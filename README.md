@@ -7,3 +7,7 @@ spcasm assembles a binary memory dump of the SPC700's main memory. No entry poin
 ## Installation
 
 This is a normal Rust project without special dependencies. Use `cargo` for building, running, testing etc.
+
+## Usage
+
+spcasm follows the mnemonic conventions from [this APU manual](https://web.archive.org/web/20060208001231/http://www.alpha-ii.com/snesmusic/files/spc700_apu_manual.txt). The directive and macro syntax is a subset of the [VASM oldstyle syntax](http://sun.hasenbraten.de/vasm/release/vasm_6.html#Oldstyle-Syntax-Module). If you're missing one of the features here, it would definitely be appreciated here!

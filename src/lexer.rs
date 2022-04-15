@@ -97,10 +97,7 @@ pub fn lex(program: &str) -> Result<Vec<Token>, String> {
 fn next_identifier(chars: &mut Peekable<std::str::Chars>, start: char) -> String {
 	let mut identifier = String::default();
 	identifier.push(start);
-	while let Some(chr) = chars.peek() {
-		if !(chr.is_alphanumeric() || chr.is_ascii_digit() || chr == &'_') {
-			break;
-		}
+	while let Some(chr) = chars.peek() && (chr.is_alphanumeric() || chr.is_ascii_digit() || chr == &'_') {
 		identifier.push(chars.next().unwrap());
 	}
 	identifier
@@ -108,10 +105,7 @@ fn next_identifier(chars: &mut Peekable<std::str::Chars>, start: char) -> String
 
 fn next_hex_number(chars: &mut Peekable<std::str::Chars>) -> Result<i64, String> {
 	let mut number_chars = String::default();
-	while let Some(chr) = chars.peek() {
-		if !chr.is_ascii_hexdigit() {
-			break;
-		}
+	while let Some(chr) = chars.peek() && chr.is_ascii_hexdigit() {
 		number_chars.push(chars.next().unwrap());
 	}
 	i64::from_str_radix(&number_chars, 16).map_err(|_| "Not a valid hex number".to_owned())
@@ -119,10 +113,7 @@ fn next_hex_number(chars: &mut Peekable<std::str::Chars>) -> Result<i64, String>
 
 fn next_bin_number(chars: &mut Peekable<std::str::Chars>) -> Result<i64, String> {
 	let mut number_chars = String::default();
-	while let Some(chr) = chars.peek() {
-		if !['0', '1'].contains(chr) {
-			break;
-		}
+	while let Some(chr) = chars.peek() && ['0', '1'].contains(chr) {
 		number_chars.push(chars.next().unwrap());
 	}
 	i64::from_str_radix(&number_chars, 2).map_err(|_| "Not a valid binary number".to_owned())

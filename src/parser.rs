@@ -110,10 +110,11 @@ impl Environment {
 							tokens_for_instruction.push(tokens.next().cloned().ok_or("Expected instruction")?);
 						}
 						instructions.push(self.create_instruction(&identifier.to_lowercase(), &tokens_for_instruction)?);
+						// is Ok() if there's no further token due to EOF
 						tokens
 							.next()
-							.and_then(|token| token.expect(Token::Newline).ok())
-							.ok_or("Expected newline or end of file")?;
+							.map(|token| token.expect(Token::Newline))
+							.transpose()?;
 					} else {
 						unimplemented!("Handle labels");
 					}
@@ -161,41 +162,40 @@ impl Environment {
 		let mut tokens = tokens.iter();
 		match tokens.next().ok_or("Expected addressing mode")? {
 			Token::Register(name) => Ok(AddressingMode::Register(*name)),
-			Token::Hash => {
-				Ok(AddressingMode::Immediate(match tokens.next().ok_or("Single '#' is not a valid addressing mode")? {
-					Token::Number(immediate) => Number::Literal(*immediate),
-					_ => return Err("Expected number for immediate argument".to_string()),
-				}))
-			},
-			Token::Number(address) => {
-				let is_direct_page = *address <= 0xFF;
-				let literal_address = Number::Literal(*address);
+			Token::Hash => Ok(AddressingMode::Immediate(
+				self.create_number(tokens.next().ok_or("Single '#' is not a valid addressing mode")?)?,
+			)),
+			literal_token @ (Token::Number(_) | Token::Identifier(_)) => {
+				let literal = self.create_number(literal_token)?;
+				let is_direct_page = match literal {
+					Number::Literal(address) => address <= 0xFF,
+					Number::Label(_) => false,
+				};
 				// Indirect addressing with '+X' or '+Y'
 				Ok(if tokens.next().and_then(|token| token.expect(Token::Plus).ok()).is_some() {
 					match tokens.next().ok_or("Expected indexing register")? {
 						Token::Register(RegisterName::X) => {
 							if is_direct_page {
-								AddressingMode::DirectPageXIndexed(literal_address)
+								AddressingMode::DirectPageXIndexed(literal)
 							} else {
-								AddressingMode::XIndexed(literal_address)
+								AddressingMode::XIndexed(literal)
 							}
 						},
 						Token::Register(RegisterName::Y) => {
 							if is_direct_page {
-								AddressingMode::DirectPageYIndexed(literal_address)
+								AddressingMode::DirectPageYIndexed(literal)
 							} else {
-								AddressingMode::YIndexed(literal_address)
+								AddressingMode::YIndexed(literal)
 							}
 						},
 						reg => return Err(format!("Illegal token {:?} for indexing", reg)),
 					}
 				} else if is_direct_page {
-					AddressingMode::DirectPage(literal_address)
+					AddressingMode::DirectPage(literal)
 				} else {
-					AddressingMode::Address(literal_address)
+					AddressingMode::Address(literal)
 				})
 			},
-			Token::Identifier(label) => Ok(AddressingMode::Address(Number::Label(self.get_label(label)))),
 			Token::OpenParenthesis => match tokens.next().ok_or("Expected indirect argument inside brackets")? {
 				Token::Register(name) => {
 					tokens.next().ok_or("Expected ')'")?.expect(Token::CloseParenthesis)?;
@@ -212,8 +212,8 @@ impl Environment {
 						_ => return Err(format!("Invalid register {:?} for indirect addressing", name)),
 					})
 				},
-				Token::Number(number) => {
-					let number_literal = Number::Literal(*number);
+				literal_token @ (Token::Number(_) | Token::Identifier(_)) => {
+					let literal = self.create_number(literal_token)?;
 					match tokens.next().ok_or("Expected '+' or ')'")? {
 						Token::Plus => {
 							tokens
@@ -223,14 +223,12 @@ impl Environment {
 									_ => None,
 								})
 								.ok_or("Expected register X")?;
-							Ok(AddressingMode::DirectPageXIndexedIndirect(number_literal))
+							Ok(AddressingMode::DirectPageXIndexedIndirect(literal))
 						},
 						Token::CloseParenthesis => {
 							tokens.next().ok_or("Expected '+'")?.expect(Token::Plus)?;
 							match tokens.next().ok_or("Expected 'Y'")? {
-								Token::Register(RegisterName::Y) => {
-									Ok(AddressingMode::DirectPageIndirectYIndexed(number_literal))
-								},
+								Token::Register(RegisterName::Y) => Ok(AddressingMode::DirectPageIndirectYIndexed(literal)),
 								_ => Err("Expected 'Y'".to_owned()),
 							}
 						},
@@ -251,6 +249,14 @@ impl Environment {
 				self.labels.push(new_label.clone());
 				new_label
 			},
+		}
+	}
+
+	fn create_number(&mut self, token: &Token) -> Result<Number, String> {
+		match token {
+			Token::Number(number) => Ok(Number::Literal(*number)),
+			Token::Identifier(label) => Ok(Number::Label(self.get_label(label))),
+			_ => Err("Expected number".to_string()),
 		}
 	}
 }

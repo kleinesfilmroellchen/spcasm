@@ -1,5 +1,5 @@
 MOV A,#$10  
-MOV A,(X)   
+MOV A,(X)
 MOV A,(X)+  
 MOV A,$32
 MOV A,$A1+X  
@@ -11,8 +11,8 @@ MOV A,($20)+Y
 MOV X,#$60  
 MOV X,$9A
 MOV X,$2E+Y  
-MOV X,$2F  
+MOV X,$2F00  
 MOV Y,#$0F
 MOV Y,$48
 MOV Y,$01+X  
-MOV Y,$21
+MOV Y,$2100

@@ -15,6 +15,7 @@ fn main() {
 	let maybe_lexed = lexer::lex(&contents);
 	println!("{:?}", maybe_lexed);
 	let lexed = maybe_lexed.unwrap();
-	let parsed = parser::parse(&lexed);
-	println!("{:#?}", parsed);
+	let mut env = parser::Environment::new();
+	let parsed = env.parse(&lexed);
+	println!("{:#?}, {:?}", parsed, env);
 }

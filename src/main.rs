@@ -7,8 +7,8 @@
 use std::env::args;
 use std::fs::read_to_string;
 
-mod lexer;
-mod parser;
+pub mod lexer;
+pub mod parser;
 
 fn main() {
 	let filename = args().nth(1).expect("No file name given");

@@ -1,43 +1,68 @@
-use std::num::NonZeroU8;
+//! Parsing and AST.
 
-use crate::lexer::RegisterName;
-use crate::lexer::Token;
 use std::rc::Rc;
 
-type MemoryAddress = i64;
+use crate::lexer::{Register, Token};
+/// Types for representing data and memory addresses (this is overkill).
+pub type MemoryAddress = i64;
 
+/// One CPU instruction.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct Instruction {
-	pub label: Option<Label>,
-	pub opcode: Opcode,
+	/// Label of this instruction, if any.
+	pub label:    Option<Rc<Label>>,
+	/// Opcode of this instruction (slightly misnamed)
+	pub opcode:   Opcode,
+	/// Memory location of the instruction, if any.
+	pub location: Option<MemoryAddress>,
 }
 
+/// A textual label that refers to some location in memory and resolves to a numeric value at some point.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct Label {
-	pub name: String,
+	/// User-given label name.
+	pub name:     String,
+	/// Resolved memory location of the label, if any.
 	pub location: Option<MemoryAddress>,
 }
 
 impl Label {
+	/// Whether this label has already been resolved to a memory location.
+	#[must_use]
 	pub const fn is_resolved(&self) -> bool {
 		self.location.is_some()
 	}
 }
 
+/// An instruction's core data that's used to generate machine code.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct Opcode {
-	pub mnemonic: String,
-	pub first_operand: Option<AddressingMode>,
+	/// Instruction mnemonic.
+	pub mnemonic:       Mnemonic,
+	/// First operand, usually instruction target.
+	pub first_operand:  Option<AddressingMode>,
+	/// Second operand, usually instruction source. This is unused on many instructions.
 	pub second_operand: Option<AddressingMode>,
 }
 
+/// Instruction mnemonics of the SPC700.
+#[derive(Clone, Debug, Copy, Eq, PartialEq)]
+pub enum Mnemonic {
+	/// MOV (load & store)
+	Mov,
+}
+
+/// Any number, either a literal or a label that's resolved to a number later.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum Number {
+	/// A literal number.
 	Literal(i64),
+	/// A label that will resolve to a number later.
 	Label(Rc<Label>),
 	// TODO: support assembly-time calculations
 }
 
+/// Addressing modes of the SPC700. Not all of these are supported everywhere (in fact, most aren't).
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum AddressingMode {
 	/// #immediate
@@ -65,37 +90,29 @@ pub enum AddressingMode {
 	/// (dp)+Y
 	DirectPageIndirectYIndexed(Number),
 	// ...
-	Register(RegisterName),
+	/// A, X, Y, SP, ...
+	Register(Register),
 }
 
-impl AddressingMode {
-	pub fn opcode_size(&self) -> NonZeroU8 {
-		unsafe {
-			NonZeroU8::new_unchecked(match self {
-				Self::IndirectX | Self::IndirectXAutoIncrement | Self::IndirectY => 1,
-				Self::Immediate(_)
-				| Self::DirectPage(_)
-				| Self::DirectPageXIndexed(_)
-				| Self::DirectPageYIndexed(_)
-				| Self::DirectPageXIndexedIndirect(_)
-				| Self::DirectPageIndirectYIndexed(_) => 2,
-				Self::Address(_) | Self::XIndexed(_) | Self::YIndexed(_) => 3,
-				Self::Register(_) => unimplemented!(),
-			})
-		}
-	}
-}
-
+/// Environment object for parsing. Holds the list of labels.
 #[derive(Clone, Debug)]
 pub struct Environment {
+	/// The list of labels.
 	pub labels: Vec<Rc<Label>>,
 }
 
 impl Environment {
+	/// Creates an empty environment.
+	#[must_use]
 	pub const fn new() -> Self {
 		Self { labels: Vec::new() }
 	}
 
+	/// Parses the token stream into a list of instructions while keeping track of labels internally. Note that no label
+	/// resolution is actually done.
+	///
+	/// # Errors
+	/// Any parser error is returned as a string.
 	pub fn parse(&mut self, tokens: &[Token]) -> Result<Vec<Instruction>, String> {
 		let mut tokens = tokens.iter().peekable();
 
@@ -111,10 +128,7 @@ impl Environment {
 						}
 						instructions.push(self.create_instruction(&identifier.to_lowercase(), &tokens_for_instruction)?);
 						// is Ok() if there's no further token due to EOF
-						tokens
-							.next()
-							.map(|token| token.expect(Token::Newline))
-							.transpose()?;
+						tokens.next().map(|token| token.expect(Token::Newline)).transpose()?;
 					} else {
 						unimplemented!("Handle labels");
 					}
@@ -152,8 +166,11 @@ impl Environment {
 			self.parse_addressing_mode(addressing_modes.next().ok_or("Expected addressing mode before ','")?)?;
 		let second_addressing_mode =
 			self.parse_addressing_mode(addressing_modes.next().ok_or("Expected addressing mode after ','")?)?;
-		let instruction =
-			Instruction { opcode: Opcode::make_mov(first_addressing_mode, second_addressing_mode), label: None };
+		let instruction = Instruction {
+			opcode:   Opcode::make_mov(first_addressing_mode, second_addressing_mode),
+			label:    None,
+			location: None,
+		};
 		println!("{:?}", instruction);
 		Ok(instruction)
 	}
@@ -174,20 +191,18 @@ impl Environment {
 				// Indirect addressing with '+X' or '+Y'
 				Ok(if tokens.next().and_then(|token| token.expect(Token::Plus).ok()).is_some() {
 					match tokens.next().ok_or("Expected indexing register")? {
-						Token::Register(RegisterName::X) => {
+						Token::Register(Register::X) =>
 							if is_direct_page {
 								AddressingMode::DirectPageXIndexed(literal)
 							} else {
 								AddressingMode::XIndexed(literal)
-							}
-						},
-						Token::Register(RegisterName::Y) => {
+							},
+						Token::Register(Register::Y) =>
 							if is_direct_page {
 								AddressingMode::DirectPageYIndexed(literal)
 							} else {
 								AddressingMode::YIndexed(literal)
-							}
-						},
+							},
 						reg => return Err(format!("Illegal token {:?} for indexing", reg)),
 					}
 				} else if is_direct_page {
@@ -200,7 +215,7 @@ impl Environment {
 				Token::Register(name) => {
 					tokens.next().ok_or("Expected ')'")?.expect(Token::CloseParenthesis)?;
 					Ok(match name {
-						RegisterName::X => {
+						Register::X => {
 							if tokens.next().and_then(|token| token.expect(Token::Plus).ok()).is_some() {
 								// '+' after closing bracket
 								AddressingMode::IndirectXAutoIncrement
@@ -208,7 +223,7 @@ impl Environment {
 								AddressingMode::IndirectX
 							}
 						},
-						RegisterName::Y => AddressingMode::IndirectY,
+						Register::Y => AddressingMode::IndirectY,
 						_ => return Err(format!("Invalid register {:?} for indirect addressing", name)),
 					})
 				},
@@ -219,7 +234,7 @@ impl Environment {
 							tokens
 								.next()
 								.and_then(|token| match token {
-									Token::Register(RegisterName::X) => Some(()),
+									Token::Register(Register::X) => Some(()),
 									_ => None,
 								})
 								.ok_or("Expected register X")?;
@@ -228,7 +243,7 @@ impl Environment {
 						Token::CloseParenthesis => {
 							tokens.next().ok_or("Expected '+'")?.expect(Token::Plus)?;
 							match tokens.next().ok_or("Expected 'Y'")? {
-								Token::Register(RegisterName::Y) => Ok(AddressingMode::DirectPageIndirectYIndexed(literal)),
+								Token::Register(Register::Y) => Ok(AddressingMode::DirectPageIndirectYIndexed(literal)),
 								_ => Err("Expected 'Y'".to_owned()),
 							}
 						},
@@ -262,7 +277,9 @@ impl Environment {
 }
 
 impl Opcode {
-	pub fn make_mov(destination: AddressingMode, source: AddressingMode) -> Self {
-		Self { mnemonic: "mov".to_owned(), first_operand: Some(destination), second_operand: Some(source) }
+	/// Create a MOV instruction. It might not actually be valid with some combinations of addressing modes.
+	#[must_use]
+	pub const fn make_mov(destination: AddressingMode, source: AddressingMode) -> Self {
+		Self { mnemonic: Mnemonic::Mov, first_operand: Some(destination), second_operand: Some(source) }
 	}
 }

@@ -1,19 +1,35 @@
+//! Lexing.
+
 use std::iter::Peekable;
 
+/// Assembly language tokens.
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub enum Token {
+	/// Identifier, i.e. a label.
 	Identifier(String),
-	Register(RegisterName),
+	/// Register name (this can never be used as an identifier).
+	Register(Register),
+	/// Literal number which was already parsed.
 	Number(i64),
+	/// '#'
 	Hash,
+	/// ','
 	Comma,
+	/// '+'
 	Plus,
+	/// '('
 	OpenParenthesis,
+	/// ')'
 	CloseParenthesis,
+	/// ASCII newline (\n).
 	Newline,
 }
 
 impl Token {
+	/// Returns this token if it matches the given type. For all tokens that contain data, this data is ignored.
+	///
+	/// # Errors
+	/// If the token doesn't match, an "Expected XYZ" error string is returned.
 	#[allow(clippy::needless_pass_by_value)]
 	pub fn expect(&self, type_: Self) -> Result<&Self, String> {
 		match self {
@@ -37,23 +53,24 @@ impl Token {
 				},
 		}
 	}
-
-	pub fn register(&self) -> RegisterName {
-		match self {
-			Self::Register(register) => *register,
-			_ => panic!("Is no register"),
-		}
-	}
 }
 
+/// Registers.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub enum RegisterName {
+pub enum Register {
+	/// Accumulator.
 	A,
+	/// First index register.
 	X,
+	/// Second index register.
 	Y,
+	/// Stack pointer.
 	SP,
 }
 
+/// Lex the given assembly into a list of tokens.
+/// # Errors
+/// Errors are returned for any syntactical error at the token level, e.g. invalid number literals.
 pub fn lex(program: &str) -> Result<Vec<Token>, String> {
 	let mut chars = program.chars().peekable();
 	let mut tokens = Vec::new();
@@ -70,13 +87,13 @@ pub fn lex(program: &str) -> Result<Vec<Token>, String> {
 			'A'..='Z' | 'a'..='z' | '_' => {
 				let identifier = next_identifier(&mut chars, chr);
 				tokens.push(if identifier == "A" {
-					Token::Register(RegisterName::A)
+					Token::Register(Register::A)
 				} else if identifier == "X" {
-					Token::Register(RegisterName::X)
+					Token::Register(Register::X)
 				} else if identifier == "Y" {
-					Token::Register(RegisterName::Y)
+					Token::Register(Register::Y)
 				} else if identifier == "SP" {
-					Token::Register(RegisterName::SP)
+					Token::Register(Register::SP)
 				} else {
 					Token::Identifier(identifier)
 				});

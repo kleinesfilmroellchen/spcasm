@@ -1,4 +1,4 @@
-MOV A,#$10  
+MOV A,#$10
 MOV A,(X)
 MOV A,(X)+  
 MOV A,$32
@@ -8,14 +8,14 @@ MOV A,$3320+X
 MOV A,$FF00+Y
 MOV A,($40+X)
 MOV A,(%00100000)+Y
-MOV X,#$60  
-MOV X,$9A
-MOV X,$2E+Y  
-MOV X,$2F00  
-MOV Y,#$0F
-MOV Y,$48
-MOV Y,%01+X  
-MOV Y,$2100
+; MOV X,#$60  
+; MOV X,$9A
+; MOV X,$2E+Y  
+; MOV X,$2F00  
+; MOV Y,#$0F
+; MOV Y,$48
+; MOV Y,%01+X  
+; MOV Y,$2100
 
 ; MOV A,#data  
 ; MOV A,data

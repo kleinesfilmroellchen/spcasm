@@ -56,10 +56,27 @@ pub enum Mnemonic {
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum Number {
 	/// A literal number.
-	Literal(i64),
+	Literal(MemoryAddress),
 	/// A label that will resolve to a number later.
 	Label(Rc<Label>),
 	// TODO: support assembly-time calculations
+}
+
+impl Number {
+	/// Extracts the actual value of this number.
+	/// # Panics
+	/// If the label was not yet resolved, this function panics as it assumes that that has already happened.
+	#[must_use]
+	pub fn value(&self) -> MemoryAddress {
+		match self {
+			Self::Literal(value) => *value,
+			// necessary because matching through an Rc is not possible right now (would be super dope though).
+			Self::Label(label) => match **label {
+				Label { location: Some(value), .. } => value,
+				_ => panic!("Unresolved label {:?}", label),
+			},
+		}
+	}
 }
 
 /// Addressing modes of the SPC700. Not all of these are supported everywhere (in fact, most aren't).

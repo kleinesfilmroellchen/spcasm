@@ -118,6 +118,7 @@ impl Environment {
 						unimplemented!("Handle labels");
 					}
 				},
+				Token::Newline => {},
 				_ => return Err(format!("Unexpected token {:?}", token)),
 			}
 		}

@@ -29,13 +29,12 @@ impl Token {
 				Self::Register(_) => Ok(self),
 				_ => Err("Expected register name".to_owned()),
 			},
-			_ => {
+			_ =>
 				if &type_ == self {
 					Ok(self)
 				} else {
 					Err(format!("Expected {:?}", type_))
-				}
-			},
+				},
 		}
 	}
 
@@ -84,6 +83,10 @@ pub fn lex(program: &str) -> Result<Vec<Token>, String> {
 			},
 			'#' | ',' | '+' | '(' | ')' => tokens.push(parse_single_char_tokens(chr)),
 			'$' => tokens.push(Token::Number(next_hex_number(&mut chars)?)),
+			'%' => tokens.push(Token::Number(next_bin_number(&mut chars)?)),
+			';' => while let Some(chr) = chars.next() && chr != '\n' {
+				chars.next();
+			},
 			_ => return Err(format!("Unexpected character {}", chr)),
 		}
 	}
@@ -112,6 +115,17 @@ fn next_hex_number(chars: &mut Peekable<std::str::Chars>) -> Result<i64, String>
 		number_chars.push(chars.next().unwrap());
 	}
 	i64::from_str_radix(&number_chars, 16).map_err(|_| "Not a valid hex number".to_owned())
+}
+
+fn next_bin_number(chars: &mut Peekable<std::str::Chars>) -> Result<i64, String> {
+	let mut number_chars = String::default();
+	while let Some(chr) = chars.peek() {
+		if !['0', '1'].contains(chr) {
+			break;
+		}
+		number_chars.push(chars.next().unwrap());
+	}
+	i64::from_str_radix(&number_chars, 2).map_err(|_| "Not a valid binary number".to_owned())
 }
 
 fn parse_single_char_tokens(chr: char) -> Token {

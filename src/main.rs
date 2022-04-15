@@ -1,5 +1,6 @@
 //! SPC700 assembler.
 
+#![feature(let_chains)]
 #![deny(clippy::all, clippy::pedantic, clippy::nursery)]
 #![deny(missing_docs)]
 

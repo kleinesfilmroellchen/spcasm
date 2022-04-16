@@ -10,14 +10,14 @@ MOV A,$FF00+Y
 MOV A,($40+X)
 data:
 MOV A,(%00100000)+Y
-; MOV X,#$60  
-; MOV X,$9A
-; MOV X,$2E+Y  
-; MOV X,$2F00  
-; MOV Y,#$0F
-; MOV Y,$48
-; MOV Y,%01+X  
-; MOV Y,$2100
+MOV X,#$60  
+MOV X,$9A
+MOV X,$2E+Y  
+MOV X,$2F00  
+MOV Y,#$0F
+MOV Y,$48
+MOV Y,%01+X  
+MOV Y,$2100
 
 MOV A,#data  
 MOV A,data
@@ -25,9 +25,32 @@ MOV A,data+X
 MOV A,data+Y
 MOV A,(data+X)
 MOV A,(data)+Y
-; MOV X,#data  
-; MOV X,data
-; MOV X,data+Y  
-; MOV Y,#data
-; MOV Y,data
-; MOV Y,data+X  
+MOV X,#data  
+MOV X,data
+MOV Y,#data
+MOV Y,data
+
+MOV (X),A
+MOV (X)+,A
+MOV $50,A
+MOV $11+X,A
+MOV $2290,A
+MOV $2294+X,A
+MOV $2295+Y,A
+MOV ($98+X),A
+MOV ($F7)+Y,A
+MOV $1E,X
+MOV $17+Y,X
+MOV $1E00,X
+MOV $1A,Y
+MOV $18+X,Y
+MOV $1F00,Y
+
+MOV A,X
+MOV A,Y
+MOV X,A
+MOV Y,A
+MOV X,SP
+MOV SP,X
+MOV $A3,$2D
+MOV $88,#%1001

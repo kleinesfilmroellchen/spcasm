@@ -6,7 +6,8 @@
 
 use std::cmp::min;
 use std::env::args;
-use std::fs::read_to_string;
+use std::fs::{read_to_string, File};
+use std::io::Write;
 
 pub mod assembler;
 pub mod lexer;
@@ -29,7 +30,13 @@ fn pretty_hex(bytes: &[u8]) -> String {
 }
 
 fn main() {
-	let filename = args().nth(1).expect("No file name given");
+	if args().nth(1).expect("No file name given") == "--help" {
+		println!("Usage: spcasm [--help] INFILE OUTFILE");
+		std::process::exit(0);
+	}
+	let filename = unsafe { args().nth(1).unwrap_unchecked() };
+	let output = args().nth(2).expect("No output file given");
+
 	let contents = read_to_string(filename).expect("Couldn't read file contents");
 	let maybe_lexed = lexer::lex(&contents);
 	println!("{:?}", maybe_lexed);
@@ -39,8 +46,12 @@ fn main() {
 	println!("{:#?}, {:?}", parsed, env);
 
 	let assembled = assembler::assemble(&env, parsed.unwrap());
-	println!("{}", match assembled {
-		Ok(assembled) => pretty_hex(&assembled),
-		err => format!("{:?}", err),
-	});
+	match assembled {
+		Ok(assembled) => {
+			pretty_hex(&assembled);
+			let mut outfile = File::options().create(true).truncate(true).write(true).open(output).expect("Couldn't open output file");
+			outfile.write_all(&assembled).expect("I/O error while writing");
+		},
+		err => println!("{:?}", err),
+	}
 }

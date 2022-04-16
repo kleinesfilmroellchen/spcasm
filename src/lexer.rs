@@ -68,6 +68,8 @@ pub enum Register {
 	Y,
 	/// Stack pointer.
 	SP,
+	/// Program status word (instruction pointer)
+	PSW,
 }
 
 /// Lex the given assembly into a list of tokens.
@@ -96,6 +98,8 @@ pub fn lex(program: &str) -> Result<Vec<Token>, String> {
 					Token::Register(Register::Y)
 				} else if identifier == "SP" {
 					Token::Register(Register::SP)
+				} else if identifier == "PSW" {
+					Token::Register(Register::PSW)
 				} else {
 					Token::Identifier(identifier)
 				});

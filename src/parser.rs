@@ -53,9 +53,151 @@ pub struct Opcode {
 
 /// Instruction mnemonics of the SPC700.
 #[derive(Clone, Debug, Copy, Eq, PartialEq)]
+#[allow(missing_docs)]
 pub enum Mnemonic {
-	/// MOV (load & store)
 	Mov,
+	Adc,
+	Sbc,
+	Cmp,
+	And,
+	Or,
+	Eor,
+	Inc,
+	Dec,
+	Asl,
+	Lsr,
+	Rol,
+	Ror,
+	Xcn,
+	Movw,
+	Incw,
+	Decw,
+	Addw,
+	Subw,
+	Cmpw,
+	Mul,
+	Div,
+	Daa,
+	Das,
+	Bra,
+	Beq,
+	Bne,
+	Bcs,
+	Bcc,
+	Bvs,
+	Bvc,
+	Bmi,
+	Bpl,
+	Bbs,
+	Bbc,
+	Cbne,
+	Dbnz,
+	Jmp,
+	Call,
+	Pcall,
+	Tcall,
+	Brk,
+	Ret,
+	Ret1,
+	Push,
+	Pop,
+	Set1,
+	Clr1,
+	Tset1,
+	Tclr1,
+	And1,
+	Or1,
+	Eor1,
+	Not1,
+	Mov1,
+	Clrc,
+	Setc,
+	Notc,
+	Clrv,
+	Clrp,
+	Setp,
+	Ei,
+	Di,
+	Nop,
+	Sleep,
+	Stop,
+}
+
+impl Mnemonic {
+	/// Parses a mnemonic.
+	/// # Errors
+	/// If the given string doesn't match a mnemonic.
+	pub fn parse(mnemonic: &str) -> Result<Self, String> {
+		Ok(match mnemonic {
+			"mov" => Self::Mov,
+			"adc" => Self::Adc,
+			"sbc" => Self::Sbc,
+			"cmp" => Self::Cmp,
+			"and" => Self::And,
+			"or" => Self::Or,
+			"eor" => Self::Eor,
+			"inc" => Self::Inc,
+			"dec" => Self::Dec,
+			"asl" => Self::Asl,
+			"lsr" => Self::Lsr,
+			"rol" => Self::Rol,
+			"ror" => Self::Ror,
+			"xcn" => Self::Xcn,
+			"movw" => Self::Movw,
+			"incw" => Self::Incw,
+			"decw" => Self::Decw,
+			"addw" => Self::Addw,
+			"subw" => Self::Subw,
+			"cmpw" => Self::Cmpw,
+			"mul" => Self::Mul,
+			"div" => Self::Div,
+			"daa" => Self::Daa,
+			"das" => Self::Das,
+			"bra" => Self::Bra,
+			"beq" => Self::Beq,
+			"bne" => Self::Bne,
+			"bcs" => Self::Bcs,
+			"bcc" => Self::Bcc,
+			"bvs" => Self::Bvs,
+			"bvc" => Self::Bvc,
+			"bmi" => Self::Bmi,
+			"bpl" => Self::Bpl,
+			"bbs" => Self::Bbs,
+			"bbc" => Self::Bbc,
+			"cbne" => Self::Cbne,
+			"dbnz" => Self::Dbnz,
+			"jmp" => Self::Jmp,
+			"call" => Self::Call,
+			"pcall" => Self::Pcall,
+			"tcall" => Self::Tcall,
+			"brk" => Self::Brk,
+			"ret" => Self::Ret,
+			"ret1" => Self::Ret1,
+			"push" => Self::Push,
+			"pop" => Self::Pop,
+			"set1" => Self::Set1,
+			"clr1" => Self::Clr1,
+			"tset1" => Self::Tset1,
+			"tclr1" => Self::Tclr1,
+			"and1" => Self::And1,
+			"or1" => Self::Or1,
+			"eor1" => Self::Eor1,
+			"not1" => Self::Not1,
+			"mov1" => Self::Mov1,
+			"clrc" => Self::Clrc,
+			"setc" => Self::Setc,
+			"notc" => Self::Notc,
+			"clrv" => Self::Clrv,
+			"clrp" => Self::Clrp,
+			"setp" => Self::Setp,
+			"ei" => Self::Ei,
+			"di" => Self::Di,
+			"nop" => Self::Nop,
+			"sleep" => Self::Sleep,
+			"stop" => Self::Stop,
+			_ => return Err(format!("{:?} is not an instruction mnemonic", mnemonic)),
+		})
+	}
 }
 
 /// Any number, either a literal or a label that's resolved to a number later.
@@ -193,21 +335,31 @@ impl Environment {
 		tokens: &[Token],
 		label: Option<Rc<Label>>,
 	) -> Result<Instruction, String> {
-		println!("{} {:?}", mnemonic, tokens);
+		let mnemonic = Mnemonic::parse(mnemonic)?;
+		println!("{:?} {:?}", mnemonic, tokens);
 		match mnemonic {
-			"mov" => self.create_mov(tokens, label),
+			Mnemonic::Mov | Mnemonic::Adc | Mnemonic::Sbc | Mnemonic::And | Mnemonic::Or | Mnemonic::Eor =>
+				self.make_two_operand_instruction(mnemonic, tokens, label),
 			_ => unimplemented!("Handle other instructions"),
 		}
 	}
 
-	fn create_mov(&mut self, tokens: &[Token], label: Option<Rc<Label>>) -> Result<Instruction, String> {
+	fn make_two_operand_instruction(
+		&mut self,
+		mnemonic: Mnemonic,
+		tokens: &[Token],
+		label: Option<Rc<Label>>,
+	) -> Result<Instruction, String> {
 		let mut addressing_modes = tokens.split(|token| token.expect(Token::Comma).is_ok());
 		let first_addressing_mode =
 			self.parse_addressing_mode(addressing_modes.next().ok_or("Expected addressing mode before ','")?)?;
 		let second_addressing_mode =
 			self.parse_addressing_mode(addressing_modes.next().ok_or("Expected addressing mode after ','")?)?;
-		let instruction =
-			Instruction { opcode: Opcode::make_mov(first_addressing_mode, second_addressing_mode), label, location: None };
+		let instruction = Instruction {
+			opcode: Opcode::make_two_operand_instruction(mnemonic, first_addressing_mode, second_addressing_mode),
+			label,
+			location: None,
+		};
 		println!("{:?}", instruction);
 		Ok(instruction)
 	}
@@ -314,9 +466,14 @@ impl Environment {
 }
 
 impl Opcode {
-	/// Create a MOV instruction. It might not actually be valid with some combinations of addressing modes.
+	/// Create an instruction with two operands. It might not actually be valid with some combinations of addressing
+	/// modes.
 	#[must_use]
-	pub const fn make_mov(destination: AddressingMode, source: AddressingMode) -> Self {
-		Self { mnemonic: Mnemonic::Mov, first_operand: Some(destination), second_operand: Some(source) }
+	pub const fn make_two_operand_instruction(
+		mnemonic: Mnemonic,
+		destination: AddressingMode,
+		source: AddressingMode,
+	) -> Self {
+		Self { mnemonic, first_operand: Some(destination), second_operand: Some(source) }
 	}
 }

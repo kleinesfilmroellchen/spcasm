@@ -54,3 +54,16 @@ MOV X,SP
 MOV SP,X
 MOV $A3,$2D
 MOV $88,#%1001
+
+adc A,#%100
+adc A,(X)
+; adc A,$60
+; adc A,$61+X
+; adc A,$8086
+; adc A,$8087+X
+; adc A,$8088+Y
+; adc A,($62+X)
+; adc A,($63)+Y
+; adc (X),(Y)
+; adc $70,$71
+; adc $73,#$0D

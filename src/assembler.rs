@@ -23,6 +23,11 @@ pub fn assemble(_environment: &Environment, instructions: Vec<Instruction>) -> R
 		match instruction.opcode {
 			Opcode { mnemonic: Mnemonic::Mov, first_operand: Some(target), second_operand: Some(source) } =>
 				assemble_mov(&mut data, target, source, instruction.label)?,
+			Opcode {
+				mnemonic: mnemonic @ (Mnemonic::Adc | Mnemonic::Sbc | Mnemonic::And | Mnemonic::Or | Mnemonic::Eor),
+				first_operand: Some(target),
+				second_operand: Some(source),
+			} => assemble_arithmetic_instruction(&mut data, mnemonic, target, source, instruction.label)?,
 			opcode => return Err(format!("Unsupported combination of opcode and addressing modes: {:?}", opcode)),
 		}
 	}
@@ -156,6 +161,46 @@ fn assemble_mov(
 			} else {
 				return Err(format!("Unsupported `MOV (dp)+Y` addressing mode {:?}", source));
 			},
+		_ => unimplemented!(),
+	}
+	Ok(())
+}
+
+#[allow(clippy::needless_pass_by_value)]
+fn assemble_arithmetic_instruction(
+	data: &mut AssembledData,
+	mnemonic: Mnemonic,
+	target: AddressingMode,
+	source: AddressingMode,
+	label: Option<Rc<Label>>,
+) -> Result<(), String> {
+	match target {
+		AddressingMode::Register(Register::A) => match source {
+			AddressingMode::Immediate(value) => data.append_instruction_with_8_bit_operand(
+				match mnemonic {
+					Mnemonic::Adc => 0x88,
+					Mnemonic::Sbc => 0xA8,
+					Mnemonic::And => 0x28,
+					Mnemonic::Or => 0x08,
+					Mnemonic::Eor => 0x48,
+					_ => unreachable!(),
+				},
+				value,
+				label,
+			),
+			AddressingMode::IndirectX => data.append(
+				match mnemonic {
+					Mnemonic::Adc => 0x86,
+					Mnemonic::Sbc => 0xA6,
+					Mnemonic::And => 0x26,
+					Mnemonic::Or => 0x06,
+					Mnemonic::Eor => 0x46,
+					_ => unreachable!(),
+				},
+				label,
+			),
+			_ => return Err("unimplemented".to_owned()),
+		},
 		_ => unimplemented!(),
 	}
 	Ok(())

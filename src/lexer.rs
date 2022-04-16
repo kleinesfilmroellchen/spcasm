@@ -101,7 +101,7 @@ pub fn lex(program: &str) -> Result<Vec<Token>, String> {
 			'#' | ',' | '+' | '(' | ')' => tokens.push(parse_single_char_tokens(chr)),
 			'$' => tokens.push(Token::Number(next_hex_number(&mut chars)?)),
 			'%' => tokens.push(Token::Number(next_bin_number(&mut chars)?)),
-			';' => while let Some(chr) = chars.next() && chr != '\n' {
+			';' => while let Some(chr) = chars.peek() && chr != &'\n' {
 				chars.next();
 			},
 			_ => return Err(format!("Unexpected character {}", chr)),

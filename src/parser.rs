@@ -33,6 +33,11 @@ impl Label {
 	pub const fn is_resolved(&self) -> bool {
 		self.location.is_some()
 	}
+
+	/// Resolves the label to the given memory location.
+	pub fn resolve_to(&mut self, location: MemoryAddress) {
+		self.location = Some(location);
+	}
 }
 
 /// An instruction's core data that's used to generate machine code.
@@ -146,7 +151,11 @@ impl Environment {
 						while tokens.peek().and_then(|token| token.expect(Token::Newline).err()).is_some() {
 							tokens_for_instruction.push(tokens.next().cloned().ok_or("Expected instruction")?);
 						}
-						instructions.push(self.create_instruction(&identifier.to_lowercase(), &tokens_for_instruction, current_label)?);
+						instructions.push(self.create_instruction(
+							&identifier.to_lowercase(),
+							&tokens_for_instruction,
+							current_label,
+						)?);
 						current_label = None;
 						// is Ok() if there's no further token due to EOF
 						tokens.next().map(|token| token.expect(Token::Newline)).transpose()?;
@@ -178,7 +187,12 @@ impl Environment {
 		.contains(&identifier.to_lowercase().as_str())
 	}
 
-	fn create_instruction(&mut self, mnemonic: &'_ str, tokens: &[Token], label: Option<Rc<Label>>) -> Result<Instruction, String> {
+	fn create_instruction(
+		&mut self,
+		mnemonic: &'_ str,
+		tokens: &[Token],
+		label: Option<Rc<Label>>,
+	) -> Result<Instruction, String> {
 		println!("{} {:?}", mnemonic, tokens);
 		match mnemonic {
 			"mov" => self.create_mov(tokens, label),
@@ -192,11 +206,8 @@ impl Environment {
 			self.parse_addressing_mode(addressing_modes.next().ok_or("Expected addressing mode before ','")?)?;
 		let second_addressing_mode =
 			self.parse_addressing_mode(addressing_modes.next().ok_or("Expected addressing mode after ','")?)?;
-		let instruction = Instruction {
-			opcode:   Opcode::make_mov(first_addressing_mode, second_addressing_mode),
-			label,
-			location: None,
-		};
+		let instruction =
+			Instruction { opcode: Opcode::make_mov(first_addressing_mode, second_addressing_mode), label, location: None };
 		println!("{:?}", instruction);
 		Ok(instruction)
 	}

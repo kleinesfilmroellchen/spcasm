@@ -8,6 +8,7 @@ MOV A,$4502
 MOV A,$3320+X
 MOV A,$FF00+Y
 MOV A,($40+X)
+data:
 MOV A,(%00100000)+Y
 ; MOV X,#$60  
 ; MOV X,$9A
@@ -18,12 +19,12 @@ MOV A,(%00100000)+Y
 ; MOV Y,%01+X  
 ; MOV Y,$2100
 
-; MOV A,#data  
-; MOV A,data
-; MOV A,data+X  
-; MOV A,data+Y
-; MOV A,(data+X)
-; MOV A,(data)+Y
+MOV A,#data  
+MOV A,data
+MOV A,data+X  
+MOV A,data+Y
+MOV A,(data+X)
+MOV A,(data)+Y
 ; MOV X,#data  
 ; MOV X,data
 ; MOV X,data+Y  

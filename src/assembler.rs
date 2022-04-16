@@ -1,12 +1,17 @@
 //! Assembler/codegen
 
+#![allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
+
 use std::collections::BTreeMap;
+use std::rc::Rc;
 
 use crate::lexer::Register;
-use crate::parser::{AddressingMode, Environment, Instruction, MemoryAddress, Mnemonic, Opcode};
+use crate::parser::{AddressingMode, Environment, Instruction, Label, MemoryAddress, Mnemonic, Number, Opcode};
+
+/// Maximum number of resolution passes executed so that no endless resolution loops are hit.
+pub const MAX_PASSES: usize = 10;
 
 /// Assembles the instructions into a byte sequence.
-/// TODO: label resolution
 /// # Errors
 /// Unencodeable instructions will cause errors.
 pub fn assemble(_environment: &Environment, instructions: Vec<Instruction>) -> Result<Vec<u8>, String> {
@@ -19,23 +24,23 @@ pub fn assemble(_environment: &Environment, instructions: Vec<Instruction>) -> R
 			Opcode { mnemonic: Mnemonic::Mov, first_operand: target, second_operand: source } => match target {
 				Some(AddressingMode::Register(Register::A)) => match source {
 					Some(AddressingMode::Immediate(value)) =>
-						data.append_instruction_with_8_bit_operand(0xE8, value.value()),
-					Some(AddressingMode::IndirectX) => data.append(0xE6),
-					Some(AddressingMode::IndirectXAutoIncrement) => data.append(0xBF),
+						data.append_instruction_with_8_bit_operand(0xE8, value, instruction.label),
+					Some(AddressingMode::IndirectX) => data.append(0xE6, instruction.label),
+					Some(AddressingMode::IndirectXAutoIncrement) => data.append(0xBF, instruction.label),
 					Some(AddressingMode::DirectPage(page_address)) =>
-						data.append_instruction_with_8_bit_operand(0xE4, page_address.value()),
+						data.append_instruction_with_8_bit_operand(0xE4, page_address, instruction.label),
 					Some(AddressingMode::DirectPageXIndexed(page_base_address)) =>
-						data.append_instruction_with_8_bit_operand(0xF4, page_base_address.value()),
+						data.append_instruction_with_8_bit_operand(0xF4, page_base_address, instruction.label),
 					Some(AddressingMode::Address(address)) =>
-						data.append_instruction_with_16_bit_operand(0xE5, address.value()),
+						data.append_instruction_with_16_bit_operand(0xE5, address, instruction.label),
 					Some(AddressingMode::XIndexed(address)) =>
-						data.append_instruction_with_16_bit_operand(0xF5, address.value()),
+						data.append_instruction_with_16_bit_operand(0xF5, address, instruction.label),
 					Some(AddressingMode::YIndexed(address)) =>
-						data.append_instruction_with_16_bit_operand(0xF6, address.value()),
+						data.append_instruction_with_16_bit_operand(0xF6, address, instruction.label),
 					Some(AddressingMode::DirectPageXIndexedIndirect(page_base_address)) =>
-						data.append_instruction_with_8_bit_operand(0xE7, page_base_address.value()),
+						data.append_instruction_with_8_bit_operand(0xE7, page_base_address, instruction.label),
 					Some(AddressingMode::DirectPageIndirectYIndexed(page_base_address)) =>
-						data.append_instruction_with_8_bit_operand(0xF7, page_base_address.value()),
+						data.append_instruction_with_8_bit_operand(0xF7, page_base_address, instruction.label),
 					Some(mode) => return Err(format!("Unsupported `MOV A,` addressing mode {:?}", mode)),
 					None => return Err("MOV must have a source operand".to_owned()),
 				},
@@ -43,14 +48,91 @@ pub fn assemble(_environment: &Environment, instructions: Vec<Instruction>) -> R
 			},
 		}
 	}
+	let mut pass_count = 0;
+	while data.execute_label_resolution_pass() && pass_count < MAX_PASSES {
+		pass_count += 1;
+	}
 	data.combine_segments()
+}
+
+/// Data in memory while we still need to resolve labels.
+/// This data may have an attached label.
+#[derive(Clone, Debug)]
+pub struct LabeledMemoryValue {
+	/// The label of this memory value.
+	pub label: Option<Rc<Label>>,
+	/// The actual memory value, which might or might not be resolved.
+	pub value: MemoryValue,
+}
+
+impl LabeledMemoryValue {
+	/// Try to resolve this memory value if it has a label. This always does nothing if the data is already resolved.
+	#[inline]
+	#[must_use]
+	pub fn try_resolve(&mut self) -> bool {
+		if let MemoryValue::Resolved(_) = self.value {
+			false
+		} else {
+			// FIXME: I can't figure out how to do this without copying first.
+			let value_copy = self.value.clone();
+			self.value = value_copy.try_resolve();
+			true
+		}
+	}
+
+	/// Return the resolved memory value.
+	/// # Panics
+	/// If the memory value isn't resolved yet.
+	#[inline]
+	#[must_use]
+	pub fn as_resolved_or_panic(&self) -> u8 {
+		self.value.as_resolved_or_panic()
+	}
+}
+
+/// The internal data held in a byte in memory, which may not be resolved.
+#[derive(Clone, Debug)]
+pub enum MemoryValue {
+	/// Resolved data.
+	Resolved(u8),
+	/// High byte of an (unresolved) label.
+	LabelHighByte(Rc<Label>),
+	/// Low byte of an (unresolved) label.
+	LabelLowByte(Rc<Label>),
+}
+
+impl MemoryValue {
+	#[allow(clippy::match_wildcard_for_single_variants)]
+	fn try_resolve(self) -> Self {
+		match self {
+			Self::Resolved(_) => self,
+			Self::LabelHighByte(ref label) | Self::LabelLowByte(ref label) => match **label {
+				Label { location: Some(memory_location), .. } => {
+					let resolved_data = match self {
+						Self::LabelHighByte(_) => (memory_location & 0xFF00) >> 8,
+						Self::LabelLowByte(_) => memory_location & 0xFF,
+						_ => unreachable!(),
+					} as u8;
+					Self::Resolved(resolved_data)
+				},
+				_ => self,
+			},
+		}
+	}
+
+	fn as_resolved_or_panic(&self) -> u8 {
+		match self {
+			Self::Resolved(value) => *value,
+			_ => panic!("Unresolved memory value {:?}", self),
+		}
+	}
 }
 
 /// The assembled data, which consists of multiple sections.
 #[derive(Clone, Debug, Default)]
 pub struct AssembledData {
 	/// The data segments. These are checked later when being combined into one.
-	pub segments:              BTreeMap<MemoryAddress, Vec<u8>>,
+	pub segments:              BTreeMap<MemoryAddress, Vec<LabeledMemoryValue>>,
 	/// The starting address of the current segment. This is the key to the segments map.
 	pub current_segment_start: Option<MemoryAddress>,
 }
@@ -60,7 +142,6 @@ impl AssembledData {
 	/// address 0 etc.
 	/// # Errors
 	/// If the segments contain overlapping data, errors are returned.
-	#[allow(clippy::cast_sign_loss, clippy::cast_possible_truncation)]
 	pub fn combine_segments(&self) -> Result<Vec<u8>, String> {
 		let mut all_data = Vec::new();
 		// The iteration is sorted
@@ -72,8 +153,10 @@ impl AssembledData {
 					all_data.len()
 				));
 			}
+			let resolved_segment_data =
+				segment_data.iter().map(LabeledMemoryValue::as_resolved_or_panic).collect::<Vec<u8>>();
 			all_data.resize(*starting_address as usize, 0);
-			all_data.extend_from_slice(segment_data);
+			all_data.extend_from_slice(&resolved_segment_data);
 		}
 
 		Ok(all_data)
@@ -98,7 +181,7 @@ impl AssembledData {
 	/// Returns an immutable reference to the data of the current segment.
 	#[must_use]
 	#[inline]
-	pub fn current_segment(&self) -> &Vec<u8> {
+	pub fn current_segment(&self) -> &Vec<LabeledMemoryValue> {
 		&self.segments[&self.current_segment_start.expect("didn't start a segment yet")]
 	}
 
@@ -106,50 +189,86 @@ impl AssembledData {
 	#[allow(clippy::missing_panics_doc)]
 	#[must_use]
 	#[inline]
-	pub fn current_segment_mut(&mut self) -> &mut Vec<u8> {
+	pub fn current_segment_mut(&mut self) -> &mut Vec<LabeledMemoryValue> {
 		self.segments.get_mut(&self.current_segment_start.expect("didn't start a segment yet")).unwrap()
-	}
-
-	/// Appends a slice of data to the current segment.
-	#[inline]
-	pub fn append_slice<'a, 'b>(&'a mut self, data: &'b [u8]) -> &'a mut Self {
-		self.current_segment_mut().extend_from_slice(data);
-		self
 	}
 
 	/// Appends a little endian (LSB first) 16-bit value to the current segment. The given number is truncated to 16
 	/// bits.
 	#[inline]
-	#[allow(clippy::cast_sign_loss)]
-	pub fn append_16_bits(&mut self, value: MemoryAddress) {
-		self.current_segment_mut().push((value & 0xFF) as u8);
-		self.current_segment_mut().push(((value & 0xFF00) >> 8) as u8);
+	pub fn append_16_bits(&mut self, value: MemoryAddress, label: Option<Rc<Label>>) {
+		self.append((value & 0xFF) as u8, label);
+		self.append(((value & 0xFF00) >> 8) as u8, None);
 	}
 
 	/// Appends an 8-bit value to the current segment. The given number is truncated to 8 bits.
 	#[inline]
-	#[allow(clippy::cast_sign_loss)]
-	pub fn append_8_bits(&mut self, value: MemoryAddress) {
-		self.current_segment_mut().push((value & 0xFF) as u8);
+	pub fn append_8_bits(&mut self, value: MemoryAddress, label: Option<Rc<Label>>) {
+		self.append((value & 0xFF) as u8, label);
 	}
 
 	/// Appends an 8-bit value to the current segment.
 	#[inline]
-	pub fn append(&mut self, value: u8) {
-		self.current_segment_mut().push(value);
+	pub fn append(&mut self, value: u8, label: Option<Rc<Label>>) {
+		self.current_segment_mut().push(LabeledMemoryValue { value: MemoryValue::Resolved(value), label });
+	}
+
+	/// Appends an unresolved value that points to a label to the current segment. The `use_high_byte` parameter decides
+	/// whether the high byte (true) or low byte (false) will be used in this memory address when the label is resolved.
+	pub fn append_unresolved(&mut self, value: Rc<Label>, use_high_byte: bool, label: Option<Rc<Label>>) {
+		self.current_segment_mut().push(LabeledMemoryValue {
+			value: if use_high_byte { MemoryValue::LabelHighByte(value) } else { MemoryValue::LabelLowByte(value) },
+			label,
+		});
 	}
 
 	/// Appends an instruction with an 8-bit operand.
 	#[inline]
-	pub fn append_instruction_with_8_bit_operand(&mut self, opcode: u8, operand: MemoryAddress) {
-		self.append(opcode);
-		self.append_8_bits(operand);
+	pub fn append_instruction_with_8_bit_operand(&mut self, opcode: u8, operand: Number, label: Option<Rc<Label>>) {
+		self.append(opcode, label);
+		match operand {
+			Number::Literal(value) => self.append_8_bits(value, None),
+			Number::Label(value) => self.append_unresolved(value, false, None),
+		}
 	}
 
 	/// Appends an instruction with an 16-bit operand.
 	#[inline]
-	pub fn append_instruction_with_16_bit_operand(&mut self, opcode: u8, operand: MemoryAddress) {
-		self.append(opcode);
-		self.append_16_bits(operand);
+	pub fn append_instruction_with_16_bit_operand(&mut self, opcode: u8, operand: Number, label: Option<Rc<Label>>) {
+		self.append(opcode, label);
+		match operand {
+			Number::Literal(value) => self.append_16_bits(value, None),
+			Number::Label(value) => {
+				// low byte first because little endian
+				self.append_unresolved(value.clone(), false, None);
+				self.append_unresolved(value, true, None);
+			},
+		}
+	}
+
+	/// Executes a label resolution pass. This means the following:
+	/// * All data in all segments is traversed. The current memory location is kept track of during traversal.
+	/// * All data with a label has that label assigned the current memory location.
+	/// * All data that references a label has a resolution attempted, which succeeds if the label has "gained" an actual
+	///   memory location. The label reference is then gone.
+	/// This means that data which references labels declared later needs one additional resolution pass.
+	/// # Returns
+	/// Whether any modifications were actually done during the resolution pass.
+	#[must_use]
+	#[allow(clippy::missing_panics_doc)]
+	pub fn execute_label_resolution_pass(&mut self) -> bool {
+		let mut had_modifications = true;
+		for (segment_start, segment_data) in &mut self.segments {
+			for (offset, datum) in segment_data.iter_mut().enumerate() {
+				let memory_address = segment_start + offset as i64;
+				if datum.label.is_some_and(|existing_label| !existing_label.is_resolved()) {
+					// Modifying Rc-contained data is dangerous in general, but safe for labels if we don't modify the name.
+					unsafe { Rc::get_mut_unchecked(datum.label.as_mut().unwrap()) }.resolve_to(memory_address);
+					had_modifications |= true;
+				}
+				had_modifications |= datum.try_resolve();
+			}
+		}
+		had_modifications
 	}
 }

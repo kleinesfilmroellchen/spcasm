@@ -1,6 +1,6 @@
 //! SPC700 assembler.
 
-#![feature(let_chains, result_flattening)]
+#![feature(let_chains, result_flattening, is_some_with, get_mut_unchecked)]
 #![deny(clippy::all, clippy::pedantic, clippy::nursery)]
 #![deny(missing_docs)]
 
@@ -48,7 +48,7 @@ fn main() {
 	let assembled = assembler::assemble(&env, parsed.unwrap());
 	match assembled {
 		Ok(assembled) => {
-			pretty_hex(&assembled);
+			println!("{}", pretty_hex(&assembled));
 			let mut outfile =
 				File::options().create(true).truncate(true).write(true).open(output).expect("Couldn't open output file");
 			outfile.write_all(&assembled).expect("I/O error while writing");

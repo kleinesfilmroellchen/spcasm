@@ -21,6 +21,8 @@ pub enum Token {
 	OpenParenthesis,
 	/// ')'
 	CloseParenthesis,
+	/// ':'
+	Colon,
 	/// ASCII newline (\n).
 	Newline,
 }
@@ -98,7 +100,7 @@ pub fn lex(program: &str) -> Result<Vec<Token>, String> {
 					Token::Identifier(identifier)
 				});
 			},
-			'#' | ',' | '+' | '(' | ')' => tokens.push(parse_single_char_tokens(chr)),
+			'#' | ',' | '+' | '(' | ')' | ':' => tokens.push(parse_single_char_tokens(chr)),
 			'$' => tokens.push(Token::Number(next_hex_number(&mut chars)?)),
 			'%' => tokens.push(Token::Number(next_bin_number(&mut chars)?)),
 			';' => while let Some(chr) = chars.peek() && chr != &'\n' {
@@ -143,6 +145,7 @@ fn parse_single_char_tokens(chr: char) -> Token {
 		'#' => Token::Hash,
 		'(' => Token::OpenParenthesis,
 		')' => Token::CloseParenthesis,
+		':' => Token::Colon,
 		_ => unreachable!(),
 	}
 }

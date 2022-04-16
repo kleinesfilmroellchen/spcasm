@@ -1,3 +1,4 @@
+start:
 MOV A,#$10
 MOV A,(X)
 MOV A,(X)+  

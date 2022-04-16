@@ -1,6 +1,7 @@
 //! Parsing and AST.
 
 use std::rc::Rc;
+use std::result::Result;
 
 use crate::lexer::{Register, Token};
 /// Types for representing data and memory addresses (this is overkill).
@@ -135,6 +136,8 @@ impl Environment {
 
 		let mut instructions = Vec::new();
 
+		let mut current_label = None;
+
 		while let Some(token) = tokens.next().cloned() {
 			match token {
 				Token::Identifier(identifier) => {
@@ -143,11 +146,17 @@ impl Environment {
 						while tokens.peek().and_then(|token| token.expect(Token::Newline).err()).is_some() {
 							tokens_for_instruction.push(tokens.next().cloned().ok_or("Expected instruction")?);
 						}
-						instructions.push(self.create_instruction(&identifier.to_lowercase(), &tokens_for_instruction)?);
+						instructions.push(self.create_instruction(&identifier.to_lowercase(), &tokens_for_instruction, current_label)?);
+						current_label = None;
 						// is Ok() if there's no further token due to EOF
 						tokens.next().map(|token| token.expect(Token::Newline)).transpose()?;
 					} else {
-						unimplemented!("Handle labels");
+						current_label = Some(self.get_label(&identifier));
+						tokens
+							.next()
+							.map(|token| token.expect(Token::Colon))
+							.ok_or_else(|| "Expected ':'".to_owned())
+							.flatten()?;
 					}
 				},
 				Token::Newline => {},
@@ -169,15 +178,15 @@ impl Environment {
 		.contains(&identifier.to_lowercase().as_str())
 	}
 
-	fn create_instruction(&mut self, mnemonic: &'_ str, tokens: &[Token]) -> Result<Instruction, String> {
+	fn create_instruction(&mut self, mnemonic: &'_ str, tokens: &[Token], label: Option<Rc<Label>>) -> Result<Instruction, String> {
 		println!("{} {:?}", mnemonic, tokens);
 		match mnemonic {
-			"mov" => self.create_mov(tokens),
+			"mov" => self.create_mov(tokens, label),
 			_ => unimplemented!("Handle other instructions"),
 		}
 	}
 
-	fn create_mov(&mut self, tokens: &[Token]) -> Result<Instruction, String> {
+	fn create_mov(&mut self, tokens: &[Token], label: Option<Rc<Label>>) -> Result<Instruction, String> {
 		let mut addressing_modes = tokens.split(|token| token.expect(Token::Comma).is_ok());
 		let first_addressing_mode =
 			self.parse_addressing_mode(addressing_modes.next().ok_or("Expected addressing mode before ','")?)?;
@@ -185,7 +194,7 @@ impl Environment {
 			self.parse_addressing_mode(addressing_modes.next().ok_or("Expected addressing mode after ','")?)?;
 		let instruction = Instruction {
 			opcode:   Opcode::make_mov(first_addressing_mode, second_addressing_mode),
-			label:    None,
+			label,
 			location: None,
 		};
 		println!("{:?}", instruction);

@@ -39,11 +39,11 @@ fn main() {
 
 	let contents = read_to_string(filename).expect("Couldn't read file contents");
 	let maybe_lexed = lexer::lex(&contents);
-	println!("{:?}", maybe_lexed);
+	// println!("{:?}", maybe_lexed);
 	let lexed = maybe_lexed.unwrap();
 	let mut env = parser::Environment::new();
 	let parsed = env.parse(&lexed);
-	println!("{:#?}, {:?}", parsed, env);
+	// println!("{:#?}, {:?}", parsed, env);
 
 	let assembled = assembler::assemble(&env, parsed.unwrap());
 	match assembled {

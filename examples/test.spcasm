@@ -57,13 +57,65 @@ MOV $88,#%1001
 
 adc A,#%100
 adc A,(X)
-; adc A,$60
-; adc A,$61+X
-; adc A,$8086
-; adc A,$8087+X
-; adc A,$8088+Y
-; adc A,($62+X)
-; adc A,($63)+Y
-; adc (X),(Y)
-; adc $70,$71
-; adc $73,#$0D
+adc A,$60
+adc A,$61+X
+adc A,$8086
+adc A,$8087+X
+adc A,$8088+Y
+adc A,($62+X)
+adc A,($63)+Y
+adc (X),(Y)
+adc $70,$71
+adc $73,#$0D
+
+sbc A,#%100
+sbc A,(X)
+sbc A,$60
+sbc A,$61+X
+sbc A,$8086
+sbc A,$8087+X
+sbc A,$8088+Y
+sbc A,($62+X)
+sbc A,($63)+Y
+sbc (X),(Y)
+sbc $70,$71
+sbc $73,#$0D
+
+and A,#%100
+and A,(X)
+and A,$60
+and A,$61+X
+and A,$8086
+and A,$8087+X
+and A,$8088+Y
+and A,($62+X)
+and A,($63)+Y
+and (X),(Y)
+and $70,$71
+and $73,#$0D
+
+or A,#%100
+or A,(X)
+or A,$60
+or A,$61+X
+or A,$8086
+or A,$8087+X
+or A,$8088+Y
+or A,($62+X)
+or A,($63)+Y
+or (X),(Y)
+or $70,$71
+or $73,#$0D
+
+eor A,#%100
+eor A,(X)
+eor A,$60
+eor A,$61+X
+eor A,$8086
+eor A,$8087+X
+eor A,$8088+Y
+eor A,($62+X)
+eor A,($63)+Y
+eor (X),(Y)
+eor $70,$71
+eor $73,#$0D

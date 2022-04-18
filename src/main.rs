@@ -1,6 +1,6 @@
 //! SPC700 assembler.
 
-#![feature(let_chains, result_flattening, is_some_with, get_mut_unchecked)]
+#![feature(let_chains, result_flattening, is_some_with, get_mut_unchecked, iterator_try_collect)]
 #![deny(clippy::all, clippy::pedantic, clippy::nursery)]
 #![deny(missing_docs)]
 
@@ -54,5 +54,41 @@ fn main() {
 			outfile.write_all(&assembled).expect("I/O error while writing");
 		},
 		err => println!("{:?}", err),
+	}
+}
+
+#[cfg(test)]
+mod test {
+	use crate::{assembler, lexer, parser};
+	#[test]
+	fn test_all_opcodes() {
+		use std::cmp::min;
+		use std::fs::read_to_string;
+
+		use crate::pretty_hex;
+
+		let testfile = read_to_string("examples/test.spcasm").unwrap();
+		let lexed = lexer::lex(&testfile).unwrap();
+		println!("{:?}", lexed);
+		let mut environment = parser::Environment::new();
+		let parsed = environment.parse(&lexed).unwrap();
+		let assembled = assembler::assemble(&environment, parsed.clone()).unwrap();
+		let expected_binary = assemble_expected_binary(parsed);
+		for (byte, (expected, actual)) in expected_binary.iter().zip(assembled.iter()).enumerate() {
+			assert_eq!(
+				expected,
+				actual,
+				"Expected and actual assembly differ at byte {:04X}:\n\texpected: {:02X}\n\tactual:   {:02x}\nhint: the \
+				 bytes before and after are:\n\t{}",
+				byte,
+				expected,
+				actual,
+				pretty_hex(&assembled[byte.saturating_sub(4) .. min(assembled.len(), byte + 5)])
+			);
+		}
+	}
+
+	fn assemble_expected_binary(instructions: Vec<parser::Instruction>) -> Vec<u8> {
+		instructions.into_iter().flat_map(|instruction| instruction.expected_value).collect()
 	}
 }

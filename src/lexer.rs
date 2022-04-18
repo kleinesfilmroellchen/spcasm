@@ -25,6 +25,9 @@ pub enum Token {
 	Colon,
 	/// ASCII newline (\n).
 	Newline,
+	/// Comments used for testing purposes.
+	#[cfg(test)]
+	TestComment(Vec<u8>),
 }
 
 impl Token {
@@ -75,6 +78,7 @@ pub enum Register {
 /// Lex the given assembly into a list of tokens.
 /// # Errors
 /// Errors are returned for any syntactical error at the token level, e.g. invalid number literals.
+#[allow(clippy::missing_panics_doc)]
 pub fn lex(program: &str) -> Result<Vec<Token>, String> {
 	let mut chars = program.chars().peekable();
 	let mut tokens = Vec::new();
@@ -88,7 +92,7 @@ pub fn lex(program: &str) -> Result<Vec<Token>, String> {
 			continue;
 		}
 		match chr {
-			'A'..='Z' | 'a'..='z' | '_' => {
+			'A' ..= 'Z' | 'a' ..= 'z' | '_' => {
 				let identifier = next_identifier(&mut chars, chr);
 				tokens.push(if identifier == "A" {
 					Token::Register(Register::A)
@@ -107,9 +111,26 @@ pub fn lex(program: &str) -> Result<Vec<Token>, String> {
 			'#' | ',' | '+' | '(' | ')' | ':' => tokens.push(parse_single_char_tokens(chr)),
 			'$' => tokens.push(Token::Number(next_hex_number(&mut chars)?)),
 			'%' => tokens.push(Token::Number(next_bin_number(&mut chars)?)),
-			';' => while let Some(chr) = chars.peek() && chr != &'\n' {
-				chars.next();
-			},
+			';' =>
+				if cfg!(test) && let Some(chr) = chars.peek() && chr == &'=' {
+					chars.next();
+					let mut comment_contents = String::new();
+					while let Some(chr) = chars.peek() && chr != &'\n' {
+						comment_contents.push(chars.next().unwrap());
+					}
+					// This cfg() is technically unnecessary, but the above check doesn't happen at compile time so
+					// Rust wouldn't find the conditionally-compiled token type.
+					#[cfg(test)]
+					tokens.push(Token::TestComment(comment_contents
+						.split_whitespace()
+						.map(|byte_string| u8::from_str_radix(byte_string, 16))
+						.try_collect::<Vec<u8>>()
+						.map_err(|parse_error| format!("Test comment is invalid: {:?}", parse_error))?));
+				} else {
+					while let Some(chr) = chars.peek() && chr != &'\n' {
+						chars.next();
+					}
+				},
 			_ => return Err(format!("Unexpected character {}", chr)),
 		}
 	}

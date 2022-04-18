@@ -11,11 +11,15 @@ pub type MemoryAddress = i64;
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct Instruction {
 	/// Label of this instruction, if any.
-	pub label:    Option<Rc<Label>>,
+	pub label:          Option<Rc<Label>>,
 	/// Opcode of this instruction (slightly misnamed)
-	pub opcode:   Opcode,
+	pub opcode:         Opcode,
 	/// Memory location of the instruction, if any.
-	pub location: Option<MemoryAddress>,
+	pub location:       Option<MemoryAddress>,
+	/// Only used for testing purposes: this is the data that the instruction should assemble to according to the test
+	/// file.
+	#[cfg(test)]
+	pub expected_value: Vec<u8>,
 }
 
 /// A textual label that refers to some location in memory and resolves to a numeric value at some point.
@@ -355,10 +359,21 @@ impl Environment {
 			self.parse_addressing_mode(addressing_modes.next().ok_or("Expected addressing mode before ','")?)?;
 		let second_addressing_mode =
 			self.parse_addressing_mode(addressing_modes.next().ok_or("Expected addressing mode after ','")?)?;
+		#[cfg(test)]
+		let expected_value = tokens
+			.iter()
+			.find_map(|token| match token {
+				Token::TestComment(expected_value) => Some(expected_value),
+				_ => None,
+			})
+			.ok_or("Test assembly doesn't have an expected output comment")?
+			.clone();
 		let instruction = Instruction {
 			opcode: Opcode::make_two_operand_instruction(mnemonic, first_addressing_mode, second_addressing_mode),
 			label,
 			location: None,
+			#[cfg(test)]
+			expected_value,
 		};
 		println!("{:?}", instruction);
 		Ok(instruction)

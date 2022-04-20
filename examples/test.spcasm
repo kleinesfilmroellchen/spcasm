@@ -138,3 +138,17 @@ cmp X,$7500    ;= 1E 00 75
 cmp Y,#$76     ;= AD 76
 cmp Y,$74      ;= 7E 74
 cmp Y,$7500    ;= 5E 00 75
+
+inc A      ;= BC
+inc $01    ;= AB 01
+inc $02+X  ;= BB 02
+inc $0304  ;= AC 04 03
+inc X      ;= 3D
+inc Y      ;= FC
+
+dec A      ;= 9C
+dec $01    ;= 8B 01
+dec $02+X  ;= 9B 02
+dec $0304  ;= 8C 04 03
+dec X      ;= 1D
+dec Y      ;= DC

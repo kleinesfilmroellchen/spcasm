@@ -31,6 +31,14 @@ pub fn assemble(_environment: &Environment, instructions: Vec<Instruction>) -> R
 				first_operand: Some(target),
 				second_operand: Some(source),
 			} => arithmetic_logic::assemble_arithmetic_instruction(&mut data, mnemonic, target, source, instruction.label)?,
+			Opcode {
+				mnemonic: mnemonic @ (Mnemonic::Inc | Mnemonic::Dec),
+				first_operand: Some(target),
+				second_operand: None,
+			} => {
+				let is_increment = mnemonic == Mnemonic::Inc;
+				arithmetic_logic::assemble_inc_dec_instruction(&mut data, is_increment, target, instruction.label)?;
+			},
 			opcode => return Err(format!("Unsupported combination of opcode and addressing modes: {:?}", opcode)),
 		}
 	}

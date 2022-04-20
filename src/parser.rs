@@ -342,8 +342,14 @@ impl Environment {
 		let mnemonic = Mnemonic::parse(mnemonic)?;
 		println!("{:?} {:?}", mnemonic, tokens);
 		match mnemonic {
-			Mnemonic::Mov | Mnemonic::Adc | Mnemonic::Sbc | Mnemonic::And | Mnemonic::Or | Mnemonic::Eor | Mnemonic::Cmp =>
-				self.make_two_operand_instruction(mnemonic, tokens, label),
+			Mnemonic::Mov
+			| Mnemonic::Adc
+			| Mnemonic::Sbc
+			| Mnemonic::And
+			| Mnemonic::Or
+			| Mnemonic::Eor
+			| Mnemonic::Cmp => self.make_two_operand_instruction(mnemonic, tokens, label),
+			Mnemonic::Inc | Mnemonic::Dec => self.make_single_operand_instruction(mnemonic, tokens, label),
 			_ => unimplemented!("Handle other instructions"),
 		}
 	}
@@ -376,6 +382,41 @@ impl Environment {
 			expected_value,
 		};
 		println!("{:?}", instruction);
+		Ok(instruction)
+	}
+
+	fn make_single_operand_instruction(
+		&mut self,
+		mnemonic: Mnemonic,
+		tokens: &[Token],
+		label: Option<Rc<Label>>,
+	) -> Result<Instruction, String> {
+		let unparsed_addressing_mode = tokens
+			.split(|token| match token {
+				Token::Newline => true,
+				#[cfg(test)]
+				Token::TestComment(_) => true,
+				_ => false,
+			})
+			.next()
+			.ok_or("Expected an addressing mode")?;
+		let addressing_mode = self.parse_addressing_mode(unparsed_addressing_mode)?;
+		#[cfg(test)]
+		let expected_value = tokens
+			.iter()
+			.find_map(|token| match token {
+				Token::TestComment(expected_value) => Some(expected_value),
+				_ => None,
+			})
+			.ok_or("Test assembly doesn't have an expected output comment")?
+			.clone();
+		let instruction = Instruction {
+			opcode: Opcode::make_single_operand_instruction(mnemonic, addressing_mode),
+			label,
+			location: None,
+			#[cfg(test)]
+			expected_value,
+		};
 		Ok(instruction)
 	}
 
@@ -490,5 +531,12 @@ impl Opcode {
 		source: AddressingMode,
 	) -> Self {
 		Self { mnemonic, first_operand: Some(destination), second_operand: Some(source) }
+	}
+
+	/// Create an instruction with one operand. It might not actually be valid with some combinations of addressing
+	/// modes.
+	#[must_use]
+	pub const fn make_single_operand_instruction(mnemonic: Mnemonic, destination: AddressingMode) -> Self {
+		Self { mnemonic, first_operand: Some(destination), second_operand: None }
 	}
 }

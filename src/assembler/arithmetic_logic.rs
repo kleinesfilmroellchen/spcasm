@@ -215,3 +215,34 @@ pub(super) fn assemble_arithmetic_instruction(
 	}
 	Ok(())
 }
+
+pub(super) fn assemble_inc_dec_instruction(
+	data: &mut AssembledData,
+	is_increment: bool,
+	target: AddressingMode,
+	label: Option<Rc<Label>>,
+) -> Result<(), String> {
+	match target {
+		AddressingMode::Register(register @ (Register::A | Register::X | Register::Y)) => data.append(
+			match (is_increment, register) {
+				(true, Register::A) => 0xBC,
+				(true, Register::X) => 0x3D,
+				(true, Register::Y) => 0xFC,
+				(false, Register::A) => 0x9C,
+				(false, Register::X) => 0x1D,
+				(false, Register::Y) => 0xDC,
+				_ => unreachable!(),
+			},
+			label,
+		),
+		AddressingMode::DirectPage(page_address) =>
+			data.append_instruction_with_8_bit_operand(if is_increment { 0xAB } else { 0x8B }, page_address, label),
+		AddressingMode::DirectPageXIndexed(page_address) =>
+			data.append_instruction_with_8_bit_operand(if is_increment { 0xBB } else { 0x9B }, page_address, label),
+		AddressingMode::Address(address) =>
+			data.append_instruction_with_16_bit_operand(if is_increment { 0xAC } else { 0x8C }, address, label),
+		_ =>
+			return Err(format!("Addressing mode {:?} invalid for `{}`", target, if is_increment { "INC" } else { "DEC" })),
+	}
+	Ok(())
+}

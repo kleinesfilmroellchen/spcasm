@@ -26,7 +26,8 @@ pub fn assemble(_environment: &Environment, instructions: Vec<Instruction>) -> R
 			Opcode { mnemonic: Mnemonic::Mov, first_operand: Some(target), second_operand: Some(source) } =>
 				mov::assemble_mov(&mut data, target, source, instruction.label)?,
 			Opcode {
-				mnemonic: mnemonic @ (Mnemonic::Adc | Mnemonic::Sbc | Mnemonic::And | Mnemonic::Or | Mnemonic::Eor),
+				mnemonic:
+					mnemonic @ (Mnemonic::Adc | Mnemonic::Sbc | Mnemonic::And | Mnemonic::Or | Mnemonic::Eor | Mnemonic::Cmp),
 				first_operand: Some(target),
 				second_operand: Some(source),
 			} => arithmetic_logic::assemble_arithmetic_instruction(&mut data, mnemonic, target, source, instruction.label)?,

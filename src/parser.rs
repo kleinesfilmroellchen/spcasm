@@ -342,7 +342,7 @@ impl Environment {
 		let mnemonic = Mnemonic::parse(mnemonic)?;
 		println!("{:?} {:?}", mnemonic, tokens);
 		match mnemonic {
-			Mnemonic::Mov | Mnemonic::Adc | Mnemonic::Sbc | Mnemonic::And | Mnemonic::Or | Mnemonic::Eor =>
+			Mnemonic::Mov | Mnemonic::Adc | Mnemonic::Sbc | Mnemonic::And | Mnemonic::Or | Mnemonic::Eor | Mnemonic::Cmp =>
 				self.make_two_operand_instruction(mnemonic, tokens, label),
 			_ => unimplemented!("Handle other instructions"),
 		}

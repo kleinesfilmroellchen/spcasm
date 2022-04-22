@@ -56,10 +56,15 @@ pub struct Opcode {
 	pub second_operand: Option<AddressingMode>,
 }
 
-trait Parse
+/// Anything that can be primitively parsed from a string into an enum variant.
+/// This trait is intended to be derived with the macro from ``spcasm_derive``.
+pub trait Parse
 where
 	Self: Sized,
 {
+	/// Parse this enum from the string representation.
+	/// # Errors
+	/// If the string doesn't correspond with any enum variant.
 	fn parse(value: &str) -> Result<Self, String>;
 }
 

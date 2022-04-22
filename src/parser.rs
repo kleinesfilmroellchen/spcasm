@@ -2,6 +2,7 @@
 
 use std::rc::Rc;
 use std::result::Result;
+use spcasm_derive::Parse;
 
 use crate::lexer::{Register, Token};
 /// Types for representing data and memory addresses (this is overkill).
@@ -55,8 +56,15 @@ pub struct Opcode {
 	pub second_operand: Option<AddressingMode>,
 }
 
+trait Parse
+where
+	Self: Sized,
+{
+	fn parse(value: &str) -> Result<Self, String>;
+}
+
 /// Instruction mnemonics of the SPC700.
-#[derive(Clone, Debug, Copy, Eq, PartialEq)]
+#[derive(Clone, Debug, Copy, Eq, PartialEq, Parse)]
 #[allow(missing_docs)]
 pub enum Mnemonic {
 	Mov,
@@ -125,83 +133,6 @@ pub enum Mnemonic {
 	Nop,
 	Sleep,
 	Stop,
-}
-
-impl Mnemonic {
-	/// Parses a mnemonic.
-	/// # Errors
-	/// If the given string doesn't match a mnemonic.
-	pub fn parse(mnemonic: &str) -> Result<Self, String> {
-		Ok(match mnemonic {
-			"mov" => Self::Mov,
-			"adc" => Self::Adc,
-			"sbc" => Self::Sbc,
-			"cmp" => Self::Cmp,
-			"and" => Self::And,
-			"or" => Self::Or,
-			"eor" => Self::Eor,
-			"inc" => Self::Inc,
-			"dec" => Self::Dec,
-			"asl" => Self::Asl,
-			"lsr" => Self::Lsr,
-			"rol" => Self::Rol,
-			"ror" => Self::Ror,
-			"xcn" => Self::Xcn,
-			"movw" => Self::Movw,
-			"incw" => Self::Incw,
-			"decw" => Self::Decw,
-			"addw" => Self::Addw,
-			"subw" => Self::Subw,
-			"cmpw" => Self::Cmpw,
-			"mul" => Self::Mul,
-			"div" => Self::Div,
-			"daa" => Self::Daa,
-			"das" => Self::Das,
-			"bra" => Self::Bra,
-			"beq" => Self::Beq,
-			"bne" => Self::Bne,
-			"bcs" => Self::Bcs,
-			"bcc" => Self::Bcc,
-			"bvs" => Self::Bvs,
-			"bvc" => Self::Bvc,
-			"bmi" => Self::Bmi,
-			"bpl" => Self::Bpl,
-			"bbs" => Self::Bbs,
-			"bbc" => Self::Bbc,
-			"cbne" => Self::Cbne,
-			"dbnz" => Self::Dbnz,
-			"jmp" => Self::Jmp,
-			"call" => Self::Call,
-			"pcall" => Self::Pcall,
-			"tcall" => Self::Tcall,
-			"brk" => Self::Brk,
-			"ret" => Self::Ret,
-			"ret1" => Self::Ret1,
-			"push" => Self::Push,
-			"pop" => Self::Pop,
-			"set1" => Self::Set1,
-			"clr1" => Self::Clr1,
-			"tset1" => Self::Tset1,
-			"tclr1" => Self::Tclr1,
-			"and1" => Self::And1,
-			"or1" => Self::Or1,
-			"eor1" => Self::Eor1,
-			"not1" => Self::Not1,
-			"mov1" => Self::Mov1,
-			"clrc" => Self::Clrc,
-			"setc" => Self::Setc,
-			"notc" => Self::Notc,
-			"clrv" => Self::Clrv,
-			"clrp" => Self::Clrp,
-			"setp" => Self::Setp,
-			"ei" => Self::Ei,
-			"di" => Self::Di,
-			"nop" => Self::Nop,
-			"sleep" => Self::Sleep,
-			"stop" => Self::Stop,
-			_ => return Err(format!("{:?} is not an instruction mnemonic", mnemonic)),
-		})
-	}
 }
 
 /// Any number, either a literal or a label that's resolved to a number later.

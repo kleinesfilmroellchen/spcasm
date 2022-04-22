@@ -5,3 +5,4 @@ edition = "2021"
 license = "BSD 2-clause"
 
 [dependencies]
+spcasm_derive = { path = "spcasm_derive" }

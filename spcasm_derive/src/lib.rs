@@ -5,7 +5,7 @@ use quote::{quote, ToTokens};
 use syn;
 
 #[proc_macro_derive(Parse)]
-pub fn hello_macro_derive(input: TokenStream) -> TokenStream {
+pub fn parse_macro_derive(input: TokenStream) -> TokenStream {
 	let type_ = syn::parse::<syn::DeriveInput>(input).unwrap();
 
 	match type_.data {
@@ -27,6 +27,8 @@ pub fn hello_macro_derive(input: TokenStream) -> TokenStream {
 			let variant_strings = variant_identifiers_and_strings.iter().map(|(_, string)| string);
 
 			quote! {
+				#[automatically_derived]
+				#[allow(missing_docs)]
 				impl crate::parser::Parse for #name {
 					fn parse(value: &str) -> Result<Self, String> {
 						Ok(match value {

@@ -2,6 +2,10 @@
 
 use std::iter::Peekable;
 
+use spcasm_derive::Parse;
+
+use crate::parser::Parse;
+
 /// Assembly language tokens.
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub enum Token {
@@ -61,7 +65,7 @@ impl Token {
 }
 
 /// Registers.
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+#[derive(Clone, Copy, Debug, Eq, PartialEq, Parse)]
 pub enum Register {
 	/// Accumulator.
 	A,
@@ -94,19 +98,7 @@ pub fn lex(program: &str) -> Result<Vec<Token>, String> {
 		match chr {
 			'A' ..= 'Z' | 'a' ..= 'z' | '_' => {
 				let identifier = next_identifier(&mut chars, chr);
-				tokens.push(if identifier == "A" {
-					Token::Register(Register::A)
-				} else if identifier == "X" {
-					Token::Register(Register::X)
-				} else if identifier == "Y" {
-					Token::Register(Register::Y)
-				} else if identifier == "SP" {
-					Token::Register(Register::SP)
-				} else if identifier == "PSW" {
-					Token::Register(Register::PSW)
-				} else {
-					Token::Identifier(identifier)
-				});
+				tokens.push(Register::parse(&identifier.to_lowercase()).map_or_else(|_|Token::Identifier(identifier), Token::Register));
 			},
 			'#' | ',' | '+' | '(' | ')' | ':' => tokens.push(parse_single_char_tokens(chr)),
 			'$' => tokens.push(Token::Number(next_hex_number(&mut chars)?)),

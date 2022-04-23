@@ -246,3 +246,62 @@ pub(super) fn assemble_inc_dec_instruction(
 	}
 	Ok(())
 }
+
+pub(super) fn assemble_shift_rotation_instruction(
+	data: &mut AssembledData,
+	mnemonic: Mnemonic,
+	target: AddressingMode,
+	label: Option<Rc<Label>>,
+) -> Result<(), String> {
+	match target {
+		AddressingMode::Register(Register::A) => data.append(
+			match mnemonic {
+				Mnemonic::Asl => 0x1C,
+				Mnemonic::Lsr => 0x5C,
+				Mnemonic::Rol => 0x3C,
+				Mnemonic::Ror => 0x7C,
+				Mnemonic::Xcn => 0x9F,
+				_ => unreachable!(),
+			},
+			label,
+		),
+		AddressingMode::DirectPage(page_address) => data.append_instruction_with_8_bit_operand(
+			match mnemonic {
+				Mnemonic::Asl => 0x0B,
+				Mnemonic::Lsr => 0x4B,
+				Mnemonic::Rol => 0x2B,
+				Mnemonic::Ror => 0x6B,
+				Mnemonic::Xcn => return Err("Addressing mode `dp` is not supported for `XCN`".to_owned()),
+				_ => unreachable!(),
+			},
+			page_address,
+			label,
+		),
+		AddressingMode::DirectPageXIndexed(page_address) => data.append_instruction_with_8_bit_operand(
+			match mnemonic {
+				Mnemonic::Asl => 0x1B,
+				Mnemonic::Lsr => 0x5B,
+				Mnemonic::Rol => 0x3B,
+				Mnemonic::Ror => 0x7B,
+				Mnemonic::Xcn => return Err("Addressing mode `dp` is not supported for `XCN`".to_owned()),
+				_ => unreachable!(),
+			},
+			page_address,
+			label,
+		),
+		AddressingMode::Address(address) => data.append_instruction_with_16_bit_operand(
+			match mnemonic {
+				Mnemonic::Asl => 0xCC,
+				Mnemonic::Lsr => 0x4C,
+				Mnemonic::Rol => 0x2C,
+				Mnemonic::Ror => 0x6C,
+				Mnemonic::Xcn => return Err("Addressing mode `dp` is not supported for `XCN`".to_owned()),
+				_ => unreachable!(),
+			},
+			address,
+			label,
+		),
+		_ => return Err(format!("Addressing mode {:?} is not supported for `{:?}` instruction", target, mnemonic)),
+	}
+	Ok(())
+}

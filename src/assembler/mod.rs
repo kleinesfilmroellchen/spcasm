@@ -5,10 +5,14 @@
 use std::collections::BTreeMap;
 use std::rc::Rc;
 
-use crate::parser::{Environment, Instruction, Label, MemoryAddress, Mnemonic, Number, Opcode};
+use r16bit::MovDirection;
+
+use crate::lexer::Register;
+use crate::parser::{AddressingMode, Environment, Instruction, Label, MemoryAddress, Mnemonic, Number, Opcode};
 
 mod arithmetic_logic;
 mod mov;
+mod r16bit;
 
 /// Maximum number of resolution passes executed so that no endless resolution loops are hit.
 pub const MAX_PASSES: usize = 10;
@@ -39,6 +43,52 @@ pub fn assemble(_environment: &Environment, instructions: Vec<Instruction>) -> R
 				let is_increment = mnemonic == Mnemonic::Inc;
 				arithmetic_logic::assemble_inc_dec_instruction(&mut data, is_increment, target, instruction.label)?;
 			},
+			Opcode {
+				mnemonic: mnemonic @ (Mnemonic::Asl | Mnemonic::Lsr | Mnemonic::Rol | Mnemonic::Ror | Mnemonic::Xcn),
+				first_operand: Some(target),
+				second_operand: None,
+			} => arithmetic_logic::assemble_shift_rotation_instruction(&mut data, mnemonic, target, instruction.label)?,
+			Opcode {
+				mnemonic: mnemonic @ (Mnemonic::Incw | Mnemonic::Decw),
+				first_operand: Some(AddressingMode::DirectPage(target)),
+				second_operand: None,
+			} => {
+				let is_increment = mnemonic == Mnemonic::Incw;
+				r16bit::assemble_incw_decw_instruction(&mut data, is_increment, target, instruction.label);
+			},
+			Opcode {
+				mnemonic: mnemonic @ (Mnemonic::Addw | Mnemonic::Subw | Mnemonic::Cmpw),
+				first_operand: Some(AddressingMode::Register(Register::YA)),
+				second_operand: Some(AddressingMode::DirectPage(target)),
+			} => r16bit::assemble_add_sub_cmp_wide_instruction(&mut data, mnemonic, target, instruction.label),
+			Opcode {
+				mnemonic: Mnemonic::Movw,
+				first_operand: Some(target @ (AddressingMode::DirectPage(_) | AddressingMode::Register(Register::YA))),
+				second_operand: Some(source @ (AddressingMode::DirectPage(_) | AddressingMode::Register(Register::YA))),
+			} => {
+				let (direction, page_address) = if target == AddressingMode::Register(Register::YA) {
+					(MovDirection::IntoYA, match source {
+						AddressingMode::DirectPage(page_address) => page_address,
+						_ => return Err("One of the addressing modes of `MOVW` must be a direct page address".to_owned()),
+					})
+				} else {
+					(MovDirection::FromYA, match target {
+						AddressingMode::DirectPage(page_address) => page_address,
+						_ => return Err("One of the addressing modes of `MOVW` must be `YA`".to_owned()),
+					})
+				};
+				r16bit::assemble_mov_wide_instruction(&mut data, page_address, &direction, instruction.label);
+			},
+			Opcode {
+				mnemonic: Mnemonic::Mul,
+				first_operand: Some(AddressingMode::Register(Register::YA)),
+				second_operand: None,
+			} => data.append(0xCF, instruction.label),
+			Opcode {
+				mnemonic: Mnemonic::Div,
+				first_operand: Some(AddressingMode::Register(Register::YA)),
+				second_operand: Some(AddressingMode::Register(Register::X)),
+			} => data.append(0x9E, instruction.label),
 			opcode => return Err(format!("Unsupported combination of opcode and addressing modes: {:?}", opcode)),
 		}
 	}

@@ -2,6 +2,7 @@
 
 use std::rc::Rc;
 use std::result::Result;
+
 use spcasm_derive::Parse;
 
 use crate::lexer::{Register, Token};
@@ -284,8 +285,21 @@ impl Environment {
 			| Mnemonic::And
 			| Mnemonic::Or
 			| Mnemonic::Eor
-			| Mnemonic::Cmp => self.make_two_operand_instruction(mnemonic, tokens, label),
-			Mnemonic::Inc | Mnemonic::Dec => self.make_single_operand_instruction(mnemonic, tokens, label),
+			| Mnemonic::Cmp
+			| Mnemonic::Movw
+			| Mnemonic::Addw
+			| Mnemonic::Subw
+			| Mnemonic::Cmpw
+			| Mnemonic::Div => self.make_two_operand_instruction(mnemonic, tokens, label),
+			Mnemonic::Inc
+			| Mnemonic::Dec
+			| Mnemonic::Asl
+			| Mnemonic::Lsr
+			| Mnemonic::Rol
+			| Mnemonic::Ror
+			| Mnemonic::Incw
+			| Mnemonic::Decw
+			| Mnemonic::Mul => self.make_single_operand_instruction(mnemonic, tokens, label),
 			_ => unimplemented!("Handle other instructions"),
 		}
 	}

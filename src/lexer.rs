@@ -75,8 +75,10 @@ pub enum Register {
 	Y,
 	/// Stack pointer.
 	SP,
-	/// Program status word (instruction pointer)
+	/// Program status word (instruction pointer).
 	PSW,
+	/// Combined 16-bit register from Y and A.
+	YA,
 }
 
 /// Lex the given assembly into a list of tokens.

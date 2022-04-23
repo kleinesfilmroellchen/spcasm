@@ -152,3 +152,34 @@ dec $02+X  ;= 9B 02
 dec $0304  ;= 8C 04 03
 dec X      ;= 1D
 dec Y      ;= DC
+
+asl A     ;= 1C
+asl $05   ;= 0B 05
+asl $06+X ;= 1B 06
+ASL $0708 ;= CC 08 07
+
+LSR A     ;= 5C
+LSR $05   ;= 4B 05
+LSR $06+X ;= 5B 06
+LSR $0708 ;= 4C 08 07
+
+rol A     ;= 3C
+rol $05   ;= 2B 05
+rol $06+X ;= 3B 06
+rol $0708 ;= 2C 08 07
+
+ror A     ;= 7C
+ror $05   ;= 6B 05
+ror $06+X ;= 7B 06
+ror $0708 ;= 6C 08 07
+
+MOVW YA,$09 ;= BA 09
+MOVW $0A,YA ;= DA 0A
+INCW $0B    ;= 3A 0B
+DECW $0C    ;= 1A 0C
+ADDW YA,$0D ;= 7A 0D
+SUBW YA,$0E ;= 9A 0E
+CMPW YA,$0F ;= 5A 0F
+
+MUL YA   ;= CF
+DIV YA,X ;= 9E

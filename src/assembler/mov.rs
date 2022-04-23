@@ -132,3 +132,32 @@ pub(super) fn assemble_mov(
 	}
 	Ok(())
 }
+
+pub(super) fn assemble_push_pop(
+	data: &mut AssembledData,
+	is_push: bool,
+	target: Register,
+	label: Option<Rc<Label>>,
+) -> Result<(), String> {
+	data.append_8_bits(
+		if is_push {
+			match target {
+				Register::A => 0x2D,
+				Register::X => 0x4D,
+				Register::Y => 0x6D,
+				Register::PSW => 0x0D,
+				_ => return Err(format!("target register {:?} not supported for `PUSH`", target)),
+			}
+		} else {
+			match target {
+				Register::A => 0xAE,
+				Register::X => 0xCE,
+				Register::Y => 0xEE,
+				Register::PSW => 0x8E,
+				_ => return Err(format!("target register {:?} not supported for `POP`", target)),
+			}
+		},
+		label,
+	);
+	Ok(())
+}

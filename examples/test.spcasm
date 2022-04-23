@@ -210,6 +210,16 @@ BRK  ;= 0F
 ret  ;= 6F
 ret1  ;= 7F
 
+push A    ;= 2D
+push X    ;= 4D
+push Y    ;= 6D
+push PSW  ;= 0D
+
+pop A    ;= AE
+pop X    ;= CE
+pop Y    ;= EE
+pop PSW  ;= 8E
+
 clrc  ;= 60
 setc  ;= 80
 notc  ;= ED

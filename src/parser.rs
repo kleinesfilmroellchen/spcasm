@@ -315,7 +315,9 @@ impl Environment {
 			| Mnemonic::Bvc
 			| Mnemonic::Bmi
 			| Mnemonic::Bpl
-			| Mnemonic::Jmp => self.make_single_operand_instruction(mnemonic, tokens, label),
+			| Mnemonic::Jmp
+			| Mnemonic::Push
+			| Mnemonic::Pop => self.make_single_operand_instruction(mnemonic, tokens, label),
 			Mnemonic::Brk
 			| Mnemonic::Ret
 			| Mnemonic::Ret1

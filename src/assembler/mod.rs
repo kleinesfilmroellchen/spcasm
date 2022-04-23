@@ -134,6 +134,11 @@ pub fn assemble(_environment: &Environment, instructions: Vec<Instruction>) -> R
 				first_operand: None,
 				second_operand: None,
 			} => assemble_operandless_instruction(&mut data, mnemonic, instruction.label),
+			Opcode {
+				mnemonic: mnemonic @ (Mnemonic::Push | Mnemonic::Pop),
+				first_operand: Some(AddressingMode::Register(target)),
+				second_operand: None,
+			} => mov::assemble_push_pop(&mut data, mnemonic == Mnemonic::Push, target, instruction.label)?,
 			opcode => return Err(format!("Unsupported combination of opcode and addressing modes: {:?}", opcode)),
 		}
 	}

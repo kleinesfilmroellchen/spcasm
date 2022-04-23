@@ -3,8 +3,7 @@
 use std::rc::Rc;
 
 use crate::assembler::AssembledData;
-use crate::lexer::Register;
-use crate::parser::{AddressingMode, Label, Mnemonic, Number};
+use crate::parser::{Label, Mnemonic, Number};
 
 #[repr(u8)]
 pub(super) enum MovDirection {

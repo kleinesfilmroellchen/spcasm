@@ -316,6 +316,20 @@ impl Environment {
 			| Mnemonic::Bmi
 			| Mnemonic::Bpl
 			| Mnemonic::Jmp => self.make_single_operand_instruction(mnemonic, tokens, label),
+			Mnemonic::Brk
+			| Mnemonic::Ret
+			| Mnemonic::Ret1
+			| Mnemonic::Clrc
+			| Mnemonic::Setc
+			| Mnemonic::Notc
+			| Mnemonic::Clrv
+			| Mnemonic::Clrp
+			| Mnemonic::Setp
+			| Mnemonic::Ei
+			| Mnemonic::Di
+			| Mnemonic::Nop
+			| Mnemonic::Sleep
+			| Mnemonic::Stop => Self::make_zero_operand_instruction(mnemonic, tokens, label),
 			_ => unimplemented!("Handle other instructions"),
 		}
 	}
@@ -384,6 +398,43 @@ impl Environment {
 			expected_value,
 		};
 		Ok(instruction)
+	}
+
+	fn make_zero_operand_instruction(
+		mnemonic: Mnemonic,
+		tokens: &[Token],
+		label: Option<Rc<Label>>,
+	) -> Result<Instruction, String> {
+		if tokens
+			.iter()
+			.filter(|token| match token {
+				Token::Newline => false,
+				#[cfg(test)]
+				Token::TestComment(_) => false,
+				_ => true,
+			})
+			.count() == 0
+		{
+			#[cfg(test)]
+			let expected_value = tokens
+				.iter()
+				.find_map(|token| match token {
+					Token::TestComment(expected_value) => Some(expected_value),
+					_ => None,
+				})
+				.ok_or("Test assembly doesn't have an expected output comment")?
+				.clone();
+			let instruction = Instruction {
+				opcode: Opcode { mnemonic, first_operand: None, second_operand: None },
+				label,
+				location: None,
+				#[cfg(test)]
+				expected_value,
+			};
+			Ok(instruction)
+		} else {
+			Err(format!("Didn't expect an addressing mode for mnemonic {:?}", mnemonic))
+		}
 	}
 
 	fn parse_addressing_mode(&mut self, tokens: &[Token]) -> Result<AddressingMode, String> {

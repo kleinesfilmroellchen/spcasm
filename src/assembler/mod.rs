@@ -21,6 +21,7 @@ pub const MAX_PASSES: usize = 10;
 /// Assembles the instructions into a byte sequence.
 /// # Errors
 /// Unencodeable instructions will cause errors.
+#[allow(clippy::too_many_lines)] // ¯\_(ツ)_/¯
 pub fn assemble(_environment: &Environment, instructions: Vec<Instruction>) -> Result<Vec<u8>, String> {
 	let mut data = AssembledData::new();
 
@@ -114,6 +115,25 @@ pub fn assemble(_environment: &Environment, instructions: Vec<Instruction>) -> R
 				first_operand: Some(target),
 				second_operand: source,
 			} => branching::assemble_branching_instruction(&mut data, mnemonic, target, source, instruction.label)?,
+			Opcode {
+				mnemonic:
+					mnemonic @ (Mnemonic::Brk
+					| Mnemonic::Ret
+					| Mnemonic::Ret1
+					| Mnemonic::Clrc
+					| Mnemonic::Setc
+					| Mnemonic::Notc
+					| Mnemonic::Clrv
+					| Mnemonic::Clrp
+					| Mnemonic::Setp
+					| Mnemonic::Ei
+					| Mnemonic::Di
+					| Mnemonic::Nop
+					| Mnemonic::Sleep
+					| Mnemonic::Stop),
+				first_operand: None,
+				second_operand: None,
+			} => assemble_operandless_instruction(&mut data, mnemonic, instruction.label),
 			opcode => return Err(format!("Unsupported combination of opcode and addressing modes: {:?}", opcode)),
 		}
 	}
@@ -122,6 +142,29 @@ pub fn assemble(_environment: &Environment, instructions: Vec<Instruction>) -> R
 		pass_count += 1;
 	}
 	data.combine_segments()
+}
+
+fn assemble_operandless_instruction(data: &mut AssembledData, mnemonic: Mnemonic, label: Option<Rc<Label>>) {
+	data.append(
+		match mnemonic {
+			Mnemonic::Brk => 0x0F,
+			Mnemonic::Ret => 0x6F,
+			Mnemonic::Ret1 => 0x7F,
+			Mnemonic::Clrc => 0x60,
+			Mnemonic::Setc => 0x80,
+			Mnemonic::Notc => 0xED,
+			Mnemonic::Clrv => 0xE0,
+			Mnemonic::Clrp => 0x20,
+			Mnemonic::Setp => 0x40,
+			Mnemonic::Ei => 0xA0,
+			Mnemonic::Di => 0xC0,
+			Mnemonic::Nop => 0x00,
+			Mnemonic::Sleep => 0xEF,
+			Mnemonic::Stop => 0xFF,
+			_ => unreachable!(),
+		},
+		label,
+	);
 }
 
 /// Data in memory while we still need to resolve labels.

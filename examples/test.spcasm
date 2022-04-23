@@ -204,3 +204,21 @@ dbnz $2F,$30  ;= 6E 2F 30
 dbnz Y,$31    ;= FE 31
 jmp $2122     ;= 5F 22 21
 jmp $2324+X     ;= 1F 24 23
+
+
+BRK  ;= 0F
+ret  ;= 6F
+ret1  ;= 7F
+
+clrc  ;= 60
+setc  ;= 80
+notc  ;= ED
+clrv  ;= E0
+clrp  ;= 20
+setp  ;= 40
+ei  ;= A0
+di  ;= C0
+
+nop  ;= 00
+sleep  ;= EF
+stop  ;= FF

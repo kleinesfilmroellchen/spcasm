@@ -89,6 +89,11 @@ pub fn assemble(_environment: &Environment, instructions: Vec<Instruction>) -> R
 				first_operand: Some(AddressingMode::Register(Register::YA)),
 				second_operand: Some(AddressingMode::Register(Register::X)),
 			} => data.append(0x9E, instruction.label),
+			Opcode {
+				mnemonic: mnemonic @ (Mnemonic::Daa | Mnemonic::Das),
+				first_operand: Some(AddressingMode::Register(Register::A)),
+				second_operand: None,
+			} => data.append(if mnemonic == Mnemonic::Daa { 0xDF } else { 0xBE }, instruction.label),
 			opcode => return Err(format!("Unsupported combination of opcode and addressing modes: {:?}", opcode)),
 		}
 	}

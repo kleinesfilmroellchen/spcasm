@@ -183,3 +183,6 @@ CMPW YA,$0F ;= 5A 0F
 
 MUL YA   ;= CF
 DIV YA,X ;= 9E
+
+daa A ;= DF
+das A ;= BE

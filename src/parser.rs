@@ -299,6 +299,8 @@ impl Environment {
 			| Mnemonic::Ror
 			| Mnemonic::Incw
 			| Mnemonic::Decw
+			| Mnemonic::Daa
+			| Mnemonic::Das
 			| Mnemonic::Mul => self.make_single_operand_instruction(mnemonic, tokens, label),
 			_ => unimplemented!("Handle other instructions"),
 		}

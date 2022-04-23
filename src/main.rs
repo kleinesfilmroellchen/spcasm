@@ -78,7 +78,7 @@ mod test {
 			assert_eq!(
 				expected,
 				actual,
-				"Expected and actual assembly differ at byte {:04X}:\n\texpected: {:02X}\n\tactual:   {:02x}\nhint: the \
+				"Expected and actual assembly differ at byte {:04X}:\n\texpected: {:02X}\n\tactual:   {:02X}\nhint: the \
 				 bytes before and after are:\n\t{}",
 				byte,
 				expected,

@@ -184,5 +184,23 @@ CMPW YA,$0F ;= 5A 0F
 MUL YA   ;= CF
 DIV YA,X ;= 9E
 
+reltarget: ;@ 01 61
 daa A ;= DF
 das A ;= BE
+
+bra $20       ;= 2F 20
+              ; label location is -4
+beq reltarget ;= F0 FC
+bne reltarget ;= D0 FA
+bcs $25       ;= B0 25
+bcc $26       ;= 90 26
+bvs $27       ;= 70 27
+bvc $28       ;= 50 28
+bmi $29       ;= 30 29
+bpl $2A       ;= 10 2A
+cbne $2B,$2C  ;= 2E 2B 2C
+cbne $2D+X,$2E;= DE 2D 2E
+dbnz $2F,$30  ;= 6E 2F 30
+dbnz Y,$31    ;= FE 31
+jmp $2122     ;= 5F 22 21
+jmp $2324+X     ;= 1F 24 23

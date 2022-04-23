@@ -185,7 +185,7 @@ pub enum AddressingMode {
 	DirectPageXIndexed(Number),
 	/// dp+Y
 	DirectPageYIndexed(Number),
-	/// abs)
+	/// abs
 	Address(Number),
 	/// abs+X
 	XIndexed(Number),
@@ -290,7 +290,11 @@ impl Environment {
 			| Mnemonic::Addw
 			| Mnemonic::Subw
 			| Mnemonic::Cmpw
-			| Mnemonic::Div => self.make_two_operand_instruction(mnemonic, tokens, label),
+			| Mnemonic::Div
+			| Mnemonic::Bbs
+			| Mnemonic::Bbc
+			| Mnemonic::Cbne
+			| Mnemonic::Dbnz => self.make_two_operand_instruction(mnemonic, tokens, label),
 			Mnemonic::Inc
 			| Mnemonic::Dec
 			| Mnemonic::Asl
@@ -301,7 +305,17 @@ impl Environment {
 			| Mnemonic::Decw
 			| Mnemonic::Daa
 			| Mnemonic::Das
-			| Mnemonic::Mul => self.make_single_operand_instruction(mnemonic, tokens, label),
+			| Mnemonic::Mul
+			| Mnemonic::Bra
+			| Mnemonic::Beq
+			| Mnemonic::Bne
+			| Mnemonic::Bcs
+			| Mnemonic::Bcc
+			| Mnemonic::Bvs
+			| Mnemonic::Bvc
+			| Mnemonic::Bmi
+			| Mnemonic::Bpl
+			| Mnemonic::Jmp => self.make_single_operand_instruction(mnemonic, tokens, label),
 			_ => unimplemented!("Handle other instructions"),
 		}
 	}

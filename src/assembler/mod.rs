@@ -11,6 +11,7 @@ use crate::lexer::Register;
 use crate::parser::{AddressingMode, Environment, Instruction, Label, MemoryAddress, Mnemonic, Number, Opcode};
 
 mod arithmetic_logic;
+mod branching;
 mod mov;
 mod r16bit;
 
@@ -94,6 +95,25 @@ pub fn assemble(_environment: &Environment, instructions: Vec<Instruction>) -> R
 				first_operand: Some(AddressingMode::Register(Register::A)),
 				second_operand: None,
 			} => data.append(if mnemonic == Mnemonic::Daa { 0xDF } else { 0xBE }, instruction.label),
+			Opcode {
+				mnemonic:
+					mnemonic @ (Mnemonic::Bra
+					| Mnemonic::Beq
+					| Mnemonic::Bne
+					| Mnemonic::Bcs
+					| Mnemonic::Bcc
+					| Mnemonic::Bvs
+					| Mnemonic::Bvc
+					| Mnemonic::Bmi
+					| Mnemonic::Bpl
+					| Mnemonic::Bbs
+					| Mnemonic::Bbc
+					| Mnemonic::Cbne
+					| Mnemonic::Dbnz
+					| Mnemonic::Jmp),
+				first_operand: Some(target),
+				second_operand: source,
+			} => branching::assemble_branching_instruction(&mut data, mnemonic, target, source, instruction.label)?,
 			opcode => return Err(format!("Unsupported combination of opcode and addressing modes: {:?}", opcode)),
 		}
 	}
@@ -116,15 +136,17 @@ pub struct LabeledMemoryValue {
 
 impl LabeledMemoryValue {
 	/// Try to resolve this memory value if it has a label. This always does nothing if the data is already resolved.
+	/// * `own_memory_address`: The actual location in memory that this value is at. Some resolution strategies need
+	///   this.
 	#[inline]
 	#[must_use]
-	pub fn try_resolve(&mut self) -> bool {
+	pub fn try_resolve(&mut self, own_memory_address: MemoryAddress) -> bool {
 		if let MemoryValue::Resolved(_) = self.value {
 			false
 		} else {
 			// FIXME: I can't figure out how to do this without copying first.
 			let value_copy = self.value.clone();
-			self.value = value_copy.try_resolve();
+			self.value = value_copy.try_resolve(own_memory_address);
 			true
 		}
 	}
@@ -148,11 +170,17 @@ pub enum MemoryValue {
 	LabelHighByte(Rc<Label>),
 	/// Low byte of an (unresolved) label.
 	LabelLowByte(Rc<Label>),
+	/// An (unresolved) label. The resolved memory value will be the difference between this memory value's location and
+	/// the label's location. The second parameter is the negative offset that's added to the relative offset after
+	/// computation. This is necessary because the actual instruction that has this relative label stored doesn't start
+	/// at this memory address, but one or two bytes before. The PSW is still at the beginning of the instruction when
+	/// we jump, so the relative jump starts at that instruction, not at this memory address.
+	LabelRelative(Rc<Label>, u8),
 }
 
 impl MemoryValue {
 	#[allow(clippy::match_wildcard_for_single_variants)]
-	fn try_resolve(self) -> Self {
+	fn try_resolve(self, own_memory_address: MemoryAddress) -> Self {
 		match self {
 			Self::Resolved(_) => self,
 			Self::LabelHighByte(ref label) | Self::LabelLowByte(ref label) => match **label {
@@ -162,6 +190,13 @@ impl MemoryValue {
 						Self::LabelLowByte(_) => memory_location & 0xFF,
 						_ => unreachable!(),
 					} as u8;
+					Self::Resolved(resolved_data)
+				},
+				_ => self,
+			},
+			Self::LabelRelative(ref label, negative_offset) => match **label {
+				Label { location: Some(label_memory_address), .. } => {
+					let resolved_data = (label_memory_address - own_memory_address) as u8 + negative_offset;
 					Self::Resolved(resolved_data)
 				},
 				_ => self,
@@ -271,6 +306,14 @@ impl AssembledData {
 		});
 	}
 
+	/// Appends an unresolved value that points to a label to the current segment. The label will be resolved to a
+	/// relative offset, like various branch instructions need it.
+	pub fn append_relative_unresolved(&mut self, value: Rc<Label>, negative_offset: u8) {
+		self
+			.current_segment_mut()
+			.push(LabeledMemoryValue { value: MemoryValue::LabelRelative(value, negative_offset), label: None });
+	}
+
 	/// Appends an instruction with an 8-bit operand.
 	#[inline]
 	pub fn append_instruction_with_8_bit_operand(&mut self, opcode: u8, operand: Number, label: Option<Rc<Label>>) {
@@ -281,7 +324,7 @@ impl AssembledData {
 		}
 	}
 
-	/// Appends an instruction with two 8-bit operands
+	/// Appends an instruction with two 8-bit operands.
 	#[inline]
 	pub fn append_instruction_with_two_8_bit_operands(
 		&mut self,
@@ -311,6 +354,15 @@ impl AssembledData {
 		}
 	}
 
+	/// Appends an instruction with an 8-bit operand. If this is a label, it's stored as a relative unresolved label.
+	pub fn append_instruction_with_relative_label(&mut self, opcode: u8, operand: Number, label: Option<Rc<Label>>) {
+		self.append(opcode, label);
+		match operand {
+			Number::Literal(value) => self.append_8_bits(value, None),
+			Number::Label(label) => self.append_relative_unresolved(label, 1),
+		}
+	}
+
 	/// Executes a label resolution pass. This means the following:
 	/// * All data in all segments is traversed. The current memory location is kept track of during traversal.
 	/// * All data with a label has that label assigned the current memory location.
@@ -331,7 +383,7 @@ impl AssembledData {
 					unsafe { Rc::get_mut_unchecked(datum.label.as_mut().unwrap()) }.resolve_to(memory_address);
 					had_modifications |= true;
 				}
-				had_modifications |= datum.try_resolve();
+				had_modifications |= datum.try_resolve(memory_address);
 			}
 		}
 		had_modifications

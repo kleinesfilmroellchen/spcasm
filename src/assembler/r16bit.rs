@@ -1,6 +1,6 @@
 //! Assembling the 16-bit (word) instructions.
 
-use std::rc::Rc;
+use std::sync::Arc;
 
 use crate::assembler::AssembledData;
 use crate::parser::{Label, Mnemonic, Number};
@@ -15,7 +15,7 @@ pub(super) fn assemble_incw_decw_instruction(
 	data: &mut AssembledData,
 	is_increment: bool,
 	target_address: Number,
-	label: Option<Rc<Label>>,
+	label: Option<Arc<Label>>,
 ) {
 	data.append_instruction_with_8_bit_operand(if is_increment { 0x3A } else { 0x1A }, target_address, label);
 }
@@ -24,7 +24,7 @@ pub(super) fn assemble_add_sub_cmp_wide_instruction(
 	data: &mut AssembledData,
 	mnemonic: Mnemonic,
 	target_address: Number,
-	label: Option<Rc<Label>>,
+	label: Option<Arc<Label>>,
 ) {
 	data.append_instruction_with_8_bit_operand(
 		match mnemonic {
@@ -42,7 +42,7 @@ pub(super) fn assemble_mov_wide_instruction(
 	data: &mut AssembledData,
 	page_address: Number,
 	direction: &MovDirection,
-	label: Option<Rc<Label>>,
+	label: Option<Arc<Label>>,
 ) {
 	data.append_instruction_with_8_bit_operand(
 		match direction {

@@ -3,10 +3,12 @@
 #![allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
 
 use std::collections::BTreeMap;
-use std::rc::Rc;
+use std::sync::Arc;
 
 use r16bit::MovDirection;
 
+use super::pretty_hex;
+use crate::error::{AssemblyCode, AssemblyError};
 use crate::lexer::Register;
 use crate::parser::{AddressingMode, Environment, Instruction, Label, MemoryAddress, Mnemonic, Number, Opcode};
 
@@ -22,64 +24,79 @@ pub const MAX_PASSES: usize = 10;
 /// # Errors
 /// Unencodeable instructions will cause errors.
 #[allow(clippy::too_many_lines)] // ¯\_(ツ)_/¯
-pub fn assemble(_environment: &Environment, instructions: Vec<Instruction>) -> Result<Vec<u8>, String> {
-	let mut data = AssembledData::new();
+pub fn assemble(environment: &Environment, instructions: Vec<Instruction>) -> Result<Vec<u8>, AssemblyError> {
+	let mut data = AssembledData::new(environment.source_code.clone());
 
 	data.new_segment(0);
 
 	for instruction in instructions {
-		match instruction.opcode {
+		match &instruction.opcode {
 			Opcode { mnemonic: Mnemonic::Mov, first_operand: Some(target), second_operand: Some(source) } =>
-				mov::assemble_mov(&mut data, target, source, instruction.label)?,
+				mov::assemble_mov(&mut data, target, source.clone(), &instruction)?,
 			Opcode {
 				mnemonic:
 					mnemonic @ (Mnemonic::Adc | Mnemonic::Sbc | Mnemonic::And | Mnemonic::Or | Mnemonic::Eor | Mnemonic::Cmp),
 				first_operand: Some(target),
 				second_operand: Some(source),
-			} => arithmetic_logic::assemble_arithmetic_instruction(&mut data, mnemonic, target, source, instruction.label)?,
+			} => arithmetic_logic::assemble_arithmetic_instruction(
+				&mut data,
+				*mnemonic,
+				target.clone(),
+				source.clone(),
+				&instruction,
+			)?,
 			Opcode {
 				mnemonic: mnemonic @ (Mnemonic::Inc | Mnemonic::Dec),
 				first_operand: Some(target),
 				second_operand: None,
 			} => {
-				let is_increment = mnemonic == Mnemonic::Inc;
-				arithmetic_logic::assemble_inc_dec_instruction(&mut data, is_increment, target, instruction.label)?;
+				let is_increment = *mnemonic == Mnemonic::Inc;
+				arithmetic_logic::assemble_inc_dec_instruction(&mut data, is_increment, target.clone(), &instruction)?;
 			},
 			Opcode {
 				mnemonic: mnemonic @ (Mnemonic::Asl | Mnemonic::Lsr | Mnemonic::Rol | Mnemonic::Ror | Mnemonic::Xcn),
 				first_operand: Some(target),
 				second_operand: None,
-			} => arithmetic_logic::assemble_shift_rotation_instruction(&mut data, mnemonic, target, instruction.label)?,
+			} => arithmetic_logic::assemble_shift_rotation_instruction(&mut data, *mnemonic, target.clone(), &instruction)?,
 			Opcode {
 				mnemonic: mnemonic @ (Mnemonic::Incw | Mnemonic::Decw),
 				first_operand: Some(AddressingMode::DirectPage(target)),
 				second_operand: None,
 			} => {
-				let is_increment = mnemonic == Mnemonic::Incw;
-				r16bit::assemble_incw_decw_instruction(&mut data, is_increment, target, instruction.label);
+				let is_increment = *mnemonic == Mnemonic::Incw;
+				r16bit::assemble_incw_decw_instruction(&mut data, is_increment, target.clone(), instruction.label);
 			},
 			Opcode {
 				mnemonic: mnemonic @ (Mnemonic::Addw | Mnemonic::Subw | Mnemonic::Cmpw),
 				first_operand: Some(AddressingMode::Register(Register::YA)),
 				second_operand: Some(AddressingMode::DirectPage(target)),
-			} => r16bit::assemble_add_sub_cmp_wide_instruction(&mut data, mnemonic, target, instruction.label),
+			} => r16bit::assemble_add_sub_cmp_wide_instruction(&mut data, *mnemonic, target.clone(), instruction.label),
 			Opcode {
 				mnemonic: Mnemonic::Movw,
 				first_operand: Some(target @ (AddressingMode::DirectPage(_) | AddressingMode::Register(Register::YA))),
 				second_operand: Some(source @ (AddressingMode::DirectPage(_) | AddressingMode::Register(Register::YA))),
 			} => {
-				let (direction, page_address) = if target == AddressingMode::Register(Register::YA) {
+				let make_movw_error = || {
+					Err(AssemblyError::InvalidAddressingModeCombination {
+						first_mode:  target.clone(),
+						second_mode: source.clone(),
+						src:         data.source_code.clone(),
+						location:    instruction.span,
+						mnemonic:    Mnemonic::Movw,
+					})
+				};
+				let (direction, page_address) = if *target == AddressingMode::Register(Register::YA) {
 					(MovDirection::IntoYA, match source {
 						AddressingMode::DirectPage(page_address) => page_address,
-						_ => return Err("One of the addressing modes of `MOVW` must be a direct page address".to_owned()),
+						_ => return make_movw_error(),
 					})
 				} else {
 					(MovDirection::FromYA, match target {
 						AddressingMode::DirectPage(page_address) => page_address,
-						_ => return Err("One of the addressing modes of `MOVW` must be `YA`".to_owned()),
+						_ => return make_movw_error(),
 					})
 				};
-				r16bit::assemble_mov_wide_instruction(&mut data, page_address, &direction, instruction.label);
+				r16bit::assemble_mov_wide_instruction(&mut data, page_address.clone(), &direction, instruction.label);
 			},
 			Opcode {
 				mnemonic: Mnemonic::Mul,
@@ -95,7 +112,7 @@ pub fn assemble(_environment: &Environment, instructions: Vec<Instruction>) -> R
 				mnemonic: mnemonic @ (Mnemonic::Daa | Mnemonic::Das),
 				first_operand: Some(AddressingMode::Register(Register::A)),
 				second_operand: None,
-			} => data.append(if mnemonic == Mnemonic::Daa { 0xDF } else { 0xBE }, instruction.label),
+			} => data.append(if *mnemonic == Mnemonic::Daa { 0xDF } else { 0xBE }, instruction.label),
 			Opcode {
 				mnemonic:
 					mnemonic @ (Mnemonic::Bra
@@ -114,7 +131,13 @@ pub fn assemble(_environment: &Environment, instructions: Vec<Instruction>) -> R
 					| Mnemonic::Jmp),
 				first_operand: Some(target),
 				second_operand: source,
-			} => branching::assemble_branching_instruction(&mut data, mnemonic, target, source, instruction.label)?,
+			} => branching::assemble_branching_instruction(
+				&mut data,
+				*mnemonic,
+				target.clone(),
+				source.clone(),
+				&instruction,
+			)?,
 			Opcode {
 				mnemonic:
 					mnemonic @ (Mnemonic::Brk
@@ -133,13 +156,25 @@ pub fn assemble(_environment: &Environment, instructions: Vec<Instruction>) -> R
 					| Mnemonic::Stop),
 				first_operand: None,
 				second_operand: None,
-			} => assemble_operandless_instruction(&mut data, mnemonic, instruction.label),
+			} => assemble_operandless_instruction(&mut data, *mnemonic, instruction.label),
 			Opcode {
 				mnemonic: mnemonic @ (Mnemonic::Push | Mnemonic::Pop),
 				first_operand: Some(AddressingMode::Register(target)),
 				second_operand: None,
-			} => mov::assemble_push_pop(&mut data, mnemonic == Mnemonic::Push, target, instruction.label)?,
-			opcode => return Err(format!("Unsupported combination of opcode and addressing modes: {:?}", opcode)),
+			} => mov::assemble_push_pop(&mut data, *mnemonic == Mnemonic::Push, *target, &instruction)?,
+			Opcode { mnemonic, first_operand: Some(_), second_operand: Some(_) } =>
+				return Err(AssemblyError::TwoOperandsNotAllowed {
+					mnemonic: *mnemonic,
+					src:      data.source_code,
+					location: instruction.span,
+				}),
+			Opcode { mnemonic, first_operand: Some(_), .. } =>
+				return Err(AssemblyError::OperandNotAllowed {
+					mnemonic: *mnemonic,
+					src:      data.source_code,
+					location: instruction.span,
+				}),
+			_ => unreachable!(),
 		}
 	}
 	let mut pass_count = 0;
@@ -149,7 +184,7 @@ pub fn assemble(_environment: &Environment, instructions: Vec<Instruction>) -> R
 	data.combine_segments()
 }
 
-fn assemble_operandless_instruction(data: &mut AssembledData, mnemonic: Mnemonic, label: Option<Rc<Label>>) {
+fn assemble_operandless_instruction(data: &mut AssembledData, mnemonic: Mnemonic, label: Option<Arc<Label>>) {
 	data.append(
 		match mnemonic {
 			Mnemonic::Brk => 0x0F,
@@ -177,7 +212,7 @@ fn assemble_operandless_instruction(data: &mut AssembledData, mnemonic: Mnemonic
 #[derive(Clone, Debug)]
 pub struct LabeledMemoryValue {
 	/// The label of this memory value.
-	pub label: Option<Rc<Label>>,
+	pub label: Option<Arc<Label>>,
 	/// The actual memory value, which might or might not be resolved.
 	pub value: MemoryValue,
 }
@@ -215,15 +250,15 @@ pub enum MemoryValue {
 	/// Resolved data.
 	Resolved(u8),
 	/// High byte of an (unresolved) label.
-	LabelHighByte(Rc<Label>),
+	LabelHighByte(Arc<Label>),
 	/// Low byte of an (unresolved) label.
-	LabelLowByte(Rc<Label>),
+	LabelLowByte(Arc<Label>),
 	/// An (unresolved) label. The resolved memory value will be the difference between this memory value's location and
 	/// the label's location. The second parameter is the negative offset that's added to the relative offset after
 	/// computation. This is necessary because the actual instruction that has this relative label stored doesn't start
 	/// at this memory address, but one or two bytes before. The PSW is still at the beginning of the instruction when
 	/// we jump, so the relative jump starts at that instruction, not at this memory address.
-	LabelRelative(Rc<Label>, u8),
+	LabelRelative(Arc<Label>, u8),
 }
 
 impl MemoryValue {
@@ -261,12 +296,14 @@ impl MemoryValue {
 }
 
 /// The assembled data, which consists of multiple sections.
-#[derive(Clone, Debug, Default)]
+#[derive(Debug)]
 pub struct AssembledData {
 	/// The data segments. These are checked later when being combined into one.
 	pub segments:              BTreeMap<MemoryAddress, Vec<LabeledMemoryValue>>,
 	/// The starting address of the current segment. This is the key to the segments map.
 	pub current_segment_start: Option<MemoryAddress>,
+	/// The source code behind this assembled data
+	pub source_code:           Arc<AssemblyCode>,
 }
 
 impl AssembledData {
@@ -274,16 +311,21 @@ impl AssembledData {
 	/// address 0 etc.
 	/// # Errors
 	/// If the segments contain overlapping data, errors are returned.
-	pub fn combine_segments(&self) -> Result<Vec<u8>, String> {
+	pub fn combine_segments(&self) -> Result<Vec<u8>, AssemblyError> {
 		let mut all_data = Vec::new();
 		// The iteration is sorted
 		for (starting_address, segment_data) in &self.segments {
 			if *starting_address < all_data.len() as i64 {
-				return Err(format!(
-					"Section at {:04x} starts after the end of the previous one, which is {:04x}",
-					starting_address,
-					all_data.len()
-				));
+				return Err(AssemblyError::SectionMismatch {
+					src:           Arc::new(AssemblyCode {
+						text: pretty_hex(&all_data),
+						name: self.source_code.name.clone(),
+					}),
+					// TODO: This location is wrong.
+					location:      (*starting_address as usize, 1).into(),
+					section_start: *starting_address,
+					section_end:   all_data.len() as MemoryAddress,
+				});
 			}
 			let resolved_segment_data =
 				segment_data.iter().map(LabeledMemoryValue::as_resolved_or_panic).collect::<Vec<u8>>();
@@ -297,8 +339,8 @@ impl AssembledData {
 	/// Creates new assembled data
 	#[must_use]
 	#[inline]
-	pub fn new() -> Self {
-		Self::default()
+	pub fn new(source_code: Arc<AssemblyCode>) -> Self {
+		Self { segments: BTreeMap::default(), current_segment_start: Option::default(), source_code }
 	}
 
 	/// Starts a new segment at the given memory address and set it as the current segment.
@@ -328,26 +370,26 @@ impl AssembledData {
 	/// Appends a little endian (LSB first) 16-bit value to the current segment. The given number is truncated to 16
 	/// bits.
 	#[inline]
-	pub fn append_16_bits(&mut self, value: MemoryAddress, label: Option<Rc<Label>>) {
+	pub fn append_16_bits(&mut self, value: MemoryAddress, label: Option<Arc<Label>>) {
 		self.append((value & 0xFF) as u8, label);
 		self.append(((value & 0xFF00) >> 8) as u8, None);
 	}
 
 	/// Appends an 8-bit value to the current segment. The given number is truncated to 8 bits.
 	#[inline]
-	pub fn append_8_bits(&mut self, value: MemoryAddress, label: Option<Rc<Label>>) {
+	pub fn append_8_bits(&mut self, value: MemoryAddress, label: Option<Arc<Label>>) {
 		self.append((value & 0xFF) as u8, label);
 	}
 
 	/// Appends an 8-bit value to the current segment.
 	#[inline]
-	pub fn append(&mut self, value: u8, label: Option<Rc<Label>>) {
+	pub fn append(&mut self, value: u8, label: Option<Arc<Label>>) {
 		self.current_segment_mut().push(LabeledMemoryValue { value: MemoryValue::Resolved(value), label });
 	}
 
 	/// Appends an unresolved value that points to a label to the current segment. The `use_high_byte` parameter decides
 	/// whether the high byte (true) or low byte (false) will be used in this memory address when the label is resolved.
-	pub fn append_unresolved(&mut self, value: Rc<Label>, use_high_byte: bool, label: Option<Rc<Label>>) {
+	pub fn append_unresolved(&mut self, value: Arc<Label>, use_high_byte: bool, label: Option<Arc<Label>>) {
 		self.current_segment_mut().push(LabeledMemoryValue {
 			value: if use_high_byte { MemoryValue::LabelHighByte(value) } else { MemoryValue::LabelLowByte(value) },
 			label,
@@ -356,7 +398,7 @@ impl AssembledData {
 
 	/// Appends an unresolved value that points to a label to the current segment. The label will be resolved to a
 	/// relative offset, like various branch instructions need it.
-	pub fn append_relative_unresolved(&mut self, value: Rc<Label>, negative_offset: u8) {
+	pub fn append_relative_unresolved(&mut self, value: Arc<Label>, negative_offset: u8) {
 		self
 			.current_segment_mut()
 			.push(LabeledMemoryValue { value: MemoryValue::LabelRelative(value, negative_offset), label: None });
@@ -364,7 +406,7 @@ impl AssembledData {
 
 	/// Appends an instruction with an 8-bit operand.
 	#[inline]
-	pub fn append_instruction_with_8_bit_operand(&mut self, opcode: u8, operand: Number, label: Option<Rc<Label>>) {
+	pub fn append_instruction_with_8_bit_operand(&mut self, opcode: u8, operand: Number, label: Option<Arc<Label>>) {
 		self.append(opcode, label);
 		match operand {
 			Number::Literal(value) => self.append_8_bits(value, None),
@@ -379,7 +421,7 @@ impl AssembledData {
 		opcode: u8,
 		first_operand: Number,
 		second_operand: Number,
-		label: Option<Rc<Label>>,
+		label: Option<Arc<Label>>,
 	) {
 		self.append_instruction_with_8_bit_operand(opcode, first_operand, label);
 		match second_operand {
@@ -390,7 +432,7 @@ impl AssembledData {
 
 	/// Appends an instruction with an 16-bit operand.
 	#[inline]
-	pub fn append_instruction_with_16_bit_operand(&mut self, opcode: u8, operand: Number, label: Option<Rc<Label>>) {
+	pub fn append_instruction_with_16_bit_operand(&mut self, opcode: u8, operand: Number, label: Option<Arc<Label>>) {
 		self.append(opcode, label);
 		match operand {
 			Number::Literal(value) => self.append_16_bits(value, None),
@@ -403,7 +445,7 @@ impl AssembledData {
 	}
 
 	/// Appends an instruction with an 8-bit operand. If this is a label, it's stored as a relative unresolved label.
-	pub fn append_instruction_with_relative_label(&mut self, opcode: u8, operand: Number, label: Option<Rc<Label>>) {
+	pub fn append_instruction_with_relative_label(&mut self, opcode: u8, operand: Number, label: Option<Arc<Label>>) {
 		self.append(opcode, label);
 		match operand {
 			Number::Literal(value) => self.append_8_bits(value, None),
@@ -428,7 +470,7 @@ impl AssembledData {
 				let memory_address = segment_start + offset as i64;
 				if datum.label.is_some_and(|existing_label| !existing_label.is_resolved()) {
 					// Modifying Rc-contained data is dangerous in general, but safe for labels if we don't modify the name.
-					unsafe { Rc::get_mut_unchecked(datum.label.as_mut().unwrap()) }.resolve_to(memory_address);
+					unsafe { Arc::get_mut_unchecked(datum.label.as_mut().unwrap()) }.resolve_to(memory_address);
 					had_modifications |= true;
 				}
 				had_modifications |= datum.try_resolve(memory_address);

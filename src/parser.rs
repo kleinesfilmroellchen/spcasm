@@ -1,10 +1,16 @@
 //! Parsing and AST.
+#![allow(clippy::use_self)]
 
-use std::rc::Rc;
+use std::fmt::{Display, Error, Formatter, UpperHex};
 use std::result::Result;
+use std::sync::Arc;
 
+use miette::{SourceOffset, SourceSpan};
+use serde::Serialize;
+use serde_variant::to_variant_name;
 use spcasm_derive::Parse;
 
+use crate::error::{AssemblyCode, AssemblyError};
 use crate::lexer::{Register, Token};
 /// Types for representing data and memory addresses (this is overkill).
 pub type MemoryAddress = i64;
@@ -13,11 +19,10 @@ pub type MemoryAddress = i64;
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct Instruction {
 	/// Label of this instruction, if any.
-	pub label:          Option<Rc<Label>>,
+	pub label:          Option<Arc<Label>>,
 	/// Opcode of this instruction (slightly misnamed)
 	pub opcode:         Opcode,
-	/// Memory location of the instruction, if any.
-	pub location:       Option<MemoryAddress>,
+	pub(crate) span:    SourceSpan,
 	/// Only used for testing purposes: this is the data that the instruction should assemble to according to the test
 	/// file.
 	#[cfg(test)]
@@ -66,12 +71,12 @@ where
 	/// Parse this enum from the string representation.
 	/// # Errors
 	/// If the string doesn't correspond with any enum variant.
-	fn parse(value: &str) -> Result<Self, String>;
+	fn parse(value: &str, location: SourceSpan, src: Arc<AssemblyCode>) -> Result<Self, AssemblyError>;
 }
 
 /// Instruction mnemonics of the SPC700.
-#[derive(Clone, Debug, Copy, Eq, PartialEq, Parse)]
-#[allow(missing_docs)]
+#[allow(missing_docs, clippy::use_self)]
+#[derive(Clone, Debug, Copy, Eq, PartialEq, Parse, Serialize)]
 pub enum Mnemonic {
 	Mov,
 	Adc,
@@ -141,13 +146,19 @@ pub enum Mnemonic {
 	Stop,
 }
 
+impl Display for Mnemonic {
+	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> Result<(), std::fmt::Error> {
+		write!(f, "{}", to_variant_name(self).unwrap().to_uppercase())
+	}
+}
+
 /// Any number, either a literal or a label that's resolved to a number later.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum Number {
 	/// A literal number.
 	Literal(MemoryAddress),
 	/// A label that will resolve to a number later.
-	Label(Rc<Label>),
+	Label(Arc<Label>),
 	// TODO: support assembly-time calculations
 }
 
@@ -163,6 +174,24 @@ impl Number {
 			Self::Label(label) => match **label {
 				Label { location: Some(value), .. } => value,
 				_ => panic!("Unresolved label {:?}", label),
+			},
+		}
+	}
+}
+
+impl From<MemoryAddress> for Number {
+	fn from(address: MemoryAddress) -> Self {
+		Self::Literal(address)
+	}
+}
+
+impl UpperHex for Number {
+	fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), Error> {
+		match self {
+			Self::Literal(numeric_address) => write!(f, "{:X}", numeric_address),
+			Self::Label(ref unresolved_label) => match &**unresolved_label {
+				Label { location: Some(numeric_address), .. } => write!(f, "{:X}", numeric_address),
+				Label { name, .. } => write!(f, "<{}>", name),
 			},
 		}
 	}
@@ -200,18 +229,40 @@ pub enum AddressingMode {
 	Register(Register),
 }
 
+impl Display for AddressingMode {
+	fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), Error> {
+		write!(f, "{}", match self {
+			Self::Immediate(number) => format!("#${:02X}", number),
+			Self::IndirectX => "(X)".to_owned(),
+			Self::IndirectY => "(Y)".to_owned(),
+			Self::IndirectXAutoIncrement => "(X)+".to_owned(),
+			Self::DirectPage(address) => format!("${:02X}", address),
+			Self::DirectPageXIndexed(address) => format!("${:02X}+X", address),
+			Self::DirectPageYIndexed(address) => format!("${:02X}+Y", address),
+			Self::DirectPageXIndexedIndirect(address) => format!("(${:02X}+X)", address),
+			Self::DirectPageIndirectYIndexed(address) => format!("(${:02X})+Y", address),
+			Self::Address(address) => format!("${:04X}", address),
+			Self::XIndexed(address) => format!("${:04X}+X", address),
+			Self::YIndexed(address) => format!("${:04X}+Y", address),
+			Self::Register(register) => format!("{}", register),
+		})
+	}
+}
+
 /// Environment object for parsing. Holds the list of labels.
-#[derive(Clone, Debug)]
+#[derive(Debug)]
 pub struct Environment {
 	/// The list of labels.
-	pub labels: Vec<Rc<Label>>,
+	pub labels:      Vec<Arc<Label>>,
+	/// The source code of the assembly code.
+	pub source_code: Arc<AssemblyCode>,
 }
 
 impl Environment {
 	/// Creates an empty environment.
 	#[must_use]
-	pub const fn new() -> Self {
-		Self { labels: Vec::new() }
+	pub const fn new(source_code: Arc<AssemblyCode>) -> Self {
+		Self { labels: Vec::new(), source_code }
 	}
 
 	/// Parses the token stream into a list of instructions while keeping track of labels internally. Note that no label
@@ -219,40 +270,55 @@ impl Environment {
 	///
 	/// # Errors
 	/// Any parser error is returned as a string.
-	pub fn parse(&mut self, tokens: &[Token]) -> Result<Vec<Instruction>, String> {
-		let mut tokens = tokens.iter().peekable();
-
+	/// # Panics
+	/// All the panics are programming bugs.
+	pub fn parse(&mut self, tokens: &[Token]) -> Result<Vec<Instruction>, AssemblyError> {
+		let mut tokens: std::iter::Peekable<std::slice::Iter<Token>> = tokens.iter().peekable();
 		let mut instructions = Vec::new();
-
 		let mut current_label = None;
 
 		while let Some(token) = tokens.next().cloned() {
-			match token {
-				Token::Identifier(identifier) => {
-					if Self::is_valid_mnemonic(&identifier) {
+			match &token {
+				Token::Identifier(identifier, location) => {
+					let location_span = SourceOffset::from(location.offset());
+					if Self::is_valid_mnemonic(identifier) {
 						let mut tokens_for_instruction: Vec<Token> = Vec::new();
-						while tokens.peek().and_then(|token| token.expect(Token::Newline).err()).is_some() {
-							tokens_for_instruction.push(tokens.next().cloned().ok_or("Expected instruction")?);
+						while tokens
+							.peek()
+							.and_then(|token| token.expect(Token::Newline(location_span), self.source_code.clone()).err())
+							.is_some()
+						{
+							tokens_for_instruction.push(tokens.next().unwrap().clone());
 						}
-						instructions.push(self.create_instruction(
-							&identifier.to_lowercase(),
-							&tokens_for_instruction,
-							current_label,
-						)?);
+						instructions.push(self.create_instruction(&token, &tokens_for_instruction, current_label)?);
 						current_label = None;
 						// is Ok() if there's no further token due to EOF
-						tokens.next().map(|token| token.expect(Token::Newline)).transpose()?;
-					} else {
-						current_label = Some(self.get_label(&identifier));
 						tokens
 							.next()
-							.map(|token| token.expect(Token::Colon))
-							.ok_or_else(|| "Expected ':'".to_owned())
+							.map(|token| token.expect(Token::Newline(location_span), self.source_code.clone()))
+							.transpose()?;
+					} else {
+						current_label = Some(self.get_label(identifier));
+						tokens
+							.next()
+							.map(|token| token.expect(Token::Colon(location_span), self.source_code.clone()))
+							.ok_or_else(|| AssemblyError::ExpectedToken {
+								expected: Token::Colon(location_span),
+								actual:   Token::Newline(location_span),
+								src:      self.source_code.clone(),
+								location: *location,
+							})
 							.flatten()?;
 					}
 				},
-				Token::Newline => {},
-				_ => return Err(format!("Unexpected token {:?}", token)),
+				Token::Newline(..) => {},
+				actual =>
+					return Err(AssemblyError::ExpectedToken {
+						expected: Token::Identifier("identifier".to_owned(), token.source_span()),
+						actual:   actual.clone(),
+						location: token.source_span(),
+						src:      self.source_code.clone(),
+					}),
 			}
 		}
 
@@ -270,13 +336,17 @@ impl Environment {
 		.contains(&identifier.to_lowercase().as_str())
 	}
 
-	fn create_instruction(
+	fn create_instruction<'a>(
 		&mut self,
-		mnemonic: &'_ str,
-		tokens: &[Token],
-		label: Option<Rc<Label>>,
-	) -> Result<Instruction, String> {
-		let mnemonic = Mnemonic::parse(mnemonic)?;
+		identifier: &'a Token,
+		tokens: &'a [Token],
+		label: Option<Arc<Label>>,
+	) -> Result<Instruction, AssemblyError> {
+		let identifier_name = match identifier {
+			Token::Identifier(identifier, ..) => identifier.to_lowercase(),
+			_ => unreachable!(),
+		};
+		let mnemonic = Mnemonic::parse(&identifier_name, identifier.source_span(), self.source_code.clone())?;
 		println!("{:?} {:?}", mnemonic, tokens);
 		match mnemonic {
 			Mnemonic::Mov
@@ -294,7 +364,7 @@ impl Environment {
 			| Mnemonic::Bbs
 			| Mnemonic::Bbc
 			| Mnemonic::Cbne
-			| Mnemonic::Dbnz => self.make_two_operand_instruction(mnemonic, tokens, label),
+			| Mnemonic::Dbnz => self.make_two_operand_instruction(mnemonic, tokens, label, identifier.source_span()),
 			Mnemonic::Inc
 			| Mnemonic::Dec
 			| Mnemonic::Asl
@@ -317,7 +387,7 @@ impl Environment {
 			| Mnemonic::Bpl
 			| Mnemonic::Jmp
 			| Mnemonic::Push
-			| Mnemonic::Pop => self.make_single_operand_instruction(mnemonic, tokens, label),
+			| Mnemonic::Pop => self.make_single_operand_instruction(mnemonic, tokens, label, identifier.source_span()),
 			Mnemonic::Brk
 			| Mnemonic::Ret
 			| Mnemonic::Ret1
@@ -331,7 +401,7 @@ impl Environment {
 			| Mnemonic::Di
 			| Mnemonic::Nop
 			| Mnemonic::Sleep
-			| Mnemonic::Stop => Self::make_zero_operand_instruction(mnemonic, tokens, label),
+			| Mnemonic::Stop => self.make_zero_operand_instruction(mnemonic, tokens, label, identifier.source_span()),
 			_ => unimplemented!("Handle other instructions"),
 		}
 	}
@@ -340,26 +410,44 @@ impl Environment {
 		&mut self,
 		mnemonic: Mnemonic,
 		tokens: &[Token],
-		label: Option<Rc<Label>>,
-	) -> Result<Instruction, String> {
-		let mut addressing_modes = tokens.split(|token| token.expect(Token::Comma).is_ok());
-		let first_addressing_mode =
-			self.parse_addressing_mode(addressing_modes.next().ok_or("Expected addressing mode before ','")?)?;
-		let second_addressing_mode =
-			self.parse_addressing_mode(addressing_modes.next().ok_or("Expected addressing mode after ','")?)?;
+		label: Option<Arc<Label>>,
+		mnemonic_token_location: SourceSpan,
+	) -> Result<Instruction, AssemblyError> {
+		let source_code_copy = self.source_code.clone();
+		let mut addressing_modes = tokens.split(|token| {
+			token.expect(Token::Comma(SourceOffset::from(token.source_span().offset())), source_code_copy.clone()).is_ok()
+		});
+		let first_addressing_mode = self.parse_addressing_mode(addressing_modes.next().ok_or_else(|| {
+			AssemblyError::UnexpectedEndOfTokens {
+				expected: "addressing mode".into(),
+				location: mnemonic_token_location,
+				src:      self.source_code.clone(),
+			}
+		})?)?;
+		let second_addressing_mode = self.parse_addressing_mode(addressing_modes.next().ok_or_else(|| {
+			AssemblyError::UnexpectedEndOfTokens {
+				expected: "addressing mode".into(),
+				location: mnemonic_token_location,
+				src:      self.source_code.clone(),
+			}
+		})?)?;
 		#[cfg(test)]
 		let expected_value = tokens
 			.iter()
 			.find_map(|token| match token {
-				Token::TestComment(expected_value) => Some(expected_value),
+				Token::TestComment(expected_value, ..) => Some(expected_value),
 				_ => None,
 			})
-			.ok_or("Test assembly doesn't have an expected output comment")?
+			.ok_or(AssemblyError::MissingTestResult {
+				location: mnemonic_token_location,
+				src:      self.source_code.clone(),
+			})?
 			.clone();
+		let final_span = tokens.last().unwrap().source_span();
 		let instruction = Instruction {
 			opcode: Opcode::make_two_operand_instruction(mnemonic, first_addressing_mode, second_addressing_mode),
 			label,
-			location: None,
+			span: (tokens.first().unwrap().source_span().offset(), final_span.offset() + final_span.len()).into(),
 			#[cfg(test)]
 			expected_value,
 		};
@@ -367,52 +455,63 @@ impl Environment {
 		Ok(instruction)
 	}
 
-	fn make_single_operand_instruction(
-		&mut self,
+	fn make_single_operand_instruction<'a>(
+		&'a mut self,
 		mnemonic: Mnemonic,
-		tokens: &[Token],
-		label: Option<Rc<Label>>,
-	) -> Result<Instruction, String> {
+		tokens: &'a [Token],
+		label: Option<Arc<Label>>,
+		mnemonic_token_location: SourceSpan,
+	) -> Result<Instruction, AssemblyError> {
 		let unparsed_addressing_mode = tokens
 			.split(|token| match token {
-				Token::Newline => true,
+				Token::Newline(..) => true,
 				#[cfg(test)]
-				Token::TestComment(_) => true,
+				Token::TestComment(..) => true,
 				_ => false,
 			})
 			.next()
-			.ok_or("Expected an addressing mode")?;
+			.ok_or_else(|| AssemblyError::UnexpectedEndOfTokens {
+				expected: "addressing mode".into(),
+				location: mnemonic_token_location,
+				src:      self.source_code.clone(),
+			})?;
 		let addressing_mode = self.parse_addressing_mode(unparsed_addressing_mode)?;
 		#[cfg(test)]
 		let expected_value = tokens
 			.iter()
 			.find_map(|token| match token {
-				Token::TestComment(expected_value) => Some(expected_value),
+				Token::TestComment(expected_value, ..) => Some(expected_value),
 				_ => None,
 			})
-			.ok_or("Test assembly doesn't have an expected output comment")?
+			.ok_or(AssemblyError::MissingTestResult {
+				location: mnemonic_token_location,
+				src:      self.source_code.clone(),
+			})?
 			.clone();
+		let final_span = tokens.last().unwrap().source_span();
 		let instruction = Instruction {
 			opcode: Opcode::make_single_operand_instruction(mnemonic, addressing_mode),
 			label,
-			location: None,
+			span: (tokens.first().unwrap().source_span().offset(), final_span.offset() + final_span.len()).into(),
 			#[cfg(test)]
 			expected_value,
 		};
 		Ok(instruction)
 	}
 
-	fn make_zero_operand_instruction(
+	fn make_zero_operand_instruction<'a>(
+		&'a self,
 		mnemonic: Mnemonic,
-		tokens: &[Token],
-		label: Option<Rc<Label>>,
-	) -> Result<Instruction, String> {
+		tokens: &'a [Token],
+		label: Option<Arc<Label>>,
+		mnemonic_token_location: SourceSpan,
+	) -> Result<Instruction, AssemblyError> {
 		if tokens
 			.iter()
 			.filter(|token| match token {
-				Token::Newline => false,
+				Token::Newline(..) => false,
 				#[cfg(test)]
-				Token::TestComment(_) => false,
+				Token::TestComment(..) => false,
 				_ => true,
 			})
 			.count() == 0
@@ -421,121 +520,181 @@ impl Environment {
 			let expected_value = tokens
 				.iter()
 				.find_map(|token| match token {
-					Token::TestComment(expected_value) => Some(expected_value),
+					Token::TestComment(expected_value, ..) => Some(expected_value),
 					_ => None,
 				})
-				.ok_or("Test assembly doesn't have an expected output comment")?
+				.ok_or(AssemblyError::MissingTestResult {
+					location: mnemonic_token_location,
+					src:      self.source_code.clone(),
+				})?
 				.clone();
 			let instruction = Instruction {
 				opcode: Opcode { mnemonic, first_operand: None, second_operand: None },
 				label,
-				location: None,
+				span: mnemonic_token_location,
 				#[cfg(test)]
 				expected_value,
 			};
 			Ok(instruction)
 		} else {
-			Err(format!("Didn't expect an addressing mode for mnemonic {:?}", mnemonic))
+			Err(AssemblyError::OperandNotAllowed {
+				mnemonic,
+				location: mnemonic_token_location,
+				src: self.source_code.clone(),
+			})
 		}
 	}
 
-	fn parse_addressing_mode(&mut self, tokens: &[Token]) -> Result<AddressingMode, String> {
-		let mut tokens = tokens.iter();
-		match tokens.next().ok_or("Expected addressing mode")? {
-			Token::Register(name) => Ok(AddressingMode::Register(*name)),
-			Token::Hash => Ok(AddressingMode::Immediate(
-				self.create_number(tokens.next().ok_or("Single '#' is not a valid addressing mode")?)?,
-			)),
-			literal_token @ (Token::Number(_) | Token::Identifier(_)) => {
-				let literal = self.create_number(literal_token)?;
+	#[allow(clippy::too_many_lines)]
+	fn parse_addressing_mode(&mut self, token_span: &[Token]) -> Result<AddressingMode, AssemblyError> {
+		let mut tokens: std::slice::Iter<Token> = token_span.iter();
+
+		let source_code_copy = self.source_code.clone();
+		let missing_token_error = |expected| {
+			|| AssemblyError::UnexpectedEndOfTokens {
+				expected,
+				location: token_span.last().map_or((0, 0).into(), Token::source_span),
+				src: source_code_copy.clone(),
+			}
+		};
+
+		match tokens.next().cloned().ok_or_else(missing_token_error("addressing mode".into()))? {
+			Token::Register(name, ..) => Ok(AddressingMode::Register(name)),
+			Token::Hash(location) => Ok(AddressingMode::Immediate(self.create_number(tokens.next().ok_or(
+				AssemblyError::SingleHashInvalid { location: (location).into(), src: self.source_code.clone() },
+			)?)?)),
+			literal_token @ (Token::Number(..) | Token::Identifier(..)) => {
+				let token_start = SourceOffset::from(literal_token.source_span().offset());
+				let literal = self.create_number(&literal_token)?;
 				let is_direct_page = match literal {
 					Number::Literal(address) => address <= 0xFF,
 					Number::Label(_) => false,
 				};
 				// Indirect addressing with '+X' or '+Y'
-				Ok(if tokens.next().and_then(|token| token.expect(Token::Plus).ok()).is_some() {
-					match tokens.next().ok_or("Expected indexing register")? {
-						Token::Register(Register::X) =>
-							if is_direct_page {
-								AddressingMode::DirectPageXIndexed(literal)
-							} else {
-								AddressingMode::XIndexed(literal)
-							},
-						Token::Register(Register::Y) =>
-							if is_direct_page {
-								AddressingMode::DirectPageYIndexed(literal)
-							} else {
-								AddressingMode::YIndexed(literal)
-							},
-						reg => return Err(format!("Illegal token {:?} for indexing", reg)),
-					}
-				} else if is_direct_page {
-					AddressingMode::DirectPage(literal)
-				} else {
-					AddressingMode::Address(literal)
-				})
+				Ok(
+					if let Some(previous_token) =
+						tokens.next().and_then(|token| token.expect(Token::Plus(token_start), self.source_code.clone()).ok())
+					{
+						match tokens.next().ok_or_else(missing_token_error(
+							Token::Register(Register::X, previous_token.source_span()).into(),
+						))? {
+							Token::Register(Register::X, ..) =>
+								if is_direct_page {
+									AddressingMode::DirectPageXIndexed(literal)
+								} else {
+									AddressingMode::XIndexed(literal)
+								},
+							Token::Register(Register::Y, ..) =>
+								if is_direct_page {
+									AddressingMode::DirectPageYIndexed(literal)
+								} else {
+									AddressingMode::YIndexed(literal)
+								},
+							reg =>
+								return Err(AssemblyError::InvalidIndexingToken {
+									token:    reg.clone(),
+									location: reg.source_span(),
+									src:      self.source_code.clone(),
+								}),
+						}
+					} else if is_direct_page {
+						AddressingMode::DirectPage(literal)
+					} else {
+						AddressingMode::Address(literal)
+					},
+				)
 			},
-			Token::OpenParenthesis => match tokens.next().ok_or("Expected indirect argument inside brackets")? {
-				Token::Register(name) => {
-					tokens.next().ok_or("Expected ')'")?.expect(Token::CloseParenthesis)?;
-					Ok(match name {
-						Register::X => {
-							if tokens.next().and_then(|token| token.expect(Token::Plus).ok()).is_some() {
-								// '+' after closing bracket
-								AddressingMode::IndirectXAutoIncrement
-							} else {
-								AddressingMode::IndirectX
-							}
-						},
-						Register::Y => AddressingMode::IndirectY,
-						_ => return Err(format!("Invalid register {:?} for indirect addressing", name)),
-					})
+			Token::OpenParenthesis(location) =>
+				match tokens.next().ok_or_else(missing_token_error("indirect argument inside brackets".into()))? {
+					register_token @ Token::Register(name, ..) => {
+						tokens
+							.next()
+							.ok_or_else(missing_token_error(Token::CloseParenthesis(location).into()))?
+							.expect(Token::CloseParenthesis(location), self.source_code.clone())?;
+						Ok(match name {
+							Register::X => {
+								if tokens
+									.next()
+									.and_then(|token| token.expect(Token::Plus(location), self.source_code.clone()).ok())
+									.is_some()
+								{
+									// '+' after closing bracket
+									AddressingMode::IndirectXAutoIncrement
+								} else {
+									AddressingMode::IndirectX
+								}
+							},
+							Register::Y => AddressingMode::IndirectY,
+							_ =>
+								return Err(AssemblyError::InvalidIndexingToken {
+									token:    register_token.clone(),
+									location: register_token.source_span(),
+									src:      self.source_code.clone(),
+								}),
+						})
+					},
+					literal_token @ (Token::Number(..) | Token::Identifier(..)) => {
+						let literal = self.create_number(literal_token)?;
+						match tokens.next().ok_or_else(missing_token_error("'+' or ')'".into()))? {
+							Token::Plus(second_location) => {
+								tokens
+									.next()
+									.and_then(|token| match token {
+										Token::Register(Register::X, ..) => Some(()),
+										_ => None,
+									})
+									.ok_or_else(missing_token_error(
+										Token::Register(Register::X, (location, *second_location).into()).into(),
+									))?;
+								Ok(AddressingMode::DirectPageXIndexedIndirect(literal))
+							},
+							Token::CloseParenthesis(second_location) => {
+								let span = (location, *second_location).into();
+								tokens
+									.next()
+									.ok_or_else(missing_token_error(Token::Plus(location).into()))?
+									.expect(Token::Plus(location), self.source_code.clone())?;
+								tokens
+									.next()
+									.ok_or_else(missing_token_error(Token::Register(Register::Y, span).into()))?
+									.expect(Token::Register(Register::Y, span), self.source_code.clone())
+									.map(|_| AddressingMode::DirectPageIndirectYIndexed(literal))
+							},
+							wrong_token => Err(AssemblyError::ExpectedToken {
+								expected: Token::CloseParenthesis(wrong_token.source_span().offset().into()),
+								actual:   wrong_token.clone(),
+								location: wrong_token.source_span(),
+								src:      self.source_code.clone(),
+							}),
+						}
+					},
+					_ => unimplemented!(),
 				},
-				literal_token @ (Token::Number(_) | Token::Identifier(_)) => {
-					let literal = self.create_number(literal_token)?;
-					match tokens.next().ok_or("Expected '+' or ')'")? {
-						Token::Plus => {
-							tokens
-								.next()
-								.and_then(|token| match token {
-									Token::Register(Register::X) => Some(()),
-									_ => None,
-								})
-								.ok_or("Expected register X")?;
-							Ok(AddressingMode::DirectPageXIndexedIndirect(literal))
-						},
-						Token::CloseParenthesis => {
-							tokens.next().ok_or("Expected '+'")?.expect(Token::Plus)?;
-							match tokens.next().ok_or("Expected 'Y'")? {
-								Token::Register(Register::Y) => Ok(AddressingMode::DirectPageIndirectYIndexed(literal)),
-								_ => Err("Expected 'Y'".to_owned()),
-							}
-						},
-						_ => Err("Expected either (dp+X) or (dp)+Y indexing".to_owned()),
-					}
-				},
-				_ => unimplemented!(),
-			},
 			_ => unimplemented!(),
 		}
 	}
 
-	fn get_label(&mut self, name: &'_ str) -> Rc<Label> {
+	fn get_label(&mut self, name: &'_ str) -> Arc<Label> {
 		match self.labels.iter().find(|label| label.name == name) {
 			Some(matching_label) => matching_label.clone(),
 			None => {
-				let new_label = Rc::new(Label { name: name.to_owned(), location: None });
+				let new_label = Arc::new(Label { name: name.to_owned(), location: None });
 				self.labels.push(new_label.clone());
 				new_label
 			},
 		}
 	}
 
-	fn create_number(&mut self, token: &Token) -> Result<Number, String> {
+	fn create_number<'a>(&'a mut self, token: &'a Token) -> Result<Number, AssemblyError> {
 		match token {
-			Token::Number(number) => Ok(Number::Literal(*number)),
-			Token::Identifier(label) => Ok(Number::Label(self.get_label(label))),
-			_ => Err("Expected number".to_string()),
+			Token::Number(number, ..) => Ok(Number::Literal(*number)),
+			Token::Identifier(label, ..) => Ok(Number::Label(self.get_label(label))),
+			_ => Err(AssemblyError::ExpectedToken {
+				expected: Token::Number(0, token.source_span()),
+				actual:   token.clone(),
+				location: token.source_span(),
+				src:      self.source_code.clone(),
+			}),
 		}
 	}
 }

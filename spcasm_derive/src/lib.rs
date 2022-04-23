@@ -11,7 +11,7 @@ pub fn parse_macro_derive(input: TokenStream) -> TokenStream {
 	match type_.data {
 		syn::Data::Enum(enum_) => {
 			let name = type_.ident;
-			let name_string = format!("\"{}\"", name);
+			let name_string = format!("{}", name).to_lowercase();
 			let variant_identifiers_and_strings = enum_
 				.variants
 				.iter()
@@ -30,10 +30,10 @@ pub fn parse_macro_derive(input: TokenStream) -> TokenStream {
 				#[automatically_derived]
 				#[allow(missing_docs)]
 				impl crate::parser::Parse for #name {
-					fn parse(value: &str) -> Result<Self, String> {
+					fn parse(value: &str, location: SourceSpan, src: Arc<AssemblyCode>) -> Result<Self, AssemblyError> {
 						Ok(match value {
 							#( #variant_strings => Self::#variant_identifiers, )*
-							_ => return Err(format!("{:?} is not valid for {}", value, #name_string)),
+							_ => return Err(AssemblyError::InvalidConstant { constant: value.to_owned(), typename: #name_string.to_owned(), location, src }),
 						})
 					}
 				}

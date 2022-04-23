@@ -5,4 +5,8 @@ edition = "2021"
 license = "BSD 2-clause"
 
 [dependencies]
+miette = { version = "4.6.0", features = ["fancy"] }
+serde = { version = "1.0.136", features = ["derive"] }
+serde_variant = "0.1.1"
 spcasm_derive = { path = "spcasm_derive" }
+thiserror = "1.0.30"

@@ -40,24 +40,17 @@ fn pretty_hex(bytes: &[u8]) -> String {
 
 fn main() -> miette::Result<()> {
 	miette::set_hook(Box::new(|_| {
-		Box::new(
-			miette::MietteHandlerOpts::new().unicode(true).context_lines(2).tab_width(4).build(),
-		)
+		Box::new(miette::MietteHandlerOpts::new().unicode(true).context_lines(2).tab_width(4).build())
 	}))?;
 
 	if args().nth(1).expect("No file name given") == "--help" {
 		eprintln!("Usage: spcasm [--help] INFILE OUTFILE");
 		std::process::exit(0);
 	}
-	let filename = unsafe { args().nth(1).unwrap_unchecked() };
+	let file_name = unsafe { args().nth(1).unwrap_unchecked() };
 	let output = args().nth(2).expect("No output file given");
 
-	let contents = read_to_string(filename.clone()).expect("Couldn't read file contents");
-	let lexed = lexer::lex(&contents, filename.clone())?;
-	let source_code = Arc::new(AssemblyCode { name: filename, text: contents });
-	let mut env = parser::Environment::new(source_code);
-	let parsed = env.parse(&lexed)?;
-	let assembled = assembler::assemble(&env, parsed)?;
+	let (_, assembled) = run_assembler(file_name)?;
 	println!("{}", pretty_hex(&assembled));
 	let mut outfile =
 		File::options().create(true).truncate(true).write(true).open(output).expect("Couldn't open output file");
@@ -65,29 +58,28 @@ fn main() -> miette::Result<()> {
 	Ok(())
 }
 
+fn run_assembler(file_name: String) -> miette::Result<(Vec<instruction::Instruction>, Vec<u8>)> {
+	let contents = read_to_string(file_name.clone()).expect("Couldn't read file contents");
+	let source_code = Arc::new(AssemblyCode { name: file_name, text: contents });
+	let lexed = lexer::lex(source_code.clone())?;
+	let mut env = parser::Environment::new(source_code);
+	let parsed = env.parse(&lexed)?;
+	Ok((parsed.clone(), assembler::assemble(&env, parsed)?))
+}
+
 #[cfg(test)]
 mod test {
 	extern crate test;
 	use test::Bencher;
 
-	use crate::{assembler, lexer, parser};
 	#[bench]
 	fn test_all_opcodes(bencher: &mut Bencher) {
 		use std::cmp::min;
-		use std::fs::read_to_string;
-		use std::sync::Arc;
 
-		use crate::error::AssemblyCode;
 		use crate::pretty_hex;
 
 		bencher.iter(|| {
-			let filename = "examples/test.spcasm";
-			let testfile = read_to_string(filename).unwrap();
-			let lexed = lexer::lex(&testfile, filename.to_owned()).unwrap();
-			let source_code = Arc::new(AssemblyCode { name: filename.to_owned(), text: testfile });
-			let mut environment = parser::Environment::new(source_code);
-			let parsed = environment.parse(&lexed).unwrap();
-			let assembled = assembler::assemble(&environment, parsed.clone()).unwrap();
+			let (parsed, assembled) = super::run_assembler("examples/test.spcasm".to_owned()).unwrap();
 			let expected_binary = assemble_expected_binary(parsed);
 			for (byte, (expected, actual)) in expected_binary.iter().zip(assembled.iter()).enumerate() {
 				assert_eq!(
@@ -104,6 +96,7 @@ mod test {
 		});
 	}
 
+	/// Assembles the contents of the expected value comments, which is what the file should assemble to.
 	fn assemble_expected_binary(instructions: Vec<crate::instruction::Instruction>) -> Vec<u8> {
 		instructions.into_iter().flat_map(|instruction| instruction.expected_value).collect()
 	}

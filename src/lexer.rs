@@ -13,9 +13,8 @@ use crate::{Register, Token};
 /// # Errors
 /// Errors are returned for any syntactical error at the token level, e.g. invalid number literals.
 #[allow(clippy::missing_panics_doc)]
-pub fn lex(program: &str, name: String) -> Result<Vec<Token>, AssemblyError> {
-	let source_code = Arc::new(AssemblyCode { name, text: program.to_owned() });
-	let mut chars = program.chars().peekable();
+pub fn lex(source_code: Arc<AssemblyCode>) -> Result<Vec<Token>, AssemblyError> {
+	let mut chars = source_code.text.chars().peekable();
 	let mut index = 0;
 	let mut tokens = Vec::new();
 

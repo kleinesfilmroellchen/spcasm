@@ -206,8 +206,8 @@ pub enum AssemblyError {
 	//#endregion
 	//#region Warnings and advice
 	#[error(
-		"The value {value:02X} is being used as a {size}-bit operand here, but it is larger than this. The extra upper bits \
-		 are truncated."
+		"The value {value:02X} is being used as a {size}-bit operand here, but it is larger than this. The extra upper \
+		 bits are truncated."
 	)]
 	#[diagnostic(code(spcasm::value_too_large), help("Remove these upper bits"), severity(Warning))]
 	ValueTooLarge {
@@ -217,7 +217,27 @@ pub enum AssemblyError {
 		location: SourceSpan,
 		#[source_code]
 		src:      Arc<AssemblyCode>,
-	}, //#endregion
+	},
+
+	#[error("This label \"{name}\" has an 8-bit value, did you want to use it in direct page addressing?")]
+	#[diagnostic(
+		code(spcasm::non_direct_page_label),
+		help(
+			"Due to machine code positioning complexities, explicit labels are always resolved to a full address if \
+			 applicable. In the future, there will be a way of explicitly specifying labels as being in the direct page, \
+			 so that they resolve to a direct page addressing mode."
+		),
+		severity(Warning),
+		url("https://github.com/kleinesfilmroellchen/spcasm/issues/1")
+	)]
+	NonDirectPageLabel {
+		name:     String,
+		#[label("Might point at a direct page address")]
+		location: SourceSpan,
+		#[source_code]
+		src:      Arc<AssemblyCode>,
+	},
+	//#endregion
 }
 
 #[derive(Clone, Debug)]

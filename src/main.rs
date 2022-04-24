@@ -41,7 +41,7 @@ fn pretty_hex(bytes: &[u8]) -> String {
 fn main() -> miette::Result<()> {
 	miette::set_hook(Box::new(|_| {
 		Box::new(
-			miette::MietteHandlerOpts::new().terminal_links(true).unicode(true).context_lines(2).tab_width(4).build(),
+			miette::MietteHandlerOpts::new().unicode(true).context_lines(2).tab_width(4).build(),
 		)
 	}))?;
 

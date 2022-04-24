@@ -33,9 +33,13 @@ pub struct Instruction {
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct Label {
 	/// User-given label name.
-	pub name:     String,
+	pub name:            String,
 	/// Resolved memory location of the label, if any.
-	pub location: Option<MemoryAddress>,
+	pub location:        Option<MemoryAddress>,
+	/// Source code location where this label is defined.
+	pub span:            SourceSpan,
+	/// Whether anyone references this label as an address.
+	pub used_as_address: bool,
 }
 
 impl Label {
@@ -46,7 +50,17 @@ impl Label {
 	}
 
 	/// Resolves the label to the given memory location.
-	pub fn resolve_to(&mut self, location: MemoryAddress) {
+	pub fn resolve_to(&mut self, location: MemoryAddress, source_code: Arc<AssemblyCode>) {
+		if location <= 0xFF && self.used_as_address {
+			println!(
+				"{:?}",
+				miette::Report::new(AssemblyError::NonDirectPageLabel {
+					name:     self.name.clone(),
+					location: self.span,
+					src:      source_code,
+				})
+			);
+		}
 		self.location = Some(location);
 	}
 }

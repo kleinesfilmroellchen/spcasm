@@ -69,7 +69,7 @@ impl Environment {
 							.map(|token| token.expect(Token::Newline(location_span), self.source_code.clone()))
 							.transpose()?;
 					} else {
-						current_label = Some(self.get_label(identifier));
+						current_label = Some(self.get_label(identifier, token.source_span(), false));
 						tokens
 							.next()
 							.map(|token| token.expect(Token::Colon(location_span), self.source_code.clone()))
@@ -337,12 +337,16 @@ impl Environment {
 
 		match tokens.next().cloned().ok_or_else(missing_token_error("addressing mode".into()))? {
 			Token::Register(name, ..) => Ok(AddressingMode::Register(name)),
-			Token::Hash(location) => Ok(AddressingMode::Immediate(self.create_number(tokens.next().ok_or(
-				AssemblyError::SingleHashInvalid { location: (location).into(), src: self.source_code.clone() },
-			)?)?)),
+			Token::Hash(location) => Ok(AddressingMode::Immediate(self.create_number(
+				tokens.next().ok_or(AssemblyError::SingleHashInvalid {
+					location: (location).into(),
+					src:      self.source_code.clone(),
+				})?,
+				false,
+			)?)),
 			literal_token @ (Token::Number(..) | Token::Identifier(..)) => {
 				let token_start = SourceOffset::from(literal_token.source_span().offset());
-				let literal = self.create_number(&literal_token)?;
+				let literal = self.create_number(&literal_token, true)?;
 				let is_direct_page = match literal {
 					Number::Literal(address) => address <= 0xFF,
 					Number::Label(_) => false,
@@ -411,7 +415,7 @@ impl Environment {
 						})
 					},
 					literal_token @ (Token::Number(..) | Token::Identifier(..)) => {
-						let literal = self.create_number(literal_token)?;
+						let literal = self.create_number(literal_token, true)?;
 						match tokens.next().ok_or_else(missing_token_error("'+' or ')'".into()))? {
 							Token::Plus(second_location) => {
 								tokens
@@ -451,21 +455,27 @@ impl Environment {
 		}
 	}
 
-	fn get_label(&mut self, name: &'_ str) -> Arc<Label> {
-		match self.labels.iter().find(|label| label.name == name) {
-			Some(matching_label) => matching_label.clone(),
+	/// TODO: We're setting the label's position wrong if we reference it before it has been defined.
+	fn get_label(&mut self, name: &'_ str, span: SourceSpan, used_as_address: bool) -> Arc<Label> {
+		match self.labels.iter_mut().find(|label| label.name == name) {
+			Some(matching_label) => {
+				if used_as_address && !matching_label.used_as_address {
+					unsafe { Arc::get_mut_unchecked(matching_label).used_as_address = true };
+				}
+				matching_label.clone()
+			},
 			None => {
-				let new_label = Arc::new(Label { name: name.to_owned(), location: None });
+				let new_label = Arc::new(Label { name: name.to_owned(), location: None, span, used_as_address });
 				self.labels.push(new_label.clone());
 				new_label
 			},
 		}
 	}
 
-	fn create_number<'a>(&'a mut self, token: &'a Token) -> Result<Number, AssemblyError> {
+	fn create_number<'a>(&'a mut self, token: &'a Token, used_as_address: bool) -> Result<Number, AssemblyError> {
 		match token {
 			Token::Number(number, ..) => Ok(Number::Literal(*number)),
-			Token::Identifier(label, ..) => Ok(Number::Label(self.get_label(label))),
+			Token::Identifier(label, ..) => Ok(Number::Label(self.get_label(label, token.source_span(), used_as_address))),
 			_ => Err(AssemblyError::ExpectedToken {
 				expected: Token::Number(0, token.source_span()),
 				actual:   token.clone(),

@@ -524,7 +524,8 @@ impl AssembledData {
 				let memory_address = segment_start + offset as i64;
 				if datum.label.is_some_and(|existing_label| !existing_label.is_resolved()) {
 					// Modifying Rc-contained data is dangerous in general, but safe for labels if we don't modify the name.
-					unsafe { Arc::get_mut_unchecked(datum.label.as_mut().unwrap()) }.resolve_to(memory_address);
+					unsafe { Arc::get_mut_unchecked(datum.label.as_mut().unwrap()) }
+						.resolve_to(memory_address, self.source_code.clone());
 					had_modifications |= true;
 				}
 				had_modifications |= datum.try_resolve(memory_address);

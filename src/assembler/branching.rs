@@ -16,6 +16,7 @@ pub(super) fn assemble_branching_instruction(
 ) -> Result<(), AssemblyError> {
 
 	let target_copy = target.clone();
+	let source_code_copy = data.source_code.clone();
 	let make_target_error = |legal_modes| {
 		Err(AssemblyError::InvalidAddressingMode {
 			mode: target_copy,
@@ -23,7 +24,7 @@ pub(super) fn assemble_branching_instruction(
 			mnemonic,
 			location: instruction.span,
 			legal_modes,
-			src: data.source_code.clone(),
+			src: source_code_copy,
 		})
 	};
 
@@ -41,6 +42,18 @@ pub(super) fn assemble_branching_instruction(
 				Mnemonic::Bvc => data.append_instruction_with_relative_label(0x50, page_address_or_relative.clone(), instruction.label.clone(), instruction.span),
 				Mnemonic::Bmi => data.append_instruction_with_relative_label(0x30, page_address_or_relative.clone(), instruction.label.clone(), instruction.span),
 				Mnemonic::Bpl => data.append_instruction_with_relative_label(0x10, page_address_or_relative.clone(), instruction.label.clone(), instruction.span),
+				Mnemonic::Pcall => data.append_instruction_with_8_bit_operand(0x4F, page_address_or_relative.clone(), instruction.label.clone(), instruction.span),
+				Mnemonic::Tcall => data.append(0x01 | match page_address_or_relative {
+						Number::Literal(value) => (value & 0x0F) as u8,
+						Number::Label(..) => return Err(AssemblyError::InvalidAddressingMode {
+							is_first_operand: true,
+							mode: target.clone(),
+							mnemonic, legal_modes: vec![AddressingMode::Address(0.into())],
+							src: data.source_code.clone(),
+							location: instruction.span
+						}),
+					} << 4,
+				instruction.label.clone()),
 				// CBNE and DBNZ have the relative jump target in the source operand, and the target is the direct page
 				// address that's checked and/or decremented.
 				Mnemonic::Cbne | Mnemonic::Dbnz =>
@@ -99,12 +112,13 @@ pub(super) fn assemble_branching_instruction(
 				// TODO
 				return make_target_error(vec![]);
 			},
-		AddressingMode::Address(jump_target) => {
-			if mnemonic != Mnemonic::Jmp {
-				return make_target_error(vec![]);
-			}
-			data.append_instruction_with_16_bit_operand(0x5F, jump_target.clone(), instruction.label.clone(), instruction.span);
-		},
+		AddressingMode::Address(jump_target) => 
+			data.append_instruction_with_16_bit_operand(match mnemonic {
+				Mnemonic::Jmp => 0x5F,
+				Mnemonic::Call => 0x3F,
+				_ => return make_target_error(vec![]),
+			}, jump_target.clone(), instruction.label.clone(), instruction.span
+		),
 		AddressingMode::XIndexed(address) =>  {
 			if mnemonic != Mnemonic::Jmp {
 				return make_target_error(vec![]);

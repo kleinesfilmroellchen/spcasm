@@ -130,6 +130,9 @@ pub fn assemble(environment: &Environment, instructions: Vec<Instruction>) -> Re
 					| Mnemonic::Bbc
 					| Mnemonic::Cbne
 					| Mnemonic::Dbnz
+					| Mnemonic::Call
+					| Mnemonic::Tcall
+					| Mnemonic::Pcall
 					| Mnemonic::Jmp),
 				first_operand: Some(target),
 				second_operand: source,

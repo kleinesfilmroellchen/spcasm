@@ -156,6 +156,9 @@ impl Environment {
 			| Mnemonic::Bmi
 			| Mnemonic::Bpl
 			| Mnemonic::Jmp
+			| Mnemonic::Call
+			| Mnemonic::Pcall
+			| Mnemonic::Tcall
 			| Mnemonic::Push
 			| Mnemonic::Pop => self.make_single_operand_instruction(mnemonic, tokens, label, identifier.source_span()),
 			Mnemonic::Brk

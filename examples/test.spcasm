@@ -222,9 +222,14 @@ bbc $31.5,$05 ;= B3 31 05
 bbc $31.6,$05 ;= D3 31 05
 bbc $31.7,$05 ;= F3 31 05
 
-BRK  ;= 0F
-ret  ;= 6F
-ret1  ;= 7F
+call $5060 ;= 3F 60 50
+pcall $02  ;= 4F 02
+tcall $5   ;= 51
+TCALL $8   ;= 81
+tcall $F   ;= F1
+BRK        ;= 0F
+ret        ;= 6F
+ret1       ;= 7F
 
 push A    ;= 2D
 push X    ;= 4D

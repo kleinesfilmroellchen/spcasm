@@ -490,7 +490,7 @@ and simbols above, the following symbols are also used.
 Table 9.2. Symbols and Meaning of Operation Explanation
 
 
-Symbol      Meaging
+Symbol      Meaning
 ---------------------------------------
   N        Negative flag
   V        Overflow flag

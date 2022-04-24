@@ -1,8 +1,8 @@
 //! Assembling the arithmetic and logic instructions.
 use crate::assembler::AssembledData;
 use crate::error::AssemblyError;
-use crate::lexer::Register;
-use crate::parser::{AddressingMode, Instruction, Mnemonic};
+use crate::instruction::{AddressingMode, Instruction, Mnemonic};
+use crate::Register;
 
 #[allow(clippy::too_many_lines)] // ¯\_(ツ)_/¯
 #[allow(clippy::needless_pass_by_value)]

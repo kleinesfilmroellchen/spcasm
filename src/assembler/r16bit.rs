@@ -3,7 +3,7 @@
 use std::sync::Arc;
 
 use crate::assembler::AssembledData;
-use crate::parser::{Label, Mnemonic, Number};
+use crate::instruction::{Label, Mnemonic, Number};
 
 #[repr(u8)]
 pub(super) enum MovDirection {

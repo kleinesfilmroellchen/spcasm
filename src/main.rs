@@ -14,8 +14,13 @@ use error::AssemblyCode;
 
 pub mod assembler;
 mod error;
+pub mod instruction;
 pub mod lexer;
 pub mod parser;
+mod register;
+mod token;
+pub use register::Register;
+pub use token::Token;
 
 fn pretty_hex(bytes: &[u8]) -> String {
 	let mut string = String::new();
@@ -99,7 +104,7 @@ mod test {
 		});
 	}
 
-	fn assemble_expected_binary(instructions: Vec<parser::Instruction>) -> Vec<u8> {
+	fn assemble_expected_binary(instructions: Vec<crate::instruction::Instruction>) -> Vec<u8> {
 		instructions.into_iter().flat_map(|instruction| instruction.expected_value).collect()
 	}
 }

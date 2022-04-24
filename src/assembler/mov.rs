@@ -1,8 +1,8 @@
 //! Assembling the MOV instruction.
 use crate::assembler::AssembledData;
 use crate::error::AssemblyError;
-use crate::lexer::Register;
-use crate::parser::{AddressingMode, Instruction, Mnemonic};
+use crate::instruction::{AddressingMode, Instruction, Mnemonic};
+use crate::Register;
 
 #[allow(clippy::too_many_lines)] //heh
 pub(super) fn assemble_mov(
@@ -88,11 +88,11 @@ pub(super) fn assemble_mov(
 			},
 		AddressingMode::IndirectX => match source {
 			AddressingMode::Register(Register::A) => data.append(0xC6, instruction.label.clone()),
-			mode => return make_error(mode,false),
+			mode => return make_error(mode, false),
 		},
 		AddressingMode::IndirectXAutoIncrement => match source {
 			AddressingMode::Register(Register::A) => data.append(0xAF, instruction.label.clone()),
-			mode => return make_error(mode,false),
+			mode => return make_error(mode, false),
 		},
 		AddressingMode::DirectPage(page_address) => match source {
 			AddressingMode::Register(Register::A) =>

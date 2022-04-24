@@ -5,8 +5,8 @@ use std::sync::Arc;
 use miette::{Diagnostic, MietteError, MietteSpanContents, SourceCode, SourceSpan, SpanContents};
 use thiserror::Error;
 
-use crate::lexer::Token;
-use crate::parser::{AddressingMode, MemoryAddress, Mnemonic};
+use crate::instruction::{AddressingMode, MemoryAddress, Mnemonic};
+use crate::Token;
 
 /// The source code for an assembly error.
 #[derive(Debug, Clone)]

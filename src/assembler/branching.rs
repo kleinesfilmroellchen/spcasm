@@ -1,8 +1,8 @@
 //! Assembling the branching instructions.
 
 use crate::assembler::AssembledData;
-use crate::lexer::Register;
-use crate::parser::{AddressingMode, Mnemonic, Number, Instruction};
+use crate::Register;
+use crate::instruction::{AddressingMode, Mnemonic, Number, Instruction};
 use crate::error::AssemblyError;
 
 #[allow(clippy::needless_pass_by_value)]

@@ -9,8 +9,9 @@ use r16bit::MovDirection;
 
 use super::pretty_hex;
 use crate::error::{AssemblyCode, AssemblyError};
-use crate::lexer::Register;
-use crate::parser::{AddressingMode, Environment, Instruction, Label, MemoryAddress, Mnemonic, Number, Opcode};
+use crate::instruction::{AddressingMode, Instruction, Label, MemoryAddress, Mnemonic, Number, Opcode};
+use crate::parser::Environment;
+use crate::Register;
 
 mod arithmetic_logic;
 mod branching;

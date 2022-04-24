@@ -4,6 +4,6 @@ dp_label:
 MOV A,#$4455
 MOV A,$884455
 MOV A,dp_label
-; AND (X), (Y)+
+AND (X),(Y)+
 ; MOV PSW,Y
 ; MOV A,#

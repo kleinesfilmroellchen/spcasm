@@ -227,12 +227,21 @@ pub enum AssemblyError {
 			 applicable. In the future, there will be a way of explicitly specifying labels as being in the direct page, \
 			 so that they resolve to a direct page addressing mode."
 		),
-		severity(Warning),
+		severity(Advice),
 		url("https://github.com/kleinesfilmroellchen/spcasm/issues/1")
 	)]
 	NonDirectPageLabel {
 		name:     String,
 		#[label("Might point at a direct page address")]
+		location: SourceSpan,
+		#[source_code]
+		src:      Arc<AssemblyCode>,
+	},
+
+	#[error("There's dangling tokens after this, spcasm ignores these for now")]
+	#[diagnostic(code(spcasm::dangling_tokens), help("Remove these tokens"), severity(Warning))]
+	DanglingTokens {
+		#[label("Dangling tokens here")]
 		location: SourceSpan,
 		#[source_code]
 		src:      Arc<AssemblyCode>,

@@ -393,19 +393,49 @@ impl Environment {
 							.ok_or_else(missing_token_error(Token::CloseParenthesis(location).into()))?
 							.expect(Token::CloseParenthesis(location), self.source_code.clone())?;
 						Ok(match name {
+							#[allow(clippy::branches_sharing_code)]
 							Register::X => {
 								if tokens
 									.next()
 									.and_then(|token| token.expect(Token::Plus(location), self.source_code.clone()).ok())
 									.is_some()
 								{
+									if let Some(further_token) = tokens.next() {
+										println!(
+											"{:?}",
+											miette::Report::new(AssemblyError::DanglingTokens {
+												src:      self.source_code.clone(),
+												location: further_token.source_span(),
+											})
+										);
+									}
 									// '+' after closing bracket
 									AddressingMode::IndirectXAutoIncrement
 								} else {
+									if let Some(further_token) = tokens.next() {
+										println!(
+											"{:?}",
+											miette::Report::new(AssemblyError::DanglingTokens {
+												src:      self.source_code.clone(),
+												location: further_token.source_span(),
+											})
+										);
+									}
 									AddressingMode::IndirectX
 								}
 							},
-							Register::Y => AddressingMode::IndirectY,
+							Register::Y => {
+								if let Some(further_token) = tokens.next() {
+									println!(
+										"{:?}",
+										miette::Report::new(AssemblyError::DanglingTokens {
+											src:      self.source_code.clone(),
+											location: further_token.source_span(),
+										})
+									);
+								}
+								AddressingMode::IndirectY
+							},
 							_ =>
 								return Err(AssemblyError::InvalidIndexingToken {
 									token:    register_token.clone(),
@@ -427,6 +457,16 @@ impl Environment {
 									.ok_or_else(missing_token_error(
 										Token::Register(Register::X, (location, *second_location).into()).into(),
 									))?;
+
+								if let Some(further_token) = tokens.next() {
+									println!(
+										"{:?}",
+										miette::Report::new(AssemblyError::DanglingTokens {
+											src:      self.source_code.clone(),
+											location: further_token.source_span(),
+										})
+									);
+								}
 								Ok(AddressingMode::DirectPageXIndexedIndirect(literal))
 							},
 							Token::CloseParenthesis(second_location) => {
@@ -435,11 +475,21 @@ impl Environment {
 									.next()
 									.ok_or_else(missing_token_error(Token::Plus(location).into()))?
 									.expect(Token::Plus(location), self.source_code.clone())?;
-								tokens
+								let result = tokens
 									.next()
 									.ok_or_else(missing_token_error(Token::Register(Register::Y, span).into()))?
 									.expect(Token::Register(Register::Y, span), self.source_code.clone())
-									.map(|_| AddressingMode::DirectPageIndirectYIndexed(literal))
+									.map(|_| AddressingMode::DirectPageIndirectYIndexed(literal));
+								if let Some(further_token) = tokens.next() {
+									println!(
+										"{:?}",
+										miette::Report::new(AssemblyError::DanglingTokens {
+											src:      self.source_code.clone(),
+											location: further_token.source_span(),
+										})
+									);
+								}
+								result
 							},
 							wrong_token => Err(AssemblyError::ExpectedToken {
 								expected: Token::CloseParenthesis(wrong_token.source_span().offset().into()),

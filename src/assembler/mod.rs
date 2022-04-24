@@ -383,7 +383,6 @@ impl AssembledData {
 	/// bits.
 	#[inline]
 	pub fn append_16_bits(&mut self, value: MemoryAddress, label: Option<Arc<Label>>, span: SourceSpan) {
-		println!("{:X}", value);
 		if (value & 0xFFFF) != value {
 			println!(
 				"{:?}",

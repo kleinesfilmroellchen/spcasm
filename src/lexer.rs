@@ -113,7 +113,7 @@ impl Token {
 			| Self::Comma(location)
 			| Self::Newline(location)
 			| Self::OpenParenthesis(location)
-			| Self::Plus(location) => SourceSpan::from(*location),
+			| Self::Plus(location) => (*location, SourceOffset::from(1)).into(),
 			Self::Identifier(_, location) | Self::Number(_, location) | Self::Register(_, location) => *location,
 			#[cfg(test)]
 			Self::TestComment(_, location) => *location,
@@ -167,8 +167,8 @@ impl Display for Register {
 /// # Errors
 /// Errors are returned for any syntactical error at the token level, e.g. invalid number literals.
 #[allow(clippy::missing_panics_doc)]
-pub fn lex(program: &str) -> Result<Vec<Token>, AssemblyError> {
-	let source_code = Arc::new(AssemblyCode { name: "<source>".to_owned(), text: program.to_owned() });
+pub fn lex(program: &str, name: String) -> Result<Vec<Token>, AssemblyError> {
+	let source_code = Arc::new(AssemblyCode { name, text: program.to_owned() });
 	let mut chars = program.chars().peekable();
 	let mut index = 0;
 	let mut tokens = Vec::new();
@@ -177,34 +177,40 @@ pub fn lex(program: &str) -> Result<Vec<Token>, AssemblyError> {
 		// \r is treated as white space and ignored.
 		if chr == '\n' {
 			tokens.push(Token::Newline(index.into()));
-		}
-		if chr.is_whitespace() {
+			index += 1;
+			continue;
+		} else if chr.is_whitespace() {
+			index += 1;
 			continue;
 		}
 		match chr {
 			'A' ..= 'Z' | 'a' ..= 'z' | '_' => {
 				let start_index = index;
 				let identifier = next_identifier(&mut chars, chr);
-				index += identifier.len()-1;
+				index += identifier.len();
 				let identifier_span =  (start_index, identifier.len()).into();
 				tokens.push(Register::parse(&identifier.to_lowercase(), identifier_span, source_code.clone())
 								.map_or_else(|_| Token::Identifier(identifier, identifier_span),
 									|value| Token::Register(value, identifier_span)));
 			},
-			'#' | ',' | '+' | '(' | ')' | ':' => tokens.push(parse_single_char_tokens(chr, index.into())),
+			'#' | ',' | '+' | '(' | ')' | ':' => {
+				tokens.push(parse_single_char_tokens(chr, index.into()));
+				index += 1;
+			},
 			'$' => {
 				let (number, size) = next_hex_number(&mut chars, index, source_code.clone())?;
 				tokens.push(Token::Number(number, (index, size).into()));
-				index += size-1;
+				index += size+1;
 			}
 			'%' => {
 				let (number, size) = next_bin_number(&mut chars, index, source_code.clone())?;
 				tokens.push(Token::Number(number, (index, size).into()));
-				index += size-1;
+				index += size+1;
 			}
 			';' =>
 				if cfg!(test) && let Some(chr) = chars.peek() && chr == &'=' {
 					chars.next();
+					index += 1;
 					let mut comment_contents = String::new();
 					while let Some(chr) = chars.peek() && chr != &'\n' {
 						comment_contents.push(chars.next().unwrap());
@@ -221,8 +227,9 @@ pub fn lex(program: &str) -> Result<Vec<Token>, AssemblyError> {
 							src: source_code.clone(),
 							location: (index, comment_contents.len()).into()
 						})?, (index, comment_contents.len()).into()));
-					index += comment_contents.len()-1;
+					index += comment_contents.len();
 				} else {
+					index += 1;
 					while let Some(chr) = chars.peek() && chr != &'\n' {
 						chars.next();
 						index += 1;
@@ -234,7 +241,6 @@ pub fn lex(program: &str) -> Result<Vec<Token>, AssemblyError> {
 				src: source_code
 			}),
 		}
-		index += 1;
 	}
 
 	Ok(tokens)

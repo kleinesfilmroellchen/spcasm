@@ -1,6 +1,6 @@
 //! SPC700 assembler.
 
-#![feature(let_chains, result_flattening, is_some_with, get_mut_unchecked, iterator_try_collect)]
+#![feature(test, let_chains, result_flattening, is_some_with, get_mut_unchecked, iterator_try_collect)]
 #![deny(clippy::all, clippy::pedantic, clippy::nursery)]
 #![deny(missing_docs)]
 
@@ -11,7 +11,6 @@ use std::io::Write;
 use std::sync::Arc;
 
 use error::AssemblyCode;
-use miette::{IntoDiagnostic, Result};
 
 pub mod assembler;
 mod error;
@@ -34,24 +33,26 @@ fn pretty_hex(bytes: &[u8]) -> String {
 	string
 }
 
-fn main() -> Result<()> {
+fn main() -> miette::Result<()> {
+	miette::set_hook(Box::new(|_| {
+		Box::new(
+			miette::MietteHandlerOpts::new().terminal_links(true).unicode(true).context_lines(2).tab_width(4).build(),
+		)
+	}))?;
+
 	if args().nth(1).expect("No file name given") == "--help" {
-		println!("Usage: spcasm [--help] INFILE OUTFILE");
+		eprintln!("Usage: spcasm [--help] INFILE OUTFILE");
 		std::process::exit(0);
 	}
 	let filename = unsafe { args().nth(1).unwrap_unchecked() };
 	let output = args().nth(2).expect("No output file given");
 
 	let contents = read_to_string(filename.clone()).expect("Couldn't read file contents");
-	let maybe_lexed = lexer::lex(&contents);
-	// println!("{:?}", maybe_lexed);
-	let lexed = maybe_lexed.into_diagnostic()?;
+	let lexed = lexer::lex(&contents, filename.clone())?;
 	let source_code = Arc::new(AssemblyCode { name: filename, text: contents });
 	let mut env = parser::Environment::new(source_code);
-	let parsed = env.parse(&lexed);
-	// println!("{:#?}, {:?}", parsed, env);
-
-	let assembled = assembler::assemble(&env, parsed.into_diagnostic()?).into_diagnostic()?;
+	let parsed = env.parse(&lexed)?;
+	let assembled = assembler::assemble(&env, parsed)?;
 	println!("{}", pretty_hex(&assembled));
 	let mut outfile =
 		File::options().create(true).truncate(true).write(true).open(output).expect("Couldn't open output file");
@@ -61,41 +62,41 @@ fn main() -> Result<()> {
 
 #[cfg(test)]
 mod test {
-	use miette::Result;
+	extern crate test;
+	use test::Bencher;
 
 	use crate::{assembler, lexer, parser};
-	#[test]
-	fn test_all_opcodes() -> Result<()> {
+	#[bench]
+	fn test_all_opcodes(bencher: &mut Bencher) {
 		use std::cmp::min;
 		use std::fs::read_to_string;
 		use std::sync::Arc;
 
-		use miette::IntoDiagnostic;
-
 		use crate::error::AssemblyCode;
 		use crate::pretty_hex;
 
-		let testfile = read_to_string("examples/test.spcasm").unwrap();
-		let lexed = lexer::lex(&testfile).unwrap();
-		// println!("{:#?}", lexed);
-		let source_code = Arc::new(AssemblyCode { name: "examples/test.spcasm".to_owned(), text: testfile });
-		let mut environment = parser::Environment::new(source_code);
-		let parsed = environment.parse(&lexed).into_diagnostic()?;
-		let assembled = assembler::assemble(&environment, parsed.clone()).unwrap();
-		let expected_binary = assemble_expected_binary(parsed);
-		for (byte, (expected, actual)) in expected_binary.iter().zip(assembled.iter()).enumerate() {
-			assert_eq!(
-				expected,
-				actual,
-				"Expected and actual assembly differ at byte {:04X}:\n\texpected: {:02X}\n\tactual:   {:02X}\nhint: the \
-				 bytes before and after are:\n\t{}",
-				byte,
-				expected,
-				actual,
-				pretty_hex(&assembled[byte.saturating_sub(4) .. min(assembled.len(), byte + 5)])
-			);
-		}
-		Ok(())
+		bencher.iter(|| {
+			let filename = "examples/test.spcasm";
+			let testfile = read_to_string(filename).unwrap();
+			let lexed = lexer::lex(&testfile, filename.to_owned()).unwrap();
+			let source_code = Arc::new(AssemblyCode { name: filename.to_owned(), text: testfile });
+			let mut environment = parser::Environment::new(source_code);
+			let parsed = environment.parse(&lexed).unwrap();
+			let assembled = assembler::assemble(&environment, parsed.clone()).unwrap();
+			let expected_binary = assemble_expected_binary(parsed);
+			for (byte, (expected, actual)) in expected_binary.iter().zip(assembled.iter()).enumerate() {
+				assert_eq!(
+					expected,
+					actual,
+					"Expected and actual assembly differ at byte {:04X}:\n\texpected: {:02X}\n\tactual:   {:02X}\nhint: \
+					 the bytes before and after are:\n\t{}",
+					byte,
+					expected,
+					actual,
+					pretty_hex(&assembled[byte.saturating_sub(4) .. min(assembled.len(), byte + 5)])
+				);
+			}
+		});
 	}
 
 	fn assemble_expected_binary(instructions: Vec<parser::Instruction>) -> Vec<u8> {

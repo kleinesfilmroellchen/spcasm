@@ -347,7 +347,6 @@ impl Environment {
 			_ => unreachable!(),
 		};
 		let mnemonic = Mnemonic::parse(&identifier_name, identifier.source_span(), self.source_code.clone())?;
-		println!("{:?} {:?}", mnemonic, tokens);
 		match mnemonic {
 			Mnemonic::Mov
 			| Mnemonic::Adc
@@ -447,11 +446,10 @@ impl Environment {
 		let instruction = Instruction {
 			opcode: Opcode::make_two_operand_instruction(mnemonic, first_addressing_mode, second_addressing_mode),
 			label,
-			span: (tokens.first().unwrap().source_span().offset(), final_span.offset() + final_span.len()).into(),
+			span: (mnemonic_token_location.offset(), (final_span.offset() + final_span.len()) - mnemonic_token_location.offset()).into(),
 			#[cfg(test)]
 			expected_value,
 		};
-		println!("{:?}", instruction);
 		Ok(instruction)
 	}
 
@@ -492,7 +490,7 @@ impl Environment {
 		let instruction = Instruction {
 			opcode: Opcode::make_single_operand_instruction(mnemonic, addressing_mode),
 			label,
-			span: (tokens.first().unwrap().source_span().offset(), final_span.offset() + final_span.len()).into(),
+			span: (mnemonic_token_location.offset(), (final_span.offset() + final_span.len()) - mnemonic_token_location.offset()).into(),
 			#[cfg(test)]
 			expected_value,
 		};

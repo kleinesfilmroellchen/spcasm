@@ -12,9 +12,9 @@ pub(super) fn assemble_mov(
 	instruction: &Instruction,
 ) -> Result<(), AssemblyError> {
 	let source_code_copy = data.source_code.clone();
-	let make_error = |mode| {
+	let make_error = |mode, is_first_operand| {
 		Err(AssemblyError::InvalidAddressingMode {
-			is_first_operand: false,
+			is_first_operand,
 			location: instruction.span,
 			src: source_code_copy,
 			mode,
@@ -46,7 +46,7 @@ pub(super) fn assemble_mov(
 				data.append_instruction_with_8_bit_operand(0xF7, page_base_address, instruction.label.clone()),
 			AddressingMode::Register(Register::X) => data.append(0x7D, instruction.label.clone()),
 			AddressingMode::Register(Register::Y) => data.append(0xDD, instruction.label.clone()),
-			mode => return make_error(mode),
+			mode => return make_error(mode, false),
 		},
 		AddressingMode::Register(Register::X) => match source {
 			AddressingMode::Immediate(value) =>
@@ -59,7 +59,7 @@ pub(super) fn assemble_mov(
 				data.append_instruction_with_16_bit_operand(0xE9, address, instruction.label.clone()),
 			AddressingMode::Register(Register::A) => data.append(0x5D, instruction.label.clone()),
 			AddressingMode::Register(Register::SP) => data.append(0x9D, instruction.label.clone()),
-			mode => return make_error(mode),
+			mode => return make_error(mode, false),
 		},
 		AddressingMode::Register(Register::Y) => match source {
 			AddressingMode::Immediate(value) =>
@@ -71,7 +71,7 @@ pub(super) fn assemble_mov(
 			AddressingMode::Address(address) =>
 				data.append_instruction_with_16_bit_operand(0xEC, address, instruction.label.clone()),
 			AddressingMode::Register(Register::A) => data.append(0xFD, instruction.label.clone()),
-			mode => return make_error(mode),
+			mode => return make_error(mode, false),
 		},
 		AddressingMode::Register(Register::SP) =>
 			if source == AddressingMode::Register(Register::X) {
@@ -88,11 +88,11 @@ pub(super) fn assemble_mov(
 			},
 		AddressingMode::IndirectX => match source {
 			AddressingMode::Register(Register::A) => data.append(0xC6, instruction.label.clone()),
-			mode => return make_error(mode),
+			mode => return make_error(mode,false),
 		},
 		AddressingMode::IndirectXAutoIncrement => match source {
 			AddressingMode::Register(Register::A) => data.append(0xAF, instruction.label.clone()),
-			mode => return make_error(mode),
+			mode => return make_error(mode,false),
 		},
 		AddressingMode::DirectPage(page_address) => match source {
 			AddressingMode::Register(Register::A) =>
@@ -113,13 +113,13 @@ pub(super) fn assemble_mov(
 				literal_value,
 				instruction.label.clone(),
 			),
-			mode => return make_error(mode),
+			mode => return make_error(mode, false),
 		},
 		AddressingMode::DirectPageXIndexed(page_address) => data.append_instruction_with_8_bit_operand(
 			match source {
 				AddressingMode::Register(Register::A) => 0xD4,
 				AddressingMode::Register(Register::Y) => 0xDB,
-				mode => return make_error(mode),
+				mode => return make_error(mode, false),
 			},
 			page_address.clone(),
 			instruction.label.clone(),
@@ -127,7 +127,7 @@ pub(super) fn assemble_mov(
 		AddressingMode::DirectPageYIndexed(page_address) => data.append_instruction_with_8_bit_operand(
 			match source {
 				AddressingMode::Register(Register::X) => 0xD9,
-				mode => return make_error(mode),
+				mode => return make_error(mode, false),
 			},
 			page_address.clone(),
 			instruction.label.clone(),
@@ -137,7 +137,7 @@ pub(super) fn assemble_mov(
 				AddressingMode::Register(Register::A) => 0xC5,
 				AddressingMode::Register(Register::X) => 0xC9,
 				AddressingMode::Register(Register::Y) => 0xCC,
-				mode => return make_error(mode),
+				mode => return make_error(mode, false),
 			},
 			address.clone(),
 			instruction.label.clone(),
@@ -146,27 +146,27 @@ pub(super) fn assemble_mov(
 			if AddressingMode::Register(Register::A) == source {
 				data.append_instruction_with_16_bit_operand(0xD5, address.clone(), instruction.label.clone());
 			} else {
-				return make_error(source);
+				return make_error(source, false);
 			},
 		AddressingMode::YIndexed(address) =>
 			if AddressingMode::Register(Register::A) == source {
 				data.append_instruction_with_16_bit_operand(0xD6, address.clone(), instruction.label.clone());
 			} else {
-				return make_error(source);
+				return make_error(source, false);
 			},
 		AddressingMode::DirectPageXIndexedIndirect(page_address) =>
 			if source == AddressingMode::Register(Register::A) {
 				data.append_instruction_with_8_bit_operand(0xC7, page_address.clone(), instruction.label.clone());
 			} else {
-				return make_error(source);
+				return make_error(source, false);
 			},
 		AddressingMode::DirectPageIndirectYIndexed(page_address) =>
 			if source == AddressingMode::Register(Register::A) {
 				data.append_instruction_with_8_bit_operand(0xD7, page_address.clone(), instruction.label.clone());
 			} else {
-				return make_error(source);
+				return make_error(source, false);
 			},
-		mode => return make_error(mode.clone()),
+		mode => return make_error(mode.clone(), true),
 	}
 	Ok(())
 }
@@ -180,7 +180,7 @@ pub(super) fn assemble_push_pop(
 	let source_code_copy = data.source_code.clone();
 	let make_error = || {
 		Err(AssemblyError::InvalidAddressingMode {
-			is_first_operand: false,
+			is_first_operand: true,
 			location:         instruction.span,
 			src:              source_code_copy,
 			mode:             AddressingMode::Register(target),

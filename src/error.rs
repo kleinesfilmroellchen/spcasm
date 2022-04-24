@@ -23,14 +23,15 @@ impl SourceCode for AssemblyCode {
 		context_lines_after: usize,
 	) -> Result<Box<dyn SpanContents<'a> + 'a>, MietteError> {
 		let result = self.text.read_span(span, context_lines_before, context_lines_after)?;
-		Ok(Box::new(MietteSpanContents::new_named(
+		let retval = Box::new(MietteSpanContents::new_named(
 			self.name.clone(),
 			result.data(),
 			*result.span(),
-			result.line_count(),
+			result.line(),
 			result.column(),
 			result.line_count(),
-		)))
+		));
+		Ok(retval)
 	}
 }
 
@@ -38,15 +39,11 @@ impl SourceCode for AssemblyCode {
 #[derive(Error, Debug, Diagnostic)]
 #[allow(clippy::module_name_repetitions)]
 pub enum AssemblyError {
-	#[error(transparent)]
-	#[diagnostic(code(spcasm::io_error))]
-	IoError(#[from] std::io::Error),
-
 	//#region Semantic errors: detected while parsing or assembling
-	#[error("Invalid addressing modes `{mode}` as {} operand for `{mnemonic}`", if *.is_first_operand { "first" } else { "second" })]
+	#[error("Invalid addressing mode `{mode}` as {} operand for `{mnemonic}`", if *.is_first_operand { "first" } else { "second" })]
 	#[diagnostic(
 		code(spcasm::invalid_addressing_mode),
-		help("The instruction `{mnemonic}` accepts the modes {} in first position", .legal_modes.iter().map(|mode| format!("{} ", mode)).collect::<String>().trim()),
+		help("The instruction `{mnemonic}` accepts the modes {} here", .legal_modes.iter().map(|mode| format!("{} ", mode)).collect::<String>().trim()),
 	)]
 	InvalidAddressingMode {
 		mode:             AddressingMode,
@@ -55,7 +52,7 @@ pub enum AssemblyError {
 		legal_modes:      Vec<AddressingMode>,
 		#[source_code]
 		src:              Arc<AssemblyCode>,
-		#[label("Addressing mode invalid")]
+		#[label("For this instruction")]
 		location:         SourceSpan,
 	},
 

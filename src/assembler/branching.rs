@@ -31,15 +31,15 @@ pub(super) fn assemble_branching_instruction(
 		// instructions. For the other relative branches, it's in the source. JMP is absolute and uses full addresses.
 		AddressingMode::DirectPage(page_address_or_relative) | AddressingMode::Address(page_address_or_relative @ Number::Label(_)) => 
 			match mnemonic {
-				Mnemonic::Bra => data.append_instruction_with_relative_label(0x2F, page_address_or_relative.clone(), instruction.label.clone()),
-				Mnemonic::Beq => data.append_instruction_with_relative_label(0xF0, page_address_or_relative.clone(), instruction.label.clone()),
-				Mnemonic::Bne => data.append_instruction_with_relative_label(0xD0, page_address_or_relative.clone(), instruction.label.clone()),
-				Mnemonic::Bcs => data.append_instruction_with_relative_label(0xB0, page_address_or_relative.clone(), instruction.label.clone()),
-				Mnemonic::Bcc => data.append_instruction_with_relative_label(0x90, page_address_or_relative.clone(), instruction.label.clone()),
-				Mnemonic::Bvs => data.append_instruction_with_relative_label(0x70, page_address_or_relative.clone(), instruction.label.clone()),
-				Mnemonic::Bvc => data.append_instruction_with_relative_label(0x50, page_address_or_relative.clone(), instruction.label.clone()),
-				Mnemonic::Bmi => data.append_instruction_with_relative_label(0x30, page_address_or_relative.clone(), instruction.label.clone()),
-				Mnemonic::Bpl => data.append_instruction_with_relative_label(0x10, page_address_or_relative.clone(), instruction.label.clone()),
+				Mnemonic::Bra => data.append_instruction_with_relative_label(0x2F, page_address_or_relative.clone(), instruction.label.clone(), instruction.span),
+				Mnemonic::Beq => data.append_instruction_with_relative_label(0xF0, page_address_or_relative.clone(), instruction.label.clone(), instruction.span),
+				Mnemonic::Bne => data.append_instruction_with_relative_label(0xD0, page_address_or_relative.clone(), instruction.label.clone(), instruction.span),
+				Mnemonic::Bcs => data.append_instruction_with_relative_label(0xB0, page_address_or_relative.clone(), instruction.label.clone(), instruction.span),
+				Mnemonic::Bcc => data.append_instruction_with_relative_label(0x90, page_address_or_relative.clone(), instruction.label.clone(), instruction.span),
+				Mnemonic::Bvs => data.append_instruction_with_relative_label(0x70, page_address_or_relative.clone(), instruction.label.clone(), instruction.span),
+				Mnemonic::Bvc => data.append_instruction_with_relative_label(0x50, page_address_or_relative.clone(), instruction.label.clone(), instruction.span),
+				Mnemonic::Bmi => data.append_instruction_with_relative_label(0x30, page_address_or_relative.clone(), instruction.label.clone(), instruction.span),
+				Mnemonic::Bpl => data.append_instruction_with_relative_label(0x10, page_address_or_relative.clone(), instruction.label.clone(), instruction.span),
 				// CBNE and DBNZ have the relative jump target in the source operand, and the target is the direct page
 				// address that's checked and/or decremented.
 				Mnemonic::Cbne | Mnemonic::Dbnz =>
@@ -54,13 +54,13 @@ pub(super) fn assemble_branching_instruction(
 						);
 						// First argument is the checked direct page address
 						match page_address_or_relative {
-							Number::Literal(page_address) => data.append_8_bits(*page_address, None),
+							Number::Literal(page_address) => data.append_8_bits(*page_address, None, instruction.span),
 							Number::Label(page_label) => data.append_unresolved(page_label.clone(), false, None),
 						}
 						// Second argument is the relative jump target.
 						// The relative unresolved label needs a negative offset of 2, because we're the second operand.
 						match relative_source {
-							Number::Literal(relative_offset) => data.append_8_bits(relative_offset, None),
+							Number::Literal(relative_offset) => data.append_8_bits(relative_offset, None, instruction.span),
 							Number::Label(relative_source_label) => data.append_relative_unresolved(relative_source_label, 2),
 						}
 					} else {
@@ -79,13 +79,13 @@ pub(super) fn assemble_branching_instruction(
 				data.append(0xDE, instruction.label.clone());
 				// First argument is the checked direct page address
 				match page_address {
-					Number::Literal(page_address) => data.append_8_bits(*page_address, None),
+					Number::Literal(page_address) => data.append_8_bits(*page_address, None, instruction.span),
 					Number::Label(page_label) => data.append_unresolved(page_label.clone(), false, None),
 				}
 				// Second argument is the relative jump target.
 				// The relative unresolved label needs a negative offset of 2, because we're the second operand.
 				match relative_source {
-					Number::Literal(relative_offset) => data.append_8_bits(relative_offset, None),
+					Number::Literal(relative_offset) => data.append_8_bits(relative_offset, None, instruction.span),
 					Number::Label(relative_source_label) => data.append_relative_unresolved(relative_source_label, 2),
 				}
 			} else {
@@ -93,7 +93,7 @@ pub(super) fn assemble_branching_instruction(
 			},
 		AddressingMode::Register(Register::Y) =>
 			if let Some(AddressingMode::DirectPage(relative_jump_target)) = source && mnemonic == Mnemonic::Dbnz {
-				data.append_instruction_with_relative_label(0xFE, relative_jump_target, instruction.label.clone());
+				data.append_instruction_with_relative_label(0xFE, relative_jump_target, instruction.label.clone(), instruction.span);
 			} else {
 				// TODO
 				return make_target_error(vec![]);
@@ -102,9 +102,9 @@ pub(super) fn assemble_branching_instruction(
 			if mnemonic != Mnemonic::Jmp {
 				return make_target_error(vec![]);
 			}
-			data.append_instruction_with_16_bit_operand(0x5F, jump_target.clone(), instruction.label.clone());
+			data.append_instruction_with_16_bit_operand(0x5F, jump_target.clone(), instruction.label.clone(), instruction.span);
 		},
-		AddressingMode::XIndexed(address) => data.append_instruction_with_16_bit_operand(0x1F, address.clone(), instruction.label.clone()),
+		AddressingMode::XIndexed(address) => data.append_instruction_with_16_bit_operand(0x1F, address.clone(), instruction.label.clone(), instruction.span),
 		_ => return make_target_error(vec![]),
 	}
 

@@ -5,6 +5,7 @@
 use std::collections::BTreeMap;
 use std::sync::Arc;
 
+use miette::{Result, SourceSpan};
 use r16bit::MovDirection;
 
 use super::pretty_hex;
@@ -65,13 +66,13 @@ pub fn assemble(environment: &Environment, instructions: Vec<Instruction>) -> Re
 				second_operand: None,
 			} => {
 				let is_increment = *mnemonic == Mnemonic::Incw;
-				r16bit::assemble_incw_decw_instruction(&mut data, is_increment, target.clone(), instruction.label);
+				r16bit::assemble_incw_decw_instruction(&mut data, is_increment, target.clone(), &instruction);
 			},
 			Opcode {
 				mnemonic: mnemonic @ (Mnemonic::Addw | Mnemonic::Subw | Mnemonic::Cmpw),
 				first_operand: Some(AddressingMode::Register(Register::YA)),
 				second_operand: Some(AddressingMode::DirectPage(target)),
-			} => r16bit::assemble_add_sub_cmp_wide_instruction(&mut data, *mnemonic, target.clone(), instruction.label),
+			} => r16bit::assemble_add_sub_cmp_wide_instruction(&mut data, *mnemonic, target.clone(), &instruction),
 			Opcode {
 				mnemonic: Mnemonic::Movw,
 				first_operand: Some(target @ (AddressingMode::DirectPage(_) | AddressingMode::Register(Register::YA))),
@@ -97,7 +98,7 @@ pub fn assemble(environment: &Environment, instructions: Vec<Instruction>) -> Re
 						_ => return make_movw_error(),
 					})
 				};
-				r16bit::assemble_mov_wide_instruction(&mut data, page_address.clone(), &direction, instruction.label);
+				r16bit::assemble_mov_wide_instruction(&mut data, page_address.clone(), &direction, &instruction);
 			},
 			Opcode {
 				mnemonic: Mnemonic::Mul,
@@ -360,6 +361,16 @@ impl AssembledData {
 		&self.segments[&self.current_segment_start.expect("didn't start a segment yet")]
 	}
 
+	/// Returns the current memory location where data is written to.
+	/// # Panics
+	/// If this assembly data doesn't have a started segment yet.
+	#[must_use]
+	#[inline]
+	pub fn current_location(&self) -> MemoryAddress {
+		self.segments[&self.current_segment_start.expect("didn't start a segment yet")].len() as MemoryAddress
+			+ self.current_segment_start.unwrap()
+	}
+
 	/// Returns a mutable reference to the data of the current segment.
 	#[allow(clippy::missing_panics_doc)]
 	#[must_use]
@@ -371,14 +382,37 @@ impl AssembledData {
 	/// Appends a little endian (LSB first) 16-bit value to the current segment. The given number is truncated to 16
 	/// bits.
 	#[inline]
-	pub fn append_16_bits(&mut self, value: MemoryAddress, label: Option<Arc<Label>>) {
+	pub fn append_16_bits(&mut self, value: MemoryAddress, label: Option<Arc<Label>>, span: SourceSpan) {
+		println!("{:X}", value);
+		if (value & 0xFFFF) != value {
+			println!(
+				"{:?}",
+				miette::Report::new(AssemblyError::ValueTooLarge {
+					value,
+					location: span,
+					src: self.source_code.clone(),
+					size: 16,
+				})
+			);
+		}
 		self.append((value & 0xFF) as u8, label);
 		self.append(((value & 0xFF00) >> 8) as u8, None);
 	}
 
 	/// Appends an 8-bit value to the current segment. The given number is truncated to 8 bits.
 	#[inline]
-	pub fn append_8_bits(&mut self, value: MemoryAddress, label: Option<Arc<Label>>) {
+	pub fn append_8_bits(&mut self, value: MemoryAddress, label: Option<Arc<Label>>, span: SourceSpan) {
+		if (value & 0xFF) != value {
+			println!(
+				"{:?}",
+				miette::Report::new(AssemblyError::ValueTooLarge {
+					value,
+					location: span,
+					src: self.source_code.clone(),
+					size: 8,
+				})
+			);
+		}
 		self.append((value & 0xFF) as u8, label);
 	}
 
@@ -407,10 +441,16 @@ impl AssembledData {
 
 	/// Appends an instruction with an 8-bit operand.
 	#[inline]
-	pub fn append_instruction_with_8_bit_operand(&mut self, opcode: u8, operand: Number, label: Option<Arc<Label>>) {
+	pub fn append_instruction_with_8_bit_operand(
+		&mut self,
+		opcode: u8,
+		operand: Number,
+		label: Option<Arc<Label>>,
+		span: SourceSpan,
+	) {
 		self.append(opcode, label);
 		match operand {
-			Number::Literal(value) => self.append_8_bits(value, None),
+			Number::Literal(value) => self.append_8_bits(value, None, span),
 			Number::Label(value) => self.append_unresolved(value, false, None),
 		}
 	}
@@ -423,20 +463,27 @@ impl AssembledData {
 		first_operand: Number,
 		second_operand: Number,
 		label: Option<Arc<Label>>,
+		span: SourceSpan,
 	) {
-		self.append_instruction_with_8_bit_operand(opcode, first_operand, label);
+		self.append_instruction_with_8_bit_operand(opcode, first_operand, label, span);
 		match second_operand {
-			Number::Literal(value) => self.append_8_bits(value, None),
+			Number::Literal(value) => self.append_8_bits(value, None, span),
 			Number::Label(value) => self.append_unresolved(value, false, None),
 		}
 	}
 
 	/// Appends an instruction with an 16-bit operand.
 	#[inline]
-	pub fn append_instruction_with_16_bit_operand(&mut self, opcode: u8, operand: Number, label: Option<Arc<Label>>) {
+	pub fn append_instruction_with_16_bit_operand(
+		&mut self,
+		opcode: u8,
+		operand: Number,
+		label: Option<Arc<Label>>,
+		span: SourceSpan,
+	) {
 		self.append(opcode, label);
 		match operand {
-			Number::Literal(value) => self.append_16_bits(value, None),
+			Number::Literal(value) => self.append_16_bits(value, None, span),
 			Number::Label(value) => {
 				// low byte first because little endian
 				self.append_unresolved(value.clone(), false, None);
@@ -446,10 +493,16 @@ impl AssembledData {
 	}
 
 	/// Appends an instruction with an 8-bit operand. If this is a label, it's stored as a relative unresolved label.
-	pub fn append_instruction_with_relative_label(&mut self, opcode: u8, operand: Number, label: Option<Arc<Label>>) {
+	pub fn append_instruction_with_relative_label(
+		&mut self,
+		opcode: u8,
+		operand: Number,
+		label: Option<Arc<Label>>,
+		span: SourceSpan,
+	) {
 		self.append(opcode, label);
 		match operand {
-			Number::Literal(value) => self.append_8_bits(value, None),
+			Number::Literal(value) => self.append_8_bits(value, None, span),
 			Number::Label(label) => self.append_relative_unresolved(label, 1),
 		}
 	}

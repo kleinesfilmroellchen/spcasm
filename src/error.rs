@@ -43,6 +43,7 @@ pub enum AssemblyError {
 	#[error("Invalid addressing mode `{mode}` as {} operand for `{mnemonic}`", if *.is_first_operand { "first" } else { "second" })]
 	#[diagnostic(
 		code(spcasm::invalid_addressing_mode),
+		severity(Error),
 		help("The instruction `{mnemonic}` accepts the modes {} here", .legal_modes.iter().map(|mode| format!("{} ", mode)).collect::<String>().trim()),
 	)]
 	InvalidAddressingMode {
@@ -57,7 +58,7 @@ pub enum AssemblyError {
 	},
 
 	#[error("Section at {section_start:04x} starts after the end of the previous one, which is {section_end:04x}")]
-	#[diagnostic(code(spcasm::syntax::expected_token))]
+	#[diagnostic(code(spcasm::syntax::expected_token), severity(Error))]
 	SectionMismatch {
 		section_start: MemoryAddress,
 		section_end:   MemoryAddress,
@@ -68,7 +69,7 @@ pub enum AssemblyError {
 	},
 
 	#[error("Invalid addressing mode combination: `{first_mode}` with `{second_mode}` for `{mnemonic}`")]
-	#[diagnostic(code(spcasm::invalid_addressing_mode))]
+	#[diagnostic(code(spcasm::invalid_addressing_mode), severity(Error))]
 	InvalidAddressingModeCombination {
 		first_mode:  AddressingMode,
 		second_mode: AddressingMode,
@@ -80,7 +81,7 @@ pub enum AssemblyError {
 	},
 
 	#[error("Two operands are not allowed for `{mnemonic}`")]
-	#[diagnostic(code(spcasm::two_operands_not_allowed), help("Remove the second operand"))]
+	#[diagnostic(code(spcasm::two_operands_not_allowed), help("Remove the second operand"), severity(Error))]
 	TwoOperandsNotAllowed {
 		mnemonic: Mnemonic,
 		#[source_code]
@@ -90,7 +91,7 @@ pub enum AssemblyError {
 	},
 
 	#[error("`{mnemonic}` doesn't take any operands")]
-	#[diagnostic(code(spcasm::operand_not_allowed), help("Remove the operands of this instruction"))]
+	#[diagnostic(code(spcasm::operand_not_allowed), help("Remove the operands of this instruction"), severity(Error))]
 	OperandNotAllowed {
 		mnemonic: Mnemonic,
 		#[label("Takes 0 operands")]
@@ -100,7 +101,7 @@ pub enum AssemblyError {
 	},
 
 	#[error("`{constant}` is not valid for {typename}")]
-	#[diagnostic(code(spcasm::invalid_constant), help("Remove the operands of this instruction"))]
+	#[diagnostic(code(spcasm::invalid_constant), help("Remove the operands of this instruction"), severity(Error))]
 	InvalidConstant {
 		constant: String,
 		typename: String,
@@ -112,7 +113,7 @@ pub enum AssemblyError {
 
 	#[cfg(test)]
 	#[error("Test assembly doesn't have an expected output comment")]
-	#[diagnostic(code(spcasm::missing_test_result))]
+	#[diagnostic(code(spcasm::missing_test_result), severity(Error))]
 	MissingTestResult {
 		#[label("Must have a ';=' comment")]
 		location: SourceSpan,
@@ -123,7 +124,7 @@ pub enum AssemblyError {
 	//#endregion
 	//#region Syntax errors: detected in the lexer and mainly the parser
 	#[error("Expected {expected}")]
-	#[diagnostic(code(spcasm::syntax::expected_token))]
+	#[diagnostic(code(spcasm::syntax::expected_token), severity(Error))]
 	ExpectedToken {
 		expected: Token,
 		actual:   Token,
@@ -134,7 +135,7 @@ pub enum AssemblyError {
 	},
 
 	#[error("Invalid number")]
-	#[diagnostic(code(spcasm::syntax::expected_token))]
+	#[diagnostic(code(spcasm::syntax::expected_token), severity(Error))]
 	InvalidNumber {
 		error:    ParseIntError,
 		#[label("{error}")]
@@ -144,7 +145,7 @@ pub enum AssemblyError {
 	},
 
 	#[error("Expected {expected}")]
-	#[diagnostic(code(spcasm::syntax::expected_token))]
+	#[diagnostic(code(spcasm::syntax::expected_token), severity(Error))]
 	UnexpectedEndOfTokens {
 		expected: TokenOrString,
 		#[label("There should be a token here")]
@@ -154,7 +155,7 @@ pub enum AssemblyError {
 	},
 
 	#[error("Unexpected character {chr}")]
-	#[diagnostic(code(spcasm::syntax::expected_token))]
+	#[diagnostic(code(spcasm::syntax::expected_token), severity(Error))]
 	UnexpectedCharacter {
 		chr:      char,
 		#[label("Unexpected")]
@@ -164,7 +165,11 @@ pub enum AssemblyError {
 	},
 
 	#[error("Single '#' is not a valid addressing mode")]
-	#[diagnostic(code(spcasm::syntax::single_hash_invalid), help("Add a number to make this an immediate operand"))]
+	#[diagnostic(
+		code(spcasm::syntax::single_hash_invalid),
+		help("Add a number to make this an immediate operand"),
+		severity(Error)
+	)]
 	SingleHashInvalid {
 		#[label("This is not an addressing mode")]
 		location: SourceSpan,
@@ -173,7 +178,7 @@ pub enum AssemblyError {
 	},
 
 	#[error("Invalid token `{token}` for indexing")]
-	#[diagnostic(code(spcasm::syntax::invalid_indexing_token), help("Use `X` or `Y` for indexing"))]
+	#[diagnostic(code(spcasm::syntax::invalid_indexing_token), help("Use `X` or `Y` for indexing"), severity(Error))]
 	InvalidIndexingToken {
 		token:    Token,
 		#[label("This token is not valid for indexing")]
@@ -188,7 +193,8 @@ pub enum AssemblyError {
 		help(
 			"Test comments consist of a series of space-delimited bytes, given as hexadecimal, for example `;= 0F AA B8` \
 			 for three bytes"
-		)
+		),
+		severity(Error)
 	)]
 	InvalidTestComment {
 		#[label("This ';=' comment is invalid: {}", basis.clone().or_else(|| "".parse::<u8>().err()).unwrap())]
@@ -198,6 +204,20 @@ pub enum AssemblyError {
 		basis:    Option<ParseIntError>,
 	},
 	//#endregion
+	//#region Warnings and advice
+	#[error(
+		"The value {value:02X} is being used as a {size}-bit operand here, but it is larger than this. The extra upper bits \
+		 are truncated."
+	)]
+	#[diagnostic(code(spcasm::value_too_large), help("Remove these upper bits"), severity(Warning))]
+	ValueTooLarge {
+		value:    MemoryAddress,
+		size:     u8,
+		#[label("{size}-bit operand")]
+		location: SourceSpan,
+		#[source_code]
+		src:      Arc<AssemblyCode>,
+	}, //#endregion
 }
 
 #[derive(Clone, Debug)]

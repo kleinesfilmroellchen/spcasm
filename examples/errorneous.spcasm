@@ -1,0 +1,7 @@
+; start::
+; MOV X,(X)+
+MOV A,#$4455
+MOV A,$884455
+; AND (X), (Y)+
+; MOV PSW,Y
+; MOV A,#

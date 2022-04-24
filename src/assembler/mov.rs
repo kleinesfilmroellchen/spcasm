@@ -27,49 +27,61 @@ pub(super) fn assemble_mov(
 	match target {
 		AddressingMode::Register(Register::A) => match source {
 			AddressingMode::Immediate(value) =>
-				data.append_instruction_with_8_bit_operand(0xE8, value, instruction.label.clone()),
+				data.append_instruction_with_8_bit_operand(0xE8, value, instruction.label.clone(), instruction.span),
 			AddressingMode::IndirectX => data.append(0xE6, instruction.label.clone()),
 			AddressingMode::IndirectXAutoIncrement => data.append(0xBF, instruction.label.clone()),
 			AddressingMode::DirectPage(page_address) =>
-				data.append_instruction_with_8_bit_operand(0xE4, page_address, instruction.label.clone()),
-			AddressingMode::DirectPageXIndexed(page_base_address) =>
-				data.append_instruction_with_8_bit_operand(0xF4, page_base_address, instruction.label.clone()),
+				data.append_instruction_with_8_bit_operand(0xE4, page_address, instruction.label.clone(), instruction.span),
+			AddressingMode::DirectPageXIndexed(page_base_address) => data.append_instruction_with_8_bit_operand(
+				0xF4,
+				page_base_address,
+				instruction.label.clone(),
+				instruction.span,
+			),
 			AddressingMode::Address(address) =>
-				data.append_instruction_with_16_bit_operand(0xE5, address, instruction.label.clone()),
+				data.append_instruction_with_16_bit_operand(0xE5, address, instruction.label.clone(), instruction.span),
 			AddressingMode::XIndexed(address) =>
-				data.append_instruction_with_16_bit_operand(0xF5, address, instruction.label.clone()),
+				data.append_instruction_with_16_bit_operand(0xF5, address, instruction.label.clone(), instruction.span),
 			AddressingMode::YIndexed(address) =>
-				data.append_instruction_with_16_bit_operand(0xF6, address, instruction.label.clone()),
-			AddressingMode::DirectPageXIndexedIndirect(page_base_address) =>
-				data.append_instruction_with_8_bit_operand(0xE7, page_base_address, instruction.label.clone()),
-			AddressingMode::DirectPageIndirectYIndexed(page_base_address) =>
-				data.append_instruction_with_8_bit_operand(0xF7, page_base_address, instruction.label.clone()),
+				data.append_instruction_with_16_bit_operand(0xF6, address, instruction.label.clone(), instruction.span),
+			AddressingMode::DirectPageXIndexedIndirect(page_base_address) => data.append_instruction_with_8_bit_operand(
+				0xE7,
+				page_base_address,
+				instruction.label.clone(),
+				instruction.span,
+			),
+			AddressingMode::DirectPageIndirectYIndexed(page_base_address) => data.append_instruction_with_8_bit_operand(
+				0xF7,
+				page_base_address,
+				instruction.label.clone(),
+				instruction.span,
+			),
 			AddressingMode::Register(Register::X) => data.append(0x7D, instruction.label.clone()),
 			AddressingMode::Register(Register::Y) => data.append(0xDD, instruction.label.clone()),
 			mode => return make_error(mode, false),
 		},
 		AddressingMode::Register(Register::X) => match source {
 			AddressingMode::Immediate(value) =>
-				data.append_instruction_with_8_bit_operand(0xCD, value, instruction.label.clone()),
+				data.append_instruction_with_8_bit_operand(0xCD, value, instruction.label.clone(), instruction.span),
 			AddressingMode::DirectPage(page_address) =>
-				data.append_instruction_with_8_bit_operand(0xF8, page_address, instruction.label.clone()),
+				data.append_instruction_with_8_bit_operand(0xF8, page_address, instruction.label.clone(), instruction.span),
 			AddressingMode::DirectPageYIndexed(page_address) =>
-				data.append_instruction_with_8_bit_operand(0xF9, page_address, instruction.label.clone()),
+				data.append_instruction_with_8_bit_operand(0xF9, page_address, instruction.label.clone(), instruction.span),
 			AddressingMode::Address(address) =>
-				data.append_instruction_with_16_bit_operand(0xE9, address, instruction.label.clone()),
+				data.append_instruction_with_16_bit_operand(0xE9, address, instruction.label.clone(), instruction.span),
 			AddressingMode::Register(Register::A) => data.append(0x5D, instruction.label.clone()),
 			AddressingMode::Register(Register::SP) => data.append(0x9D, instruction.label.clone()),
 			mode => return make_error(mode, false),
 		},
 		AddressingMode::Register(Register::Y) => match source {
 			AddressingMode::Immediate(value) =>
-				data.append_instruction_with_8_bit_operand(0x8D, value, instruction.label.clone()),
+				data.append_instruction_with_8_bit_operand(0x8D, value, instruction.label.clone(), instruction.span),
 			AddressingMode::DirectPage(page_address) =>
-				data.append_instruction_with_8_bit_operand(0xEB, page_address, instruction.label.clone()),
+				data.append_instruction_with_8_bit_operand(0xEB, page_address, instruction.label.clone(), instruction.span),
 			AddressingMode::DirectPageXIndexed(page_address) =>
-				data.append_instruction_with_8_bit_operand(0xFB, page_address, instruction.label.clone()),
+				data.append_instruction_with_8_bit_operand(0xFB, page_address, instruction.label.clone(), instruction.span),
 			AddressingMode::Address(address) =>
-				data.append_instruction_with_16_bit_operand(0xEC, address, instruction.label.clone()),
+				data.append_instruction_with_16_bit_operand(0xEC, address, instruction.label.clone(), instruction.span),
 			AddressingMode::Register(Register::A) => data.append(0xFD, instruction.label.clone()),
 			mode => return make_error(mode, false),
 		},
@@ -95,23 +107,37 @@ pub(super) fn assemble_mov(
 			mode => return make_error(mode, false),
 		},
 		AddressingMode::DirectPage(page_address) => match source {
-			AddressingMode::Register(Register::A) =>
-				data.append_instruction_with_8_bit_operand(0xC4, page_address.clone(), instruction.label.clone()),
-			AddressingMode::Register(Register::X) =>
-				data.append_instruction_with_8_bit_operand(0xD8, page_address.clone(), instruction.label.clone()),
-			AddressingMode::Register(Register::Y) =>
-				data.append_instruction_with_8_bit_operand(0xCB, page_address.clone(), instruction.label.clone()),
+			AddressingMode::Register(Register::A) => data.append_instruction_with_8_bit_operand(
+				0xC4,
+				page_address.clone(),
+				instruction.label.clone(),
+				instruction.span,
+			),
+			AddressingMode::Register(Register::X) => data.append_instruction_with_8_bit_operand(
+				0xD8,
+				page_address.clone(),
+				instruction.label.clone(),
+				instruction.span,
+			),
+			AddressingMode::Register(Register::Y) => data.append_instruction_with_8_bit_operand(
+				0xCB,
+				page_address.clone(),
+				instruction.label.clone(),
+				instruction.span,
+			),
 			AddressingMode::DirectPage(source_address) => data.append_instruction_with_two_8_bit_operands(
 				0xFA,
 				page_address.clone(),
 				source_address,
 				instruction.label.clone(),
+				instruction.span,
 			),
 			AddressingMode::Immediate(literal_value) => data.append_instruction_with_two_8_bit_operands(
 				0x8F,
 				page_address.clone(),
 				literal_value,
 				instruction.label.clone(),
+				instruction.span,
 			),
 			mode => return make_error(mode, false),
 		},
@@ -123,6 +149,7 @@ pub(super) fn assemble_mov(
 			},
 			page_address.clone(),
 			instruction.label.clone(),
+			instruction.span,
 		),
 		AddressingMode::DirectPageYIndexed(page_address) => data.append_instruction_with_8_bit_operand(
 			match source {
@@ -131,6 +158,7 @@ pub(super) fn assemble_mov(
 			},
 			page_address.clone(),
 			instruction.label.clone(),
+			instruction.span,
 		),
 		AddressingMode::Address(address) => data.append_instruction_with_16_bit_operand(
 			match source {
@@ -141,28 +169,49 @@ pub(super) fn assemble_mov(
 			},
 			address.clone(),
 			instruction.label.clone(),
+			instruction.span,
 		),
 		AddressingMode::XIndexed(address) =>
 			if AddressingMode::Register(Register::A) == source {
-				data.append_instruction_with_16_bit_operand(0xD5, address.clone(), instruction.label.clone());
+				data.append_instruction_with_16_bit_operand(
+					0xD5,
+					address.clone(),
+					instruction.label.clone(),
+					instruction.span,
+				);
 			} else {
 				return make_error(source, false);
 			},
 		AddressingMode::YIndexed(address) =>
 			if AddressingMode::Register(Register::A) == source {
-				data.append_instruction_with_16_bit_operand(0xD6, address.clone(), instruction.label.clone());
+				data.append_instruction_with_16_bit_operand(
+					0xD6,
+					address.clone(),
+					instruction.label.clone(),
+					instruction.span,
+				);
 			} else {
 				return make_error(source, false);
 			},
 		AddressingMode::DirectPageXIndexedIndirect(page_address) =>
 			if source == AddressingMode::Register(Register::A) {
-				data.append_instruction_with_8_bit_operand(0xC7, page_address.clone(), instruction.label.clone());
+				data.append_instruction_with_8_bit_operand(
+					0xC7,
+					page_address.clone(),
+					instruction.label.clone(),
+					instruction.span,
+				);
 			} else {
 				return make_error(source, false);
 			},
 		AddressingMode::DirectPageIndirectYIndexed(page_address) =>
 			if source == AddressingMode::Register(Register::A) {
-				data.append_instruction_with_8_bit_operand(0xD7, page_address.clone(), instruction.label.clone());
+				data.append_instruction_with_8_bit_operand(
+					0xD7,
+					page_address.clone(),
+					instruction.label.clone(),
+					instruction.span,
+				);
 			} else {
 				return make_error(source, false);
 			},
@@ -208,6 +257,7 @@ pub(super) fn assemble_push_pop(
 			}
 		},
 		instruction.label.clone(),
+		instruction.span,
 	);
 	Ok(())
 }

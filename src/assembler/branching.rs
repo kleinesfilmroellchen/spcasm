@@ -125,7 +125,7 @@ pub(super) fn assemble_branching_instruction(
 			}
 			data.append_instruction_with_16_bit_operand(0x1F, address.clone(), instruction.label.clone(), instruction.span);
 		},
-		AddressingMode::DirectPageBit(page_address, bit) => {
+		AddressingMode::DirectPageBit(page_address, bit) | AddressingMode::AddressBit(page_address, bit) => {
 			let is_bbs = mnemonic == Mnemonic::Bbs;
 			if !is_bbs && mnemonic != Mnemonic::Bbc {
 				return make_target_error(vec![AddressingMode::DirectPageBit(0.into(),0)]);

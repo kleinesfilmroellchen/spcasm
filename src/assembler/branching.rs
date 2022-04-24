@@ -5,6 +5,7 @@ use crate::Register;
 use crate::instruction::{AddressingMode, Mnemonic, Number, Instruction};
 use crate::error::AssemblyError;
 
+#[allow(clippy::too_many_lines)] // bruh
 #[allow(clippy::needless_pass_by_value)]
 pub(super) fn assemble_branching_instruction(
 	data: &mut AssembledData,
@@ -104,7 +105,34 @@ pub(super) fn assemble_branching_instruction(
 			}
 			data.append_instruction_with_16_bit_operand(0x5F, jump_target.clone(), instruction.label.clone(), instruction.span);
 		},
-		AddressingMode::XIndexed(address) => data.append_instruction_with_16_bit_operand(0x1F, address.clone(), instruction.label.clone(), instruction.span),
+		AddressingMode::XIndexed(address) =>  {
+			if mnemonic != Mnemonic::Jmp {
+				return make_target_error(vec![]);
+			}
+			data.append_instruction_with_16_bit_operand(0x1F, address.clone(), instruction.label.clone(), instruction.span);
+		},
+		AddressingMode::DirectPageBit(page_address, bit) => {
+			let is_bbs = mnemonic == Mnemonic::Bbs;
+			if !is_bbs && mnemonic != Mnemonic::Bbc {
+				return make_target_error(vec![AddressingMode::DirectPageBit(0.into(),0)]);
+			}
+			let jump_target = if let Some(AddressingMode::DirectPage(jump_target) | AddressingMode::Address(jump_target)) = source {
+				jump_target
+			} else {
+				return Err(AssemblyError::InvalidAddressingMode {
+					is_first_operand: false,
+					mnemonic,
+					mode: source.unwrap_or(AddressingMode::Register(Register::A)),
+					legal_modes: vec![AddressingMode::DirectPage(0.into())],
+					location: instruction.span,
+					src: data.source_code.clone(),
+				})
+			};
+			data.append_instruction_with_two_8_bit_operands(
+				if is_bbs { 0x03 } else { 0x13 } | (bit << 5),
+				page_address.clone(), jump_target, instruction.label.clone(), instruction.span
+			);
+		},
 		_ => return make_target_error(vec![]),
 	}
 

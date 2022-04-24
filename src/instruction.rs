@@ -246,6 +246,10 @@ pub enum AddressingMode {
 	DirectPageXIndexedIndirect(Number),
 	/// (dp)+Y
 	DirectPageIndirectYIndexed(Number),
+	/// dp.bit
+	DirectPageBit(Number, u8),
+	/// abs.bit
+	AddressBit(Number, u8),
 	// ...
 	/// A, X, Y, SP, ...
 	Register(Register),
@@ -266,6 +270,8 @@ impl Display for AddressingMode {
 			Self::Address(address) => format!("${:04X}", address),
 			Self::XIndexed(address) => format!("${:04X}+X", address),
 			Self::YIndexed(address) => format!("${:04X}+Y", address),
+			Self::DirectPageBit(address, bit) => format!("${:02X}.{:01}", address, bit),
+			Self::AddressBit(address, bit) => format!("${:04X}.{:01}", address, bit),
 			Self::Register(register) => format!("{}", register),
 		})
 	}

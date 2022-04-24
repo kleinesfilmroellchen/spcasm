@@ -351,14 +351,14 @@ impl Environment {
 					Number::Literal(address) => address <= 0xFF,
 					Number::Label(_) => false,
 				};
-				// Indirect addressing with '+X' or '+Y'
-				Ok(
-					if let Some(previous_token) =
-						tokens.next().and_then(|token| token.expect(Token::Plus(token_start), self.source_code.clone()).ok())
-					{
-						match tokens.next().ok_or_else(missing_token_error(
-							Token::Register(Register::X, previous_token.source_span()).into(),
-						))? {
+				let next_token_or_none = tokens.next();
+				Ok(match next_token_or_none {
+					Some(Token::Plus(token_start)) => {
+						match tokens
+							.next()
+							.ok_or_else(missing_token_error(Token::Register(Register::X, (*token_start).into()).into()))?
+						{
+							// Indirect addressing with '+X' or '+Y'
 							Token::Register(Register::X, ..) =>
 								if is_direct_page {
 									AddressingMode::DirectPageXIndexed(literal)
@@ -378,12 +378,46 @@ impl Environment {
 									src:      self.source_code.clone(),
 								}),
 						}
-					} else if is_direct_page {
-						AddressingMode::DirectPage(literal)
-					} else {
-						AddressingMode::Address(literal)
 					},
-				)
+					#[allow(clippy::cast_sign_loss, clippy::cast_possible_truncation)]
+					Some(Token::Period(token_start)) =>
+						if let Some(Token::Number(bit, location)) = tokens.next() {
+							if *bit < 0 || *bit >= 8 {
+								return Err(AssemblyError::InvalidBitIndex {
+									index:    *bit as u8,
+									location: *location,
+									src:      self.source_code.clone(),
+								});
+							}
+							if is_direct_page {
+								AddressingMode::DirectPageBit(literal, (bit & 0x07) as u8)
+							} else {
+								AddressingMode::AddressBit(literal, (bit & 0x07) as u8)
+							}
+						} else {
+							return Err(missing_token_error(Token::Number(0, (*token_start).into()).into())());
+						},
+					None | Some(Token::Newline(..)) =>
+						if is_direct_page {
+							AddressingMode::DirectPage(literal)
+						} else {
+							AddressingMode::Address(literal)
+						},
+					#[cfg(test)]
+					Some(Token::TestComment(..)) =>
+						if is_direct_page {
+							AddressingMode::DirectPage(literal)
+						} else {
+							AddressingMode::Address(literal)
+						},
+					Some(other_token) =>
+						return Err(AssemblyError::ExpectedToken {
+							expected: Token::Plus(other_token.source_span().offset().into()),
+							actual:   other_token.clone(),
+							location: other_token.source_span(),
+							src:      self.source_code.clone(),
+						}),
+				})
 			},
 			Token::OpenParenthesis(location) =>
 				match tokens.next().ok_or_else(missing_token_error("indirect argument inside brackets".into()))? {

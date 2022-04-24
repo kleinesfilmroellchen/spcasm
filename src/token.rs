@@ -29,6 +29,8 @@ pub enum Token {
 	CloseParenthesis(SourceOffset),
 	/// ':'
 	Colon(SourceOffset),
+	/// '.'
+	Period(SourceOffset),
 	/// ASCII newline (\n).
 	Newline(SourceOffset),
 	/// Comments used for testing purposes.
@@ -84,6 +86,10 @@ impl Token {
 				Self::Comma(..) => Ok(self),
 				_ => Err(()),
 			},
+			Self::Period(..) => match type_ {
+				Self::Period(..) => Ok(self),
+				_ => Err(()),
+			},
 			#[cfg(test)]
 			Self::TestComment(..) => match type_ {
 				Self::TestComment(..) => Ok(self),
@@ -108,6 +114,7 @@ impl Token {
 			| Self::Comma(location)
 			| Self::Newline(location)
 			| Self::OpenParenthesis(location)
+			| Self::Period(location)
 			| Self::Plus(location) => (*location, SourceOffset::from(1)).into(),
 			Self::Identifier(_, location) | Self::Number(_, location) | Self::Register(_, location) => *location,
 			#[cfg(test)]
@@ -124,6 +131,7 @@ impl Display for Token {
 			Self::Number(..) => "number",
 			Self::Hash(..) => "hash",
 			Self::Comma(..) => "comma",
+			Self::Period(..) => "'.'",
 			Self::Plus(..) => "'+'",
 			Self::OpenParenthesis(..) => "'('",
 			Self::CloseParenthesis(..) => "')'",

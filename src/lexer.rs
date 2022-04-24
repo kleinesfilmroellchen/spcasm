@@ -38,20 +38,25 @@ pub fn lex(source_code: Arc<AssemblyCode>) -> Result<Vec<Token>, AssemblyError> 
 								.map_or_else(|_| Token::Identifier(identifier, identifier_span),
 									|value| Token::Register(value, identifier_span)));
 			},
-			'#' | ',' | '+' | '(' | ')' | ':' => {
+			'0'..='9' => {
+				let (number, size) = next_number(&mut chars, Some(chr), 10, |chr| chr.is_ascii_digit(), index, source_code.clone())?;
+				tokens.push(Token::Number(number, (index, size).into()));
+				index += size+1;
+			}
+			'#' | ',' | '+' | '(' | ')' | ':' | '.' => {
 				tokens.push(parse_single_char_tokens(chr, index.into()));
 				index += 1;
 			},
 			'$' => {
-				let (number, size) = next_hex_number(&mut chars, index, source_code.clone())?;
+				let (number, size) = next_number(&mut chars, None, 16, |chr| chr.is_ascii_hexdigit(), index, source_code.clone())?;
 				tokens.push(Token::Number(number, (index, size).into()));
 				index += size+1;
-			}
+			},
 			'%' => {
-				let (number, size) = next_bin_number(&mut chars, index, source_code.clone())?;
+				let (number, size) = next_number(&mut chars, None, 2, |chr| ['0', '1'].contains(&chr), index, source_code.clone())?;
 				tokens.push(Token::Number(number, (index, size).into()));
 				index += size+1;
-			}
+			},
 			';' =>
 				if cfg!(test) && let Some(chr) = chars.peek() && chr == &'=' {
 					chars.next();
@@ -100,34 +105,23 @@ fn next_identifier(chars: &mut Peekable<std::str::Chars>, start: char) -> String
 	identifier
 }
 
-fn next_hex_number(
+fn next_number(
 	chars: &mut Peekable<std::str::Chars>,
+	first_char: Option<char>,
+	radix: u8,
+	checker: fn(char) -> bool,
 	start_index: usize,
 	source_code: Arc<AssemblyCode>,
 ) -> Result<(i64, usize), AssemblyError> {
-	let mut number_chars = String::default();
-	while let Some(chr) = chars.peek() && chr.is_ascii_hexdigit() {
+	let mut number_chars = match first_char {
+		Some(chr) => String::from(chr),
+		None => String::default(),
+	};
+	while let Some(chr) = chars.peek() && checker(*chr) {
 		number_chars.push(chars.next().unwrap());
 	}
-	i64::from_str_radix(&number_chars, 16)
-		.map_err(|error| AssemblyError::InvalidNumber {
-			error,
-			location: (start_index, number_chars.len()).into(),
-			src: source_code,
-		})
-		.map(|value| (value, number_chars.len()))
-}
-
-fn next_bin_number(
-	chars: &mut Peekable<std::str::Chars>,
-	start_index: usize,
-	source_code: Arc<AssemblyCode>,
-) -> Result<(i64, usize), AssemblyError> {
-	let mut number_chars = String::default();
-	while let Some(chr) = chars.peek() && ['0', '1'].contains(chr) {
-		number_chars.push(chars.next().unwrap());
-	}
-	i64::from_str_radix(&number_chars, 2)
+	dbg!(&number_chars);
+	i64::from_str_radix(&number_chars, radix.into())
 		.map_err(|error| AssemblyError::InvalidNumber {
 			error,
 			location: (start_index, number_chars.len()).into(),
@@ -144,6 +138,7 @@ fn parse_single_char_tokens(chr: char, location: SourceOffset) -> Token {
 		'(' => Token::OpenParenthesis(location),
 		')' => Token::CloseParenthesis(location),
 		':' => Token::Colon(location),
+		'.' => Token::Period(location),
 		_ => unreachable!(),
 	}
 }

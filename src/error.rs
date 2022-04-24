@@ -186,6 +186,21 @@ pub enum AssemblyError {
 		#[source_code]
 		src:      Arc<AssemblyCode>,
 	},
+
+	#[error("Invalid bit index `{index}`")]
+	#[diagnostic(
+		code(spcasm::syntax::invalid_indexing_token),
+		help("Use a bit index between 0 and 7 inclusive"),
+		severity(Error)
+	)]
+	InvalidBitIndex {
+		index:    u8,
+		#[label("Bit index is invalid")]
+		location: SourceSpan,
+		#[source_code]
+		src:      Arc<AssemblyCode>,
+	},
+
 	#[cfg(test)]
 	#[error("Test comment has invalid format")]
 	#[diagnostic(

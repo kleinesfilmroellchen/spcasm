@@ -6,12 +6,12 @@ series CPU. Address classification of the memory space is made
 according to purpose: and addresses 0000 - 00ff are called page 0
 and addresses 0100 - 01ff are called page 1.
 In regard to the data in this region, when direct page designation
-is carried out by direct page flaq (P) within the program status
+is carried out by direct page flag (P) within the program status
 word, it is possible to carry out data processing in wide-ranging
 addresing modes with a small number of cycles.
 
 Within the CPU there are the universal registers A,X and Y, program
-status ward (PSW) of the varius flags, program counter (PC), and
+status word (PSW) of the varius flags, program counter (PC), and
 stack pointer (SP).
 
 The A register is operable by the greatest number of commands,
@@ -32,11 +32,11 @@ within the direct page as source address and destination addresses.
 In regard to bit processing diversified by control purpose. Boolean
 bit operation commands are applicable to the 8K byte range of
 data of addresses 0000 - 1fff. Morever, in regard to the bits
-within the total space of the 64K bytes, commads of multiple bit
+within the total space of the 64K bytes, commands of multiple bit
 test and set, test and reset are provided for. For the purpose of
 data which must be systematized or in order to carry out data
 processing rapidly. It is possible to operate 16-bit data with a
-single commad. Addition, subtraction, comparison and transferrance
+single command. Addition, subtraction, comparison and transferrance
 are possible between two byte of continuous 16-bit data within the
 direct page and the paired Y register and A register. In addition
 increment and decrement of continuous 16-bit data within the
@@ -80,7 +80,7 @@ Withing the CPU are the registers necessary for the execution of
 the various commands. These are an A register (note : functions
 as an 8-bit accumulator). X register, Y register (8-bit universal
 register which can also be used as index register). PSW ( program
-status ward). SP (stack pointer), etc. These are all 8-bit 
+status word). SP (stack pointer), etc. These are all 8-bit 
 registersm but the PC (program counter) is made up of 16 bits.
 
 
@@ -103,7 +103,7 @@ registersm but the PC (program counter) is made up of 16 bits.
              |       SP       |   Stack Pointer        (8  bits)
               ----------------
               ----------------
-             |       PSW      |   Program Status Ward  (8  bits)
+             |       PSW      |   Program Status Word  (8  bits)
               ----------------
             /              /
            ---------------
@@ -147,7 +147,7 @@ register.
 When carrying out 16-bit operation commands, it becomes the register
 which retains the high byte data of the 16-bit accumulator which is
 made up of the pairing of this with the A register. When
-multiplication commads are being carried out, it becomes the dividend
+multiplication commands are being carried out, it becomes the dividend
 register and the product high byte data is entered.
 When carrying out division commands, paired with the A register it
 formulates the dividend, and the resulting remained is entered.
@@ -160,7 +160,7 @@ level 8 bits are referred to as PCL-
 Normally, it would have the address to be executed next and would
 be incremented only the number of bytes necessary fo the command
 fetched.
-When there is a branching commad in the oidst of the program the address
+When there is a branching command in the oidst of the program the address
 of the branch destination would be stored in the program counter. When
 there is a reset (negative POR) input, reset vector which are in
 addresses FFFF and FFFE enter respectively PCH and PCL and branching
@@ -226,12 +226,12 @@ POP A (X,Y, PSW)
        |    SP+1     |sending of A (X..)|       SP+1             |
         ---------------------------------------------------------
 
-(6) PROGRAM STATUS WARD (PSW)
+(6) PROGRAM STATUS WORD (PSW)
 
-The program status ward is made up of the various flags which are
+The program status word is made up of the various flags which are
 set and reset according to the results of the execution of 8-bit
-register commads and the various flags which determine the
-activities of the CPU. When reset it veocnes "000-0-00".
+register commands and the various flags which determine the
+activities of the CPU. When reset it becomes "000-0-00".
 
     7    6     5     4     3     2     1     0
   -----------------------------------------------
@@ -244,8 +244,8 @@ After operation execution, this is set when there has been a carry
 from the uppermost bit of the arithmetic logic unit (ALU) or when
 there has been no borrow. It is even altered with shift or rotate
 commands. It also acts as an bit accumulator of Boolean bit operation
-commands. It is set at the SETC commads and reset at the CLRC commads.
-In addition, the carry flag inverts at the NOTC commads.
+commands. It is set at the SETC commands and reset at the CLRC commands.
+In addition, the carry flag inverts at the NOTC commands.
 
 Zero Flag (Z)
 
@@ -259,12 +259,12 @@ Half Carry Flag (H)
 After operation execution, this flag is set when there has been
 a carry from form bit 3 of the ALU to bit 4, or when there has
 not been any borrow. There is no command to set, however, it is
-reset by reset by means of the CLRV commad. At his time, the
+reset by reset by means of the CLRV command. At his time, the
 overflow flag is also set.
 
 Direct Page Flag (P)
 
-This is the flaq which designates the direct page to which many
+This is the flag which designates the direct page to which many
 addressing mode are applicable, such as direct page addressing
 etc. When 0, the direct page becomes the addresses of the
 region 0000-00ff and when 1, it becomes the addresses of the
@@ -277,13 +277,13 @@ After arithmetic operation execution, this flag is set when
 overflow or underflow has been produced. At this time, influence
 is extended simultaneously to the H flag.
 It is possible to carry out tests with conditional branching 
-commads.
+commands.
 
 Negative Flag (N)
 
 After operation execution, this flag is set when the values of
 the result of MSD is 1 and reset when that values is 0. It is
-possible to carry out tests with conditinal branching commads.
+possible to carry out tests with conditinal branching commands.
 
 7.2. MEMORY SPACE.
 
@@ -299,7 +299,7 @@ Page one is taken up by the stack.
 7.2.1. Direct Pages (Zero Page, Page One)
 
 By means of setting or resetting the direct page (P) flag
-within the program status ward. it is possible to disignate 
+within the program status word. it is possible to disignate 
 whether zero page or page one is to be made the direct page.
 it is set up such that the data within this page can be treated
 with fewer bytes, at highter speed and with more numerous types
@@ -321,9 +321,9 @@ A mask ROM is installed within the Sound-CPU from FFC0H- FFFF. There
 is a program in it which transmits data from the ROM cassette to the
 256K bit RAM throuh the SCPU. This region is used by means of reset.
 
-7.2.3. Area of Applicable Bit Operation Commads.
+7.2.3. Area of Applicable Bit Operation Commands.
 
-(i)   The commads SET1 (set memory bit) and CLR1 (clear memory bit)
+(i)   The commands SET1 (set memory bit) and CLR1 (clear memory bit)
       are applicable to one-bit data with the direct page.
 
 (ii)  The commands TSET1 (test and set bit) and TCLR1 ( test and
@@ -379,7 +379,7 @@ applicable to the data of the direct page (P=0: addresses
 (P) flag. it is possible to manipulate the data in various ways.
 In additon byte efficiency also improves due to the fact that
 direct address designation is possible by one-byte data within
-the command words. Moreover, since effective commad cycles also
+the command words. Moreover, since effective command cycles also
 decrease data can be accessed more rapidly.
 
 
@@ -388,7 +388,7 @@ decrease data can be accessed more rapidly.
 --------------------------------------------------------------------
                                         #of   Effective Addr. Region
 Simbol  |    Addressing    
-                                        Bytes  0000-01FF  1FFF  1FFF
+                                        Bytes  0000-01FF  1FFF >1FFF
 --------------------------------------------------------------------
   dp       Direct Page                    2        X        X
 
@@ -443,7 +443,7 @@ Symbol
   A       A register
   X       X register
   Y       Y register
- PSW      Program status ward
+ PSW      Program status word
  YA       Y, A paired 16-bit register
  PC       Program counter
  SP       Stack pointer

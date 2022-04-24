@@ -8,6 +8,8 @@ spcasm assembles a binary memory dump of the SPC700's main memory. No entry poin
 * Extremely fast: spcasm assembles about 1.143 MB/s on a modern computer. This means that the entire SPC700 address space (64KB), if it were entirely program RAM, can be assembled by spcasm in just over 57 ms.
 * Nice errors: spcasm reports errors in a nice format, if your terminal supports it:
 ![image](https://user-images.githubusercontent.com/28656157/164973851-d66c5fa3-8bed-43b6-b7c2-e66cc53592c6.png)
+* Helpful warnings and information about possible pitfalls:
+![image](https://user-images.githubusercontent.com/28656157/164979501-4ece4431-735e-471c-a9a8-674df64b23c3.png)
 
 ## Installation
 

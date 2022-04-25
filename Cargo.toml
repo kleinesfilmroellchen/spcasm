@@ -1,12 +1,20 @@
 [package]
-name = "spcasm"
-version = "0.1.0"
 edition = "2021"
 license = "BSD 2-clause"
-
+name = "spcasm"
+version = "0.1.0"
 [dependencies]
-miette = { version = "4.6.0", features = ["fancy"] }
-serde = { version = "1.0.136", features = ["derive"] }
+object = { version = "0.28.3", features = ["write_core"] }
 serde_variant = "0.1.1"
-spcasm_derive = { path = "spcasm_derive" }
 thiserror = "1.0.30"
+
+[dependencies.miette]
+features = ["fancy"]
+version = "4.6.0"
+
+[dependencies.serde]
+features = ["derive"]
+version = "1.0.136"
+
+[dependencies.spcasm_derive]
+path = "spcasm_derive"

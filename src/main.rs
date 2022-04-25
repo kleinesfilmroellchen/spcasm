@@ -13,6 +13,7 @@ use std::sync::Arc;
 use error::AssemblyCode;
 
 pub mod assembler;
+pub mod elf;
 mod error;
 pub mod instruction;
 pub mod lexer;
@@ -52,9 +53,10 @@ fn main() -> miette::Result<()> {
 
 	let (_, assembled) = run_assembler(file_name)?;
 	println!("{}", pretty_hex(&assembled));
-	let mut outfile =
+	let outfile =
 		File::options().create(true).truncate(true).write(true).open(output).expect("Couldn't open output file");
-	outfile.write_all(&assembled).expect("I/O error while writing");
+	elf::write_to_elf(&mut std::io::BufWriter::new(outfile), &assembled).unwrap();
+	// outfile.write_all(&assembled).expect("I/O error while writing");
 	Ok(())
 }
 

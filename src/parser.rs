@@ -347,6 +347,7 @@ impl Environment {
 				})?,
 				false,
 			)?)),
+			// Direct address modes
 			literal_token @ (Token::Number(..) | Token::Identifier(..)) => {
 				let token_start = SourceOffset::from(literal_token.source_span().offset());
 				let literal = self.create_number(&literal_token, true)?;
@@ -356,12 +357,12 @@ impl Environment {
 				};
 				let next_token_or_none = tokens.next();
 				Ok(match next_token_or_none {
+					// Indirect addressing with '+X' or '+Y'
 					Some(Token::Plus(token_start)) => {
 						match tokens
 							.next()
 							.ok_or_else(missing_token_error(Token::Register(Register::X, (*token_start).into()).into()))?
 						{
-							// Indirect addressing with '+X' or '+Y'
 							Token::Register(Register::X, ..) =>
 								if is_direct_page {
 									AddressingMode::DirectPageXIndexed(literal)
@@ -382,6 +383,7 @@ impl Environment {
 								}),
 						}
 					},
+					// Bit indexing mode
 					#[allow(clippy::cast_sign_loss, clippy::cast_possible_truncation)]
 					Some(Token::Period(token_start)) =>
 						if let Some(Token::Number(bit, location)) = tokens.next() {
@@ -422,8 +424,10 @@ impl Environment {
 						}),
 				})
 			},
+			// Indexed modes
 			Token::OpenParenthesis(location) =>
 				match tokens.next().ok_or_else(missing_token_error("indirect argument inside brackets".into()))? {
+					// (X), (Y), ...
 					register_token @ Token::Register(name, ..) => {
 						tokens
 							.next()
@@ -481,6 +485,7 @@ impl Environment {
 								}),
 						})
 					},
+					// (address) ...
 					literal_token @ (Token::Number(..) | Token::Identifier(..)) => {
 						let literal = self.create_number(literal_token, true)?;
 						match tokens.next().ok_or_else(missing_token_error("'+' or ')'".into()))? {
@@ -494,7 +499,10 @@ impl Environment {
 									.ok_or_else(missing_token_error(
 										Token::Register(Register::X, (location, *second_location).into()).into(),
 									))?;
-
+								tokens
+									.next()
+									.ok_or_else(missing_token_error(Token::CloseParenthesis(location).into()))?
+									.expect(Token::CloseParenthesis(location), self.source_code.clone())?;
 								if let Some(further_token) = tokens.next() {
 									println!(
 										"{:?}",

@@ -120,7 +120,6 @@ fn next_number(
 	while let Some(chr) = chars.peek() && checker(*chr) {
 		number_chars.push(chars.next().unwrap());
 	}
-	dbg!(&number_chars);
 	i64::from_str_radix(&number_chars, radix.into())
 		.map_err(|error| AssemblyError::InvalidNumber {
 			error,

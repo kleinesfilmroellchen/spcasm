@@ -210,10 +210,10 @@ impl From<MemoryAddress> for Number {
 impl UpperHex for Number {
 	fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), Error> {
 		match self {
-			Self::Literal(numeric_address) => write!(f, "{:X}", numeric_address),
+			Self::Literal(numeric_address) => write!(f, "${:X}", numeric_address),
 			Self::Label(ref unresolved_label) => match &**unresolved_label {
-				Label { location: Some(numeric_address), .. } => write!(f, "{:X}", numeric_address),
-				Label { name, .. } => write!(f, "<{}>", name),
+				Label { location: Some(numeric_address), .. } => write!(f, "${:X}", numeric_address),
+				Label { name, .. } => write!(f, "{}", name),
 			},
 		}
 	}
@@ -258,20 +258,20 @@ pub enum AddressingMode {
 impl Display for AddressingMode {
 	fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), Error> {
 		write!(f, "{}", match self {
-			Self::Immediate(number) => format!("#${:02X}", number),
+			Self::Immediate(number) => format!("#{:02X}", number),
 			Self::IndirectX => "(X)".to_owned(),
 			Self::IndirectY => "(Y)".to_owned(),
 			Self::IndirectXAutoIncrement => "(X)+".to_owned(),
-			Self::DirectPage(address) => format!("${:02X}", address),
-			Self::DirectPageXIndexed(address) => format!("${:02X}+X", address),
-			Self::DirectPageYIndexed(address) => format!("${:02X}+Y", address),
-			Self::DirectPageXIndexedIndirect(address) => format!("(${:02X}+X)", address),
-			Self::DirectPageIndirectYIndexed(address) => format!("(${:02X})+Y", address),
-			Self::Address(address) => format!("${:04X}", address),
-			Self::XIndexed(address) => format!("${:04X}+X", address),
-			Self::YIndexed(address) => format!("${:04X}+Y", address),
-			Self::DirectPageBit(address, bit) => format!("${:02X}.{:01}", address, bit),
-			Self::AddressBit(address, bit) => format!("${:04X}.{:01}", address, bit),
+			Self::DirectPage(address) => format!("{:02X}", address),
+			Self::DirectPageXIndexed(address) => format!("{:02X}+X", address),
+			Self::DirectPageYIndexed(address) => format!("{:02X}+Y", address),
+			Self::DirectPageXIndexedIndirect(address) => format!("({:02X}+X)", address),
+			Self::DirectPageIndirectYIndexed(address) => format!("({:02X})+Y", address),
+			Self::Address(address) => format!("{:04X}", address),
+			Self::XIndexed(address) => format!("{:04X}+X", address),
+			Self::YIndexed(address) => format!("{:04X}+Y", address),
+			Self::DirectPageBit(address, bit) => format!("{:02X}.{:01}", address, bit),
+			Self::AddressBit(address, bit) => format!("{:04X}.{:01}", address, bit),
 			Self::Register(register) => format!("{}", register),
 		})
 	}

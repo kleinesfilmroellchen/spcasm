@@ -250,7 +250,10 @@ pub enum AddressingMode {
 	DirectPageBit(Number, u8),
 	/// abs.bit
 	AddressBit(Number, u8),
-	// ...
+	/// /abs.bit
+	NegatedAddressBit(Number, u8),
+	/// C
+	CarryFlag,
 	/// A, X, Y, SP, ...
 	Register(Register),
 }
@@ -261,6 +264,7 @@ impl Display for AddressingMode {
 			Self::Immediate(number) => format!("#{:02X}", number),
 			Self::IndirectX => "(X)".to_owned(),
 			Self::IndirectY => "(Y)".to_owned(),
+			Self::CarryFlag => "C".to_owned(),
 			Self::IndirectXAutoIncrement => "(X)+".to_owned(),
 			Self::DirectPage(address) => format!("{:02X}", address),
 			Self::DirectPageXIndexed(address) => format!("{:02X}+X", address),
@@ -272,6 +276,7 @@ impl Display for AddressingMode {
 			Self::YIndexed(address) => format!("{:04X}+Y", address),
 			Self::DirectPageBit(address, bit) => format!("{:02X}.{:01}", address, bit),
 			Self::AddressBit(address, bit) => format!("{:04X}.{:01}", address, bit),
+			Self::NegatedAddressBit(address, bit) => format!("/{:04X}.{:01}", address, bit),
 			Self::Register(register) => format!("{}", register),
 		})
 	}

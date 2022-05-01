@@ -134,7 +134,11 @@ impl Environment {
 			| Mnemonic::Bbs
 			| Mnemonic::Bbc
 			| Mnemonic::Cbne
-			| Mnemonic::Dbnz => self.make_two_operand_instruction(mnemonic, tokens, label, identifier.source_span()),
+			| Mnemonic::Dbnz
+			| Mnemonic::And1
+			| Mnemonic::Or1
+			| Mnemonic::Eor1
+			| Mnemonic::Mov1 => self.make_two_operand_instruction(mnemonic, tokens, label, identifier.source_span()),
 			Mnemonic::Inc
 			| Mnemonic::Dec
 			| Mnemonic::Asl
@@ -160,7 +164,13 @@ impl Environment {
 			| Mnemonic::Pcall
 			| Mnemonic::Tcall
 			| Mnemonic::Push
-			| Mnemonic::Pop => self.make_single_operand_instruction(mnemonic, tokens, label, identifier.source_span()),
+			| Mnemonic::Xcn
+			| Mnemonic::Pop
+			| Mnemonic::Set1
+			| Mnemonic::Clr1
+			| Mnemonic::Tset1
+			| Mnemonic::Tclr1
+			| Mnemonic::Not1 => self.make_single_operand_instruction(mnemonic, tokens, label, identifier.source_span()),
 			Mnemonic::Brk
 			| Mnemonic::Ret
 			| Mnemonic::Ret1
@@ -175,7 +185,6 @@ impl Environment {
 			| Mnemonic::Nop
 			| Mnemonic::Sleep
 			| Mnemonic::Stop => self.make_zero_operand_instruction(mnemonic, tokens, label, identifier.source_span()),
-			_ => unimplemented!("Handle other instructions"),
 		}
 	}
 
@@ -349,7 +358,6 @@ impl Environment {
 			)?)),
 			// Direct address modes
 			literal_token @ (Token::Number(..) | Token::Identifier(..)) => {
-				let token_start = SourceOffset::from(literal_token.source_span().offset());
 				let literal = self.create_number(&literal_token, true)?;
 				let is_direct_page = match literal {
 					Number::Literal(address) => address <= 0xFF,
@@ -423,6 +431,37 @@ impl Environment {
 							src:      self.source_code.clone(),
 						}),
 				})
+			},
+			// Negated bit index
+			#[allow(clippy::cast_sign_loss, clippy::cast_possible_truncation)]
+			Token::Slash(location) => {
+				let number =
+					match tokens.next().ok_or_else(missing_token_error(Token::Number(0, location.into()).into()))? {
+						number @ (Token::Number(..) | Token::Identifier(..)) => number,
+						_ => unreachable!(),
+					};
+				let number = self.create_number(number, true)?;
+				tokens
+					.next()
+					.ok_or_else(missing_token_error(Token::Period(location).into()))?
+					.expect(Token::Period(location), self.source_code.clone())?;
+				let (bit, end_location) = match *tokens
+					.next()
+					.ok_or_else(missing_token_error(Token::Number(0, location.into()).into()))?
+					.expect(Token::Number(0, location.into()), self.source_code.clone())?
+				{
+					Token::Number(number, location) => (number, location),
+					_ => unreachable!(),
+				};
+				if !(0x00 ..= 0x07).contains(&bit) {
+					return Err(AssemblyError::InvalidBitIndex {
+						index:    bit as u8,
+						location: end_location,
+						src:      self.source_code.clone(),
+					});
+				}
+
+				Ok(AddressingMode::NegatedAddressBit(number, bit as u8))
 			},
 			// Indexed modes
 			Token::OpenParenthesis(location) =>

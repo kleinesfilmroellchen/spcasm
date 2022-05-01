@@ -2,7 +2,7 @@
 #![allow(clippy::module_name_repetitions)]
 
 use std::fs::File;
-use std::io::{BufWriter, Write};
+use std::io::BufWriter;
 
 use object::write::Object;
 

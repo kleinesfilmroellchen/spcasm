@@ -43,7 +43,7 @@ pub fn lex(source_code: Arc<AssemblyCode>) -> Result<Vec<Token>, AssemblyError> 
 				tokens.push(Token::Number(number, (index, size).into()));
 				index += size+1;
 			}
-			'#' | ',' | '+' | '(' | ')' | ':' | '.' => {
+			'#' | ',' | '+' | '(' | ')' | ':' | '.' | '/' => {
 				tokens.push(parse_single_char_tokens(chr, index.into()));
 				index += 1;
 			},
@@ -137,6 +137,7 @@ fn parse_single_char_tokens(chr: char, location: SourceOffset) -> Token {
 		'(' => Token::OpenParenthesis(location),
 		')' => Token::CloseParenthesis(location),
 		':' => Token::Colon(location),
+		'/' => Token::Slash(location),
 		'.' => Token::Period(location),
 		_ => unreachable!(),
 	}

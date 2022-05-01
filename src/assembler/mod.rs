@@ -15,6 +15,7 @@ use crate::parser::Environment;
 use crate::Register;
 
 mod arithmetic_logic;
+mod bit;
 mod branching;
 mod mov;
 mod r16bit;
@@ -167,6 +168,20 @@ pub fn assemble(environment: &Environment, instructions: Vec<Instruction>) -> Re
 				first_operand: Some(AddressingMode::Register(target)),
 				second_operand: None,
 			} => mov::assemble_push_pop(&mut data, *mnemonic == Mnemonic::Push, *target, &instruction)?,
+			Opcode {
+				mnemonic:
+					mnemonic @ (Mnemonic::Set1
+					| Mnemonic::Clr1
+					| Mnemonic::Tset1
+					| Mnemonic::Tclr1
+					| Mnemonic::And1
+					| Mnemonic::Or1
+					| Mnemonic::Eor1
+					| Mnemonic::Not1
+					| Mnemonic::Mov1),
+				first_operand: Some(target),
+				second_operand: source,
+			} => bit::assemble_bit_instructions(&mut data, *mnemonic, target.clone(), source, &instruction)?,
 			Opcode { mnemonic, first_operand: Some(_), second_operand: Some(_) } =>
 				return Err(AssemblyError::TwoOperandsNotAllowed {
 					mnemonic: *mnemonic,
@@ -264,6 +279,9 @@ pub enum MemoryValue {
 	/// at this memory address, but one or two bytes before. The PSW is still at the beginning of the instruction when
 	/// we jump, so the relative jump starts at that instruction, not at this memory address.
 	LabelRelative(Arc<Label>, u8),
+	/// An (unresolved) label. The upper three bits are used for the bit index value which can range from 0 to 7. This
+	/// is used for most absolute bit addressing modes.
+	LabelHighByteWithContainedBitIndex(Arc<Label>, u8),
 }
 
 impl MemoryValue {
@@ -285,6 +303,13 @@ impl MemoryValue {
 			Self::LabelRelative(ref label, negative_offset) => match **label {
 				Label { location: Some(label_memory_address), .. } => {
 					let resolved_data = (label_memory_address - own_memory_address) as u8 + negative_offset;
+					Self::Resolved(resolved_data)
+				},
+				_ => self,
+			},
+			Self::LabelHighByteWithContainedBitIndex(ref label, bit_index) => match **label {
+				Label { location: Some(label_memory_address), .. } => {
+					let resolved_data = ((label_memory_address & 0x1F00) >> 8) as u8 | (bit_index << 5);
 					Self::Resolved(resolved_data)
 				},
 				_ => self,
@@ -441,6 +466,15 @@ impl AssembledData {
 			.push(LabeledMemoryValue { value: MemoryValue::LabelRelative(value, negative_offset), label: None });
 	}
 
+	/// Appends an unresolved value with a bit index that will be placed into the upper three bits after label
+	/// resolution.
+	pub fn append_unresolved_with_bit_index(&mut self, value: Arc<Label>, bit_index: u8) {
+		self.current_segment_mut().push(LabeledMemoryValue {
+			value: MemoryValue::LabelHighByteWithContainedBitIndex(value, bit_index),
+			label: None,
+		});
+	}
+
 	/// Appends an instruction with an 8-bit operand.
 	#[inline]
 	pub fn append_instruction_with_8_bit_operand(
@@ -490,6 +524,28 @@ impl AssembledData {
 				// low byte first because little endian
 				self.append_unresolved(value.clone(), false, None);
 				self.append_unresolved(value, true, None);
+			},
+		}
+	}
+
+	/// Appends an instruction with a 16-bit operand. The upper three bits of it are replaced by the bit index, either
+	/// now (if the operand is a resolved number) or later (if the operand is a label).
+	#[inline]
+	pub fn append_instruction_with_16_bit_operand_and_bit_index(
+		&mut self,
+		opcode: u8,
+		operand: Number,
+		bit_index: u8,
+		label: Option<Arc<Label>>,
+		span: SourceSpan,
+	) {
+		self.append(opcode, label);
+
+		match operand {
+			Number::Literal(value) => self.append_16_bits(value | (MemoryAddress::from(bit_index) << 13), None, span),
+			Number::Label(value) => {
+				self.append_unresolved(value.clone(), false, None);
+				self.append_unresolved_with_bit_index(value, bit_index);
 			},
 		}
 	}

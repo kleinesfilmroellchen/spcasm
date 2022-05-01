@@ -173,6 +173,8 @@ ror $05   ;= 6B 05
 ror $06+X ;= 7B 06
 ror $0708 ;= 6C 08 07
 
+xcn A     ;= 9F
+
 MOVW YA,$09 ;= BA 09
 MOVW $0A,YA ;= DA 0A
 INCW $0B    ;= 3A 0B
@@ -240,6 +242,21 @@ pop A    ;= AE
 pop X    ;= CE
 pop Y    ;= EE
 pop PSW  ;= 8E
+
+set1 $50.5  ;= A2 50
+clr1 $51.7  ;= F2 51
+
+tset1 $5060 ;= 0E 60 50
+tclr1 $1011 ;= 4E 11 10
+
+and1 C,$1010.0  ;= 4A 10 10 
+and1 C,/$1020.3 ;= 6A 20 70
+or1 C,$1030.7   ;= 0A 30 F0
+or1 C,/$1040.6  ;= 2A 40 D0
+eor1 C,$1070.2  ;= 8A 70 50
+not1 $1080.5    ;= EA 80 B0
+mov1 C,$1090.4  ;= AA 90 90
+mov1 $10A0.1,C  ;= CA A0 30
 
 clrc  ;= 60
 setc  ;= 80

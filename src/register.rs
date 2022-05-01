@@ -27,6 +27,8 @@ pub enum Register {
 	PSW,
 	/// Combined 16-bit register from Y and A.
 	YA,
+	/// Carry flag, a pseudo-register.
+	C,
 }
 
 impl Display for Register {

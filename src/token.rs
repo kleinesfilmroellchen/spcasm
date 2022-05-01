@@ -23,6 +23,8 @@ pub enum Token {
 	Comma(SourceOffset),
 	/// '+'
 	Plus(SourceOffset),
+	/// '/'
+	Slash(SourceOffset),
 	/// '('
 	OpenParenthesis(SourceOffset),
 	/// ')'
@@ -78,6 +80,10 @@ impl Token {
 				Self::Plus(..) => Ok(self),
 				_ => Err(()),
 			},
+			Self::Slash(..) => match type_ {
+				Self::Slash(..) => Ok(self),
+				_ => Err(()),
+			},
 			Self::Newline(..) => match type_ {
 				Self::Newline(..) => Ok(self),
 				_ => Err(()),
@@ -115,6 +121,7 @@ impl Token {
 			| Self::Newline(location)
 			| Self::OpenParenthesis(location)
 			| Self::Period(location)
+			| Self::Slash(location)
 			| Self::Plus(location) => (*location, SourceOffset::from(1)).into(),
 			Self::Identifier(_, location) | Self::Number(_, location) | Self::Register(_, location) => *location,
 			#[cfg(test)]
@@ -135,6 +142,7 @@ impl Display for Token {
 			Self::Plus(..) => "'+'",
 			Self::OpenParenthesis(..) => "'('",
 			Self::CloseParenthesis(..) => "')'",
+			Self::Slash(..) => "'/'",
 			Self::Newline(..) => "new line",
 			Self::Colon(..) => "':'",
 			#[cfg(test)]

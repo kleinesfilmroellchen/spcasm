@@ -16,9 +16,13 @@ pub mod elf;
 mod error;
 pub mod instruction;
 pub mod lexer;
+mod r#macro;
 pub mod parser;
+mod program;
 mod register;
 mod token;
+pub use program::ProgramElement;
+pub use r#macro::Macro;
 pub use register::Register;
 pub use token::Token;
 
@@ -59,7 +63,7 @@ fn main() -> miette::Result<()> {
 	Ok(())
 }
 
-fn run_assembler(file_name: String) -> miette::Result<(Vec<instruction::Instruction>, Vec<u8>)> {
+fn run_assembler(file_name: String) -> miette::Result<(Vec<ProgramElement>, Vec<u8>)> {
 	let contents = read_to_string(file_name.clone()).expect("Couldn't read file contents");
 	let source_code = Arc::new(AssemblyCode { name: file_name, text: contents });
 	let lexed = lexer::lex(source_code.clone())?;
@@ -98,7 +102,15 @@ mod test {
 	}
 
 	/// Assembles the contents of the expected value comments, which is what the file should assemble to.
-	fn assemble_expected_binary(instructions: Vec<crate::instruction::Instruction>) -> Vec<u8> {
-		instructions.into_iter().flat_map(|instruction| instruction.expected_value).collect()
+	#[allow(clippy::match_wildcard_for_single_variants)]
+	fn assemble_expected_binary(instructions: Vec<crate::ProgramElement>) -> Vec<u8> {
+		instructions
+			.into_iter()
+			.filter_map(|program_element| match program_element {
+				crate::ProgramElement::Instruction(instruction) => Some(instruction),
+				_ => None,
+			})
+			.flat_map(|instruction| instruction.expected_value)
+			.collect()
 	}
 }

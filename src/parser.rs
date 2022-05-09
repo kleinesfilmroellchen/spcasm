@@ -5,6 +5,7 @@ use std::sync::Arc;
 
 use miette::{SourceOffset, SourceSpan};
 
+use super::ProgramElement;
 use crate::error::{AssemblyCode, AssemblyError};
 use crate::instruction::{AddressingMode, Instruction, Label, Mnemonic, Number, Opcode};
 use crate::{Register, Token};
@@ -43,7 +44,7 @@ impl Environment {
 	/// Any parser error is returned as a string.
 	/// # Panics
 	/// All the panics are programming bugs.
-	pub fn parse(&mut self, tokens: &[Token]) -> Result<Vec<Instruction>, AssemblyError> {
+	pub fn parse(&mut self, tokens: &[Token]) -> Result<Vec<ProgramElement>, AssemblyError> {
 		let mut tokens: std::iter::Peekable<std::slice::Iter<Token>> = tokens.iter().peekable();
 		let mut instructions = Vec::new();
 		let mut current_label = None;
@@ -61,7 +62,11 @@ impl Environment {
 						{
 							tokens_for_instruction.push(tokens.next().unwrap().clone());
 						}
-						instructions.push(self.create_instruction(&token, &tokens_for_instruction, current_label)?);
+						instructions.push(ProgramElement::Instruction(self.create_instruction(
+							&token,
+							&tokens_for_instruction,
+							current_label,
+						)?));
 						current_label = None;
 						// is Ok() if there's no further token due to EOF
 						tokens

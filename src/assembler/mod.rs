@@ -8,7 +8,8 @@ use std::sync::Arc;
 use miette::{Result, SourceSpan};
 use r16bit::MovDirection;
 
-use super::pretty_hex;
+use super::r#macro::MacroValue;
+use super::{pretty_hex, Macro, ProgramElement};
 use crate::error::{AssemblyCode, AssemblyError};
 use crate::instruction::{AddressingMode, Instruction, Label, MemoryAddress, Mnemonic, Number, Opcode};
 use crate::parser::Environment;
@@ -26,175 +27,15 @@ pub const MAX_PASSES: usize = 10;
 /// Assembles the instructions into a byte sequence.
 /// # Errors
 /// Unencodeable instructions will cause errors.
-#[allow(clippy::too_many_lines)] // ¯\_(ツ)_/¯
-pub fn assemble(environment: &Environment, instructions: Vec<Instruction>) -> Result<Vec<u8>, AssemblyError> {
+pub fn assemble(environment: &Environment, instructions: Vec<ProgramElement>) -> Result<Vec<u8>, AssemblyError> {
 	let mut data = AssembledData::new(environment.source_code.clone());
 
 	data.new_segment(0);
 
-	for instruction in instructions {
-		match &instruction.opcode {
-			Opcode { mnemonic: Mnemonic::Mov, first_operand: Some(target), second_operand: Some(source) } =>
-				mov::assemble_mov(&mut data, target, source.clone(), &instruction)?,
-			Opcode {
-				mnemonic:
-					mnemonic @ (Mnemonic::Adc | Mnemonic::Sbc | Mnemonic::And | Mnemonic::Or | Mnemonic::Eor | Mnemonic::Cmp),
-				first_operand: Some(target),
-				second_operand: Some(source),
-			} => arithmetic_logic::assemble_arithmetic_instruction(
-				&mut data,
-				*mnemonic,
-				target.clone(),
-				source.clone(),
-				&instruction,
-			)?,
-			Opcode {
-				mnemonic: mnemonic @ (Mnemonic::Inc | Mnemonic::Dec),
-				first_operand: Some(target),
-				second_operand: None,
-			} => {
-				let is_increment = *mnemonic == Mnemonic::Inc;
-				arithmetic_logic::assemble_inc_dec_instruction(&mut data, is_increment, target.clone(), &instruction)?;
-			},
-			Opcode {
-				mnemonic: mnemonic @ (Mnemonic::Asl | Mnemonic::Lsr | Mnemonic::Rol | Mnemonic::Ror | Mnemonic::Xcn),
-				first_operand: Some(target),
-				second_operand: None,
-			} => arithmetic_logic::assemble_shift_rotation_instruction(&mut data, *mnemonic, target.clone(), &instruction)?,
-			Opcode {
-				mnemonic: mnemonic @ (Mnemonic::Incw | Mnemonic::Decw),
-				first_operand: Some(AddressingMode::DirectPage(target)),
-				second_operand: None,
-			} => {
-				let is_increment = *mnemonic == Mnemonic::Incw;
-				r16bit::assemble_incw_decw_instruction(&mut data, is_increment, target.clone(), &instruction);
-			},
-			Opcode {
-				mnemonic: mnemonic @ (Mnemonic::Addw | Mnemonic::Subw | Mnemonic::Cmpw),
-				first_operand: Some(AddressingMode::Register(Register::YA)),
-				second_operand: Some(AddressingMode::DirectPage(target)),
-			} => r16bit::assemble_add_sub_cmp_wide_instruction(&mut data, *mnemonic, target.clone(), &instruction),
-			Opcode {
-				mnemonic: Mnemonic::Movw,
-				first_operand: Some(target @ (AddressingMode::DirectPage(_) | AddressingMode::Register(Register::YA))),
-				second_operand: Some(source @ (AddressingMode::DirectPage(_) | AddressingMode::Register(Register::YA))),
-			} => {
-				let make_movw_error = || {
-					Err(AssemblyError::InvalidAddressingModeCombination {
-						first_mode:  target.clone(),
-						second_mode: source.clone(),
-						src:         data.source_code.clone(),
-						location:    instruction.span,
-						mnemonic:    Mnemonic::Movw,
-					})
-				};
-				let (direction, page_address) = if *target == AddressingMode::Register(Register::YA) {
-					(MovDirection::IntoYA, match source {
-						AddressingMode::DirectPage(page_address) => page_address,
-						_ => return make_movw_error(),
-					})
-				} else {
-					(MovDirection::FromYA, match target {
-						AddressingMode::DirectPage(page_address) => page_address,
-						_ => return make_movw_error(),
-					})
-				};
-				r16bit::assemble_mov_wide_instruction(&mut data, page_address.clone(), &direction, &instruction);
-			},
-			Opcode {
-				mnemonic: Mnemonic::Mul,
-				first_operand: Some(AddressingMode::Register(Register::YA)),
-				second_operand: None,
-			} => data.append(0xCF, instruction.label),
-			Opcode {
-				mnemonic: Mnemonic::Div,
-				first_operand: Some(AddressingMode::Register(Register::YA)),
-				second_operand: Some(AddressingMode::Register(Register::X)),
-			} => data.append(0x9E, instruction.label),
-			Opcode {
-				mnemonic: mnemonic @ (Mnemonic::Daa | Mnemonic::Das),
-				first_operand: Some(AddressingMode::Register(Register::A)),
-				second_operand: None,
-			} => data.append(if *mnemonic == Mnemonic::Daa { 0xDF } else { 0xBE }, instruction.label),
-			Opcode {
-				mnemonic:
-					mnemonic @ (Mnemonic::Bra
-					| Mnemonic::Beq
-					| Mnemonic::Bne
-					| Mnemonic::Bcs
-					| Mnemonic::Bcc
-					| Mnemonic::Bvs
-					| Mnemonic::Bvc
-					| Mnemonic::Bmi
-					| Mnemonic::Bpl
-					| Mnemonic::Bbs
-					| Mnemonic::Bbc
-					| Mnemonic::Cbne
-					| Mnemonic::Dbnz
-					| Mnemonic::Call
-					| Mnemonic::Tcall
-					| Mnemonic::Pcall
-					| Mnemonic::Jmp),
-				first_operand: Some(target),
-				second_operand: source,
-			} => branching::assemble_branching_instruction(
-				&mut data,
-				*mnemonic,
-				target.clone(),
-				source.clone(),
-				&instruction,
-			)?,
-			Opcode {
-				mnemonic:
-					mnemonic @ (Mnemonic::Brk
-					| Mnemonic::Ret
-					| Mnemonic::Ret1
-					| Mnemonic::Clrc
-					| Mnemonic::Setc
-					| Mnemonic::Notc
-					| Mnemonic::Clrv
-					| Mnemonic::Clrp
-					| Mnemonic::Setp
-					| Mnemonic::Ei
-					| Mnemonic::Di
-					| Mnemonic::Nop
-					| Mnemonic::Sleep
-					| Mnemonic::Stop),
-				first_operand: None,
-				second_operand: None,
-			} => assemble_operandless_instruction(&mut data, *mnemonic, instruction.label),
-			Opcode {
-				mnemonic: mnemonic @ (Mnemonic::Push | Mnemonic::Pop),
-				first_operand: Some(AddressingMode::Register(target)),
-				second_operand: None,
-			} => mov::assemble_push_pop(&mut data, *mnemonic == Mnemonic::Push, *target, &instruction)?,
-			Opcode {
-				mnemonic:
-					mnemonic @ (Mnemonic::Set1
-					| Mnemonic::Clr1
-					| Mnemonic::Tset1
-					| Mnemonic::Tclr1
-					| Mnemonic::And1
-					| Mnemonic::Or1
-					| Mnemonic::Eor1
-					| Mnemonic::Not1
-					| Mnemonic::Mov1),
-				first_operand: Some(target),
-				second_operand: source,
-			} => bit::assemble_bit_instructions(&mut data, *mnemonic, target.clone(), source, &instruction)?,
-			Opcode { mnemonic, first_operand: Some(_), second_operand: Some(_) } =>
-				return Err(AssemblyError::TwoOperandsNotAllowed {
-					mnemonic: *mnemonic,
-					src:      data.source_code,
-					location: instruction.span,
-				}),
-			Opcode { mnemonic, first_operand: Some(_), .. } =>
-				return Err(AssemblyError::OperandNotAllowed {
-					mnemonic: *mnemonic,
-					src:      data.source_code,
-					location: instruction.span,
-				}),
-			_ => unreachable!(),
+	for program_element in instructions {
+		match program_element {
+			ProgramElement::Instruction(instruction) => assemble_instruction(&mut data, instruction)?,
+			ProgramElement::Macro(r#macro) => assemble_macro(&mut data, r#macro)?,
 		}
 	}
 	let mut pass_count = 0;
@@ -202,6 +43,179 @@ pub fn assemble(environment: &Environment, instructions: Vec<Instruction>) -> Re
 		pass_count += 1;
 	}
 	data.combine_segments()
+}
+
+#[allow(clippy::too_many_lines)] // ¯\_(ツ)_/¯
+fn assemble_instruction(data: &mut AssembledData, instruction: Instruction) -> Result<(), AssemblyError> {
+	match &instruction.opcode {
+		Opcode { mnemonic: Mnemonic::Mov, first_operand: Some(target), second_operand: Some(source) } =>
+			mov::assemble_mov(data, target, source.clone(), &instruction)?,
+		Opcode {
+			mnemonic:
+				mnemonic @ (Mnemonic::Adc | Mnemonic::Sbc | Mnemonic::And | Mnemonic::Or | Mnemonic::Eor | Mnemonic::Cmp),
+			first_operand: Some(target),
+			second_operand: Some(source),
+		} => arithmetic_logic::assemble_arithmetic_instruction(
+			data,
+			*mnemonic,
+			target.clone(),
+			source.clone(),
+			&instruction,
+		)?,
+		Opcode {
+			mnemonic: mnemonic @ (Mnemonic::Inc | Mnemonic::Dec),
+			first_operand: Some(target),
+			second_operand: None,
+		} => {
+			let is_increment = *mnemonic == Mnemonic::Inc;
+			arithmetic_logic::assemble_inc_dec_instruction(data, is_increment, target.clone(), &instruction)?;
+		},
+		Opcode {
+			mnemonic: mnemonic @ (Mnemonic::Asl | Mnemonic::Lsr | Mnemonic::Rol | Mnemonic::Ror | Mnemonic::Xcn),
+			first_operand: Some(target),
+			second_operand: None,
+		} => arithmetic_logic::assemble_shift_rotation_instruction(data, *mnemonic, target.clone(), &instruction)?,
+		Opcode {
+			mnemonic: mnemonic @ (Mnemonic::Incw | Mnemonic::Decw),
+			first_operand: Some(AddressingMode::DirectPage(target)),
+			second_operand: None,
+		} => {
+			let is_increment = *mnemonic == Mnemonic::Incw;
+			r16bit::assemble_incw_decw_instruction(data, is_increment, target.clone(), &instruction);
+		},
+		Opcode {
+			mnemonic: mnemonic @ (Mnemonic::Addw | Mnemonic::Subw | Mnemonic::Cmpw),
+			first_operand: Some(AddressingMode::Register(Register::YA)),
+			second_operand: Some(AddressingMode::DirectPage(target)),
+		} => r16bit::assemble_add_sub_cmp_wide_instruction(data, *mnemonic, target.clone(), &instruction),
+		Opcode {
+			mnemonic: Mnemonic::Movw,
+			first_operand: Some(target @ (AddressingMode::DirectPage(_) | AddressingMode::Register(Register::YA))),
+			second_operand: Some(source @ (AddressingMode::DirectPage(_) | AddressingMode::Register(Register::YA))),
+		} => {
+			let make_movw_error = || {
+				Err(AssemblyError::InvalidAddressingModeCombination {
+					first_mode:  target.clone(),
+					second_mode: source.clone(),
+					src:         data.source_code.clone(),
+					location:    instruction.span,
+					mnemonic:    Mnemonic::Movw,
+				})
+			};
+			let (direction, page_address) = if *target == AddressingMode::Register(Register::YA) {
+				(MovDirection::IntoYA, match source {
+					AddressingMode::DirectPage(page_address) => page_address,
+					_ => return make_movw_error(),
+				})
+			} else {
+				(MovDirection::FromYA, match target {
+					AddressingMode::DirectPage(page_address) => page_address,
+					_ => return make_movw_error(),
+				})
+			};
+			r16bit::assemble_mov_wide_instruction(data, page_address.clone(), &direction, &instruction);
+		},
+		Opcode {
+			mnemonic: Mnemonic::Mul,
+			first_operand: Some(AddressingMode::Register(Register::YA)),
+			second_operand: None,
+		} => data.append(0xCF, instruction.label),
+		Opcode {
+			mnemonic: Mnemonic::Div,
+			first_operand: Some(AddressingMode::Register(Register::YA)),
+			second_operand: Some(AddressingMode::Register(Register::X)),
+		} => data.append(0x9E, instruction.label),
+		Opcode {
+			mnemonic: mnemonic @ (Mnemonic::Daa | Mnemonic::Das),
+			first_operand: Some(AddressingMode::Register(Register::A)),
+			second_operand: None,
+		} => data.append(if *mnemonic == Mnemonic::Daa { 0xDF } else { 0xBE }, instruction.label),
+		Opcode {
+			mnemonic:
+				mnemonic @ (Mnemonic::Bra
+				| Mnemonic::Beq
+				| Mnemonic::Bne
+				| Mnemonic::Bcs
+				| Mnemonic::Bcc
+				| Mnemonic::Bvs
+				| Mnemonic::Bvc
+				| Mnemonic::Bmi
+				| Mnemonic::Bpl
+				| Mnemonic::Bbs
+				| Mnemonic::Bbc
+				| Mnemonic::Cbne
+				| Mnemonic::Dbnz
+				| Mnemonic::Call
+				| Mnemonic::Tcall
+				| Mnemonic::Pcall
+				| Mnemonic::Jmp),
+			first_operand: Some(target),
+			second_operand: source,
+		} => branching::assemble_branching_instruction(data, *mnemonic, target.clone(), source.clone(), &instruction)?,
+		Opcode {
+			mnemonic:
+				mnemonic @ (Mnemonic::Brk
+				| Mnemonic::Ret
+				| Mnemonic::Ret1
+				| Mnemonic::Clrc
+				| Mnemonic::Setc
+				| Mnemonic::Notc
+				| Mnemonic::Clrv
+				| Mnemonic::Clrp
+				| Mnemonic::Setp
+				| Mnemonic::Ei
+				| Mnemonic::Di
+				| Mnemonic::Nop
+				| Mnemonic::Sleep
+				| Mnemonic::Stop),
+			first_operand: None,
+			second_operand: None,
+		} => assemble_operandless_instruction(data, *mnemonic, instruction.label),
+		Opcode {
+			mnemonic: mnemonic @ (Mnemonic::Push | Mnemonic::Pop),
+			first_operand: Some(AddressingMode::Register(target)),
+			second_operand: None,
+		} => mov::assemble_push_pop(data, *mnemonic == Mnemonic::Push, *target, &instruction)?,
+		Opcode {
+			mnemonic:
+				mnemonic @ (Mnemonic::Set1
+				| Mnemonic::Clr1
+				| Mnemonic::Tset1
+				| Mnemonic::Tclr1
+				| Mnemonic::And1
+				| Mnemonic::Or1
+				| Mnemonic::Eor1
+				| Mnemonic::Not1
+				| Mnemonic::Mov1),
+			first_operand: Some(target),
+			second_operand: source,
+		} => bit::assemble_bit_instructions(data, *mnemonic, target.clone(), source, &instruction)?,
+		Opcode { mnemonic, first_operand: Some(_), second_operand: Some(_) } =>
+			return Err(AssemblyError::TwoOperandsNotAllowed {
+				mnemonic: *mnemonic,
+				src:      data.source_code.clone(),
+				location: instruction.span,
+			}),
+		Opcode { mnemonic, first_operand: Some(_), .. } =>
+			return Err(AssemblyError::OperandNotAllowed {
+				mnemonic: *mnemonic,
+				src:      data.source_code.clone(),
+				location: instruction.span,
+			}),
+		_ => unreachable!(),
+	}
+	Ok(())
+}
+
+#[allow(clippy::unnecessary_wraps)]
+fn assemble_macro(data: &mut AssembledData, mcro: Macro) -> Result<(), AssemblyError> {
+	match mcro.value {
+		MacroValue::Org(address) => {
+			data.new_segment(address);
+		},
+		_ => unimplemented!(),
+	}
+	Ok(())
 }
 
 fn assemble_operandless_instruction(data: &mut AssembledData, mnemonic: Mnemonic, label: Option<Arc<Label>>) {

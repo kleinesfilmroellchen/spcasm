@@ -7,7 +7,7 @@ use miette::{SourceOffset, SourceSpan};
 
 use super::ProgramElement;
 use crate::error::{AssemblyCode, AssemblyError};
-use crate::instruction::{AddressingMode, Instruction, Label, Mnemonic, Number, Opcode};
+use crate::instruction::{AddressingMode, Instruction, GlobalLabel, Mnemonic, Number, Opcode};
 use crate::{Register, Token};
 /// Anything that can be primitively parsed from a string into an enum variant.
 /// This trait is intended to be derived with the macro from ``spcasm_derive``.
@@ -25,7 +25,7 @@ where
 #[derive(Debug)]
 pub struct Environment {
 	/// The list of labels.
-	pub labels:      Vec<Arc<Label>>,
+	pub labels:      Vec<Arc<GlobalLabel>>,
 	/// The source code of the assembly code.
 	pub source_code: Arc<AssemblyCode>,
 }
@@ -116,7 +116,7 @@ impl Environment {
 		&mut self,
 		identifier: &'a Token,
 		tokens: &'a [Token],
-		label: Option<Arc<Label>>,
+		label: Option<Arc<GlobalLabel>>,
 	) -> Result<Instruction, AssemblyError> {
 		let identifier_name = match identifier {
 			Token::Identifier(identifier, ..) => identifier.to_lowercase(),
@@ -197,7 +197,7 @@ impl Environment {
 		&mut self,
 		mnemonic: Mnemonic,
 		tokens: &[Token],
-		label: Option<Arc<Label>>,
+		label: Option<Arc<GlobalLabel>>,
 		mnemonic_token_location: SourceSpan,
 	) -> Result<Instruction, AssemblyError> {
 		let source_code_copy = self.source_code.clone();
@@ -249,7 +249,7 @@ impl Environment {
 		&'a mut self,
 		mnemonic: Mnemonic,
 		tokens: &'a [Token],
-		label: Option<Arc<Label>>,
+		label: Option<Arc<GlobalLabel>>,
 		mnemonic_token_location: SourceSpan,
 	) -> Result<Instruction, AssemblyError> {
 		let unparsed_addressing_mode = tokens
@@ -297,7 +297,7 @@ impl Environment {
 		&'a self,
 		mnemonic: Mnemonic,
 		tokens: &'a [Token],
-		label: Option<Arc<Label>>,
+		label: Option<Arc<GlobalLabel>>,
 		mnemonic_token_location: SourceSpan,
 	) -> Result<Instruction, AssemblyError> {
 		if tokens
@@ -595,7 +595,7 @@ impl Environment {
 	}
 
 	/// TODO: We're setting the label's position wrong if we reference it before it has been defined.
-	fn get_label(&mut self, name: &'_ str, span: SourceSpan, used_as_address: bool) -> Arc<Label> {
+	fn get_label(&mut self, name: &'_ str, span: SourceSpan, used_as_address: bool) -> Arc<GlobalLabel> {
 		match self.labels.iter_mut().find(|label| label.name == name) {
 			Some(matching_label) => {
 				if used_as_address && !matching_label.used_as_address {
@@ -604,7 +604,7 @@ impl Environment {
 				matching_label.clone()
 			},
 			None => {
-				let new_label = Arc::new(Label { name: name.to_owned(), location: None, span, used_as_address });
+				let new_label = Arc::new(GlobalLabel { name: name.to_owned(), location: None, span, used_as_address });
 				self.labels.push(new_label.clone());
 				new_label
 			},

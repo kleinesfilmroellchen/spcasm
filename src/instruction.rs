@@ -19,7 +19,7 @@ pub type MemoryAddress = i64;
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct Instruction {
 	/// Label of this instruction, if any.
-	pub label:          Option<Arc<Label>>,
+	pub label:          Option<Arc<GlobalLabel>>,
 	/// Opcode of this instruction (slightly misnamed)
 	pub opcode:         Opcode,
 	pub(crate) span:    SourceSpan,
@@ -29,9 +29,10 @@ pub struct Instruction {
 	pub expected_value: Vec<u8>,
 }
 
-/// A textual label that refers to some location in memory and resolves to a numeric value at some point.
+/// A textual label that refers to some location in memory and resolves to a numeric value at some point. It is global,
+/// meaning that it refers to the same value everywhere.
 #[derive(Clone, Debug, Eq, PartialEq)]
-pub struct Label {
+pub struct GlobalLabel {
 	/// User-given label name.
 	pub name:            String,
 	/// Resolved memory location of the label, if any.
@@ -42,7 +43,7 @@ pub struct Label {
 	pub used_as_address: bool,
 }
 
-impl Label {
+impl GlobalLabel {
 	/// Whether this label has already been resolved to a memory location.
 	#[must_use]
 	pub const fn is_resolved(&self) -> bool {
@@ -180,7 +181,7 @@ pub enum Number {
 	/// A literal number.
 	Literal(MemoryAddress),
 	/// A label that will resolve to a number later.
-	Label(Arc<Label>),
+	Label(Arc<GlobalLabel>),
 	// TODO: support assembly-time calculations
 }
 
@@ -194,7 +195,7 @@ impl Number {
 			Self::Literal(value) => *value,
 			// necessary because matching through an Rc is not possible right now (would be super dope though).
 			Self::Label(label) => match **label {
-				Label { location: Some(value), .. } => value,
+				GlobalLabel { location: Some(value), .. } => value,
 				_ => panic!("Unresolved label {:?}", label),
 			},
 		}
@@ -212,8 +213,8 @@ impl UpperHex for Number {
 		match self {
 			Self::Literal(numeric_address) => write!(f, "${:X}", numeric_address),
 			Self::Label(ref unresolved_label) => match &**unresolved_label {
-				Label { location: Some(numeric_address), .. } => write!(f, "${:X}", numeric_address),
-				Label { name, .. } => write!(f, "{}", name),
+				GlobalLabel { location: Some(numeric_address), .. } => write!(f, "${:X}", numeric_address),
+				GlobalLabel { name, .. } => write!(f, "{}", name),
 			},
 		}
 	}

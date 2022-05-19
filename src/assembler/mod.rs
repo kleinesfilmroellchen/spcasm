@@ -11,7 +11,7 @@ use r16bit::MovDirection;
 use super::r#macro::MacroValue;
 use super::{pretty_hex, Macro, ProgramElement};
 use crate::error::{AssemblyCode, AssemblyError};
-use crate::instruction::{AddressingMode, Instruction, Label, MemoryAddress, Mnemonic, Number, Opcode};
+use crate::instruction::{AddressingMode, Instruction, GlobalLabel, MemoryAddress, Mnemonic, Number, Opcode};
 use crate::parser::Environment;
 use crate::Register;
 
@@ -218,7 +218,7 @@ fn assemble_macro(data: &mut AssembledData, mcro: Macro) -> Result<(), AssemblyE
 	Ok(())
 }
 
-fn assemble_operandless_instruction(data: &mut AssembledData, mnemonic: Mnemonic, label: Option<Arc<Label>>) {
+fn assemble_operandless_instruction(data: &mut AssembledData, mnemonic: Mnemonic, label: Option<Arc<GlobalLabel>>) {
 	data.append(
 		match mnemonic {
 			Mnemonic::Brk => 0x0F,
@@ -246,7 +246,7 @@ fn assemble_operandless_instruction(data: &mut AssembledData, mnemonic: Mnemonic
 #[derive(Clone, Debug)]
 pub struct LabeledMemoryValue {
 	/// The label of this memory value.
-	pub label: Option<Arc<Label>>,
+	pub label: Option<Arc<GlobalLabel>>,
 	/// The actual memory value, which might or might not be resolved.
 	pub value: MemoryValue,
 }
@@ -284,18 +284,18 @@ pub enum MemoryValue {
 	/// Resolved data.
 	Resolved(u8),
 	/// High byte of an (unresolved) label.
-	LabelHighByte(Arc<Label>),
+	LabelHighByte(Arc<GlobalLabel>),
 	/// Low byte of an (unresolved) label.
-	LabelLowByte(Arc<Label>),
+	LabelLowByte(Arc<GlobalLabel>),
 	/// An (unresolved) label. The resolved memory value will be the difference between this memory value's location and
 	/// the label's location. The second parameter is the negative offset that's added to the relative offset after
 	/// computation. This is necessary because the actual instruction that has this relative label stored doesn't start
 	/// at this memory address, but one or two bytes before. The PSW is still at the beginning of the instruction when
 	/// we jump, so the relative jump starts at that instruction, not at this memory address.
-	LabelRelative(Arc<Label>, u8),
+	LabelRelative(Arc<GlobalLabel>, u8),
 	/// An (unresolved) label. The upper three bits are used for the bit index value which can range from 0 to 7. This
 	/// is used for most absolute bit addressing modes.
-	LabelHighByteWithContainedBitIndex(Arc<Label>, u8),
+	LabelHighByteWithContainedBitIndex(Arc<GlobalLabel>, u8),
 }
 
 impl MemoryValue {
@@ -304,7 +304,7 @@ impl MemoryValue {
 		match self {
 			Self::Resolved(_) => self,
 			Self::LabelHighByte(ref label) | Self::LabelLowByte(ref label) => match **label {
-				Label { location: Some(memory_location), .. } => {
+				GlobalLabel { location: Some(memory_location), .. } => {
 					let resolved_data = match self {
 						Self::LabelHighByte(_) => (memory_location & 0xFF00) >> 8,
 						Self::LabelLowByte(_) => memory_location & 0xFF,
@@ -315,14 +315,14 @@ impl MemoryValue {
 				_ => self,
 			},
 			Self::LabelRelative(ref label, negative_offset) => match **label {
-				Label { location: Some(label_memory_address), .. } => {
+				GlobalLabel { location: Some(label_memory_address), .. } => {
 					let resolved_data = (label_memory_address - own_memory_address) as u8 + negative_offset;
 					Self::Resolved(resolved_data)
 				},
 				_ => self,
 			},
 			Self::LabelHighByteWithContainedBitIndex(ref label, bit_index) => match **label {
-				Label { location: Some(label_memory_address), .. } => {
+				GlobalLabel { location: Some(label_memory_address), .. } => {
 					let resolved_data = ((label_memory_address & 0x1F00) >> 8) as u8 | (bit_index << 5);
 					Self::Resolved(resolved_data)
 				},
@@ -424,7 +424,7 @@ impl AssembledData {
 	/// Appends a little endian (LSB first) 16-bit value to the current segment. The given number is truncated to 16
 	/// bits.
 	#[inline]
-	pub fn append_16_bits(&mut self, value: MemoryAddress, label: Option<Arc<Label>>, span: SourceSpan) {
+	pub fn append_16_bits(&mut self, value: MemoryAddress, label: Option<Arc<GlobalLabel>>, span: SourceSpan) {
 		if (value & 0xFFFF) != value {
 			println!(
 				"{:?}",
@@ -442,7 +442,7 @@ impl AssembledData {
 
 	/// Appends an 8-bit value to the current segment. The given number is truncated to 8 bits.
 	#[inline]
-	pub fn append_8_bits(&mut self, value: MemoryAddress, label: Option<Arc<Label>>, span: SourceSpan) {
+	pub fn append_8_bits(&mut self, value: MemoryAddress, label: Option<Arc<GlobalLabel>>, span: SourceSpan) {
 		if (value & 0xFF) != value {
 			println!(
 				"{:?}",
@@ -459,13 +459,13 @@ impl AssembledData {
 
 	/// Appends an 8-bit value to the current segment.
 	#[inline]
-	pub fn append(&mut self, value: u8, label: Option<Arc<Label>>) {
+	pub fn append(&mut self, value: u8, label: Option<Arc<GlobalLabel>>) {
 		self.current_segment_mut().push(LabeledMemoryValue { value: MemoryValue::Resolved(value), label });
 	}
 
 	/// Appends an unresolved value that points to a label to the current segment. The `use_high_byte` parameter decides
 	/// whether the high byte (true) or low byte (false) will be used in this memory address when the label is resolved.
-	pub fn append_unresolved(&mut self, value: Arc<Label>, use_high_byte: bool, label: Option<Arc<Label>>) {
+	pub fn append_unresolved(&mut self, value: Arc<GlobalLabel>, use_high_byte: bool, label: Option<Arc<GlobalLabel>>) {
 		self.current_segment_mut().push(LabeledMemoryValue {
 			value: if use_high_byte { MemoryValue::LabelHighByte(value) } else { MemoryValue::LabelLowByte(value) },
 			label,
@@ -474,7 +474,7 @@ impl AssembledData {
 
 	/// Appends an unresolved value that points to a label to the current segment. The label will be resolved to a
 	/// relative offset, like various branch instructions need it.
-	pub fn append_relative_unresolved(&mut self, value: Arc<Label>, negative_offset: u8) {
+	pub fn append_relative_unresolved(&mut self, value: Arc<GlobalLabel>, negative_offset: u8) {
 		self
 			.current_segment_mut()
 			.push(LabeledMemoryValue { value: MemoryValue::LabelRelative(value, negative_offset), label: None });
@@ -482,7 +482,7 @@ impl AssembledData {
 
 	/// Appends an unresolved value with a bit index that will be placed into the upper three bits after label
 	/// resolution.
-	pub fn append_unresolved_with_bit_index(&mut self, value: Arc<Label>, bit_index: u8) {
+	pub fn append_unresolved_with_bit_index(&mut self, value: Arc<GlobalLabel>, bit_index: u8) {
 		self.current_segment_mut().push(LabeledMemoryValue {
 			value: MemoryValue::LabelHighByteWithContainedBitIndex(value, bit_index),
 			label: None,
@@ -495,7 +495,7 @@ impl AssembledData {
 		&mut self,
 		opcode: u8,
 		operand: Number,
-		label: Option<Arc<Label>>,
+		label: Option<Arc<GlobalLabel>>,
 		span: SourceSpan,
 	) {
 		self.append(opcode, label);
@@ -512,7 +512,7 @@ impl AssembledData {
 		opcode: u8,
 		first_operand: Number,
 		second_operand: Number,
-		label: Option<Arc<Label>>,
+		label: Option<Arc<GlobalLabel>>,
 		span: SourceSpan,
 	) {
 		self.append_instruction_with_8_bit_operand(opcode, first_operand, label, span);
@@ -528,7 +528,7 @@ impl AssembledData {
 		&mut self,
 		opcode: u8,
 		operand: Number,
-		label: Option<Arc<Label>>,
+		label: Option<Arc<GlobalLabel>>,
 		span: SourceSpan,
 	) {
 		self.append(opcode, label);
@@ -550,7 +550,7 @@ impl AssembledData {
 		opcode: u8,
 		operand: Number,
 		bit_index: u8,
-		label: Option<Arc<Label>>,
+		label: Option<Arc<GlobalLabel>>,
 		span: SourceSpan,
 	) {
 		self.append(opcode, label);
@@ -569,7 +569,7 @@ impl AssembledData {
 		&mut self,
 		opcode: u8,
 		operand: Number,
-		label: Option<Arc<Label>>,
+		label: Option<Arc<GlobalLabel>>,
 		span: SourceSpan,
 	) {
 		self.append(opcode, label);

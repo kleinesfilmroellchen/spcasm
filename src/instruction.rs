@@ -10,16 +10,17 @@ use serde::Serialize;
 use serde_variant::to_variant_name;
 use spcasm_derive::Parse;
 
-use crate::error::{AssemblyCode, AssemblyError};
-use crate::Register;
+use super::error::{AssemblyCode, AssemblyError};
+use super::label::{GlobalLabel, Label};
+use super::Register;
 /// Types for representing data and memory addresses (this is overkill).
 pub type MemoryAddress = i64;
 
 /// One CPU instruction.
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Debug)]
 pub struct Instruction {
 	/// Label of this instruction, if any.
-	pub label:          Option<Arc<GlobalLabel>>,
+	pub label:          Option<Label>,
 	/// Opcode of this instruction (slightly misnamed)
 	pub opcode:         Opcode,
 	pub(crate) span:    SourceSpan,
@@ -27,43 +28,6 @@ pub struct Instruction {
 	/// file.
 	#[cfg(test)]
 	pub expected_value: Vec<u8>,
-}
-
-/// A textual label that refers to some location in memory and resolves to a numeric value at some point. It is global,
-/// meaning that it refers to the same value everywhere.
-#[derive(Clone, Debug, Eq, PartialEq)]
-pub struct GlobalLabel {
-	/// User-given label name.
-	pub name:            String,
-	/// Resolved memory location of the label, if any.
-	pub location:        Option<MemoryAddress>,
-	/// Source code location where this label is defined.
-	pub span:            SourceSpan,
-	/// Whether anyone references this label as an address.
-	pub used_as_address: bool,
-}
-
-impl GlobalLabel {
-	/// Whether this label has already been resolved to a memory location.
-	#[must_use]
-	pub const fn is_resolved(&self) -> bool {
-		self.location.is_some()
-	}
-
-	/// Resolves the label to the given memory location.
-	pub fn resolve_to(&mut self, location: MemoryAddress, source_code: Arc<AssemblyCode>) {
-		if location <= 0xFF && self.used_as_address {
-			println!(
-				"{:?}",
-				miette::Report::new(AssemblyError::NonDirectPageLabel {
-					name:     self.name.clone(),
-					location: self.span,
-					src:      source_code,
-				})
-			);
-		}
-		self.location = Some(location);
-	}
 }
 
 /// An instruction's core data that's used to generate machine code.

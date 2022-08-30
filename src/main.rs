@@ -1,6 +1,6 @@
 //! SPC700 assembler.
 
-#![feature(test, let_chains, result_flattening, is_some_with, get_mut_unchecked, iterator_try_collect, if_let_guard)]
+#![feature(test, result_flattening, is_some_with, get_mut_unchecked, iterator_try_collect, if_let_guard)]
 #![deny(clippy::all, clippy::pedantic, clippy::nursery)]
 #![deny(missing_docs)]
 

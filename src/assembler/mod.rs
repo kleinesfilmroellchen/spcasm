@@ -312,12 +312,38 @@ impl MemoryValue {
 					} as u8;
 					Self::Resolved(resolved_data)
 				},
+				Label::Local(ref local) => {
+					// Try to figure out whether this local label has been resolved in the parent.
+					// This is only necessary in local labels which are not refcounted to better distinguish them,
+					// so setting the address within the parent does not automatically set the address in all other identical local labels.
+					let parent = local.strong_parent();
+					parent.locals.get(&local.name).and_then(|parent_local| parent_local.location)
+						.map_or(self.clone(), |address| {
+							let resolved_data = match self {
+								Self::LabelHighByte(_) => (address & 0xFF00) >> 8,
+								Self::LabelLowByte(_) => address & 0xFF,
+								_ => unreachable!(),
+							} as u8;
+							Self::Resolved(resolved_data)
+						})
+				},
 				_ => self,
 			},
 			Self::LabelRelative(ref label, negative_offset) => match *label {
 				Label::Global(ref global) if let Some(label_memory_address) = global.location => {
-					let resolved_data = (label_memory_address - own_memory_address) as u8 + negative_offset;
+					let resolved_data = ((label_memory_address - own_memory_address) as u8).wrapping_add(negative_offset);
 					Self::Resolved(resolved_data)
+				},
+				Label::Local(ref local) => {
+					// Try to figure out whether this local label has been resolved in the parent.
+					// This is only necessary in local labels which are not refcounted to better distinguish them,
+					// so setting the address within the parent does not automatically set the address in all other identical local labels.
+					let parent = local.strong_parent();
+					parent.locals.get(&local.name).and_then(|parent_local| parent_local.location).map_or(self, |address| {
+						dbg!(negative_offset);
+						let resolved_data = ((address - own_memory_address) as u8).wrapping_add(negative_offset);
+						Self::Resolved(resolved_data)
+					})
 				},
 				_ => self,
 			},
@@ -500,7 +526,7 @@ impl AssembledData {
 		self.append(opcode, label);
 		match operand {
 			Number::Literal(value) => self.append_8_bits(value, None, span),
-			Number::Label(value) => self.append_unresolved(Label::Global(value), false, None),
+			Number::Label(value) => self.append_unresolved(value, false, None),
 		}
 	}
 
@@ -517,7 +543,7 @@ impl AssembledData {
 		self.append_instruction_with_8_bit_operand(opcode, first_operand, label, span);
 		match second_operand {
 			Number::Literal(value) => self.append_8_bits(value, None, span),
-			Number::Label(value) => self.append_unresolved(Label::Global(value), false, None),
+			Number::Label(value) => self.append_unresolved(value, false, None),
 		}
 	}
 
@@ -535,8 +561,8 @@ impl AssembledData {
 			Number::Literal(value) => self.append_16_bits(value, None, span),
 			Number::Label(value) => {
 				// low byte first because little endian
-				self.append_unresolved(Label::Global(value.clone()), false, None);
-				self.append_unresolved(Label::Global(value), true, None);
+				self.append_unresolved(value.clone(), false, None);
+				self.append_unresolved(value, true, None);
 			},
 		}
 	}
@@ -557,8 +583,8 @@ impl AssembledData {
 		match operand {
 			Number::Literal(value) => self.append_16_bits(value | (MemoryAddress::from(bit_index) << 13), None, span),
 			Number::Label(value) => {
-				self.append_unresolved(Label::Global(value.clone()), false, None);
-				self.append_unresolved_with_bit_index(Label::Global(value), bit_index);
+				self.append_unresolved(value.clone(), false, None);
+				self.append_unresolved_with_bit_index(value, bit_index);
 			},
 		}
 	}
@@ -574,7 +600,7 @@ impl AssembledData {
 		self.append(opcode, label);
 		match operand {
 			Number::Literal(value) => self.append_8_bits(value, None, span),
-			Number::Label(label) => self.append_relative_unresolved(Label::Global(label), 1),
+			Number::Label(label) => self.append_relative_unresolved(label, 1),
 		}
 	}
 
@@ -591,23 +617,34 @@ impl AssembledData {
 	pub fn execute_label_resolution_pass(&mut self) -> bool {
 		let mut had_modifications = true;
 		for (segment_start, segment_data) in &mut self.segments {
+			let mut current_global_label = None;
 			for (offset, datum) in segment_data.iter_mut().enumerate() {
 				let memory_address = segment_start + offset as i64;
-				datum.label.as_mut().filter(|existing_label| !existing_label.is_resolved()).and_then(
-					|resolved_label| {
-						match *resolved_label {
-							Label::Global(ref mut global) => {
-								// Modifying Rc-contained data is dangerous in general, but safe for labels if we don't
-								// modify the name.
-								unsafe { Arc::get_mut_unchecked(global) }
-									.resolve_to(memory_address, self.source_code.clone());
-								had_modifications |= true;
-								Some(resolved_label)
-							},
-							Label::Local(..) => panic!("Local labels are not handled yet"),
-						}
-					},
-				);
+				current_global_label =
+					datum.label.clone().filter(|label| matches!(label, Label::Global(..))).or(current_global_label);
+				// Resolve the actual label definition; i.e. if the below code executes, we're at the memory location
+				// which is labeled.
+				datum.label.as_mut().filter(|existing_label| !existing_label.is_resolved()).map(|resolved_label| {
+					match *resolved_label {
+						Label::Global(ref mut global) => {
+							// Modifying Rc-contained data is dangerous in general, but safe for labels if we don't
+							// modify the name.
+							unsafe { Arc::get_mut_unchecked(global) }
+								.resolve_to(memory_address, self.source_code.clone());
+							had_modifications |= true;
+							resolved_label
+						},
+						Label::Local(ref mut local) => {
+							local.resolve_to(memory_address, self.source_code.clone());
+							let mut parent = local.strong_parent();
+							unsafe { Arc::get_mut_unchecked(&mut parent) }
+								.locals
+								.insert(local.name.clone(), local.clone());
+							resolved_label
+						},
+					}
+				});
+				// Resolve a label used as a memory address, e.g. in an instruction operand like a jump target.
 				had_modifications |= datum.try_resolve(memory_address);
 			}
 		}

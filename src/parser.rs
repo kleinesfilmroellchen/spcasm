@@ -1,5 +1,6 @@
 //! Parsing and AST.
 #![allow(clippy::use_self)]
+use std::collections::HashMap;
 use std::result::Result;
 use std::sync::Arc;
 
@@ -70,6 +71,7 @@ impl Environment {
 							&token,
 							&tokens_for_instruction,
 							label_for_next_instruction,
+							current_global_label.clone(),
 						)?));
 						label_for_next_instruction = None;
 						// is Ok() if there's no further token due to EOF
@@ -111,13 +113,23 @@ impl Environment {
 						Token::Identifier(name, location) => (name.clone(), *location),
 						_ => unreachable!(),
 					};
+					tokens
+						.next()
+						.map(|token| token.expect(Token::Colon(*location), self.source_code.clone()))
+						.ok_or_else(|| AssemblyError::ExpectedToken {
+							expected: Token::Colon(*location),
+							actual:   Token::Newline(*location),
+							location: (*location).into(),
+							src:      self.source_code.clone(),
+						})
+						.flatten()?;
 					let local_label = Label::Local(LocalLabel::new(
 						label_name.clone(),
 						SourceSpan::new(
 							*location,
 							SourceOffset::from((label_location.offset() - location.offset()) + label_location.len()),
 						),
-						current_global_label.clone().ok_or_else(|| AssemblyError::MissingGlobalLabel {
+						&current_global_label.clone().ok_or_else(|| AssemblyError::MissingGlobalLabel {
 							local_label: label_name,
 							src:         self.source_code.clone(),
 							location:    label_location,
@@ -154,6 +166,7 @@ impl Environment {
 		identifier: &'a Token,
 		tokens: &'a [Token],
 		label: Option<Label>,
+		current_global_label: Option<Arc<GlobalLabel>>,
 	) -> Result<Instruction, AssemblyError> {
 		let identifier_name = match identifier {
 			Token::Identifier(identifier, ..) => identifier.to_lowercase(),
@@ -180,7 +193,13 @@ impl Environment {
 			| Mnemonic::And1
 			| Mnemonic::Or1
 			| Mnemonic::Eor1
-			| Mnemonic::Mov1 => self.make_two_operand_instruction(mnemonic, tokens, label, identifier.source_span()),
+			| Mnemonic::Mov1 => self.make_two_operand_instruction(
+				mnemonic,
+				tokens,
+				label,
+				identifier.source_span(),
+				current_global_label,
+			),
 			Mnemonic::Inc
 			| Mnemonic::Dec
 			| Mnemonic::Asl
@@ -212,7 +231,13 @@ impl Environment {
 			| Mnemonic::Clr1
 			| Mnemonic::Tset1
 			| Mnemonic::Tclr1
-			| Mnemonic::Not1 => self.make_single_operand_instruction(mnemonic, tokens, label, identifier.source_span()),
+			| Mnemonic::Not1 => self.make_single_operand_instruction(
+				mnemonic,
+				tokens,
+				label,
+				identifier.source_span(),
+				current_global_label,
+			),
 			Mnemonic::Brk
 			| Mnemonic::Ret
 			| Mnemonic::Ret1
@@ -236,6 +261,7 @@ impl Environment {
 		tokens: &[Token],
 		label: Option<Label>,
 		mnemonic_token_location: SourceSpan,
+		current_global_label: Option<Arc<GlobalLabel>>,
 	) -> Result<Instruction, AssemblyError> {
 		let source_code_copy = self.source_code.clone();
 		let mut addressing_modes = tokens.split(|token| {
@@ -243,20 +269,22 @@ impl Environment {
 				.expect(Token::Comma(SourceOffset::from(token.source_span().offset())), source_code_copy.clone())
 				.is_ok()
 		});
-		let first_addressing_mode = self.parse_addressing_mode(addressing_modes.next().ok_or_else(|| {
-			AssemblyError::UnexpectedEndOfTokens {
+		let first_addressing_mode = self.parse_addressing_mode(
+			addressing_modes.next().ok_or_else(|| AssemblyError::UnexpectedEndOfTokens {
 				expected: "addressing mode".into(),
 				location: mnemonic_token_location,
 				src:      self.source_code.clone(),
-			}
-		})?)?;
-		let second_addressing_mode = self.parse_addressing_mode(addressing_modes.next().ok_or_else(|| {
-			AssemblyError::UnexpectedEndOfTokens {
+			})?,
+			current_global_label.clone(),
+		)?;
+		let second_addressing_mode = self.parse_addressing_mode(
+			addressing_modes.next().ok_or_else(|| AssemblyError::UnexpectedEndOfTokens {
 				expected: "addressing mode".into(),
 				location: mnemonic_token_location,
 				src:      self.source_code.clone(),
-			}
-		})?)?;
+			})?,
+			current_global_label,
+		)?;
 		#[cfg(test)]
 		let expected_value = tokens
 			.iter()
@@ -290,6 +318,7 @@ impl Environment {
 		tokens: &'a [Token],
 		label: Option<Label>,
 		mnemonic_token_location: SourceSpan,
+		current_global_label: Option<Arc<GlobalLabel>>,
 	) -> Result<Instruction, AssemblyError> {
 		let unparsed_addressing_mode = tokens
 			.split(|token| match token {
@@ -304,7 +333,7 @@ impl Environment {
 				location: mnemonic_token_location,
 				src:      self.source_code.clone(),
 			})?;
-		let addressing_mode = self.parse_addressing_mode(unparsed_addressing_mode)?;
+		let addressing_mode = self.parse_addressing_mode(unparsed_addressing_mode, current_global_label)?;
 		#[cfg(test)]
 		let expected_value = tokens
 			.iter()
@@ -379,7 +408,11 @@ impl Environment {
 	}
 
 	#[allow(clippy::too_many_lines)]
-	fn parse_addressing_mode(&mut self, token_span: &[Token]) -> Result<AddressingMode, AssemblyError> {
+	fn parse_addressing_mode(
+		&mut self,
+		token_span: &[Token],
+		current_global_label: Option<Arc<GlobalLabel>>,
+	) -> Result<AddressingMode, AssemblyError> {
 		let mut tokens: std::slice::Iter<Token> = token_span.iter();
 
 		let source_code_copy = self.source_code.clone();
@@ -474,6 +507,31 @@ impl Environment {
 							src:      self.source_code.clone(),
 						}),
 				})
+			},
+			// Direct address modes with local label
+			Token::Period(start) => {
+				let (identifier, end) = match tokens.next().ok_or_else(missing_token_error(
+					Token::Identifier("local label".to_string(), start.into()).into(),
+				))? {
+					Token::Identifier(text, end) => (text.clone(), *end),
+					actual =>
+						return Err(AssemblyError::ExpectedToken {
+							expected: Token::Identifier("local label".to_string(), start.into()),
+							actual:   actual.clone(),
+							location: start.into(),
+							src:      self.source_code.clone(),
+						}),
+				};
+				let location = SourceSpan::new(start, (end.len() + end.offset() - start.offset()).into());
+				Ok(AddressingMode::Address(Number::Label(Label::Local(LocalLabel::new(
+					identifier.clone(),
+					location,
+					&current_global_label.ok_or(AssemblyError::MissingGlobalLabel {
+						local_label: identifier,
+						src: self.source_code.clone(),
+						location,
+					})?,
+				)))))
 			},
 			// Negated bit index
 			#[allow(clippy::cast_sign_loss, clippy::cast_possible_truncation)]
@@ -628,26 +686,38 @@ impl Environment {
 						}),
 					}
 				},
-				_ => unimplemented!(),
+				wrong_token => Err(AssemblyError::ExpectedToken {
+					expected: Token::Number(0, wrong_token.source_span().offset().into()),
+					actual:   wrong_token.clone(),
+					location: wrong_token.source_span(),
+					src:      self.source_code.clone(),
+				}),
 			},
-			_ => unimplemented!(),
+			wrong_token => Err(AssemblyError::ExpectedToken {
+				expected: Token::Number(0, wrong_token.source_span().offset().into()),
+				actual:   wrong_token.clone(),
+				location: wrong_token.source_span(),
+				src:      self.source_code.clone(),
+			}),
 		}
 	}
 
-	/// TODO: We're setting the label's position wrong if we reference it before it has been defined.
 	fn get_global_label(&mut self, name: &'_ str, span: SourceSpan, used_as_address: bool) -> Arc<GlobalLabel> {
-		match self.labels.iter_mut().find(|label| label.name == name) {
-			Some(matching_label) => {
-				if used_as_address && !matching_label.used_as_address {
-					unsafe { Arc::get_mut_unchecked(matching_label).used_as_address = true };
-				}
-				matching_label.clone()
-			},
-			None => {
-				let new_label = Arc::new(GlobalLabel { name: name.to_owned(), location: None, span, used_as_address });
-				self.labels.push(new_label.clone());
-				new_label
-			},
+		if let Some(matching_label) = self.labels.iter_mut().find(|label| label.name == name) {
+			if used_as_address && !matching_label.used_as_address {
+				unsafe { Arc::get_mut_unchecked(matching_label).used_as_address = true };
+			}
+			matching_label.clone()
+		} else {
+			let new_label = Arc::new(GlobalLabel {
+				name: name.to_owned(),
+				location: None,
+				span,
+				used_as_address,
+				locals: HashMap::new(),
+			});
+			self.labels.push(new_label.clone());
+			new_label
 		}
 	}
 
@@ -655,7 +725,7 @@ impl Environment {
 		match token {
 			Token::Number(number, ..) => Ok(Number::Literal(*number)),
 			Token::Identifier(label, ..) =>
-				Ok(Number::Label(self.get_global_label(label, token.source_span(), used_as_address))),
+				Ok(Number::Label(Label::Global(self.get_global_label(label, token.source_span(), used_as_address)))),
 			_ => Err(AssemblyError::ExpectedToken {
 				expected: Token::Number(0, token.source_span()),
 				actual:   token.clone(),

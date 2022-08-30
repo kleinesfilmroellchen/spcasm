@@ -13,6 +13,7 @@ use spcasm_derive::Parse;
 use super::error::{AssemblyCode, AssemblyError};
 use super::label::{GlobalLabel, Label};
 use super::Register;
+use crate::label::LocalLabel;
 /// Types for representing data and memory addresses (this is overkill).
 pub type MemoryAddress = i64;
 
@@ -31,7 +32,7 @@ pub struct Instruction {
 }
 
 /// An instruction's core data that's used to generate machine code.
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct Opcode {
 	/// Instruction mnemonic.
 	pub mnemonic:       Mnemonic,
@@ -140,12 +141,12 @@ impl Display for Mnemonic {
 }
 
 /// Any number, either a literal or a label that's resolved to a number later.
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub enum Number {
 	/// A literal number.
 	Literal(MemoryAddress),
 	/// A label that will resolve to a number later.
-	Label(Arc<GlobalLabel>),
+	Label(Label),
 	// TODO: support assembly-time calculations
 }
 
@@ -158,8 +159,8 @@ impl Number {
 		match self {
 			Self::Literal(value) => *value,
 			// necessary because matching through an Rc is not possible right now (would be super dope though).
-			Self::Label(label) => match **label {
-				GlobalLabel { location: Some(value), .. } => value,
+			Self::Label(ref label) => match label {
+				Label::Global(global_label) if let Some(value) = global_label.location => value,
 				_ => panic!("Unresolved label {:?}", label),
 			},
 		}
@@ -175,17 +176,19 @@ impl From<MemoryAddress> for Number {
 impl UpperHex for Number {
 	fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), Error> {
 		match self {
-			Self::Literal(numeric_address) => write!(f, "${:X}", numeric_address),
-			Self::Label(ref unresolved_label) => match &**unresolved_label {
+			Self::Label(Label::Global(ref unresolved_label)) => match &**unresolved_label {
 				GlobalLabel { location: Some(numeric_address), .. } => write!(f, "${:X}", numeric_address),
 				GlobalLabel { name, .. } => write!(f, "{}", name),
 			},
+			Self::Label(Label::Local(LocalLabel { location: Some(numeric_address), .. }))
+			| Self::Literal(numeric_address) => write!(f, "${:X}", numeric_address),
+			Self::Label(Label::Local(LocalLabel { name, .. })) => write!(f, "{}", name),
 		}
 	}
 }
 
 /// Addressing modes of the SPC700. Not all of these are supported everywhere (in fact, most aren't).
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub enum AddressingMode {
 	/// #immediate
 	Immediate(Number),

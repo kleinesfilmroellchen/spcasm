@@ -1,4 +1,7 @@
-use std::sync::Arc;
+#![allow(clippy::module_name_repetitions)]
+
+use std::collections::HashMap;
+use std::sync::{Arc, Weak};
 
 use miette::SourceSpan;
 
@@ -21,6 +24,18 @@ pub enum Label {
 	Local(LocalLabel),
 }
 
+impl PartialEq for Label {
+	fn eq(&self, other: &Self) -> bool {
+		match self {
+			Self::Global(label) => match other {
+				Self::Global(other_label) => label.eq(other_label),
+				Self::Local(..) => false,
+			},
+			Self::Local(..) => false,
+		}
+	}
+}
+
 impl Resolvable for Label {
 	#[must_use]
 	fn is_resolved(&self) -> bool {
@@ -40,7 +55,7 @@ impl Resolvable for Label {
 
 /// A textual label that refers to some location in memory and resolves to a numeric value at some point. It is global,
 /// meaning that it refers to the same value everywhere.
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Debug)]
 pub struct GlobalLabel {
 	/// User-given label name.
 	pub name:            String,
@@ -50,7 +65,16 @@ pub struct GlobalLabel {
 	pub span:            SourceSpan,
 	/// Whether anyone references this label as an address.
 	pub used_as_address: bool,
+	/// Local labels belonging to this global label.
+	pub locals:          HashMap<String, LocalLabel>,
 }
+
+impl PartialEq for GlobalLabel {
+	fn eq(&self, other: &Self) -> bool {
+		self.name == other.name
+	}
+}
+impl Eq for GlobalLabel {}
 
 impl Resolvable for GlobalLabel {
 	#[must_use]
@@ -83,21 +107,35 @@ pub struct LocalLabel {
 	/// Source code location where this label is defined.
 	pub span:     SourceSpan,
 	/// The parent label that this local label is contained within.
-	pub parent:   Arc<GlobalLabel>,
+	pub parent:   Weak<GlobalLabel>,
 }
 
 impl LocalLabel {
-	pub fn new(name: String, span: SourceSpan, parent: Arc<GlobalLabel>) -> Self {
-		LocalLabel { name, span, location: None, parent }
+	pub fn new(name: String, span: SourceSpan, parent: &Arc<GlobalLabel>) -> Self {
+		Self { name, span, location: None, parent: Arc::downgrade(parent) }
+	}
+
+	pub fn strong_parent(&self) -> Arc<GlobalLabel> {
+		self.parent.upgrade().expect("Parent deleted before label resolution finished")
 	}
 }
 
 impl Resolvable for LocalLabel {
 	fn is_resolved(&self) -> bool {
-		todo!()
+		self.location.is_some()
 	}
 
-	fn resolve_to(&mut self, _location: MemoryAddress, _source_code: Arc<AssemblyCode>) {
-		todo!()
+	fn resolve_to(&mut self, location: MemoryAddress, source_code: Arc<AssemblyCode>) {
+		if location <= 0xFF {
+			println!(
+				"{:?}",
+				miette::Report::new(AssemblyError::NonDirectPageLabel {
+					name:     format!(".{}", self.name),
+					location: self.span,
+					src:      source_code,
+				})
+			);
+		}
+		self.location = Some(location);
 	}
 }

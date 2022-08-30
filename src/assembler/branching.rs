@@ -3,7 +3,6 @@
 use crate::assembler::AssembledData;
 use crate::error::AssemblyError;
 use crate::instruction::{AddressingMode, Instruction, Mnemonic, Number};
-use crate::label::Label;
 use crate::Register;
 
 #[allow(clippy::too_many_lines)] // bruh
@@ -31,7 +30,7 @@ pub(super) fn assemble_branching_instruction(
 	match &target {
 		// Note that a direct page address in the target is also interpreted as a relative offset for some branch
 		// instructions. For the other relative branches, it's in the source. JMP is absolute and uses full addresses.
-		AddressingMode::DirectPage(page_address_or_relative) | AddressingMode::Address(page_address_or_relative @ Number::Label(_)) =>
+		AddressingMode::DirectPage(page_address_or_relative) | AddressingMode::Address(page_address_or_relative @ Number::Label(_)) if mnemonic != Mnemonic::Jmp =>
 			match mnemonic {
 				Mnemonic::Bra => data.append_instruction_with_relative_label(0x2F, page_address_or_relative.clone(), instruction.label.clone(), instruction.span),
 				Mnemonic::Beq => data.append_instruction_with_relative_label(0xF0, page_address_or_relative.clone(), instruction.label.clone(), instruction.span),
@@ -69,20 +68,19 @@ pub(super) fn assemble_branching_instruction(
 						// First argument is the checked direct page address
 						match page_address_or_relative {
 							Number::Literal(page_address) => data.append_8_bits(*page_address, None, instruction.span),
-							Number::Label(page_label) => data.append_unresolved(Label::Global(page_label.clone()), false, None),
+							Number::Label(page_label) => data.append_unresolved(page_label.clone(), false, None),
 						}
 						// Second argument is the relative jump target.
 						// The relative unresolved label needs a negative offset of 2, because we're the second operand.
 						match relative_source {
 							Number::Literal(relative_offset) => data.append_8_bits(relative_offset, None, instruction.span),
-							Number::Label(relative_source_label) => data.append_relative_unresolved(Label::Global(relative_source_label), 2),
+							Number::Label(relative_source_label) => data.append_relative_unresolved(relative_source_label, 2),
 						}
 					} else {
 						return if let Some(source) =  source { Err(AssemblyError::InvalidAddressingModeCombination {
 							second_mode: source, first_mode: target,
 							src: data.source_code.clone(), location: instruction.span,mnemonic
 						})} else {
-							// TODO
 							make_target_error(vec![])
 						};
 					},
@@ -94,13 +92,13 @@ pub(super) fn assemble_branching_instruction(
 				// First argument is the checked direct page address
 				match page_address {
 					Number::Literal(page_address) => data.append_8_bits(*page_address, None, instruction.span),
-					Number::Label(page_label) => data.append_unresolved(Label::Global(page_label.clone()), false, None),
+					Number::Label(page_label) => data.append_unresolved(page_label.clone(), false, None),
 				}
 				// Second argument is the relative jump target.
 				// The relative unresolved label needs a negative offset of 2, because we're the second operand.
 				match relative_source {
 					Number::Literal(relative_offset) => data.append_8_bits(relative_offset, None, instruction.span),
-					Number::Label(relative_source_label) => data.append_relative_unresolved(Label::Global(relative_source_label), 2),
+					Number::Label(relative_source_label) => data.append_relative_unresolved(relative_source_label, 2),
 				}
 			} else {
 				return make_target_error(vec![]);
@@ -109,16 +107,15 @@ pub(super) fn assemble_branching_instruction(
 			if let Some(AddressingMode::DirectPage(relative_jump_target)) = source && mnemonic == Mnemonic::Dbnz {
 				data.append_instruction_with_relative_label(0xFE, relative_jump_target, instruction.label.clone(), instruction.span);
 			} else {
-				// TODO
 				return make_target_error(vec![]);
 			},
-		AddressingMode::Address(jump_target) =>
+		AddressingMode::Address(jump_target) => {
 			data.append_instruction_with_16_bit_operand(match mnemonic {
 				Mnemonic::Jmp => 0x5F,
 				Mnemonic::Call => 0x3F,
 				_ => return make_target_error(vec![]),
 			}, jump_target.clone(), instruction.label.clone(), instruction.span
-		),
+		);},
 		AddressingMode::XIndexed(address) => {
 			if mnemonic != Mnemonic::Jmp {
 				return make_target_error(vec![]);

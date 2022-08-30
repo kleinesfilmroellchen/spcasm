@@ -186,8 +186,9 @@ CMPW YA,$0F ;= 5A 0F
 MUL YA   ;= CF
 DIV YA,X ;= 9E
 
-reltarget: ;@ 01 61
+reltarget:    ;@ 01 62
 daa A ;= DF
+.subtarget:   ;@ 01 63
 das A ;= BE
 
 bra $20       ;= 2F 20
@@ -206,6 +207,19 @@ dbnz $2F,$30  ;= 6E 2F 30
 dbnz Y,$31    ;= FE 31
 jmp $2122     ;= 5F 22 21
 jmp $2324+X     ;= 1F 24 23
+
+jmp .subtarget  ;= 5F 63 01
+jmp reltarget   ;= 5F 62 01
+another_global: ;@ 01 8D
+NOP             ;= 00
+.subtarget:     ;@ 01 8E
+NOP             ;= 00
+jmp .subtarget  ;= 5F 8E 01
+
+.selftarget:
+bne .selftarget       ;= D0 00
+global_selftarget:
+bne global_selftarget ;= D0 00
 
 bbs data.0,$F9 ;= 03 13 F9
 bbs $30.1,$F9 ;= 23 30 F9

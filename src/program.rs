@@ -1,5 +1,5 @@
 //! AST of the entire assembly program.
-#![allow(clippy::module_name_repetitions)]
+#![allow(clippy::module_name_repetitions, clippy::large_enum_variant)]
 use miette::SourceSpan;
 
 use super::instruction::Instruction;
@@ -19,7 +19,7 @@ impl ProgramElement {
 	#[must_use]
 	pub const fn span(&self) -> &SourceSpan {
 		match self {
-			ProgramElement::Macro(Macro { span, .. }) | ProgramElement::Instruction(Instruction { span, .. }) => span,
+			Self::Macro(Macro { span, .. }) | Self::Instruction(Instruction { span, .. }) => span,
 		}
 	}
 }

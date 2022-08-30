@@ -111,6 +111,19 @@ pub enum AssemblyError {
 		location: SourceSpan,
 	},
 
+	#[error("There is no global label defined before the local label '{local_label}'")]
+	#[diagnostic(
+		code(spcasm::missing_global),
+		help("Add a global label before defining this local label"),
+		severity(Error)
+	)]
+	MissingGlobalLabel {
+		local_label: String,
+		src:         Arc<AssemblyCode>,
+		#[label("Local label defined here")]
+		location:    SourceSpan,
+	},
+
 	#[cfg(test)]
 	#[error("Test assembly doesn't have an expected output comment")]
 	#[diagnostic(code(spcasm::missing_test_result), severity(Error))]
@@ -206,8 +219,8 @@ pub enum AssemblyError {
 	#[diagnostic(
 		code(spcasm::syntax::invalid_test_comment),
 		help(
-			"Test comments consist of a series of space-delimited bytes, given as hexadecimal, for example `;= 0F AA B8` \
-			 for three bytes"
+			"Test comments consist of a series of space-delimited bytes, given as hexadecimal, for example `;= 0F AA \
+			 B8` for three bytes"
 		),
 		severity(Error)
 	)]
@@ -221,8 +234,8 @@ pub enum AssemblyError {
 	//#endregion
 	//#region Warnings and advice
 	#[error(
-		"The value {value:02X} is being used as a {size}-bit operand here, but it is larger than this. The extra upper \
-		 bits are truncated."
+		"The value {value:02X} is being used as a {size}-bit operand here, but it is larger than this. The extra \
+		 upper bits are truncated."
 	)]
 	#[diagnostic(code(spcasm::value_too_large), help("Remove these upper bits"), severity(Warning))]
 	ValueTooLarge {
@@ -239,8 +252,8 @@ pub enum AssemblyError {
 		code(spcasm::non_direct_page_label),
 		help(
 			"Due to machine code positioning complexities, explicit labels are always resolved to a full address if \
-			 applicable. In the future, there will be a way of explicitly specifying labels as being in the direct page, \
-			 so that they resolve to a direct page addressing mode."
+			 applicable. In the future, there will be a way of explicitly specifying labels as being in the direct \
+			 page, so that they resolve to a direct page addressing mode."
 		),
 		severity(Advice),
 		url("https://github.com/kleinesfilmroellchen/spcasm/issues/1")

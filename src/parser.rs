@@ -5,10 +5,10 @@ use std::sync::Arc;
 
 use miette::{SourceOffset, SourceSpan};
 
-use super::ProgramElement;
-use crate::error::{AssemblyCode, AssemblyError};
-use crate::instruction::{AddressingMode, Instruction, GlobalLabel, Mnemonic, Number, Opcode};
-use crate::{Register, Token};
+use super::error::{AssemblyCode, AssemblyError};
+use super::instruction::{AddressingMode, Instruction, Mnemonic, Number, Opcode};
+use super::label::{GlobalLabel, Label, LocalLabel};
+use super::{ProgramElement, Register, Token};
 /// Anything that can be primitively parsed from a string into an enum variant.
 /// This trait is intended to be derived with the macro from ``spcasm_derive``.
 pub trait Parse
@@ -47,17 +47,21 @@ impl Environment {
 	pub fn parse(&mut self, tokens: &[Token]) -> Result<Vec<ProgramElement>, AssemblyError> {
 		let mut tokens: std::iter::Peekable<std::slice::Iter<Token>> = tokens.iter().peekable();
 		let mut instructions = Vec::new();
-		let mut current_label = None;
+		let mut current_global_label = None;
+		let mut label_for_next_instruction = None;
 
 		while let Some(token) = tokens.next().cloned() {
 			match &token {
 				Token::Identifier(identifier, location) => {
 					let location_span = SourceOffset::from(location.offset());
 					if Self::is_valid_mnemonic(identifier) {
+						// Instruction
 						let mut tokens_for_instruction: Vec<Token> = Vec::new();
 						while tokens
 							.peek()
-							.and_then(|token| token.expect(Token::Newline(location_span), self.source_code.clone()).err())
+							.and_then(|token| {
+								token.expect(Token::Newline(location_span), self.source_code.clone()).err()
+							})
 							.is_some()
 						{
 							tokens_for_instruction.push(tokens.next().unwrap().clone());
@@ -65,16 +69,18 @@ impl Environment {
 						instructions.push(ProgramElement::Instruction(self.create_instruction(
 							&token,
 							&tokens_for_instruction,
-							current_label,
+							label_for_next_instruction,
 						)?));
-						current_label = None;
+						label_for_next_instruction = None;
 						// is Ok() if there's no further token due to EOF
 						tokens
 							.next()
 							.map(|token| token.expect(Token::Newline(location_span), self.source_code.clone()))
 							.transpose()?;
 					} else {
-						current_label = Some(self.get_label(identifier, token.source_span(), false));
+						// Global label
+						current_global_label = Some(self.get_global_label(identifier, token.source_span(), false));
+						label_for_next_instruction = Some(Label::Global(current_global_label.clone().unwrap()));
 						tokens
 							.next()
 							.map(|token| token.expect(Token::Colon(location_span), self.source_code.clone()))
@@ -88,6 +94,37 @@ impl Environment {
 					}
 				},
 				Token::Newline(..) => {},
+				Token::Period(location) => {
+					// Local label
+					let expected_identifier = Token::Identifier("label".to_owned(), (*location).into());
+					let (label_name, label_location) = match tokens
+						.next()
+						.map(|token| token.expect(expected_identifier.clone(), self.source_code.clone()))
+						.ok_or_else(|| AssemblyError::ExpectedToken {
+							expected: expected_identifier,
+							actual:   Token::Newline(*location),
+							location: (*location).into(),
+							src:      self.source_code.clone(),
+						})
+						.flatten()?
+					{
+						Token::Identifier(name, location) => (name.clone(), *location),
+						_ => unreachable!(),
+					};
+					let local_label = Label::Local(LocalLabel::new(
+						label_name.clone(),
+						SourceSpan::new(
+							*location,
+							SourceOffset::from((label_location.offset() - location.offset()) + label_location.len()),
+						),
+						current_global_label.clone().ok_or_else(|| AssemblyError::MissingGlobalLabel {
+							local_label: label_name,
+							src:         self.source_code.clone(),
+							location:    label_location,
+						})?,
+					));
+					label_for_next_instruction = Some(local_label);
+				},
 				actual =>
 					return Err(AssemblyError::ExpectedToken {
 						expected: Token::Identifier("identifier".to_owned(), token.source_span()),
@@ -104,10 +141,10 @@ impl Environment {
 	fn is_valid_mnemonic(identifier: &str) -> bool {
 		[
 			"mov", "adc", "sbc", "cmp", "and", "or", "eor", "inc", "dec", "asl", "lsr", "rol", "ror", "xcn", "movw",
-			"incw", "decw", "addw", "subw", "cmpw", "mul", "div", "daa", "das", "bra", "beq", "bne", "bcs", "bcc", "bvs",
-			"bvc", "bmi", "bpl", "bbs", "bbc", "cbne", "dbnz", "jmp", "call", "pcall", "tcall", "brk", "ret", "ret1",
-			"push", "pop", "set1", "clr1", "tset1", "tclr1", "and1", "or1", "eor1", "not1", "mov1", "clrc", "setc",
-			"notc", "clrv", "clrp", "setp", "ei", "di", "nop", "sleep", "stop",
+			"incw", "decw", "addw", "subw", "cmpw", "mul", "div", "daa", "das", "bra", "beq", "bne", "bcs", "bcc",
+			"bvs", "bvc", "bmi", "bpl", "bbs", "bbc", "cbne", "dbnz", "jmp", "call", "pcall", "tcall", "brk", "ret",
+			"ret1", "push", "pop", "set1", "clr1", "tset1", "tclr1", "and1", "or1", "eor1", "not1", "mov1", "clrc",
+			"setc", "notc", "clrv", "clrp", "setp", "ei", "di", "nop", "sleep", "stop",
 		]
 		.contains(&identifier.to_lowercase().as_str())
 	}
@@ -116,7 +153,7 @@ impl Environment {
 		&mut self,
 		identifier: &'a Token,
 		tokens: &'a [Token],
-		label: Option<Arc<GlobalLabel>>,
+		label: Option<Label>,
 	) -> Result<Instruction, AssemblyError> {
 		let identifier_name = match identifier {
 			Token::Identifier(identifier, ..) => identifier.to_lowercase(),
@@ -197,12 +234,14 @@ impl Environment {
 		&mut self,
 		mnemonic: Mnemonic,
 		tokens: &[Token],
-		label: Option<Arc<GlobalLabel>>,
+		label: Option<Label>,
 		mnemonic_token_location: SourceSpan,
 	) -> Result<Instruction, AssemblyError> {
 		let source_code_copy = self.source_code.clone();
 		let mut addressing_modes = tokens.split(|token| {
-			token.expect(Token::Comma(SourceOffset::from(token.source_span().offset())), source_code_copy.clone()).is_ok()
+			token
+				.expect(Token::Comma(SourceOffset::from(token.source_span().offset())), source_code_copy.clone())
+				.is_ok()
 		});
 		let first_addressing_mode = self.parse_addressing_mode(addressing_modes.next().ok_or_else(|| {
 			AssemblyError::UnexpectedEndOfTokens {
@@ -249,7 +288,7 @@ impl Environment {
 		&'a mut self,
 		mnemonic: Mnemonic,
 		tokens: &'a [Token],
-		label: Option<Arc<GlobalLabel>>,
+		label: Option<Label>,
 		mnemonic_token_location: SourceSpan,
 	) -> Result<Instruction, AssemblyError> {
 		let unparsed_addressing_mode = tokens
@@ -297,7 +336,7 @@ impl Environment {
 		&'a self,
 		mnemonic: Mnemonic,
 		tokens: &'a [Token],
-		label: Option<Arc<GlobalLabel>>,
+		label: Option<Label>,
 		mnemonic_token_location: SourceSpan,
 	) -> Result<Instruction, AssemblyError> {
 		if tokens
@@ -372,10 +411,9 @@ impl Environment {
 				Ok(match next_token_or_none {
 					// Indirect addressing with '+X' or '+Y'
 					Some(Token::Plus(token_start)) => {
-						match tokens
-							.next()
-							.ok_or_else(missing_token_error(Token::Register(Register::X, (*token_start).into()).into()))?
-						{
+						match tokens.next().ok_or_else(missing_token_error(
+							Token::Register(Register::X, (*token_start).into()).into(),
+						))? {
 							Token::Register(Register::X, ..) =>
 								if is_direct_page {
 									AddressingMode::DirectPageXIndexed(literal)
@@ -469,47 +507,24 @@ impl Environment {
 				Ok(AddressingMode::NegatedAddressBit(number, bit as u8))
 			},
 			// Indexed modes
-			Token::OpenParenthesis(location) =>
-				match tokens.next().ok_or_else(missing_token_error("indirect argument inside brackets".into()))? {
-					// (X), (Y), ...
-					register_token @ Token::Register(name, ..) => {
-						tokens
-							.next()
-							.ok_or_else(missing_token_error(Token::CloseParenthesis(location).into()))?
-							.expect(Token::CloseParenthesis(location), self.source_code.clone())?;
-						Ok(match name {
-							#[allow(clippy::branches_sharing_code)]
-							Register::X => {
-								if tokens
-									.next()
-									.and_then(|token| token.expect(Token::Plus(location), self.source_code.clone()).ok())
-									.is_some()
-								{
-									if let Some(further_token) = tokens.next() {
-										println!(
-											"{:?}",
-											miette::Report::new(AssemblyError::DanglingTokens {
-												src:      self.source_code.clone(),
-												location: further_token.source_span(),
-											})
-										);
-									}
-									// '+' after closing bracket
-									AddressingMode::IndirectXAutoIncrement
-								} else {
-									if let Some(further_token) = tokens.next() {
-										println!(
-											"{:?}",
-											miette::Report::new(AssemblyError::DanglingTokens {
-												src:      self.source_code.clone(),
-												location: further_token.source_span(),
-											})
-										);
-									}
-									AddressingMode::IndirectX
-								}
-							},
-							Register::Y => {
+			Token::OpenParenthesis(location) => match tokens
+				.next()
+				.ok_or_else(missing_token_error("indirect argument inside brackets".into()))?
+			{
+				// (X), (Y), ...
+				register_token @ Token::Register(name, ..) => {
+					tokens
+						.next()
+						.ok_or_else(missing_token_error(Token::CloseParenthesis(location).into()))?
+						.expect(Token::CloseParenthesis(location), self.source_code.clone())?;
+					Ok(match name {
+						#[allow(clippy::branches_sharing_code)]
+						Register::X => {
+							if tokens
+								.next()
+								.and_then(|token| token.expect(Token::Plus(location), self.source_code.clone()).ok())
+								.is_some()
+							{
 								if let Some(further_token) = tokens.next() {
 									println!(
 										"{:?}",
@@ -519,83 +534,108 @@ impl Environment {
 										})
 									);
 								}
-								AddressingMode::IndirectY
-							},
-							_ =>
-								return Err(AssemblyError::InvalidIndexingToken {
-									token:    register_token.clone(),
-									location: register_token.source_span(),
-									src:      self.source_code.clone(),
-								}),
-						})
-					},
-					// (address) ...
-					literal_token @ (Token::Number(..) | Token::Identifier(..)) => {
-						let literal = self.create_number(literal_token, true)?;
-						match tokens.next().ok_or_else(missing_token_error("'+' or ')'".into()))? {
-							Token::Plus(second_location) => {
-								tokens
-									.next()
-									.and_then(|token| match token {
-										Token::Register(Register::X, ..) => Some(()),
-										_ => None,
+								// '+' after closing bracket
+								AddressingMode::IndirectXAutoIncrement
+							} else {
+								if let Some(further_token) = tokens.next() {
+									println!(
+										"{:?}",
+										miette::Report::new(AssemblyError::DanglingTokens {
+											src:      self.source_code.clone(),
+											location: further_token.source_span(),
+										})
+									);
+								}
+								AddressingMode::IndirectX
+							}
+						},
+						Register::Y => {
+							if let Some(further_token) = tokens.next() {
+								println!(
+									"{:?}",
+									miette::Report::new(AssemblyError::DanglingTokens {
+										src:      self.source_code.clone(),
+										location: further_token.source_span(),
 									})
-									.ok_or_else(missing_token_error(
-										Token::Register(Register::X, (location, *second_location).into()).into(),
-									))?;
-								tokens
-									.next()
-									.ok_or_else(missing_token_error(Token::CloseParenthesis(location).into()))?
-									.expect(Token::CloseParenthesis(location), self.source_code.clone())?;
-								if let Some(further_token) = tokens.next() {
-									println!(
-										"{:?}",
-										miette::Report::new(AssemblyError::DanglingTokens {
-											src:      self.source_code.clone(),
-											location: further_token.source_span(),
-										})
-									);
-								}
-								Ok(AddressingMode::DirectPageXIndexedIndirect(literal))
-							},
-							Token::CloseParenthesis(second_location) => {
-								let span = (location, *second_location).into();
-								tokens
-									.next()
-									.ok_or_else(missing_token_error(Token::Plus(location).into()))?
-									.expect(Token::Plus(location), self.source_code.clone())?;
-								let result = tokens
-									.next()
-									.ok_or_else(missing_token_error(Token::Register(Register::Y, span).into()))?
-									.expect(Token::Register(Register::Y, span), self.source_code.clone())
-									.map(|_| AddressingMode::DirectPageIndirectYIndexed(literal));
-								if let Some(further_token) = tokens.next() {
-									println!(
-										"{:?}",
-										miette::Report::new(AssemblyError::DanglingTokens {
-											src:      self.source_code.clone(),
-											location: further_token.source_span(),
-										})
-									);
-								}
-								result
-							},
-							wrong_token => Err(AssemblyError::ExpectedToken {
-								expected: Token::CloseParenthesis(wrong_token.source_span().offset().into()),
-								actual:   wrong_token.clone(),
-								location: wrong_token.source_span(),
+								);
+							}
+							AddressingMode::IndirectY
+						},
+						_ =>
+							return Err(AssemblyError::InvalidIndexingToken {
+								token:    register_token.clone(),
+								location: register_token.source_span(),
 								src:      self.source_code.clone(),
 							}),
-						}
-					},
-					_ => unimplemented!(),
+					})
 				},
+				// (address) ...
+				literal_token @ (Token::Number(..) | Token::Identifier(..)) => {
+					let literal = self.create_number(literal_token, true)?;
+					match tokens.next().ok_or_else(missing_token_error("'+' or ')'".into()))? {
+						Token::Plus(second_location) => {
+							tokens
+								.next()
+								.and_then(|token| match token {
+									Token::Register(Register::X, ..) => Some(()),
+									_ => None,
+								})
+								.ok_or_else(missing_token_error(
+									Token::Register(Register::X, (location, *second_location).into()).into(),
+								))?;
+							tokens
+								.next()
+								.ok_or_else(missing_token_error(Token::CloseParenthesis(location).into()))?
+								.expect(Token::CloseParenthesis(location), self.source_code.clone())?;
+							if let Some(further_token) = tokens.next() {
+								println!(
+									"{:?}",
+									miette::Report::new(AssemblyError::DanglingTokens {
+										src:      self.source_code.clone(),
+										location: further_token.source_span(),
+									})
+								);
+							}
+							Ok(AddressingMode::DirectPageXIndexedIndirect(literal))
+						},
+						Token::CloseParenthesis(second_location) => {
+							let span = (location, *second_location).into();
+							tokens
+								.next()
+								.ok_or_else(missing_token_error(Token::Plus(location).into()))?
+								.expect(Token::Plus(location), self.source_code.clone())?;
+							let result = tokens
+								.next()
+								.ok_or_else(missing_token_error(Token::Register(Register::Y, span).into()))?
+								.expect(Token::Register(Register::Y, span), self.source_code.clone())
+								.map(|_| AddressingMode::DirectPageIndirectYIndexed(literal));
+							if let Some(further_token) = tokens.next() {
+								println!(
+									"{:?}",
+									miette::Report::new(AssemblyError::DanglingTokens {
+										src:      self.source_code.clone(),
+										location: further_token.source_span(),
+									})
+								);
+							}
+							result
+						},
+						wrong_token => Err(AssemblyError::ExpectedToken {
+							expected: Token::CloseParenthesis(wrong_token.source_span().offset().into()),
+							actual:   wrong_token.clone(),
+							location: wrong_token.source_span(),
+							src:      self.source_code.clone(),
+						}),
+					}
+				},
+				_ => unimplemented!(),
+			},
 			_ => unimplemented!(),
 		}
 	}
 
 	/// TODO: We're setting the label's position wrong if we reference it before it has been defined.
-	fn get_label(&mut self, name: &'_ str, span: SourceSpan, used_as_address: bool) -> Arc<GlobalLabel> {
+	fn get_global_label(&mut self, name: &'_ str, span: SourceSpan, used_as_address: bool) -> Arc<GlobalLabel> {
 		match self.labels.iter_mut().find(|label| label.name == name) {
 			Some(matching_label) => {
 				if used_as_address && !matching_label.used_as_address {
@@ -614,7 +654,8 @@ impl Environment {
 	fn create_number<'a>(&'a mut self, token: &'a Token, used_as_address: bool) -> Result<Number, AssemblyError> {
 		match token {
 			Token::Number(number, ..) => Ok(Number::Literal(*number)),
-			Token::Identifier(label, ..) => Ok(Number::Label(self.get_label(label, token.source_span(), used_as_address))),
+			Token::Identifier(label, ..) =>
+				Ok(Number::Label(self.get_global_label(label, token.source_span(), used_as_address))),
 			_ => Err(AssemblyError::ExpectedToken {
 				expected: Token::Number(0, token.source_span()),
 				actual:   token.clone(),

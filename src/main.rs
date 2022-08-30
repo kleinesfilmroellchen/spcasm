@@ -1,6 +1,6 @@
 //! SPC700 assembler.
 
-#![feature(test, let_chains, result_flattening, is_some_with, get_mut_unchecked, iterator_try_collect)]
+#![feature(test, let_chains, result_flattening, is_some_with, get_mut_unchecked, iterator_try_collect, if_let_guard)]
 #![deny(clippy::all, clippy::pedantic, clippy::nursery)]
 #![deny(missing_docs)]
 
@@ -15,6 +15,7 @@ pub mod assembler;
 pub mod elf;
 mod error;
 pub mod instruction;
+mod label;
 pub mod lexer;
 mod r#macro;
 pub mod parser;
@@ -90,8 +91,8 @@ mod test {
 				assert_eq!(
 					expected,
 					actual,
-					"Expected and actual assembly differ at byte {:04X}:\n\texpected: {:02X}\n\tactual:   {:02X}\nhint: \
-					 the bytes before and after are:\n\t{}",
+					"Expected and actual assembly differ at byte {:04X}:\n\texpected: {:02X}\n\tactual:   \
+					 {:02X}\nhint: the bytes before and after are:\n\t{}",
 					byte,
 					expected,
 					actual,

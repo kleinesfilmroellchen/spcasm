@@ -30,8 +30,12 @@ pub(super) fn assemble_mov(
 				data.append_instruction_with_8_bit_operand(0xE8, value, instruction.label.clone(), instruction.span),
 			AddressingMode::IndirectX => data.append(0xE6, instruction.label.clone()),
 			AddressingMode::IndirectXAutoIncrement => data.append(0xBF, instruction.label.clone()),
-			AddressingMode::DirectPage(page_address) =>
-				data.append_instruction_with_8_bit_operand(0xE4, page_address, instruction.label.clone(), instruction.span),
+			AddressingMode::DirectPage(page_address) => data.append_instruction_with_8_bit_operand(
+				0xE4,
+				page_address,
+				instruction.label.clone(),
+				instruction.span,
+			),
 			AddressingMode::DirectPageXIndexed(page_base_address) => data.append_instruction_with_8_bit_operand(
 				0xF4,
 				page_base_address,
@@ -44,18 +48,20 @@ pub(super) fn assemble_mov(
 				data.append_instruction_with_16_bit_operand(0xF5, address, instruction.label.clone(), instruction.span),
 			AddressingMode::YIndexed(address) =>
 				data.append_instruction_with_16_bit_operand(0xF6, address, instruction.label.clone(), instruction.span),
-			AddressingMode::DirectPageXIndexedIndirect(page_base_address) => data.append_instruction_with_8_bit_operand(
-				0xE7,
-				page_base_address,
-				instruction.label.clone(),
-				instruction.span,
-			),
-			AddressingMode::DirectPageIndirectYIndexed(page_base_address) => data.append_instruction_with_8_bit_operand(
-				0xF7,
-				page_base_address,
-				instruction.label.clone(),
-				instruction.span,
-			),
+			AddressingMode::DirectPageXIndexedIndirect(page_base_address) => data
+				.append_instruction_with_8_bit_operand(
+					0xE7,
+					page_base_address,
+					instruction.label.clone(),
+					instruction.span,
+				),
+			AddressingMode::DirectPageIndirectYIndexed(page_base_address) => data
+				.append_instruction_with_8_bit_operand(
+					0xF7,
+					page_base_address,
+					instruction.label.clone(),
+					instruction.span,
+				),
 			AddressingMode::Register(Register::X) => data.append(0x7D, instruction.label.clone()),
 			AddressingMode::Register(Register::Y) => data.append(0xDD, instruction.label.clone()),
 			mode => return make_error(mode, false),
@@ -63,10 +69,18 @@ pub(super) fn assemble_mov(
 		AddressingMode::Register(Register::X) => match source {
 			AddressingMode::Immediate(value) =>
 				data.append_instruction_with_8_bit_operand(0xCD, value, instruction.label.clone(), instruction.span),
-			AddressingMode::DirectPage(page_address) =>
-				data.append_instruction_with_8_bit_operand(0xF8, page_address, instruction.label.clone(), instruction.span),
-			AddressingMode::DirectPageYIndexed(page_address) =>
-				data.append_instruction_with_8_bit_operand(0xF9, page_address, instruction.label.clone(), instruction.span),
+			AddressingMode::DirectPage(page_address) => data.append_instruction_with_8_bit_operand(
+				0xF8,
+				page_address,
+				instruction.label.clone(),
+				instruction.span,
+			),
+			AddressingMode::DirectPageYIndexed(page_address) => data.append_instruction_with_8_bit_operand(
+				0xF9,
+				page_address,
+				instruction.label.clone(),
+				instruction.span,
+			),
 			AddressingMode::Address(address) =>
 				data.append_instruction_with_16_bit_operand(0xE9, address, instruction.label.clone(), instruction.span),
 			AddressingMode::Register(Register::A) => data.append(0x5D, instruction.label.clone()),
@@ -76,10 +90,18 @@ pub(super) fn assemble_mov(
 		AddressingMode::Register(Register::Y) => match source {
 			AddressingMode::Immediate(value) =>
 				data.append_instruction_with_8_bit_operand(0x8D, value, instruction.label.clone(), instruction.span),
-			AddressingMode::DirectPage(page_address) =>
-				data.append_instruction_with_8_bit_operand(0xEB, page_address, instruction.label.clone(), instruction.span),
-			AddressingMode::DirectPageXIndexed(page_address) =>
-				data.append_instruction_with_8_bit_operand(0xFB, page_address, instruction.label.clone(), instruction.span),
+			AddressingMode::DirectPage(page_address) => data.append_instruction_with_8_bit_operand(
+				0xEB,
+				page_address,
+				instruction.label.clone(),
+				instruction.span,
+			),
+			AddressingMode::DirectPageXIndexed(page_address) => data.append_instruction_with_8_bit_operand(
+				0xFB,
+				page_address,
+				instruction.label.clone(),
+				instruction.span,
+			),
 			AddressingMode::Address(address) =>
 				data.append_instruction_with_16_bit_operand(0xEC, address, instruction.label.clone(), instruction.span),
 			AddressingMode::Register(Register::A) => data.append(0xFD, instruction.label.clone()),

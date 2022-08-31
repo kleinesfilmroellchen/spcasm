@@ -136,9 +136,11 @@ pub(super) fn assemble_branching_instruction(
 					src: data.source_code.clone(),
 				})
 			};
+			// CAUTION! BBS and BBC have their operands in the SAME order in machine code and assembly, which is NOT THE DEFAULT! 
 			data.append_instruction_with_two_8_bit_operands(
 				if is_bbs { 0x03 } else { 0x13 } | (bit << 5),
-				page_address.clone(), jump_target, instruction.label.clone(), instruction.span
+				jump_target,
+				page_address.clone(), instruction.label.clone(), instruction.span
 			);
 		},
 		_ => return make_target_error(vec![]),

@@ -526,17 +526,22 @@ impl AssembledData {
 	}
 
 	/// Appends an instruction with two 8-bit operands.
+	/// Note that the second machine operand is given first, as most *assembly code* mnemonics have the second *machine
+	/// code* operand first. There are exceptions, like BBS and BBC, but standard MOV/ADD/... have target, source while
+	/// their machine code has source, target.
 	#[inline]
 	pub fn append_instruction_with_two_8_bit_operands(
 		&mut self,
 		opcode: u8,
-		first_operand: Number,
-		second_operand: Number,
+		second_machine_operand: Number,
+		first_machine_operand: Number,
 		label: Option<Label>,
 		span: SourceSpan,
 	) {
-		self.append_instruction_with_8_bit_operand(opcode, first_operand, label, span);
-		match second_operand {
+		// The operands are flipped in machine code from what the assembly does. It's not target, source; it's source,
+		// target.
+		self.append_instruction_with_8_bit_operand(opcode, first_machine_operand, label, span);
+		match second_machine_operand {
 			Number::Literal(value) => self.append_8_bits(value, None, span),
 			Number::Label(value) => self.append_unresolved(value, false, None),
 		}

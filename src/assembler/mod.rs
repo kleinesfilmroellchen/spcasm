@@ -288,11 +288,8 @@ pub enum MemoryValue {
 	/// Low byte of an (unresolved) label.
 	LabelLowByte(Label),
 	/// An (unresolved) label. The resolved memory value will be the difference between this memory value's location
-	/// and the label's location. The second parameter is the negative offset that's added to the relative offset after
-	/// computation. This is necessary because the actual instruction that has this relative label stored doesn't start
-	/// at this memory address, but one or two bytes before. The PSW is still at the beginning of the instruction when
-	/// we jump, so the relative jump starts at that instruction, not at this memory address.
-	LabelRelative(Label, u8),
+	/// plus one and the label's location.
+	LabelRelative(Label),
 	/// An (unresolved) label. The upper three bits are used for the bit index value which can range from 0 to 7. This
 	/// is used for most absolute bit addressing modes.
 	LabelHighByteWithContainedBitIndex(Label, u8),
@@ -329,9 +326,9 @@ impl MemoryValue {
 				},
 				_ => self,
 			},
-			Self::LabelRelative(ref label, negative_offset) => match *label {
+			Self::LabelRelative(ref label) => match *label {
 				Label::Global(ref global) if let Some(label_memory_address) = global.location => {
-					let resolved_data = ((label_memory_address - own_memory_address) as u8).wrapping_add(negative_offset);
+					let resolved_data = (label_memory_address - (own_memory_address+1)) as u8;
 					Self::Resolved(resolved_data)
 				},
 				Label::Local(ref local) => {
@@ -340,7 +337,7 @@ impl MemoryValue {
 					// so setting the address within the parent does not automatically set the address in all other identical local labels.
 					let parent = local.strong_parent();
 					parent.locals.get(&local.name).and_then(|parent_local| parent_local.location).map_or(self, |address| {
-						let resolved_data = ((address - own_memory_address) as u8).wrapping_add(negative_offset);
+						let resolved_data = (address - (own_memory_address+1)) as u8;
 						Self::Resolved(resolved_data)
 					})
 				},
@@ -499,9 +496,8 @@ impl AssembledData {
 
 	/// Appends an unresolved value that points to a label to the current segment. The label will be resolved to a
 	/// relative offset, like various branch instructions need it.
-	pub fn append_relative_unresolved(&mut self, value: Label, negative_offset: u8) {
-		self.current_segment_mut()
-			.push(LabeledMemoryValue { value: MemoryValue::LabelRelative(value, negative_offset), label: None });
+	pub fn append_relative_unresolved(&mut self, value: Label) {
+		self.current_segment_mut().push(LabeledMemoryValue { value: MemoryValue::LabelRelative(value), label: None });
 	}
 
 	/// Appends an unresolved value with a bit index that will be placed into the upper three bits after label
@@ -599,7 +595,7 @@ impl AssembledData {
 		self.append(opcode, label);
 		match operand {
 			Number::Literal(value) => self.append_8_bits(value, None, span),
-			Number::Label(label) => self.append_relative_unresolved(label, 1),
+			Number::Label(label) => self.append_relative_unresolved(label),
 		}
 	}
 

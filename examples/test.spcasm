@@ -193,8 +193,8 @@ das A ;= BE
 
 bra $20       ;= 2F 20
               ; label location is -4
-beq reltarget ;= F0 FC
-bne reltarget ;= D0 FA
+beq reltarget ;= F0 FA
+bne reltarget ;= D0 F8
 bcs $25       ;= B0 25
 bcc $26       ;= 90 26
 bvs $27       ;= 70 27
@@ -217,9 +217,9 @@ NOP             ;= 00
 jmp .subtarget  ;= 5F 8E 01
 
 .selftarget:
-bne .selftarget       ;= D0 00
+bne .selftarget       ;= D0 FE
 global_selftarget:
-bne global_selftarget ;= D0 00
+bne global_selftarget ;= D0 FE
 
 bbs data.0,$F9 ;= 03 13 F9
 bbs $30.1,$F9 ;= 23 30 F9

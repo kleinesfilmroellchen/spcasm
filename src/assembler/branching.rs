@@ -74,7 +74,7 @@ pub(super) fn assemble_branching_instruction(
 						// The relative unresolved label needs a negative offset of 2, because we're the second operand.
 						match relative_source {
 							Number::Literal(relative_offset) => data.append_8_bits(relative_offset, None, instruction.span),
-							Number::Label(relative_source_label) => data.append_relative_unresolved(relative_source_label, 2),
+							Number::Label(relative_source_label) => data.append_relative_unresolved(relative_source_label),
 						}
 					} else {
 						return if let Some(source) =  source { Err(AssemblyError::InvalidAddressingModeCombination {
@@ -98,7 +98,7 @@ pub(super) fn assemble_branching_instruction(
 				// The relative unresolved label needs a negative offset of 2, because we're the second operand.
 				match relative_source {
 					Number::Literal(relative_offset) => data.append_8_bits(relative_offset, None, instruction.span),
-					Number::Label(relative_source_label) => data.append_relative_unresolved(relative_source_label, 2),
+					Number::Label(relative_source_label) => data.append_relative_unresolved(relative_source_label),
 				}
 			} else {
 				return make_target_error(vec![]);

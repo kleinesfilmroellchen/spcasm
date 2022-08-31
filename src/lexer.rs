@@ -62,8 +62,10 @@ pub fn lex(source_code: Arc<AssemblyCode>) -> Result<Vec<Token>, AssemblyError> 
 					chars.next();
 					index += 1;
 					let mut comment_contents = String::new();
-					while let Some(chr) = chars.peek() && chr != &'\n' {
+					// Either stop at a newline or another regular comment.
+					while let Some(chr) = chars.peek() && chr != &'\n' && chr != &';' {
 						comment_contents.push(chars.next().unwrap());
+						index += 1;
 					}
 					// This cfg() is technically unnecessary, but the above check doesn't happen at compile time so
 					// Rust wouldn't find the conditionally-compiled token type.
@@ -77,7 +79,6 @@ pub fn lex(source_code: Arc<AssemblyCode>) -> Result<Vec<Token>, AssemblyError> 
 							src: source_code.clone(),
 							location: (index, comment_contents.len()).into()
 						})?, (index, comment_contents.len()).into()));
-					index += comment_contents.len();
 				} else {
 					index += 1;
 					while let Some(chr) = chars.peek() && chr != &'\n' {

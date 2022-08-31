@@ -29,7 +29,7 @@ pub fn lex(source_code: Arc<AssemblyCode>) -> Result<Vec<Token>, AssemblyError> 
 			continue;
 		}
 		match chr {
-			'A' ..= 'Z' | 'a' ..= 'z' | '_' => {
+			'A' ..= 'Z' | 'a' ..= 'z' | '_' | '@' => {
 				let start_index = index;
 				let identifier = next_identifier(&mut chars, chr);
 				index += identifier.len();
@@ -99,7 +99,7 @@ pub fn lex(source_code: Arc<AssemblyCode>) -> Result<Vec<Token>, AssemblyError> 
 fn next_identifier(chars: &mut Peekable<std::str::Chars>, start: char) -> String {
 	let mut identifier = String::default();
 	identifier.push(start);
-	while let Some(chr) = chars.peek() && (chr.is_alphanumeric() || chr.is_ascii_digit() || chr == &'_') {
+	while let Some(chr) = chars.peek() && (chr.is_alphanumeric() || chr.is_ascii_digit() || chr == &'_' || chr == &'@') {
 		identifier.push(chars.next().unwrap());
 	}
 	identifier

@@ -340,7 +340,6 @@ impl MemoryValue {
 					// so setting the address within the parent does not automatically set the address in all other identical local labels.
 					let parent = local.strong_parent();
 					parent.locals.get(&local.name).and_then(|parent_local| parent_local.location).map_or(self, |address| {
-						dbg!(negative_offset);
 						let resolved_data = ((address - own_memory_address) as u8).wrapping_add(negative_offset);
 						Self::Resolved(resolved_data)
 					})

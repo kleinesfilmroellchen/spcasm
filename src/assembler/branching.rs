@@ -116,10 +116,7 @@ pub(super) fn assemble_branching_instruction(
 				_ => return make_target_error(vec![]),
 			}, jump_target.clone(), instruction.label.clone(), instruction.span
 		);},
-		AddressingMode::XIndexed(address) => {
-			if mnemonic != Mnemonic::Jmp {
-				return make_target_error(vec![]);
-			}
+		AddressingMode::XIndexed(address) | AddressingMode::DirectPageXIndexedIndirect(address) if mnemonic == Mnemonic::Jmp => {
 			data.append_instruction_with_16_bit_operand(0x1F, address.clone(), instruction.label.clone(), instruction.span);
 		},
 		AddressingMode::DirectPageBit(page_address, bit) | AddressingMode::AddressBit(page_address, bit) => {

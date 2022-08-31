@@ -76,30 +76,37 @@ fn run_assembler(file_name: String) -> miette::Result<(Vec<ProgramElement>, Vec<
 #[cfg(test)]
 mod test {
 	extern crate test;
+	use std::cmp::min;
+
 	use test::Bencher;
+
+	use crate::pretty_hex;
 
 	#[bench]
 	fn test_all_opcodes(bencher: &mut Bencher) {
-		use std::cmp::min;
+		bencher.iter(|| test_file("examples/test.spcasm"));
+	}
 
-		use crate::pretty_hex;
+	#[test]
+	fn test_boot_rom() {
+		test_file("examples/bootrom.spcasm");
+	}
 
-		bencher.iter(|| {
-			let (parsed, assembled) = super::run_assembler("examples/test.spcasm".to_owned()).unwrap();
-			let expected_binary = assemble_expected_binary(parsed);
-			for (byte, (expected, actual)) in expected_binary.iter().zip(assembled.iter()).enumerate() {
-				assert_eq!(
-					expected,
-					actual,
-					"Expected and actual assembly differ at byte {:04X}:\n\texpected: {:02X}\n\tactual:   \
-					 {:02X}\nhint: the bytes before and after are:\n\t{}",
-					byte,
-					expected,
-					actual,
-					pretty_hex(&assembled[byte.saturating_sub(4) .. min(assembled.len(), byte + 5)])
-				);
-			}
-		});
+	fn test_file(file: &str) {
+		let (parsed, assembled) = super::run_assembler(file.to_owned()).unwrap();
+		let expected_binary = assemble_expected_binary(parsed);
+		for (byte, (expected, actual)) in expected_binary.iter().zip(assembled.iter()).enumerate() {
+			assert_eq!(
+				expected,
+				actual,
+				"Expected and actual assembly differ at byte {:04X}:\n\texpected: {:02X}\n\tactual:   {:02X}\nhint: \
+				 the bytes before and after are:\n\t{}",
+				byte,
+				expected,
+				actual,
+				pretty_hex(&assembled[byte.saturating_sub(4) .. min(assembled.len(), byte + 5)])
+			);
+		}
 	}
 
 	/// Assembles the contents of the expected value comments, which is what the file should assemble to.

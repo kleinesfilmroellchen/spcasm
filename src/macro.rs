@@ -1,6 +1,7 @@
 //! Assembly directives and macros.
 #![allow(clippy::module_name_repetitions)]
 use miette::SourceSpan;
+use spcasm_derive::Parse;
 
 use super::instruction::MemoryAddress;
 /// An assembly macro.
@@ -11,7 +12,13 @@ pub struct Macro {
 	pub(crate) span: SourceSpan,
 }
 
-///An assembly macro's value and relevant data.
+/// Macro symbols, used in lexing.
+#[derive(Debug, Clone, Copy, Parse, Eq, PartialEq)]
+pub enum MacroSymbol {
+	Org,
+}
+
+/// An assembly macro's value and relevant data.
 #[derive(Clone, Copy, Debug)]
 pub enum MacroValue {
 	/// org <memory address>

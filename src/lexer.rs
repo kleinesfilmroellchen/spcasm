@@ -7,6 +7,7 @@ use miette::SourceOffset;
 
 use crate::error::{AssemblyCode, AssemblyError};
 use crate::parser::Parse;
+use crate::r#macro::MacroSymbol;
 use crate::{Register, Token};
 
 /// Lex the given assembly into a list of tokens.
@@ -35,8 +36,10 @@ pub fn lex(source_code: Arc<AssemblyCode>) -> Result<Vec<Token>, AssemblyError> 
 				index += identifier.len();
 				let identifier_span =  (start_index, identifier.len()).into();
 				tokens.push(Register::parse(&identifier.to_lowercase(), identifier_span, source_code.clone())
-								.map_or_else(|_| Token::Identifier(identifier, identifier_span),
-									|value| Token::Register(value, identifier_span)));
+								.map(|value| Token::Register(value, identifier_span))
+								.or_else(|_| MacroSymbol::parse(&identifier.to_lowercase(), identifier_span, source_code.clone())
+									.map(|value| Token::Macro(value, identifier_span)))
+								.or(Ok(Token::Identifier(identifier, identifier_span)))?);
 			},
 			'0'..='9' => {
 				let (number, size) = next_number(&mut chars, Some(chr), 10, |chr| chr.is_ascii_digit(), index, source_code.clone())?;
@@ -60,7 +63,7 @@ pub fn lex(source_code: Arc<AssemblyCode>) -> Result<Vec<Token>, AssemblyError> 
 			';' =>
 				if cfg!(test) && let Some(chr) = chars.peek() && chr == &'=' {
 					chars.next();
-					index += 1;
+					index += 2;
 					let mut comment_contents = String::new();
 					// Either stop at a newline or another regular comment.
 					while let Some(chr) = chars.peek() && chr != &'\n' && chr != &';' {

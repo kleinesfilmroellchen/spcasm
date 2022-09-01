@@ -2,7 +2,7 @@
 
 spcasm is a simple assembler for the SPC700 processor architecture, famously used in the S-SMP as the sound co-processor of the SNES.
 
-spcasm assembles an ELF that hijacks another architecture (this must be ignored) and puts the SPC700's main memory into a `.data` section. No entry point-related things are handled. You'll have to process this memory dump further, for example you can include it in an SNES ROM and transfer it via the 6502 main processor.
+spcasm assembles an ELF that hijacks another architecture (this must be ignored) and puts the SPC700's main memory into a `.data` section. No entry point-related things are handled. You'll have to process this memory dump further, for example you can include it in an SNES ROM and transfer it via the 65c816 main processor.
 
 [This project is just for fun](https://justforfunnoreally.dev/). Still, some reasons to use spcasm:
 * Extremely fast: spcasm assembles about 124.858 KB/s on a modern computer. This means that the entire SPC700 address space (64KB), if it were entirely program RAM, can be assembled by spcasm in about half a second.

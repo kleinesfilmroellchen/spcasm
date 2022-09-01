@@ -254,17 +254,10 @@ impl Environment {
 		let second_addressing_mode = self.parse_addressing_mode(&mut second_addressing_mode, current_global_label)?;
 
 		#[cfg(test)]
-		let expected_value = tokens
-			.iter()
-			.find_map(|token| match token {
-				Token::TestComment(expected_value, ..) => Some(expected_value),
-				_ => None,
-			})
-			.ok_or(AssemblyError::MissingTestResult {
-				location: mnemonic_token_location,
-				src:      self.source_code.clone(),
-			})?
-			.clone();
+		let expected_value = tokens.iter().find_map(|token| match token {
+			Token::TestComment(expected_value, ..) => Some(expected_value.clone()),
+			_ => None,
+		});
 		let final_span = tokens.end().unwrap().source_span();
 		let instruction = Instruction {
 			opcode: Opcode::make_two_operand_instruction(mnemonic, first_addressing_mode, second_addressing_mode),
@@ -276,6 +269,8 @@ impl Environment {
 				.into(),
 			#[cfg(test)]
 			expected_value,
+			#[cfg(test)]
+			assembled_size: None,
 		};
 		Ok(instruction)
 	}
@@ -290,17 +285,10 @@ impl Environment {
 	) -> Result<Instruction, AssemblyError> {
 		let addressing_mode = self.parse_addressing_mode(tokens, current_global_label)?;
 		#[cfg(test)]
-		let expected_value = tokens
-			.iter()
-			.find_map(|token| match token {
-				Token::TestComment(expected_value, ..) => Some(expected_value),
-				_ => None,
-			})
-			.ok_or(AssemblyError::MissingTestResult {
-				location: mnemonic_token_location,
-				src:      self.source_code.clone(),
-			})?
-			.clone();
+		let expected_value = tokens.iter().find_map(|token| match token {
+			Token::TestComment(expected_value, ..) => Some(expected_value.clone()),
+			_ => None,
+		});
 		let final_span = tokens.end().unwrap().source_span();
 		let instruction = Instruction {
 			opcode: Opcode::make_single_operand_instruction(mnemonic, addressing_mode),
@@ -312,6 +300,8 @@ impl Environment {
 				.into(),
 			#[cfg(test)]
 			expected_value,
+			#[cfg(test)]
+			assembled_size: None,
 		};
 		Ok(instruction)
 	}
@@ -334,23 +324,18 @@ impl Environment {
 			.count() == 0
 		{
 			#[cfg(test)]
-			let expected_value = tokens
-				.iter()
-				.find_map(|token| match token {
-					Token::TestComment(expected_value, ..) => Some(expected_value),
-					_ => None,
-				})
-				.ok_or(AssemblyError::MissingTestResult {
-					location: mnemonic_token_location,
-					src:      self.source_code.clone(),
-				})?
-				.clone();
+			let expected_value = tokens.iter().find_map(|token| match token {
+				Token::TestComment(expected_value, ..) => Some(expected_value.clone()),
+				_ => None,
+			});
 			let instruction = Instruction {
 				opcode: Opcode { mnemonic, first_operand: None, second_operand: None },
 				label,
 				span: mnemonic_token_location,
 				#[cfg(test)]
 				expected_value,
+				#[cfg(test)]
+				assembled_size: None,
 			};
 			Ok(instruction)
 		} else {

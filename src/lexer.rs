@@ -27,6 +27,18 @@ pub fn lex(source_code: Arc<AssemblyCode>) -> Result<Vec<Token>, AssemblyError> 
 			continue;
 		} else if chr.is_whitespace() {
 			index += 1;
+			// A ':' surrounded by whitespace serves as a pseudo-line separator within a line for code organization.
+			if chars.peek().contains(&&':') {
+				chars.next();
+				index += 1;
+				if chars.peek().is_some_and(|c| c.is_whitespace()) {
+					chars.next();
+					index += 1;
+					tokens.push(Token::Newline((index - 2).into()));
+				} else {
+					tokens.push(Token::Colon((index - 1).into()));
+				}
+			}
 			continue;
 		}
 		match chr {

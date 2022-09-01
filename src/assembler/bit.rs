@@ -10,7 +10,7 @@ pub(super) fn assemble_bit_instructions(
 	mnemonic: Mnemonic,
 	target: AddressingMode,
 	source: &Option<AddressingMode>,
-	instruction: &Instruction,
+	instruction: &mut Instruction,
 ) -> Result<(), AssemblyError> {
 	let target_copy = target.clone();
 	let source_copy = source.clone();
@@ -41,8 +41,7 @@ pub(super) fn assemble_bit_instructions(
 			data.append_instruction_with_8_bit_operand(
 				if mnemonic == Mnemonic::Set1 { 0x02 } else { 0x12 } | (bit << 5),
 				page_address,
-				instruction.label.clone(),
-				instruction.span,
+				instruction,
 			);
 		},
 		AddressingMode::Address(address) => data.append_instruction_with_16_bit_operand(
@@ -52,8 +51,7 @@ pub(super) fn assemble_bit_instructions(
 				_ => return make_error(true),
 			},
 			address,
-			instruction.label.clone(),
-			instruction.span,
+			instruction,
 		),
 		AddressingMode::Register(Register::C) => match &source {
 			Some(
@@ -86,8 +84,7 @@ pub(super) fn assemble_bit_instructions(
 					},
 					address.clone(),
 					*bit,
-					instruction.label.clone(),
-					instruction.span,
+					instruction,
 				);
 			},
 			_ => return make_error(true),
@@ -101,23 +98,11 @@ pub(super) fn assemble_bit_instructions(
 						src: data.source_code.clone(),
 					});
 				} else {
-					data.append_instruction_with_16_bit_operand_and_bit_index(
-						0xEA,
-						address,
-						bit,
-						instruction.label.clone(),
-						instruction.span,
-					);
+					data.append_instruction_with_16_bit_operand_and_bit_index(0xEA, address, bit, instruction);
 				},
 			Mnemonic::Mov1 =>
 				if matches!(source, Some(AddressingMode::Register(Register::C))) {
-					data.append_instruction_with_16_bit_operand_and_bit_index(
-						0xCA,
-						address,
-						bit,
-						instruction.label.clone(),
-						instruction.span,
-					);
+					data.append_instruction_with_16_bit_operand_and_bit_index(0xCA, address, bit, instruction);
 				} else {
 					return make_error(true);
 				},

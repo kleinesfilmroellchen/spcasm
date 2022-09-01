@@ -26,7 +26,9 @@ pub struct Instruction {
 	/// Only used for testing purposes: this is the data that the instruction should assemble to according to the test
 	/// file.
 	#[cfg(test)]
-	pub expected_value: Vec<u8>,
+	pub expected_value: Option<Vec<u8>>,
+	#[cfg(test)]
+	pub assembled_size: Option<u8>,
 }
 
 /// An instruction's core data that's used to generate machine code.

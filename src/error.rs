@@ -6,6 +6,7 @@ use miette::{Diagnostic, MietteError, MietteSpanContents, SourceCode, SourceSpan
 use thiserror::Error;
 
 use crate::instruction::{AddressingMode, MemoryAddress, Mnemonic};
+use crate::label::Label;
 use crate::Token;
 
 /// The source code for an assembly error.
@@ -66,6 +67,22 @@ pub enum AssemblyError {
 		location:      SourceSpan,
 		#[source_code]
 		src:           Arc<AssemblyCode>,
+	},
+
+	#[error("Label '{label}' can not be resolved to a value")]
+	#[diagnostic(
+		code(spcasm::unresolved_label),
+		severity(Error),
+		help("Any symbolic label must be defined somewhere. Did you misspell the label's name?")
+	)]
+	UnresolvedLabel {
+		label:          Label,
+		#[label("'{label}' used here")]
+		label_location: SourceSpan,
+		#[label("In this instruction")]
+		usage_location: SourceSpan,
+		#[source_code]
+		src:            Arc<AssemblyCode>,
 	},
 
 	#[error("Invalid addressing mode combination: `{first_mode}` with `{second_mode}` for `{mnemonic}`")]

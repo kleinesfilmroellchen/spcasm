@@ -1,0 +1,7 @@
+MoV a,X
+
+inc x : inc x
+
+lAbEl: bne label
+label: jmp LABEL
+LABEL: jmp label

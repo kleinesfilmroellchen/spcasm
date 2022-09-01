@@ -1,6 +1,7 @@
 #![allow(clippy::module_name_repetitions)]
 
 use std::collections::HashMap;
+use std::fmt::Display;
 use std::sync::{Arc, Weak};
 
 use miette::SourceSpan;
@@ -22,6 +23,24 @@ pub enum Label {
 	Global(Arc<GlobalLabel>),
 	/// A label only valid within a global label. It may be reused with a different value later on.
 	Local(LocalLabel),
+}
+
+impl Label {
+	pub fn source_span(&self) -> SourceSpan {
+		match self {
+			Self::Global(global) => global.span,
+			Self::Local(LocalLabel { span: label_span, .. }) => *label_span,
+		}
+	}
+}
+
+impl Display for Label {
+	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+		write!(f, "{}", match self {
+			Self::Global(global) => global.name.clone(),
+			Self::Local(local) => format!(".{}", local.name),
+		})
+	}
 }
 
 impl PartialEq for Label {

@@ -28,7 +28,7 @@ pub const MAX_PASSES: usize = 10;
 /// Assembles the instructions into a byte sequence.
 /// # Errors
 /// Unencodeable instructions will cause errors.
-pub fn assemble(environment: &Environment, instructions: Vec<ProgramElement>) -> Result<Vec<u8>, AssemblyError> {
+pub fn assemble(environment: &Environment, instructions: &mut Vec<ProgramElement>) -> Result<Vec<u8>, AssemblyError> {
 	let mut data = AssembledData::new(environment.source_code.clone());
 
 	data.new_segment(0);
@@ -36,7 +36,7 @@ pub fn assemble(environment: &Environment, instructions: Vec<ProgramElement>) ->
 	for program_element in instructions {
 		match program_element {
 			ProgramElement::Instruction(instruction) => assemble_instruction(&mut data, instruction)?,
-			ProgramElement::Macro(r#macro) => assemble_macro(&mut data, r#macro)?,
+			ProgramElement::Macro(r#macro) => assemble_macro(&mut data, *r#macro)?,
 		}
 	}
 	let mut pass_count = 0;
@@ -47,48 +47,42 @@ pub fn assemble(environment: &Environment, instructions: Vec<ProgramElement>) ->
 }
 
 #[allow(clippy::too_many_lines)] // ¯\_(ツ)_/¯
-fn assemble_instruction(data: &mut AssembledData, instruction: Instruction) -> Result<(), AssemblyError> {
-	match &instruction.opcode {
+fn assemble_instruction(data: &mut AssembledData, instruction: &mut Instruction) -> Result<(), AssemblyError> {
+	match instruction.opcode.clone() {
 		Opcode { mnemonic: Mnemonic::Mov, first_operand: Some(target), second_operand: Some(source) } =>
-			mov::assemble_mov(data, target, source.clone(), &instruction)?,
+			mov::assemble_mov(data, &target, source, instruction)?,
 		Opcode {
 			mnemonic:
 				mnemonic @ (Mnemonic::Adc | Mnemonic::Sbc | Mnemonic::And | Mnemonic::Or | Mnemonic::Eor | Mnemonic::Cmp),
 			first_operand: Some(target),
 			second_operand: Some(source),
-		} => arithmetic_logic::assemble_arithmetic_instruction(
-			data,
-			*mnemonic,
-			target.clone(),
-			source.clone(),
-			&instruction,
-		)?,
+		} => arithmetic_logic::assemble_arithmetic_instruction(data, mnemonic, target, source, instruction)?,
 		Opcode {
 			mnemonic: mnemonic @ (Mnemonic::Inc | Mnemonic::Dec),
 			first_operand: Some(target),
 			second_operand: None,
 		} => {
-			let is_increment = *mnemonic == Mnemonic::Inc;
-			arithmetic_logic::assemble_inc_dec_instruction(data, is_increment, target.clone(), &instruction)?;
+			let is_increment = mnemonic == Mnemonic::Inc;
+			arithmetic_logic::assemble_inc_dec_instruction(data, is_increment, target, instruction)?;
 		},
 		Opcode {
 			mnemonic: mnemonic @ (Mnemonic::Asl | Mnemonic::Lsr | Mnemonic::Rol | Mnemonic::Ror | Mnemonic::Xcn),
 			first_operand: Some(target),
 			second_operand: None,
-		} => arithmetic_logic::assemble_shift_rotation_instruction(data, *mnemonic, target.clone(), &instruction)?,
+		} => arithmetic_logic::assemble_shift_rotation_instruction(data, mnemonic, target, instruction)?,
 		Opcode {
 			mnemonic: mnemonic @ (Mnemonic::Incw | Mnemonic::Decw),
 			first_operand: Some(AddressingMode::DirectPage(target)),
 			second_operand: None,
 		} => {
-			let is_increment = *mnemonic == Mnemonic::Incw;
-			r16bit::assemble_incw_decw_instruction(data, is_increment, target.clone(), &instruction);
+			let is_increment = mnemonic == Mnemonic::Incw;
+			r16bit::assemble_incw_decw_instruction(data, is_increment, target, instruction);
 		},
 		Opcode {
 			mnemonic: mnemonic @ (Mnemonic::Addw | Mnemonic::Subw | Mnemonic::Cmpw),
 			first_operand: Some(AddressingMode::Register(Register::YA)),
 			second_operand: Some(AddressingMode::DirectPage(target)),
-		} => r16bit::assemble_add_sub_cmp_wide_instruction(data, *mnemonic, target.clone(), &instruction),
+		} => r16bit::assemble_add_sub_cmp_wide_instruction(data, mnemonic, target, instruction),
 		Opcode {
 			mnemonic: Mnemonic::Movw,
 			first_operand: Some(target @ (AddressingMode::DirectPage(_) | AddressingMode::Register(Register::YA))),
@@ -103,7 +97,7 @@ fn assemble_instruction(data: &mut AssembledData, instruction: Instruction) -> R
 					mnemonic:    Mnemonic::Movw,
 				})
 			};
-			let (direction, page_address) = if *target == AddressingMode::Register(Register::YA) {
+			let (direction, page_address) = if target == AddressingMode::Register(Register::YA) {
 				(MovDirection::IntoYA, match source {
 					AddressingMode::DirectPage(page_address) => page_address,
 					_ => return make_movw_error(),
@@ -114,23 +108,23 @@ fn assemble_instruction(data: &mut AssembledData, instruction: Instruction) -> R
 					_ => return make_movw_error(),
 				})
 			};
-			r16bit::assemble_mov_wide_instruction(data, page_address.clone(), &direction, &instruction);
+			r16bit::assemble_mov_wide_instruction(data, page_address, &direction, instruction);
 		},
 		Opcode {
 			mnemonic: Mnemonic::Mul,
 			first_operand: Some(AddressingMode::Register(Register::YA)),
 			second_operand: None,
-		} => data.append(0xCF, instruction.label),
+		} => data.append_instruction(0xCF, instruction),
 		Opcode {
 			mnemonic: Mnemonic::Div,
 			first_operand: Some(AddressingMode::Register(Register::YA)),
 			second_operand: Some(AddressingMode::Register(Register::X)),
-		} => data.append(0x9E, instruction.label),
+		} => data.append_instruction(0x9E, instruction),
 		Opcode {
 			mnemonic: mnemonic @ (Mnemonic::Daa | Mnemonic::Das),
 			first_operand: Some(AddressingMode::Register(Register::A)),
 			second_operand: None,
-		} => data.append(if *mnemonic == Mnemonic::Daa { 0xDF } else { 0xBE }, instruction.label),
+		} => data.append_instruction(if mnemonic == Mnemonic::Daa { 0xDF } else { 0xBE }, instruction),
 		Opcode {
 			mnemonic:
 				mnemonic @ (Mnemonic::Bra
@@ -152,7 +146,7 @@ fn assemble_instruction(data: &mut AssembledData, instruction: Instruction) -> R
 				| Mnemonic::Jmp),
 			first_operand: Some(target),
 			second_operand: source,
-		} => branching::assemble_branching_instruction(data, *mnemonic, target.clone(), source.clone(), &instruction)?,
+		} => branching::assemble_branching_instruction(data, mnemonic, target, source, instruction)?,
 		Opcode {
 			mnemonic:
 				mnemonic @ (Mnemonic::Brk
@@ -171,12 +165,12 @@ fn assemble_instruction(data: &mut AssembledData, instruction: Instruction) -> R
 				| Mnemonic::Stop),
 			first_operand: None,
 			second_operand: None,
-		} => assemble_operandless_instruction(data, *mnemonic, instruction.label),
+		} => assemble_operandless_instruction(data, mnemonic, instruction),
 		Opcode {
 			mnemonic: mnemonic @ (Mnemonic::Push | Mnemonic::Pop),
 			first_operand: Some(AddressingMode::Register(target)),
 			second_operand: None,
-		} => mov::assemble_push_pop(data, *mnemonic == Mnemonic::Push, *target, &instruction)?,
+		} => mov::assemble_push_pop(data, mnemonic == Mnemonic::Push, target, instruction)?,
 		Opcode {
 			mnemonic:
 				mnemonic @ (Mnemonic::Set1
@@ -190,17 +184,17 @@ fn assemble_instruction(data: &mut AssembledData, instruction: Instruction) -> R
 				| Mnemonic::Mov1),
 			first_operand: Some(target),
 			second_operand: source,
-		} => bit::assemble_bit_instructions(data, *mnemonic, target.clone(), source, &instruction)?,
+		} => bit::assemble_bit_instructions(data, mnemonic, target, &source, instruction)?,
 		Opcode { mnemonic, first_operand: Some(_), second_operand: Some(_) } =>
 			return Err(AssemblyError::TwoOperandsNotAllowed {
-				mnemonic: *mnemonic,
-				src:      data.source_code.clone(),
+				mnemonic,
+				src: data.source_code.clone(),
 				location: instruction.span,
 			}),
 		Opcode { mnemonic, first_operand: Some(_), .. } =>
 			return Err(AssemblyError::OperandNotAllowed {
-				mnemonic: *mnemonic,
-				src:      data.source_code.clone(),
+				mnemonic,
+				src: data.source_code.clone(),
 				location: instruction.span,
 			}),
 		_ => unreachable!(),
@@ -218,8 +212,8 @@ fn assemble_macro(data: &mut AssembledData, mcro: Macro) -> Result<(), AssemblyE
 	Ok(())
 }
 
-fn assemble_operandless_instruction(data: &mut AssembledData, mnemonic: Mnemonic, label: Option<Label>) {
-	data.append(
+fn assemble_operandless_instruction(data: &mut AssembledData, mnemonic: Mnemonic, instruction: &mut Instruction) {
+	data.append_instruction(
 		match mnemonic {
 			Mnemonic::Brk => 0x0F,
 			Mnemonic::Ret => 0x6F,
@@ -237,8 +231,13 @@ fn assemble_operandless_instruction(data: &mut AssembledData, mnemonic: Mnemonic
 			Mnemonic::Stop => 0xFF,
 			_ => unreachable!(),
 		},
-		label,
+		instruction,
 	);
+
+	#[cfg(test)]
+	{
+		instruction.assembled_size = Some(1);
+	}
 }
 
 /// Data in memory while we still need to resolve labels.
@@ -246,9 +245,11 @@ fn assemble_operandless_instruction(data: &mut AssembledData, mnemonic: Mnemonic
 #[derive(Clone, Debug)]
 pub struct LabeledMemoryValue {
 	/// The label of this memory value.
-	pub label: Option<Label>,
+	pub label:                Option<Label>,
 	/// The actual memory value, which might or might not be resolved.
-	pub value: MemoryValue,
+	pub value:                MemoryValue,
+	/// The source span of the instruction or macro that was compiled to this memory value.
+	pub instruction_location: SourceSpan,
 }
 
 impl LabeledMemoryValue {
@@ -269,12 +270,16 @@ impl LabeledMemoryValue {
 	}
 
 	/// Return the resolved memory value.
-	/// # Panics
-	/// If the memory value isn't resolved yet.
+	/// # Errors
+	/// If the memory value is not resolved, a nice "unresolved label" error is returned.
 	#[inline]
-	#[must_use]
-	pub fn as_resolved_or_panic(&self) -> u8 {
-		self.value.as_resolved_or_panic()
+	pub fn try_as_resolved(&self, src: &Arc<AssemblyCode>) -> Result<u8, AssemblyError> {
+		self.value.try_resolved().map_err(|label| AssemblyError::UnresolvedLabel {
+			label:          label.clone(),
+			label_location: label.source_span(),
+			usage_location: self.instruction_location,
+			src:            src.clone(),
+		})
 	}
 }
 
@@ -353,10 +358,13 @@ impl MemoryValue {
 		}
 	}
 
-	fn as_resolved_or_panic(&self) -> u8 {
+	fn try_resolved(&self) -> Result<u8, Label> {
 		match self {
-			Self::Resolved(value) => *value,
-			_ => panic!("Unresolved memory value {:?}", self),
+			Self::Resolved(value) => Ok(*value),
+			Self::LabelHighByte(label)
+			| Self::LabelLowByte(label)
+			| Self::LabelHighByteWithContainedBitIndex(label, ..)
+			| Self::LabelRelative(label) => Err(label.clone()),
 		}
 	}
 }
@@ -393,8 +401,8 @@ impl AssembledData {
 					section_end:   all_data.len() as MemoryAddress,
 				});
 			}
-			let resolved_segment_data =
-				segment_data.iter().map(LabeledMemoryValue::as_resolved_or_panic).collect::<Vec<u8>>();
+			let try_resolve = |lmv: &LabeledMemoryValue| lmv.try_as_resolved(&self.source_code);
+			let resolved_segment_data = segment_data.iter().map(try_resolve).try_collect::<Vec<u8>>()?;
 			all_data.resize(*starting_address as usize, 0);
 			all_data.extend_from_slice(&resolved_segment_data);
 		}
@@ -458,8 +466,8 @@ impl AssembledData {
 				})
 			);
 		}
-		self.append((value & 0xFF) as u8, label);
-		self.append(((value & 0xFF00) >> 8) as u8, None);
+		self.append((value & 0xFF) as u8, label, span);
+		self.append(((value & 0xFF00) >> 8) as u8, None, span);
 	}
 
 	/// Appends an 8-bit value to the current segment. The given number is truncated to 8 bits.
@@ -476,36 +484,57 @@ impl AssembledData {
 				})
 			);
 		}
-		self.append((value & 0xFF) as u8, label);
+		self.append((value & 0xFF) as u8, label, span);
+	}
+
+	/// Appends the opcode of an instruction that doesn't take any operands.
+	#[inline]
+	pub fn append_instruction(&mut self, opcode: u8, instruction: &mut Instruction) {
+		self.append(opcode, instruction.label.clone(), instruction.span);
+
+		#[cfg(test)]
+		{
+			instruction.assembled_size = Some(1);
+		}
 	}
 
 	/// Appends an 8-bit value to the current segment.
 	#[inline]
-	pub fn append(&mut self, value: u8, label: Option<Label>) {
-		self.current_segment_mut().push(LabeledMemoryValue { value: MemoryValue::Resolved(value), label });
+	fn append(&mut self, value: u8, label: Option<Label>, span: SourceSpan) {
+		self.current_segment_mut().push(LabeledMemoryValue {
+			value: MemoryValue::Resolved(value),
+			label,
+			instruction_location: span,
+		});
 	}
 
 	/// Appends an unresolved value that points to a label to the current segment. The `use_high_byte` parameter decides
 	/// whether the high byte (true) or low byte (false) will be used in this memory address when the label is resolved.
-	pub fn append_unresolved(&mut self, value: Label, use_high_byte: bool, label: Option<Label>) {
+	pub fn append_unresolved(&mut self, value: Label, use_high_byte: bool, label: Option<Label>, span: SourceSpan) {
 		self.current_segment_mut().push(LabeledMemoryValue {
 			value: if use_high_byte { MemoryValue::LabelHighByte(value) } else { MemoryValue::LabelLowByte(value) },
 			label,
+			instruction_location: span,
 		});
 	}
 
 	/// Appends an unresolved value that points to a label to the current segment. The label will be resolved to a
 	/// relative offset, like various branch instructions need it.
-	pub fn append_relative_unresolved(&mut self, value: Label) {
-		self.current_segment_mut().push(LabeledMemoryValue { value: MemoryValue::LabelRelative(value), label: None });
+	pub fn append_relative_unresolved(&mut self, value: Label, span: SourceSpan) {
+		self.current_segment_mut().push(LabeledMemoryValue {
+			value:                MemoryValue::LabelRelative(value),
+			label:                None,
+			instruction_location: span,
+		});
 	}
 
 	/// Appends an unresolved value with a bit index that will be placed into the upper three bits after label
 	/// resolution.
-	pub fn append_unresolved_with_bit_index(&mut self, value: Label, bit_index: u8) {
+	pub fn append_unresolved_with_bit_index(&mut self, value: Label, bit_index: u8, span: SourceSpan) {
 		self.current_segment_mut().push(LabeledMemoryValue {
-			value: MemoryValue::LabelHighByteWithContainedBitIndex(value, bit_index),
-			label: None,
+			value:                MemoryValue::LabelHighByteWithContainedBitIndex(value, bit_index),
+			label:                None,
+			instruction_location: span,
 		});
 	}
 
@@ -515,13 +544,17 @@ impl AssembledData {
 		&mut self,
 		opcode: u8,
 		operand: Number,
-		label: Option<Label>,
-		span: SourceSpan,
+		instruction: &mut Instruction,
 	) {
-		self.append(opcode, label);
+		self.append(opcode, instruction.label.clone(), instruction.span);
 		match operand {
-			Number::Literal(value) => self.append_8_bits(value, None, span),
-			Number::Label(value) => self.append_unresolved(value, false, None),
+			Number::Literal(value) => self.append_8_bits(value, None, instruction.span),
+			Number::Label(value) => self.append_unresolved(value, false, None, instruction.span),
+		}
+
+		#[cfg(test)]
+		{
+			instruction.assembled_size = Some(2);
 		}
 	}
 
@@ -535,15 +568,19 @@ impl AssembledData {
 		opcode: u8,
 		second_machine_operand: Number,
 		first_machine_operand: Number,
-		label: Option<Label>,
-		span: SourceSpan,
+		instruction: &mut Instruction,
 	) {
 		// The operands are flipped in machine code from what the assembly does. It's not target, source; it's source,
 		// target.
-		self.append_instruction_with_8_bit_operand(opcode, first_machine_operand, label, span);
+		self.append_instruction_with_8_bit_operand(opcode, first_machine_operand, instruction);
 		match second_machine_operand {
-			Number::Literal(value) => self.append_8_bits(value, None, span),
-			Number::Label(value) => self.append_unresolved(value, false, None),
+			Number::Literal(value) => self.append_8_bits(value, None, instruction.span),
+			Number::Label(value) => self.append_unresolved(value, false, None, instruction.span),
+		}
+
+		#[cfg(test)]
+		{
+			instruction.assembled_size = Some(3);
 		}
 	}
 
@@ -553,17 +590,21 @@ impl AssembledData {
 		&mut self,
 		opcode: u8,
 		operand: Number,
-		label: Option<Label>,
-		span: SourceSpan,
+		instruction: &mut Instruction,
 	) {
-		self.append(opcode, label);
+		self.append(opcode, instruction.label.clone(), instruction.span);
 		match operand {
-			Number::Literal(value) => self.append_16_bits(value, None, span),
+			Number::Literal(value) => self.append_16_bits(value, None, instruction.span),
 			Number::Label(value) => {
 				// low byte first because little endian
-				self.append_unresolved(value.clone(), false, None);
-				self.append_unresolved(value, true, None);
+				self.append_unresolved(value.clone(), false, None, instruction.span);
+				self.append_unresolved(value, true, None, instruction.span);
 			},
+		}
+
+		#[cfg(test)]
+		{
+			instruction.assembled_size = Some(3);
 		}
 	}
 
@@ -575,17 +616,22 @@ impl AssembledData {
 		opcode: u8,
 		operand: Number,
 		bit_index: u8,
-		label: Option<Label>,
-		span: SourceSpan,
+		instruction: &mut Instruction,
 	) {
-		self.append(opcode, label);
+		self.append(opcode, instruction.label.clone(), instruction.span);
 
 		match operand {
-			Number::Literal(value) => self.append_16_bits(value | (MemoryAddress::from(bit_index) << 13), None, span),
+			Number::Literal(value) =>
+				self.append_16_bits(value | (MemoryAddress::from(bit_index) << 13), None, instruction.span),
 			Number::Label(value) => {
-				self.append_unresolved(value.clone(), false, None);
-				self.append_unresolved_with_bit_index(value, bit_index);
+				self.append_unresolved(value.clone(), false, None, instruction.span);
+				self.append_unresolved_with_bit_index(value, bit_index, instruction.span);
 			},
+		}
+
+		#[cfg(test)]
+		{
+			instruction.assembled_size = Some(3);
 		}
 	}
 
@@ -594,13 +640,17 @@ impl AssembledData {
 		&mut self,
 		opcode: u8,
 		operand: Number,
-		label: Option<Label>,
-		span: SourceSpan,
+		instruction: &mut Instruction,
 	) {
-		self.append(opcode, label);
+		self.append(opcode, instruction.label.clone(), instruction.span);
 		match operand {
-			Number::Literal(value) => self.append_8_bits(value, None, span),
-			Number::Label(label) => self.append_relative_unresolved(label),
+			Number::Literal(value) => self.append_8_bits(value, None, instruction.span),
+			Number::Label(label) => self.append_relative_unresolved(label, instruction.span),
+		}
+
+		#[cfg(test)]
+		{
+			instruction.assembled_size = Some(2);
 		}
 	}
 

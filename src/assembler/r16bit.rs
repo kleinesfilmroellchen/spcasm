@@ -13,21 +13,16 @@ pub(super) fn assemble_incw_decw_instruction(
 	data: &mut AssembledData,
 	is_increment: bool,
 	target_address: Number,
-	instruction: &Instruction,
+	instruction: &mut Instruction,
 ) {
-	data.append_instruction_with_8_bit_operand(
-		if is_increment { 0x3A } else { 0x1A },
-		target_address,
-		instruction.label.clone(),
-		instruction.span,
-	);
+	data.append_instruction_with_8_bit_operand(if is_increment { 0x3A } else { 0x1A }, target_address, instruction);
 }
 
 pub(super) fn assemble_add_sub_cmp_wide_instruction(
 	data: &mut AssembledData,
 	mnemonic: Mnemonic,
 	target_address: Number,
-	instruction: &Instruction,
+	instruction: &mut Instruction,
 ) {
 	data.append_instruction_with_8_bit_operand(
 		match mnemonic {
@@ -37,8 +32,7 @@ pub(super) fn assemble_add_sub_cmp_wide_instruction(
 			_ => unreachable!(),
 		},
 		target_address,
-		instruction.label.clone(),
-		instruction.span,
+		instruction,
 	);
 }
 
@@ -46,7 +40,7 @@ pub(super) fn assemble_mov_wide_instruction(
 	data: &mut AssembledData,
 	page_address: Number,
 	direction: &MovDirection,
-	instruction: &Instruction,
+	instruction: &mut Instruction,
 ) {
 	data.append_instruction_with_8_bit_operand(
 		match direction {
@@ -54,7 +48,6 @@ pub(super) fn assemble_mov_wide_instruction(
 			MovDirection::FromYA => 0xDA,
 		},
 		page_address,
-		instruction.label.clone(),
-		instruction.span,
+		instruction,
 	);
 }

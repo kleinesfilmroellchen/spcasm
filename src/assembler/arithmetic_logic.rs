@@ -11,7 +11,7 @@ pub(super) fn assemble_arithmetic_instruction(
 	mnemonic: Mnemonic,
 	target: AddressingMode,
 	source: AddressingMode,
-	instruction: &Instruction,
+	instruction: &mut Instruction,
 ) -> Result<(), AssemblyError> {
 	match target {
 		AddressingMode::Register(Register::A) => match source {
@@ -26,10 +26,9 @@ pub(super) fn assemble_arithmetic_instruction(
 					_ => unreachable!(),
 				},
 				value,
-				instruction.label.clone(),
-				instruction.span,
+				instruction,
 			),
-			AddressingMode::IndirectX => data.append(
+			AddressingMode::IndirectX => data.append_instruction(
 				match mnemonic {
 					Mnemonic::Adc => 0x86,
 					Mnemonic::Cmp => 0x66,
@@ -39,7 +38,7 @@ pub(super) fn assemble_arithmetic_instruction(
 					Mnemonic::Eor => 0x46,
 					_ => unreachable!(),
 				},
-				instruction.label.clone(),
+				instruction,
 			),
 			AddressingMode::DirectPage(page_address) => data.append_instruction_with_8_bit_operand(
 				match mnemonic {
@@ -52,8 +51,7 @@ pub(super) fn assemble_arithmetic_instruction(
 					_ => unreachable!(),
 				},
 				page_address,
-				instruction.label.clone(),
-				instruction.span,
+				instruction,
 			),
 			AddressingMode::DirectPageXIndexed(page_address) => data.append_instruction_with_8_bit_operand(
 				match mnemonic {
@@ -66,8 +64,7 @@ pub(super) fn assemble_arithmetic_instruction(
 					_ => unreachable!(),
 				},
 				page_address,
-				instruction.label.clone(),
-				instruction.span,
+				instruction,
 			),
 			AddressingMode::Address(address) => data.append_instruction_with_16_bit_operand(
 				match mnemonic {
@@ -80,8 +77,7 @@ pub(super) fn assemble_arithmetic_instruction(
 					_ => unreachable!(),
 				},
 				address,
-				instruction.label.clone(),
-				instruction.span,
+				instruction,
 			),
 			AddressingMode::XIndexed(address) => data.append_instruction_with_16_bit_operand(
 				match mnemonic {
@@ -94,8 +90,7 @@ pub(super) fn assemble_arithmetic_instruction(
 					_ => unreachable!(),
 				},
 				address,
-				instruction.label.clone(),
-				instruction.span,
+				instruction,
 			),
 			AddressingMode::YIndexed(address) => data.append_instruction_with_16_bit_operand(
 				match mnemonic {
@@ -108,8 +103,7 @@ pub(super) fn assemble_arithmetic_instruction(
 					_ => unreachable!(),
 				},
 				address,
-				instruction.label.clone(),
-				instruction.span,
+				instruction,
 			),
 			AddressingMode::DirectPageXIndexedIndirect(page_address) => data.append_instruction_with_8_bit_operand(
 				match mnemonic {
@@ -122,8 +116,7 @@ pub(super) fn assemble_arithmetic_instruction(
 					_ => unreachable!(),
 				},
 				page_address,
-				instruction.label.clone(),
-				instruction.span,
+				instruction,
 			),
 			AddressingMode::DirectPageIndirectYIndexed(page_address) => data.append_instruction_with_8_bit_operand(
 				match mnemonic {
@@ -136,8 +129,7 @@ pub(super) fn assemble_arithmetic_instruction(
 					_ => unreachable!(),
 				},
 				page_address,
-				instruction.label.clone(),
-				instruction.span,
+				instruction,
 			),
 			_ =>
 				return Err(AssemblyError::InvalidAddressingMode {
@@ -152,7 +144,7 @@ pub(super) fn assemble_arithmetic_instruction(
 		},
 		AddressingMode::IndirectX =>
 			if source == AddressingMode::IndirectY {
-				data.append(
+				data.append_instruction(
 					match mnemonic {
 						Mnemonic::Adc => 0x99,
 						Mnemonic::Sbc => 0xB9,
@@ -162,7 +154,7 @@ pub(super) fn assemble_arithmetic_instruction(
 						Mnemonic::Eor => 0x59,
 						_ => unreachable!(),
 					},
-					instruction.label.clone(),
+					instruction,
 				);
 			} else {
 				return Err(AssemblyError::InvalidAddressingMode {
@@ -221,8 +213,7 @@ pub(super) fn assemble_arithmetic_instruction(
 						legal_modes: vec![],
 					}),
 			},
-			instruction.label.clone(),
-			instruction.span,
+			instruction,
 		),
 		AddressingMode::Register(register @ (Register::X | Register::Y)) => match source {
 			AddressingMode::Immediate(value) => data.append_instruction_with_8_bit_operand(
@@ -232,8 +223,7 @@ pub(super) fn assemble_arithmetic_instruction(
 					_ => unreachable!(),
 				},
 				value,
-				instruction.label.clone(),
-				instruction.span,
+				instruction,
 			),
 			AddressingMode::DirectPage(page_address) => data.append_instruction_with_8_bit_operand(
 				match register {
@@ -242,8 +232,7 @@ pub(super) fn assemble_arithmetic_instruction(
 					_ => unreachable!(),
 				},
 				page_address,
-				instruction.label.clone(),
-				instruction.span,
+				instruction,
 			),
 			AddressingMode::Address(address) => data.append_instruction_with_16_bit_operand(
 				match register {
@@ -252,8 +241,7 @@ pub(super) fn assemble_arithmetic_instruction(
 					_ => unreachable!(),
 				},
 				address,
-				instruction.label.clone(),
-				instruction.span,
+				instruction,
 			),
 			_ =>
 				return Err(AssemblyError::InvalidAddressingMode {
@@ -284,10 +272,10 @@ pub(super) fn assemble_inc_dec_instruction(
 	data: &mut AssembledData,
 	is_increment: bool,
 	target: AddressingMode,
-	instruction: &Instruction,
+	instruction: &mut Instruction,
 ) -> Result<(), AssemblyError> {
 	match target {
-		AddressingMode::Register(register @ (Register::A | Register::X | Register::Y)) => data.append(
+		AddressingMode::Register(register @ (Register::A | Register::X | Register::Y)) => data.append_instruction(
 			match (is_increment, register) {
 				(true, Register::A) => 0xBC,
 				(true, Register::X) => 0x3D,
@@ -297,26 +285,20 @@ pub(super) fn assemble_inc_dec_instruction(
 				(false, Register::Y) => 0xDC,
 				_ => unreachable!(),
 			},
-			instruction.label.clone(),
+			instruction,
 		),
 		AddressingMode::DirectPage(page_address) => data.append_instruction_with_8_bit_operand(
 			if is_increment { 0xAB } else { 0x8B },
 			page_address,
-			instruction.label.clone(),
-			instruction.span,
+			instruction,
 		),
 		AddressingMode::DirectPageXIndexed(page_address) => data.append_instruction_with_8_bit_operand(
 			if is_increment { 0xBB } else { 0x9B },
 			page_address,
-			instruction.label.clone(),
-			instruction.span,
+			instruction,
 		),
-		AddressingMode::Address(address) => data.append_instruction_with_16_bit_operand(
-			if is_increment { 0xAC } else { 0x8C },
-			address,
-			instruction.label.clone(),
-			instruction.span,
-		),
+		AddressingMode::Address(address) =>
+			data.append_instruction_with_16_bit_operand(if is_increment { 0xAC } else { 0x8C }, address, instruction),
 		_ =>
 			return Err(AssemblyError::InvalidAddressingMode {
 				is_first_operand: true,
@@ -341,7 +323,7 @@ pub(super) fn assemble_shift_rotation_instruction(
 	data: &mut AssembledData,
 	mnemonic: Mnemonic,
 	target: AddressingMode,
-	instruction: &Instruction,
+	instruction: &mut Instruction,
 ) -> Result<(), AssemblyError> {
 	let target_copy = target.clone();
 	let source_code_copy = data.source_code.clone();
@@ -357,7 +339,7 @@ pub(super) fn assemble_shift_rotation_instruction(
 	};
 
 	match target {
-		AddressingMode::Register(Register::A) => data.append(
+		AddressingMode::Register(Register::A) => data.append_instruction(
 			match mnemonic {
 				Mnemonic::Asl => 0x1C,
 				Mnemonic::Lsr => 0x5C,
@@ -366,7 +348,7 @@ pub(super) fn assemble_shift_rotation_instruction(
 				Mnemonic::Xcn => 0x9F,
 				_ => unreachable!(),
 			},
-			instruction.label.clone(),
+			instruction,
 		),
 		AddressingMode::DirectPage(page_address) => data.append_instruction_with_8_bit_operand(
 			match mnemonic {
@@ -378,8 +360,7 @@ pub(super) fn assemble_shift_rotation_instruction(
 				_ => unreachable!(),
 			},
 			page_address,
-			instruction.label.clone(),
-			instruction.span,
+			instruction,
 		),
 		AddressingMode::DirectPageXIndexed(page_address) => data.append_instruction_with_8_bit_operand(
 			match mnemonic {
@@ -391,8 +372,7 @@ pub(super) fn assemble_shift_rotation_instruction(
 				_ => unreachable!(),
 			},
 			page_address,
-			instruction.label.clone(),
-			instruction.span,
+			instruction,
 		),
 		AddressingMode::Address(address) => data.append_instruction_with_16_bit_operand(
 			match mnemonic {
@@ -404,8 +384,7 @@ pub(super) fn assemble_shift_rotation_instruction(
 				_ => unreachable!(),
 			},
 			address,
-			instruction.label.clone(),
-			instruction.span,
+			instruction,
 		),
 		_ =>
 			return Err(AssemblyError::InvalidAddressingMode {

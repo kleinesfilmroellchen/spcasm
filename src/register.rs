@@ -3,14 +3,10 @@
 #![allow(clippy::use_self)]
 
 use std::fmt::Display;
-use std::sync::Arc;
 
-use miette::SourceSpan;
 use serde::Serialize;
 use serde_variant::to_variant_name;
 use spcasm_derive::Parse;
-
-use crate::error::{AssemblyCode, AssemblyError};
 
 /// Registers.
 #[derive(Clone, Copy, Debug, Eq, PartialEq, Parse, Serialize)]

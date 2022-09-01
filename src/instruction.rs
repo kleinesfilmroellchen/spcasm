@@ -3,14 +3,12 @@
 
 use std::fmt::{Display, Error, Formatter, UpperHex};
 use std::result::Result;
-use std::sync::Arc;
 
 use miette::SourceSpan;
 use serde::Serialize;
 use serde_variant::to_variant_name;
 use spcasm_derive::Parse;
 
-use super::error::{AssemblyCode, AssemblyError};
 use super::label::{GlobalLabel, Label};
 use super::Register;
 use crate::label::LocalLabel;

@@ -36,7 +36,7 @@ pub fn assemble(environment: &Environment, instructions: &mut Vec<ProgramElement
 	for program_element in instructions {
 		match program_element {
 			ProgramElement::Instruction(instruction) => assemble_instruction(&mut data, instruction)?,
-			ProgramElement::Macro(r#macro) => assemble_macro(&mut data, r#macro.clone())?,
+			ProgramElement::Macro(r#macro) => assemble_macro(&mut data, r#macro)?,
 		}
 	}
 	let mut pass_count = 0;
@@ -203,7 +203,7 @@ fn assemble_instruction(data: &mut AssembledData, instruction: &mut Instruction)
 }
 
 #[allow(clippy::unnecessary_wraps)]
-fn assemble_macro(data: &mut AssembledData, mcro: Macro) -> Result<(), AssemblyError> {
+fn assemble_macro(data: &mut AssembledData, mcro: &Macro) -> Result<(), AssemblyError> {
 	match mcro.value {
 		MacroValue::Org(address) => {
 			data.new_segment(address);

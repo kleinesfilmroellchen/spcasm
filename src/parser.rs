@@ -21,6 +21,9 @@ where
 	/// # Errors
 	/// If the string doesn't correspond with any enum variant.
 	fn parse(value: &str, location: SourceSpan, src: Arc<AssemblyCode>) -> Result<Self, AssemblyError>;
+
+	/// Returns whether this string corresponds with an enum variant; i.e. parsing would succeed.
+	fn is_valid(value: &str) -> bool;
 }
 
 /// Environment object for parsing. Holds the list of labels.
@@ -57,7 +60,7 @@ impl Environment {
 				Token::Identifier(identifier, location) => {
 					let location_span = SourceOffset::from(location.offset());
 					let newline = Token::Newline(location_span);
-					if Self::is_valid_mnemonic(identifier) {
+					if Mnemonic::is_valid(identifier) {
 						// Instruction
 						let mut tokens_for_instruction = tokens.make_substream();
 						tokens_for_instruction.limit_to_first(&newline);
@@ -112,17 +115,6 @@ impl Environment {
 		}
 
 		Ok(instructions)
-	}
-
-	fn is_valid_mnemonic(identifier: &str) -> bool {
-		[
-			"mov", "adc", "sbc", "cmp", "and", "or", "eor", "inc", "dec", "asl", "lsr", "rol", "ror", "xcn", "movw",
-			"incw", "decw", "addw", "subw", "cmpw", "mul", "div", "daa", "das", "bra", "beq", "bne", "bcs", "bcc",
-			"bvs", "bvc", "bmi", "bpl", "bbs", "bbc", "cbne", "dbnz", "jmp", "call", "pcall", "tcall", "brk", "ret",
-			"ret1", "push", "pop", "set1", "clr1", "tset1", "tclr1", "and1", "or1", "eor1", "not1", "mov1", "clrc",
-			"setc", "notc", "clrv", "clrp", "setp", "ei", "di", "nop", "sleep", "stop",
-		]
-		.contains(&identifier.to_lowercase().as_str())
 	}
 
 	fn create_instruction<'a, 'b>(

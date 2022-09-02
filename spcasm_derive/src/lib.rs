@@ -24,7 +24,8 @@ pub fn parse_macro_derive(input: TokenStream) -> TokenStream {
 				})
 				.collect::<Vec<(syn::Ident, String)>>();
 			let variant_identifiers = variant_identifiers_and_strings.iter().map(|(identifier, _)| identifier);
-			let variant_strings = variant_identifiers_and_strings.iter().map(|(_, string)| string);
+			let variant_strings =
+				variant_identifiers_and_strings.iter().map(|(_, string)| string).collect::<Vec<&String>>();
 
 			quote! {
 				#[automatically_derived]
@@ -35,6 +36,13 @@ pub fn parse_macro_derive(input: TokenStream) -> TokenStream {
 							#( #variant_strings => Self::#variant_identifiers, )*
 							_ => return Err(crate::error::AssemblyError::InvalidConstant { constant: value.to_owned(), typename: #name_string.to_owned(), location, src }),
 						})
+					}
+
+					fn is_valid(value: &str) -> bool {
+						[
+							#( #variant_strings, )*
+						]
+						.contains(&value.to_lowercase().as_str())
 					}
 				}
 			}

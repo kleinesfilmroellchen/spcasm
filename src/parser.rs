@@ -1,5 +1,4 @@
 //! Parsing and AST.
-#![allow(clippy::use_self)]
 use std::collections::HashMap;
 use std::result::Result;
 use std::sync::Arc;
@@ -11,6 +10,7 @@ use super::instruction::{AddressingMode, Instruction, Mnemonic, Number, Opcode};
 use super::label::{GlobalLabel, Label, LocalLabel};
 use super::{ProgramElement, Register, Token};
 use crate::token::TokenStream;
+
 /// Anything that can be primitively parsed from a string into an enum variant.
 /// This trait is intended to be derived with the macro from ``spcasm_derive``.
 pub trait Parse

@@ -1,0 +1,42 @@
+{
+	"version": "0.2.0",
+	"configurations": [
+		{
+			"type": "lldb",
+			"request": "launch",
+			"name": "Debug spcasm",
+			"cargo": {
+				"args": [
+					"build",
+					"--bin=spcasm",
+					"--package=spcasm"
+				],
+				"filter": {
+					"name": "spcasm",
+					"kind": "bin"
+				}
+			},
+			"args": ["examples/test.spcasm", "target/test"],
+			"cwd": "${workspaceFolder}"
+		},
+		{
+			"type": "lldb",
+			"request": "launch",
+			"name": "Debug spcasm tests",
+			"cargo": {
+				"args": [
+					"test",
+					"--no-run",
+					"--bin=spcasm",
+					"--package=spcasm"
+				],
+				"filter": {
+					"name": "spcasm",
+					"kind": "bin"
+				}
+			},
+			"args": [],
+			"cwd": "${workspaceFolder}"
+		}
+	]
+}

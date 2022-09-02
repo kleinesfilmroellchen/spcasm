@@ -10,6 +10,7 @@ use super::instruction::{AddressingMode, Instruction, Mnemonic, Number, Opcode};
 use super::label::{GlobalLabel, Label, LocalLabel};
 use super::{ProgramElement, Register, Token};
 use crate::token::TokenStream;
+use crate::Macro;
 
 /// Anything that can be primitively parsed from a string into an enum variant.
 /// This trait is intended to be derived with the macro from ``spcasm_derive``.
@@ -80,6 +81,22 @@ impl Environment {
 						label_for_next_instruction = Some(Label::Global(current_global_label.clone().unwrap()));
 						tokens.expect(&Token::Colon(location_span))?;
 					}
+				},
+				Token::Macro(symbol, location) => {
+					// Macro
+					let newline = Token::Newline(location.offset().into());
+					let mut tokens_for_macro = tokens.make_substream();
+					tokens_for_macro.limit_to_first(&newline);
+					tokens.advance_to_others_end(&tokens_for_macro)?;
+
+					instructions.push(ProgramElement::Macro(Macro::parse_macro(
+						self,
+						*symbol,
+						*location,
+						tokens_for_macro,
+						current_global_label.clone(),
+					)?));
+					tokens.expect(&newline)?;
 				},
 				Token::Newline(..) => {},
 				Token::Period(location) => {

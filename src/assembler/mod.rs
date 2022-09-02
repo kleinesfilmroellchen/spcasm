@@ -206,7 +206,7 @@ fn assemble_instruction(data: &mut AssembledData, instruction: &mut Instruction)
 fn assemble_macro(data: &mut AssembledData, mcro: Macro) -> Result<(), AssemblyError> {
 	match mcro.value {
 		MacroValue::Org(address) => {
-			data.new_segment(address.value());
+			data.new_segment(address);
 		},
 	}
 	Ok(())

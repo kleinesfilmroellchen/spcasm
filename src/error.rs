@@ -7,6 +7,7 @@ use thiserror::Error;
 
 use crate::instruction::{AddressingMode, MemoryAddress, Mnemonic};
 use crate::label::Label;
+use crate::r#macro::MacroSymbol;
 use crate::Token;
 
 /// The source code for an assembly error.
@@ -126,6 +127,24 @@ pub enum AssemblyError {
 		src:      Arc<AssemblyCode>,
 		#[label("Takes 0 operands")]
 		location: SourceSpan,
+	},
+
+	#[error("Invalid use of labels in an argument for `{r#macro}`")]
+	#[diagnostic(
+		code(spcasm::labels_in_macro_argument),
+		help(
+			"Because the macro argument can determine a label's position, resolving the argument value is not \
+			 generally possible. For this reason, labels are not allowed to be used in a macro argument."
+		)
+	)]
+	LabelsInMacroArgument {
+		r#macro:           MacroSymbol,
+		#[source_code]
+		src:               Arc<AssemblyCode>,
+		#[label("This macro")]
+		location:          SourceSpan,
+		#[label("This macro argument")]
+		argument_location: SourceSpan,
 	},
 
 	#[error("There is no global label defined before the local label '{local_label}'")]

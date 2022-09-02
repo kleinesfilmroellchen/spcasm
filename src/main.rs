@@ -99,6 +99,7 @@ mod test {
 	}
 
 	#[test]
+	#[cfg(feature = "test_bootrom")]
 	fn test_boot_rom() {
 		test_file("examples/bootrom.spcasm");
 	}

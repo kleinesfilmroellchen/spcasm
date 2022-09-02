@@ -2,7 +2,7 @@
 ; These 64 bytes of on-chip ROM are accessible in $FFC0-FFFF in the S-SMP's address space.
 ; The code gets run by the S-SMP on reset and implements a basic data transfer protocol the 65c816 can use to initially upload samples and audio data.
 
-; org FFC0
+org $FFC0
 
 RESET:
    mov  x, #$EF      ;= CD EF      

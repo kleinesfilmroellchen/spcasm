@@ -3,6 +3,10 @@ edition = "2021"
 license = "BSD 2-clause"
 name = "spcasm"
 version = "0.1.0"
+
+[features]
+test_bootrom = []
+
 [dependencies]
 object = { version = "0.28.3", features = ["write_core"] }
 serde_variant = "0.1.1"

@@ -224,6 +224,13 @@ impl<'a> TokenStream<'a> {
 		self.index = self.index.checked_sub(amount).expect("backtrack beyond token stream beginning");
 	}
 
+	/// Move the token stream to this index.
+	///
+	/// **Use this API with great caution.**
+	pub fn move_to(&mut self, index: usize) {
+		self.index = index.min(self.tokens.len() - 1);
+	}
+
 	/// Create a substream that is almost identical, but all the previous visited tokens are cut off.
 	pub fn make_substream(&self) -> Self {
 		Self { tokens: &self.tokens[self.index ..], index: 0, source: self.source.clone() }

@@ -1,3 +1,4 @@
+zero_label:
 MoV a,X
 
 inc x : inc x
@@ -5,3 +6,11 @@ inc x : inc x
 lAbEl: bne label
 label: jmp LABEL
 LABEL: jmp label
+
+adc a,#3+4 ;= 88 07
+adc a,3+4 ;= 85 07 00
+mov x,zero_label  + $0F ;= E9 0F 00
+mov x, 80 /10 ;= E9 08 00
+mov A, +(80/10)+5 ;= E5 0D 00
+mov A, 80/ (10+5) ;= E5 05 00
+mov A, +(80/10)+X ;= F5 08 00

@@ -36,7 +36,7 @@ pub fn assemble(environment: &Environment, instructions: &mut Vec<ProgramElement
 	for program_element in instructions {
 		match program_element {
 			ProgramElement::Instruction(instruction) => assemble_instruction(&mut data, instruction)?,
-			ProgramElement::Macro(r#macro) => assemble_macro(&mut data, *r#macro)?,
+			ProgramElement::Macro(r#macro) => assemble_macro(&mut data, r#macro.clone())?,
 		}
 	}
 	let mut pass_count = 0;
@@ -206,7 +206,7 @@ fn assemble_instruction(data: &mut AssembledData, instruction: &mut Instruction)
 fn assemble_macro(data: &mut AssembledData, mcro: Macro) -> Result<(), AssemblyError> {
 	match mcro.value {
 		MacroValue::Org(address) => {
-			data.new_segment(address);
+			data.new_segment(address.value());
 		},
 	}
 	Ok(())
@@ -274,11 +274,15 @@ impl LabeledMemoryValue {
 	/// If the memory value is not resolved, a nice "unresolved label" error is returned.
 	#[inline]
 	pub fn try_as_resolved(&self, src: &Arc<AssemblyCode>) -> Result<u8, AssemblyError> {
-		self.value.try_resolved().map_err(|label| AssemblyError::UnresolvedLabel {
-			label:          label.clone(),
-			label_location: label.source_span(),
-			usage_location: self.instruction_location,
-			src:            src.clone(),
+		self.value.try_resolved().map_err(|number| {
+			let first_label =
+				number.first_label().expect("Number resolution failure was not caused by label; this is a bug!");
+			AssemblyError::UnresolvedLabel {
+				label:          first_label.clone(),
+				label_location: first_label.source_span(),
+				usage_location: self.instruction_location,
+				src:            src.clone(),
+			}
 		})
 	}
 }
@@ -288,16 +292,16 @@ impl LabeledMemoryValue {
 pub enum MemoryValue {
 	/// Resolved data.
 	Resolved(u8),
-	/// High byte of an (unresolved) label.
-	LabelHighByte(Label),
-	/// Low byte of an (unresolved) label.
-	LabelLowByte(Label),
-	/// An (unresolved) label. The resolved memory value will be the difference between this memory value's location
-	/// plus one and the label's location.
-	LabelRelative(Label),
-	/// An (unresolved) label. The upper three bits are used for the bit index value which can range from 0 to 7. This
+	/// High byte of an (unresolved) number.
+	NumberHighByte(Number),
+	/// Low byte of an (unresolved) number.
+	NumberLowByte(Number),
+	/// An (unresolved) number. The resolved memory value will be the difference between this memory value's location
+	/// plus one and the number's location.
+	NumberRelative(Number),
+	/// An (unresolved) number. The upper three bits are used for the bit index value which can range from 0 to 7. This
 	/// is used for most absolute bit addressing modes.
-	LabelHighByteWithContainedBitIndex(Label, u8),
+	NumberHighByteWithContainedBitIndex(Number, u8),
 }
 
 impl MemoryValue {
@@ -305,66 +309,38 @@ impl MemoryValue {
 	fn try_resolve(self, own_memory_address: MemoryAddress) -> Self {
 		match self {
 			Self::Resolved(_) => self,
-			Self::LabelHighByte(ref label) | Self::LabelLowByte(ref label) => match *label {
-				Label::Global(ref global) if let Some(memory_location) = global.location => {
-					let resolved_data = match self {
-						Self::LabelHighByte(_) => (memory_location & 0xFF00) >> 8,
-						Self::LabelLowByte(_) => memory_location & 0xFF,
-						_ => unreachable!(),
-					} as u8;
+			Self::NumberHighByte(number) => match number.try_resolve() {
+				Number::Literal(memory_location) => Self::Resolved(((memory_location & 0xFF00) >> 8) as u8),
+				resolved => Self::NumberHighByte(resolved),
+			},
+			Self::NumberLowByte(number) => match number.try_resolve() {
+				Number::Literal(memory_location) => Self::Resolved((memory_location & 0xFF) as u8),
+				resolved => Self::NumberLowByte(resolved),
+			},
+			Self::NumberRelative(number) => match number.try_resolve() {
+				Number::Literal(label_memory_address) => {
+					let resolved_data = (label_memory_address - (own_memory_address + 1)) as u8;
 					Self::Resolved(resolved_data)
 				},
-				Label::Local(ref local) => {
-					// Try to figure out whether this local label has been resolved in the parent.
-					// This is only necessary in local labels which are not refcounted to better distinguish them,
-					// so setting the address within the parent does not automatically set the address in all other identical local labels.
-					let parent = local.strong_parent();
-					parent.locals.get(&local.name).and_then(|parent_local| parent_local.location)
-						.map_or(self.clone(), |address| {
-							let resolved_data = match self {
-								Self::LabelHighByte(_) => (address & 0xFF00) >> 8,
-								Self::LabelLowByte(_) => address & 0xFF,
-								_ => unreachable!(),
-							} as u8;
-							Self::Resolved(resolved_data)
-						})
-				},
-				_ => self,
+				resolved => Self::NumberRelative(resolved),
 			},
-			Self::LabelRelative(ref label) => match *label {
-				Label::Global(ref global) if let Some(label_memory_address) = global.location => {
-					let resolved_data = (label_memory_address - (own_memory_address+1)) as u8;
-					Self::Resolved(resolved_data)
-				},
-				Label::Local(ref local) => {
-					// Try to figure out whether this local label has been resolved in the parent.
-					// This is only necessary in local labels which are not refcounted to better distinguish them,
-					// so setting the address within the parent does not automatically set the address in all other identical local labels.
-					let parent = local.strong_parent();
-					parent.locals.get(&local.name).and_then(|parent_local| parent_local.location).map_or(self, |address| {
-						let resolved_data = (address - (own_memory_address+1)) as u8;
-						Self::Resolved(resolved_data)
-					})
-				},
-				_ => self,
-			},
-			Self::LabelHighByteWithContainedBitIndex(ref label, bit_index) => match *label {
-				Label::Global(ref global) if let Some(label_memory_address) = global.location => {
+			Self::NumberHighByteWithContainedBitIndex(number, bit_index) => match number.try_resolve() {
+				Number::Literal(label_memory_address) => {
 					let resolved_data = ((label_memory_address & 0x1F00) >> 8) as u8 | (bit_index << 5);
 					Self::Resolved(resolved_data)
 				},
-				_ => self,
+				resolved => Self::NumberHighByteWithContainedBitIndex(resolved, bit_index),
 			},
 		}
 	}
 
-	fn try_resolved(&self) -> Result<u8, Label> {
+	fn try_resolved(&self) -> Result<u8, Number> {
 		match self {
 			Self::Resolved(value) => Ok(*value),
-			Self::LabelHighByte(label)
-			| Self::LabelLowByte(label)
-			| Self::LabelHighByteWithContainedBitIndex(label, ..)
-			| Self::LabelRelative(label) => Err(label.clone()),
+			Self::NumberHighByte(label)
+			| Self::NumberLowByte(label)
+			| Self::NumberHighByteWithContainedBitIndex(label, ..)
+			| Self::NumberRelative(label) => Err(label.clone()),
 		}
 	}
 }
@@ -510,9 +486,9 @@ impl AssembledData {
 
 	/// Appends an unresolved value that points to a label to the current segment. The `use_high_byte` parameter decides
 	/// whether the high byte (true) or low byte (false) will be used in this memory address when the label is resolved.
-	pub fn append_unresolved(&mut self, value: Label, use_high_byte: bool, label: Option<Label>, span: SourceSpan) {
+	pub fn append_unresolved(&mut self, value: Number, use_high_byte: bool, label: Option<Label>, span: SourceSpan) {
 		self.current_segment_mut().push(LabeledMemoryValue {
-			value: if use_high_byte { MemoryValue::LabelHighByte(value) } else { MemoryValue::LabelLowByte(value) },
+			value: if use_high_byte { MemoryValue::NumberHighByte(value) } else { MemoryValue::NumberLowByte(value) },
 			label,
 			instruction_location: span,
 		});
@@ -520,9 +496,9 @@ impl AssembledData {
 
 	/// Appends an unresolved value that points to a label to the current segment. The label will be resolved to a
 	/// relative offset, like various branch instructions need it.
-	pub fn append_relative_unresolved(&mut self, value: Label, span: SourceSpan) {
+	pub fn append_relative_unresolved(&mut self, value: Number, span: SourceSpan) {
 		self.current_segment_mut().push(LabeledMemoryValue {
-			value:                MemoryValue::LabelRelative(value),
+			value:                MemoryValue::NumberRelative(value),
 			label:                None,
 			instruction_location: span,
 		});
@@ -530,9 +506,9 @@ impl AssembledData {
 
 	/// Appends an unresolved value with a bit index that will be placed into the upper three bits after label
 	/// resolution.
-	pub fn append_unresolved_with_bit_index(&mut self, value: Label, bit_index: u8, span: SourceSpan) {
+	pub fn append_unresolved_with_bit_index(&mut self, value: Number, bit_index: u8, span: SourceSpan) {
 		self.current_segment_mut().push(LabeledMemoryValue {
-			value:                MemoryValue::LabelHighByteWithContainedBitIndex(value, bit_index),
+			value:                MemoryValue::NumberHighByteWithContainedBitIndex(value, bit_index),
 			label:                None,
 			instruction_location: span,
 		});
@@ -547,9 +523,9 @@ impl AssembledData {
 		instruction: &mut Instruction,
 	) {
 		self.append(opcode, instruction.label.clone(), instruction.span);
-		match operand {
+		match operand.try_resolve() {
 			Number::Literal(value) => self.append_8_bits(value, None, instruction.span),
-			Number::Label(value) => self.append_unresolved(value, false, None, instruction.span),
+			value => self.append_unresolved(value, false, None, instruction.span),
 		}
 
 		#[cfg(test)]
@@ -573,9 +549,9 @@ impl AssembledData {
 		// The operands are flipped in machine code from what the assembly does. It's not target, source; it's source,
 		// target.
 		self.append_instruction_with_8_bit_operand(opcode, first_machine_operand, instruction);
-		match second_machine_operand {
+		match second_machine_operand.try_resolve() {
 			Number::Literal(value) => self.append_8_bits(value, None, instruction.span),
-			Number::Label(value) => self.append_unresolved(value, false, None, instruction.span),
+			value => self.append_unresolved(value, false, None, instruction.span),
 		}
 
 		#[cfg(test)]
@@ -593,9 +569,9 @@ impl AssembledData {
 		instruction: &mut Instruction,
 	) {
 		self.append(opcode, instruction.label.clone(), instruction.span);
-		match operand {
+		match operand.try_resolve() {
 			Number::Literal(value) => self.append_16_bits(value, None, instruction.span),
-			Number::Label(value) => {
+			value => {
 				// low byte first because little endian
 				self.append_unresolved(value.clone(), false, None, instruction.span);
 				self.append_unresolved(value, true, None, instruction.span);
@@ -620,10 +596,10 @@ impl AssembledData {
 	) {
 		self.append(opcode, instruction.label.clone(), instruction.span);
 
-		match operand {
+		match operand.try_resolve() {
 			Number::Literal(value) =>
 				self.append_16_bits(value | (MemoryAddress::from(bit_index) << 13), None, instruction.span),
-			Number::Label(value) => {
+			value => {
 				self.append_unresolved(value.clone(), false, None, instruction.span);
 				self.append_unresolved_with_bit_index(value, bit_index, instruction.span);
 			},
@@ -643,9 +619,9 @@ impl AssembledData {
 		instruction: &mut Instruction,
 	) {
 		self.append(opcode, instruction.label.clone(), instruction.span);
-		match operand {
+		match operand.try_resolve() {
 			Number::Literal(value) => self.append_8_bits(value, None, instruction.span),
-			Number::Label(label) => self.append_relative_unresolved(label, instruction.span),
+			value => self.append_relative_unresolved(value, instruction.span),
 		}
 
 		#[cfg(test)]

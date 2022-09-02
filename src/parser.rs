@@ -353,19 +353,15 @@ impl Environment {
 
 		match tokens.next()? {
 			Token::Register(name, ..) => Ok(AddressingMode::Register(name)),
-			Token::Hash(location) => Ok(AddressingMode::Immediate(self.create_number(
-				&tokens.next().map_err(|_| AssemblyError::SingleHashInvalid {
-					location: (location).into(),
-					src:      self.source_code.clone(),
-				})?,
-				false,
-			)?)),
+			Token::Hash(location) => Ok(AddressingMode::Immediate(self.parse_number(tokens, current_global_label)?)),
 			// Direct address modes
-			literal_token @ (Token::Number(..) | Token::Identifier(..)) => {
-				let literal = self.create_number(&literal_token, true)?;
+			Token::Number(..) | Token::Identifier(..) | Token::Period(..) | Token::Plus(..) => {
+				tokens.backtrack(1);
+				let literal = self.parse_number(tokens, current_global_label)?;
 				let is_direct_page = match literal {
 					Number::Literal(address) => address <= 0xFF,
-					Number::Label(_) => false,
+					// TODO: We could also look at constant calculations which don't depend on labels.
+					_ => false,
 				};
 				let next_token_or_none = tokens.next().ok();
 				Ok(match next_token_or_none {
@@ -431,37 +427,10 @@ impl Environment {
 						}),
 				})
 			},
-			// Direct address modes with local label
-			Token::Period(start) => {
-				let (identifier, end) = match tokens.next()? {
-					Token::Identifier(text, end) => (text, end),
-					actual =>
-						return Err(AssemblyError::ExpectedToken {
-							expected: Token::Identifier("local label".to_string(), start.into()),
-							actual,
-							location: start.into(),
-							src: self.source_code.clone(),
-						}),
-				};
-				let location = SourceSpan::new(start, (end.len() + end.offset() - start.offset()).into());
-				Ok(AddressingMode::Address(Number::Label(Label::Local(LocalLabel::new(
-					identifier.clone(),
-					location,
-					&current_global_label.ok_or(AssemblyError::MissingGlobalLabel {
-						local_label: identifier,
-						src: self.source_code.clone(),
-						location,
-					})?,
-				)))))
-			},
 			// Negated bit index
 			#[allow(clippy::cast_sign_loss, clippy::cast_possible_truncation)]
 			Token::Slash(location) => {
-				let number = match tokens.next()? {
-					number @ (Token::Number(..) | Token::Identifier(..)) => number,
-					_ => return Err(missing_token_error(Token::Number(0, location.into()).into())()),
-				};
-				let number = self.create_number(&number, true)?;
+				let number = self.parse_number(tokens, current_global_label)?;
 				tokens.expect(&Token::Period(location))?;
 				let (bit, end_location) = match tokens.expect(&Token::Number(0, location.into()))? {
 					Token::Number(number, location) => (number, location),
@@ -532,7 +501,7 @@ impl Environment {
 				},
 				// (address) ...
 				literal_token @ (Token::Number(..) | Token::Identifier(..)) => {
-					let literal = self.create_number(&literal_token, true)?;
+					let literal = self.create_literal(&literal_token, true)?;
 					match tokens.next()? {
 						Token::Plus(second_location) => {
 							tokens.expect(&Token::Register(Register::X, (location, second_location).into()))?;
@@ -608,7 +577,97 @@ impl Environment {
 		}
 	}
 
-	fn create_number<'a>(&'a mut self, token: &'a Token, used_as_address: bool) -> Result<Number, AssemblyError> {
+	// Parse a number; which can be a statically resolvable expression.
+	pub(crate) fn parse_number(
+		&mut self,
+		tokens: &mut TokenStream,
+		current_global_label: Option<Arc<GlobalLabel>>,
+	) -> Result<Number, AssemblyError> {
+		let lhs = match tokens.next()? {
+			literal @ (Token::Number(..) | Token::Identifier(..)) => self.create_literal(&literal, false),
+			Token::Period(.., span) => {
+				// Local label
+				let (local_label, label_span) =
+					match tokens.expect(&Token::Identifier("local label".to_string(), span.into()))? {
+						Token::Identifier(name, label_span) => (name, label_span),
+						_ => unreachable!(),
+					};
+				Ok(Number::Label(Label::Local(LocalLabel {
+					span:     label_span,
+					name:     local_label.clone(),
+					parent:   Arc::downgrade(&current_global_label.clone().ok_or(
+						AssemblyError::MissingGlobalLabel {
+							local_label,
+							src: self.source_code.clone(),
+							location: label_span,
+						},
+					)?),
+					location: None,
+				})))
+			},
+			Token::OpenParenthesis(span) => {
+				// Parse a sub expression with a recursive call. We'll pass on the same token stream so that everything
+				// up to the ) is consumed.
+				let result = self.parse_number(tokens, current_global_label.clone())?;
+				tokens.expect(&Token::CloseParenthesis(span))?;
+				Ok(result)
+			},
+			// '+' does of course not require a closing parenthesis unlike above.
+			Token::Plus(..) => self.parse_number(tokens, current_global_label.clone()),
+			token => Err(AssemblyError::ExpectedToken {
+				expected: Token::Number(0, token.source_span()),
+				actual:   token.clone(),
+				location: token.source_span(),
+				src:      self.source_code.clone(),
+			}),
+		}?;
+
+		// It's totally fine if we hit various tokens not part of the expression anymore, or we are at the end of our
+		// stream. Just return the lhs.
+		match tokens.next() {
+			Err(_) => Ok(lhs),
+			// All of these must remain available for the caller.
+			Ok(Token::Newline(..) | Token::Period(..) | Token::CloseParenthesis(..)) => {
+				tokens.backtrack(1);
+				Ok(lhs)
+			},
+			#[cfg(test)]
+			Ok(Token::TestComment(..)) => {
+				tokens.backtrack(1);
+				Ok(lhs)
+			},
+			Ok(Token::Plus(..)) => {
+				// This may either be an addition, like "3+4", or it may be an indexing addressing mode, like "3+X".
+				// This can easily be distinguished by trying to parse a right-hand side, and on parse failure not
+				// failing, but backtracking the parser to where we were before the "+" and returning the left-hand
+				// side. Then, the addressing mode parser can pick up the "+X" again.
+				let starting_position = tokens.index;
+				let maybe_rhs = self.parse_number(tokens, current_global_label);
+				if let Ok(rhs) = maybe_rhs {
+					// TODO: This violates operator precedence front and back.
+					Ok(Number::Add(Box::new(lhs), Box::new(rhs)))
+				} else {
+					// All the misparsing from the right-hand side...
+					tokens.move_to(starting_position);
+					// ... and the "+".
+					tokens.backtrack(1);
+					Ok(lhs)
+				}
+			},
+			Ok(Token::Slash(..)) => {
+				let rhs = self.parse_number(tokens, current_global_label)?;
+				Ok(Number::Divide(Box::new(lhs), Box::new(rhs)))
+			},
+			Ok(token) => Err(AssemblyError::ExpectedToken {
+				expected: Token::Newline(token.source_span().offset().into()),
+				actual:   token.clone(),
+				location: token.source_span(),
+				src:      self.source_code.clone(),
+			}),
+		}
+	}
+
+	fn create_literal<'a>(&'a mut self, token: &'a Token, used_as_address: bool) -> Result<Number, AssemblyError> {
 		match token {
 			Token::Number(number, ..) => Ok(Number::Literal(*number)),
 			Token::Identifier(label, ..) =>

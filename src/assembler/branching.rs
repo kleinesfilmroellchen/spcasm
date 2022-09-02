@@ -44,7 +44,7 @@ pub(super) fn assemble_branching_instruction(
 				Mnemonic::Pcall => data.append_instruction_with_8_bit_operand(0x4F, page_address_or_relative.clone(), instruction),
 				Mnemonic::Tcall => data.append_instruction(0x01 | match page_address_or_relative {
 						Number::Literal(value) => (value & 0x0F) as u8,
-						Number::Label(..) => return Err(AssemblyError::InvalidAddressingMode {
+						_ => return Err(AssemblyError::InvalidAddressingMode {
 							is_first_operand: true,
 							mode: target.clone(),
 							mnemonic, legal_modes: vec![AddressingMode::Address(0.into())],
@@ -74,13 +74,13 @@ pub(super) fn assemble_branching_instruction(
 						// First argument is the checked direct page address
 						match page_address_or_relative {
 							Number::Literal(page_address) => data.append_8_bits(*page_address, None, instruction.span),
-							Number::Label(page_label) => data.append_unresolved(page_label.clone(), false, None, instruction.span),
+							value => data.append_unresolved(value.clone(), false, None, instruction.span),
 						}
 						// Second argument is the relative jump target.
 						// The relative unresolved label needs a negative offset of 2, because we're the second operand.
 						match relative_source {
 							Number::Literal(relative_offset) => data.append_8_bits(relative_offset, None, instruction.span),
-							Number::Label(relative_source_label) => data.append_relative_unresolved(relative_source_label, instruction.span),
+							value => data.append_relative_unresolved(value, instruction.span),
 						}
 					} else {
 						return if let Some(source) = source { Err(AssemblyError::InvalidAddressingModeCombination {
@@ -100,13 +100,13 @@ pub(super) fn assemble_branching_instruction(
 				// First argument is the checked direct page address
 				match page_address {
 					Number::Literal(page_address) => data.append_8_bits(*page_address, None, instruction.span),
-					Number::Label(page_label) => data.append_unresolved(page_label.clone(), false, None, instruction.span),
+					value => data.append_unresolved(value.clone(), false, None, instruction.span),
 				}
 				// Second argument is the relative jump target.
 				// The relative unresolved label needs a negative offset of 2, because we're the second operand.
 				match relative_source {
 					Number::Literal(relative_offset) => data.append_8_bits(relative_offset, None, instruction.span),
-					Number::Label(relative_source_label) => data.append_relative_unresolved(relative_source_label, instruction.span),
+					value => data.append_relative_unresolved(value, instruction.span),
 				}
 			} else {
 				return make_target_error(vec![]);

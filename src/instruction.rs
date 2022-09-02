@@ -140,17 +140,38 @@ impl Display for Mnemonic {
 	}
 }
 
-/// Any number, either a literal or a label that's resolved to a number later.
+/// Any number, may be an expression that can be calculated at assembly time.
 #[derive(Clone, Debug, PartialEq)]
 pub enum Number {
 	/// A literal number.
 	Literal(MemoryAddress),
 	/// A label that will resolve to a number later.
 	Label(Label),
-	// TODO: support assembly-time calculations
+	/// - expr; negating another number.
+	Negate(Box<Number>),
+	/// expr + expr
+	Add(Box<Number>, Box<Number>),
+	/// expr - expr
+	Subtract(Box<Number>, Box<Number>),
+	/// expr * expr
+	Multiply(Box<Number>, Box<Number>),
+	/// expr / expr
+	Divide(Box<Number>, Box<Number>),
 }
 
 impl Number {
+	/// Return the first label that can be found in this expression.
+	#[must_use]
+	pub fn first_label(&self) -> Option<Label> {
+		match self {
+			Self::Literal(..) => None,
+			Self::Label(label) => Some(label.clone()),
+			Self::Negate(number) => number.first_label(),
+			Self::Add(lhs, rhs) | Self::Subtract(lhs, rhs) | Self::Multiply(lhs, rhs) | Self::Divide(lhs, rhs) =>
+				lhs.first_label().or_else(|| rhs.first_label()),
+		}
+	}
+
 	/// Extracts the actual value of this number.
 	/// # Panics
 	/// If the label was not yet resolved, this function panics as it assumes that that has already happened.
@@ -163,6 +184,49 @@ impl Number {
 				Label::Global(global_label) if let Some(value) = global_label.location => value,
 				_ => panic!("Unresolved label {:?}", label),
 			},
+			Self::Negate(number) => -number.value(),
+			Self::Add(lhs, rhs) => lhs.value() + rhs.value(),
+			Self::Subtract(lhs, rhs) => lhs.value() - rhs.value(),
+			Self::Multiply(lhs, rhs) => lhs.value() * rhs.value(),
+			Self::Divide(lhs, rhs) => lhs.value() / rhs.value(),
+		}
+	}
+
+	/// Try to resolve this number down to a literal. Even if that's not entirely possible, sub-expressions are
+	/// collapsed and resolved as far as possible.
+	#[must_use]
+	pub fn try_resolve(self) -> Self {
+		match self {
+			Self::Label(Label::Global(ref global)) if let Some(memory_location) = global.location => Self::Literal(memory_location),
+			Self::Label(Label::Local(ref local)) => {
+				// Try to figure out whether this local label has been resolved in the parent.
+				// This is only necessary in local labels which are not refcounted to better distinguish them,
+				// so setting the address within the parent does not automatically set the address in all other identical local labels.
+				let parent = local.strong_parent();
+				parent.locals.get(&local.name).and_then(|parent_local| parent_local.location)
+					.map_or(self.clone(), Self::Literal)
+			},
+			Number::Negate(number) => match number.try_resolve() {
+				Number::Literal(value) => Number::Literal(-value),
+				resolved => Number::Negate(Box::new(resolved)),
+			},
+			Number::Add(lhs, rhs) => match (lhs.try_resolve(), rhs.try_resolve()) {
+				(Number::Literal(lhs_value), Number::Literal(rhs_value)) => Number::Literal(lhs_value + rhs_value),
+				(lhs, rhs) => Number::Add(Box::new(lhs), Box::new(rhs)),
+			},
+			Number::Subtract(lhs, rhs) => match (lhs.try_resolve(), rhs.try_resolve()) {
+				(Number::Literal(lhs_value), Number::Literal(rhs_value)) => Number::Literal(lhs_value - rhs_value),
+				(lhs, rhs) => Number::Subtract(Box::new(lhs), Box::new(rhs)),
+			},
+			Number::Multiply(lhs, rhs) => match (lhs.try_resolve(), rhs.try_resolve()) {
+				(Number::Literal(lhs_value), Number::Literal(rhs_value)) => Number::Literal(lhs_value * rhs_value),
+				(lhs, rhs) => Number::Multiply(Box::new(lhs), Box::new(rhs)),
+			},
+			Number::Divide(lhs, rhs) => match (lhs.try_resolve(), rhs.try_resolve()) {
+				(Number::Literal(lhs_value), Number::Literal(rhs_value)) => Number::Literal(lhs_value / rhs_value),
+				(lhs, rhs) => Number::Divide(Box::new(lhs), Box::new(rhs)),
+			},
+			_ => self,
 		}
 	}
 }
@@ -183,6 +247,11 @@ impl UpperHex for Number {
 			Self::Label(Label::Local(LocalLabel { location: Some(numeric_address), .. }))
 			| Self::Literal(numeric_address) => write!(f, "${:X}", numeric_address),
 			Self::Label(Label::Local(LocalLabel { name, .. })) => write!(f, "{}", name),
+			Number::Negate(number) => write!(f, "-{:X}", number.as_ref()),
+			Number::Add(lhs, rhs) => write!(f, "({:X}+{:X})", lhs.as_ref(), rhs.as_ref()),
+			Number::Subtract(lhs, rhs) => write!(f, "({:X}-{:X})", lhs.as_ref(), rhs.as_ref()),
+			Number::Multiply(lhs, rhs) => write!(f, "({:X}*{:X})", lhs.as_ref(), rhs.as_ref()),
+			Number::Divide(lhs, rhs) => write!(f, "({:X}/{:X})", lhs.as_ref(), rhs.as_ref()),
 		}
 	}
 }

@@ -370,7 +370,7 @@ impl Environment {
 
 		match tokens.next()? {
 			Token::Register(name, ..) => Ok(AddressingMode::Register(name)),
-			Token::Hash(location) => Ok(AddressingMode::Immediate(self.parse_number(tokens, current_global_label)?)),
+			Token::Hash(..) => Ok(AddressingMode::Immediate(self.parse_number(tokens, current_global_label)?)),
 			// Direct address modes
 			Token::Number(..) | Token::Identifier(..) | Token::Period(..) | Token::Plus(..) => {
 				tokens.backtrack(1);

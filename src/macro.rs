@@ -70,7 +70,6 @@ impl Macro {
 						},
 					}
 				},
-				_ => unimplemented!(),
 			},
 			span,
 		})

@@ -484,9 +484,15 @@ impl AssembledData {
 		});
 	}
 
-	/// Appends an unresolved value that points to a label to the current segment. The `use_high_byte` parameter decides
+	/// Appends an unresolved value to the current segment. The `use_high_byte` parameter decides
 	/// whether the high byte (true) or low byte (false) will be used in this memory address when the label is resolved.
-	pub fn append_unresolved(&mut self, value: Number, use_high_byte: bool, label: Option<Label>, span: SourceSpan) {
+	pub fn append_8_bits_unresolved(
+		&mut self,
+		value: Number,
+		use_high_byte: bool,
+		label: Option<Label>,
+		span: SourceSpan,
+	) {
 		self.current_segment_mut().push(LabeledMemoryValue {
 			value: if use_high_byte { MemoryValue::NumberHighByte(value) } else { MemoryValue::NumberLowByte(value) },
 			label,
@@ -494,7 +500,13 @@ impl AssembledData {
 		});
 	}
 
-	/// Appends an unresolved value that points to a label to the current segment. The label will be resolved to a
+	/// Appends an unresolved value that occupies 16 bits (LSB first) to the current segment.
+	pub fn append_16_bits_unresolved(&mut self, value: Number, label: Option<Label>, span: SourceSpan) {
+		self.append_8_bits_unresolved(value.clone(), false, label, span);
+		self.append_8_bits_unresolved(value, true, None, span);
+	}
+
+	/// Appends an unresolved value to the current segment. The label will be resolved to a
 	/// relative offset, like various branch instructions need it.
 	pub fn append_relative_unresolved(&mut self, value: Number, span: SourceSpan) {
 		self.current_segment_mut().push(LabeledMemoryValue {
@@ -525,7 +537,7 @@ impl AssembledData {
 		self.append(opcode, instruction.label.clone(), instruction.span);
 		match operand.try_resolve() {
 			Number::Literal(value) => self.append_8_bits(value, None, instruction.span),
-			value => self.append_unresolved(value, false, None, instruction.span),
+			value => self.append_8_bits_unresolved(value, false, None, instruction.span),
 		}
 
 		#[cfg(test)]
@@ -551,7 +563,7 @@ impl AssembledData {
 		self.append_instruction_with_8_bit_operand(opcode, first_machine_operand, instruction);
 		match second_machine_operand.try_resolve() {
 			Number::Literal(value) => self.append_8_bits(value, None, instruction.span),
-			value => self.append_unresolved(value, false, None, instruction.span),
+			value => self.append_8_bits_unresolved(value, false, None, instruction.span),
 		}
 
 		#[cfg(test)]
@@ -573,8 +585,7 @@ impl AssembledData {
 			Number::Literal(value) => self.append_16_bits(value, None, instruction.span),
 			value => {
 				// low byte first because little endian
-				self.append_unresolved(value.clone(), false, None, instruction.span);
-				self.append_unresolved(value, true, None, instruction.span);
+				self.append_16_bits_unresolved(value, None, instruction.span);
 			},
 		}
 
@@ -600,7 +611,7 @@ impl AssembledData {
 			Number::Literal(value) =>
 				self.append_16_bits(value | (MemoryAddress::from(bit_index) << 13), None, instruction.span),
 			value => {
-				self.append_unresolved(value.clone(), false, None, instruction.span);
+				self.append_8_bits_unresolved(value.clone(), false, None, instruction.span);
 				self.append_unresolved_with_bit_index(value, bit_index, instruction.span);
 			},
 		}

@@ -74,7 +74,9 @@ impl Environment {
 							current_global_label.clone(),
 						)?));
 						label_for_next_instruction = None;
-						tokens.expect(&newline)?;
+						if !tokens.is_end() {
+							tokens.expect(&newline)?;
+						}
 					} else {
 						// Global label
 						current_global_label = Some(self.get_global_label(identifier, token.source_span(), false));
@@ -98,7 +100,9 @@ impl Environment {
 						current_global_label.clone(),
 					)?));
 					label_for_next_instruction = None;
-					tokens.expect(&newline)?;
+					if !tokens.is_end() {
+						tokens.expect(&newline)?;
+					}
 				},
 				Token::Newline(..) => {},
 				Token::Period(location) => {

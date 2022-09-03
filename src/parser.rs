@@ -9,6 +9,7 @@ use super::error::{AssemblyCode, AssemblyError};
 use super::instruction::{AddressingMode, Instruction, Mnemonic, Number, Opcode};
 use super::label::{GlobalLabel, Label, LocalLabel};
 use super::{ProgramElement, Register, Token};
+use crate::error::TokenOrString;
 use crate::token::TokenStream;
 use crate::Macro;
 
@@ -636,6 +637,11 @@ impl Environment {
 			},
 			// '+' does of course not require a closing parenthesis unlike above.
 			Token::Plus(..) => self.parse_number(tokens, current_global_label.clone()),
+			Token::Newline(span) => Err(AssemblyError::UnexpectedEndOfTokens {
+				expected: TokenOrString::Token(Token::Number(0, span.into())),
+				location: span.into(),
+				src:      self.source_code.clone(),
+			}),
 			token => Err(AssemblyError::ExpectedToken {
 				expected: Token::Number(0, token.source_span()),
 				actual:   token.clone(),
@@ -649,7 +655,7 @@ impl Environment {
 		match tokens.next() {
 			Err(_) => Ok(lhs),
 			// All of these must remain available for the caller.
-			Ok(Token::Newline(..) | Token::Period(..) | Token::CloseParenthesis(..)) => {
+			Ok(Token::Newline(..) | Token::Period(..) | Token::CloseParenthesis(..) | Token::Comma(..)) => {
 				tokens.backtrack(1);
 				Ok(lhs)
 			},

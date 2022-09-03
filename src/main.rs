@@ -9,7 +9,9 @@
 	iterator_try_collect,
 	if_let_guard,
 	let_chains,
-	option_result_contains
+	option_result_contains,
+	maybe_uninit_uninit_array,
+	maybe_uninit_array_assume_init
 )]
 #![deny(clippy::all, clippy::pedantic, clippy::nursery)]
 #![deny(missing_docs)]

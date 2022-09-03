@@ -58,7 +58,7 @@ impl Macro {
 		Ok(Self {
 			value: match symbol {
 				MacroSymbol::Org => {
-					let initial_span = remaining_line.lookahead(1)?[0].source_span();
+					let initial_span = remaining_line.lookahead::<1>()?[0].source_span();
 					let number = environment.parse_number(&mut remaining_line, current_global_label)?.try_resolve();
 					match number {
 						Number::Literal(value) => MacroValue::Org(value),

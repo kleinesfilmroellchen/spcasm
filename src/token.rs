@@ -1,6 +1,7 @@
 //! The Token struct.
 
 use std::fmt::Display;
+use std::mem::MaybeUninit;
 use std::sync::Arc;
 
 use miette::{SourceOffset, SourceSpan};
@@ -208,12 +209,19 @@ impl<'a> TokenStream<'a> {
 		predicate(self.next()?)
 	}
 
-	pub fn lookahead(&self, amount: usize) -> Result<&[Token], AssemblyError> {
-		self.tokens.get(self.index .. self.index + amount).ok_or_else(|| AssemblyError::UnexpectedEndOfTokens {
-			expected: TokenOrString::String(format!("{} tokens", amount)),
-			location: self.tokens.last().map_or((0, 1).into(), Token::source_span),
-			src:      self.source.clone(),
-		})
+	pub fn lookahead<const Amount: usize>(&self) -> Result<[Token; Amount], AssemblyError> {
+		let token_span =
+			self.tokens.get(self.index .. self.index + Amount).ok_or_else(|| AssemblyError::UnexpectedEndOfTokens {
+				expected: TokenOrString::String(format!("{} tokens", Amount)),
+				location: self.tokens.last().map_or((0, 1).into(), Token::source_span),
+				src:      self.source.clone(),
+			})?;
+		// HACK: This avoids initializing the array with dummy tokens, which should be faster.
+		let mut token_array = MaybeUninit::uninit_array();
+		for (i, token) in token_array.iter_mut().enumerate() {
+			token.write(token_span[i].clone());
+		}
+		Ok(unsafe { MaybeUninit::array_assume_init(token_array) })
 	}
 
 	pub fn end(&self) -> Result<&Token, AssemblyError> {
@@ -256,9 +264,9 @@ impl<'a> TokenStream<'a> {
 	}
 
 	pub fn advance_past_other(&mut self, other_stream: &Self) -> Result<&Self, AssemblyError> {
-		let other_token = &other_stream.lookahead(1)?[0];
+		let other_token = &other_stream.lookahead::<1>()?[0];
 		while let Ok(next_token) = self.next() {
-			if &next_token == other_token {
+			if next_token == *other_token {
 				break;
 			}
 		}

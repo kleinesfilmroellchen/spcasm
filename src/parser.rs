@@ -374,10 +374,9 @@ impl Environment {
 			// Direct address modes
 			Token::Number(..) | Token::Identifier(..) | Token::Period(..) | Token::Plus(..) => {
 				tokens.backtrack(1);
-				let literal = self.parse_number(tokens, current_global_label)?;
+				let literal = self.parse_number(tokens, current_global_label)?.try_resolve();
 				let is_direct_page = match literal {
 					Number::Literal(address) => address <= 0xFF,
-					// TODO: We could also look at constant calculations which don't depend on labels.
 					_ => false,
 				};
 				let next_token_or_none = tokens.next().ok();

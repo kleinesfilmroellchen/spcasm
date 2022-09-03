@@ -104,14 +104,12 @@ impl Macro {
 				| MacroSymbol::Dl
 				| MacroSymbol::Dd) => {
 					let mut values = Vec::new();
-					dbg!(&remaining_line);
 					loop {
 						match environment.parse_number(&mut remaining_line, current_global_label.clone()) {
 							Ok(number) => values.push(number),
 							Err(AssemblyError::UnexpectedEndOfTokens { .. }) => break,
 							Err(err) => return Err(err),
 						}
-						println!("continue parsing with {:?}", remaining_line);
 						// No comma means we need to stop parsing values.
 						if remaining_line.expect(&Token::Comma(0.into())).is_err() {
 							break;

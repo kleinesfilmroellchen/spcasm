@@ -11,6 +11,7 @@ use crate::instruction::{MemoryAddress, Number};
 use crate::label::{GlobalLabel, Label};
 use crate::parser::Environment;
 use crate::token::TokenStream;
+use crate::Token;
 
 /// An assembly macro.
 #[derive(Clone, Debug)]
@@ -26,12 +27,26 @@ pub struct Macro {
 #[derive(Debug, Clone, Copy, Parse, Eq, PartialEq)]
 pub enum MacroSymbol {
 	Org,
+	Db,
+	Byte,
+	Dw,
+	Word,
+	Dl,
+	Dd,
+	Ascii,
+	Asciiz,
 }
 
 impl Display for MacroSymbol {
 	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
 		write!(f, "{}", match self {
 			Self::Org => "org",
+			Self::Db | Self::Byte => "db",
+			Self::Dw | Self::Word => "dw",
+			Self::Dl => "dl",
+			Self::Dd => "dd",
+			Self::Ascii => "ascii",
+			Self::Asciiz => "asciiz",
 		})
 	}
 }
@@ -41,12 +56,21 @@ impl Display for MacroSymbol {
 pub enum MacroValue {
 	/// org <memory address>
 	Org(MemoryAddress),
+	/// Various table macros, such as byte/db, word/dw, dl, dd, ascii(z), ...
+	/// dw <16-bit word>
+	Table {
+		/// The entries of the table. For simple macros like "dw $0A", this only has one entry.
+		values:     Vec<Number>,
+		/// How many bytes each entry occupies; depends on the specific macro used.
+		entry_size: u8,
+	},
 }
 
 impl Macro {
 	/// Parse a macro from a macro symbol and a line of text containing parameters for the macro.
 	/// # Errors
 	/// Any parser error.
+	/// # Panics
 	pub fn parse_macro(
 		environment: &mut Environment,
 		symbol: MacroSymbol,
@@ -73,6 +97,39 @@ impl Macro {
 						},
 					}
 				},
+				symbol @ (MacroSymbol::Db
+				| MacroSymbol::Byte
+				| MacroSymbol::Dw
+				| MacroSymbol::Word
+				| MacroSymbol::Dl
+				| MacroSymbol::Dd) => {
+					let mut values = Vec::new();
+					dbg!(&remaining_line);
+					loop {
+						match environment.parse_number(&mut remaining_line, current_global_label.clone()) {
+							Ok(number) => values.push(number),
+							Err(AssemblyError::UnexpectedEndOfTokens { .. }) => break,
+							Err(err) => return Err(err),
+						}
+						println!("continue parsing with {:?}", remaining_line);
+						// No comma means we need to stop parsing values.
+						if remaining_line.expect(&Token::Comma(0.into())).is_err() {
+							break;
+						}
+					}
+					MacroValue::Table {
+						values,
+						entry_size: match symbol {
+							MacroSymbol::Byte | MacroSymbol::Db => 1,
+							MacroSymbol::Dw | MacroSymbol::Word => 2,
+							MacroSymbol::Dl => 3,
+							MacroSymbol::Dd => 4,
+							_ => unreachable!(),
+						},
+					}
+				},
+				MacroSymbol::Ascii => todo!(),
+				MacroSymbol::Asciiz => todo!(),
 			},
 			span,
 			label: label_for_macro,

@@ -46,4 +46,4 @@ Start:
    bne  Block        ;= D0 DB
    jmp  ($0000+x)    ;= 1F 00 00   ; in: A=0, X=0, Y=0, SP=EFh, PSW=02h
 
-; dw   RESET           ;= C0 FF     ; reset vector
+dw   RESET           ;= C0 FF     ; reset vector

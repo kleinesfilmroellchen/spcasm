@@ -208,6 +208,18 @@ fn assemble_macro(data: &mut AssembledData, mcro: &Macro) -> Result<(), Assembly
 		MacroValue::Org(address) => {
 			data.new_segment(address);
 		},
+		MacroValue::Table { entry_size, ref values } => {
+			let mut label = mcro.label.clone();
+			for value in values {
+				match entry_size {
+					1 => data.append_8_bits_unresolved(value.clone(), false, label, mcro.span),
+					2 => data.append_16_bits_unresolved(value.clone(), label, mcro.span),
+					3 | 4 => unimplemented!(),
+					_ => unreachable!(),
+				}
+				label = None;
+			}
+		},
 	}
 	Ok(())
 }

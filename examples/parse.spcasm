@@ -14,3 +14,10 @@ mov x, 80 /10 ;= F8 08
 mov A, +(80/10)+5 ;= E4 0D
 mov A, 80/ (10+5) ;= E4 05
 mov A, +(80/10)+X ;= F4 08
+mov A,bytelabel
+
+dw 40, 30, 20,10
+word $f707
+db zero_label, zero_label+$FF
+bytelabel: byte 0
+; dl $50+3,$50/10,%1101

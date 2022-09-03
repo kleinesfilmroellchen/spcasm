@@ -36,6 +36,8 @@ pub enum Token {
 	Colon(SourceOffset),
 	/// '.'
 	Period(SourceOffset),
+	/// '='
+	Equals(SourceOffset),
 	/// ASCII newline (\n).
 	Newline(SourceOffset),
 	/// Comments used for testing purposes.
@@ -118,6 +120,7 @@ impl Token {
 			| Self::CloseParenthesis(location)
 			| Self::Colon(location)
 			| Self::Comma(location)
+			| Self::Equals(location)
 			| Self::Newline(location)
 			| Self::OpenParenthesis(location)
 			| Self::Period(location)
@@ -144,6 +147,7 @@ impl Display for Token {
 			Self::Comma(..) => "comma",
 			Self::Period(..) => "'.'",
 			Self::Plus(..) => "'+'",
+			Self::Equals(..) => "'='",
 			Self::OpenParenthesis(..) => "'('",
 			Self::CloseParenthesis(..) => "')'",
 			Self::Slash(..) => "'/'",

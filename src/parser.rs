@@ -94,8 +94,10 @@ impl Environment {
 						*symbol,
 						*location,
 						tokens_for_macro,
+						label_for_next_instruction,
 						current_global_label.clone(),
 					)?));
+					label_for_next_instruction = None;
 					tokens.expect(&newline)?;
 				},
 				Token::Newline(..) => {},

@@ -8,7 +8,7 @@ use spcasm_derive::Parse;
 
 use crate::error::AssemblyError;
 use crate::instruction::{MemoryAddress, Number};
-use crate::label::GlobalLabel;
+use crate::label::{GlobalLabel, Label};
 use crate::parser::Environment;
 use crate::token::TokenStream;
 
@@ -18,6 +18,8 @@ pub struct Macro {
 	/// Actual data of the macro.
 	pub value:       MacroValue,
 	pub(crate) span: SourceSpan,
+	/// Label at the start of the macro. Some macros ignore this.
+	pub label:       Option<Label>,
 }
 
 /// Macro symbols, used in lexing.
@@ -50,6 +52,7 @@ impl Macro {
 		symbol: MacroSymbol,
 		span: SourceSpan,
 		mut remaining_line: TokenStream,
+		label_for_macro: Option<Label>,
 		current_global_label: Option<Arc<GlobalLabel>>,
 	) -> Result<Self, AssemblyError> {
 		Ok(Self {
@@ -72,6 +75,7 @@ impl Macro {
 				},
 			},
 			span,
+			label: label_for_macro,
 		})
 	}
 }

@@ -15,6 +15,7 @@
 )]
 #![deny(clippy::all, clippy::pedantic, clippy::nursery)]
 #![deny(missing_docs)]
+#![allow(non_upper_case_globals)]
 
 use std::cmp::min;
 use std::env::args;

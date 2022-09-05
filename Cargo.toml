@@ -3,6 +3,7 @@ edition = "2021"
 license = "BSD 2-clause"
 name = "spcasm"
 version = "0.1.0"
+build = "build.rs"
 
 [features]
 test_bootrom = []
@@ -11,6 +12,10 @@ test_bootrom = []
 object = { version = "0.28.3", features = ["write_core"] }
 serde_variant = "0.1.1"
 thiserror = "1.0.30"
+lalrpop-util = "0.19"
+
+[build-dependencies]
+lalrpop = { version = "0.19", default-features = false }
 
 [dependencies.miette]
 features = ["fancy"]

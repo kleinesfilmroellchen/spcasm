@@ -5,14 +5,18 @@ use std::mem::MaybeUninit;
 use std::sync::Arc;
 
 use miette::{SourceOffset, SourceSpan};
+use serde_variant::to_variant_name;
 
 use crate::error::{AssemblyCode, AssemblyError, TokenOrString};
-use crate::r#macro::MacroSymbol;
+use crate::instruction::Mnemonic;
+use crate::mcro::MacroSymbol;
 use crate::Register;
 
 /// Assembly language tokens.
 #[derive(Debug, Clone)]
 pub enum Token {
+	/// Mnemonic, the start of an instruction.
+	Mnemonic(Mnemonic, SourceSpan),
 	/// Identifier, i.e. a label.
 	Identifier(String, SourceSpan),
 	/// Register name (this can never be used as an identifier).
@@ -54,6 +58,7 @@ impl PartialEq for Token {
 			(Self::Macro(name, ..), Self::Macro(other_name, ..)) => name == other_name,
 			(Self::Number(value, ..), Self::Number(other_value, ..)) => value == other_value,
 			(Self::Register(register, ..), Self::Register(other_register, ..)) => register == other_register,
+			(Self::Mnemonic(mnemonic, ..), Self::Mnemonic(other_mnemonic, ..)) => mnemonic == other_mnemonic,
 			(Self::Colon(..), Self::Colon(..))
 			| (Self::OpenParenthesis(..), Self::OpenParenthesis(..))
 			| (Self::CloseParenthesis(..), Self::CloseParenthesis(..))
@@ -107,6 +112,7 @@ impl Token {
 			| (Self::Comma(..), Self::Comma(..))
 			| (Self::Period(..), Self::Period(..)) => true,
 			(Self::Register(first, ..), Self::Register(second, ..)) => first == second,
+			(Self::Mnemonic(first, ..), Self::Mnemonic(second, ..)) => first == second,
 			#[cfg(test)]
 			(Self::TestComment(..), Self::TestComment(..)) => true,
 			_ => false,
@@ -130,6 +136,7 @@ impl Token {
 			Self::Identifier(_, location)
 			| Self::Number(_, location)
 			| Self::Register(_, location)
+			| Self::Mnemonic(_, location)
 			| Self::Macro(_, location) => *location,
 			#[cfg(test)]
 			Self::TestComment(_, location) => *location,
@@ -139,6 +146,9 @@ impl Token {
 
 impl Display for Token {
 	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> Result<(), std::fmt::Error> {
+		if let Self::Mnemonic(mnemonic, ..) = self {
+			return write!(f, "{}", mnemonic);
+		};
 		write!(f, "{}", match self {
 			Self::Identifier(..) => "identifier",
 			Self::Register(..) => "register name",
@@ -156,6 +166,7 @@ impl Display for Token {
 			Self::Colon(..) => "':'",
 			#[cfg(test)]
 			Self::TestComment(..) => "test comment (';=')",
+			_ => unreachable!(),
 		})
 	}
 }

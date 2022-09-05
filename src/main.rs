@@ -17,6 +17,8 @@
 #![deny(missing_docs)]
 #![allow(non_upper_case_globals)]
 
+#[macro_use] extern crate lalrpop_util;
+
 use std::cmp::min;
 use std::env::args;
 use std::fs::{read_to_string, File};
@@ -30,13 +32,15 @@ mod error;
 pub mod instruction;
 mod label;
 pub mod lexer;
-mod r#macro;
+mod mcro;
 pub mod parser;
 mod program;
 mod register;
 mod token;
+lalrpop_mod!(asm);
+
+pub use mcro::Macro;
 pub use program::ProgramElement;
-pub use r#macro::Macro;
 pub use register::Register;
 pub use token::Token;
 
@@ -94,7 +98,17 @@ mod test {
 
 	use test::Bencher;
 
-	use crate::pretty_hex;
+	use crate::parser::Environment;
+	use crate::{lexer, pretty_hex};
+
+	#[test]
+	fn test_new_parser() {
+		let contents = std::fs::read_to_string("examples/new_parser.spcasm").expect("Couldn't read file contents");
+		let source_code = std::sync::Arc::new(crate::error::AssemblyCode { name: "fake".to_string(), text: contents });
+		let lexed = lexer::LalrpopAdaptor::from(lexer::lex(source_code.clone()).expect("must lex"));
+		let mut env = Environment::new(source_code);
+		println!("{:#?}", crate::asm::ProgramParser::new().parse(&mut env, lexed));
+	}
 
 	#[bench]
 	fn test_all_opcodes(bencher: &mut Bencher) {

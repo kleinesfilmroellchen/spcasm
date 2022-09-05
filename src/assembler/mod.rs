@@ -8,7 +8,7 @@ use std::sync::Arc;
 use miette::{Result, SourceSpan};
 use r16bit::MovDirection;
 
-use super::r#macro::MacroValue;
+use super::mcro::MacroValue;
 use super::{pretty_hex, Macro, ProgramElement};
 use crate::error::{AssemblyCode, AssemblyError};
 use crate::instruction::{AddressingMode, Instruction, MemoryAddress, Mnemonic, Number, Opcode};

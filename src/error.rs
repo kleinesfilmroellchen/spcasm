@@ -7,7 +7,7 @@ use thiserror::Error;
 
 use crate::instruction::{AddressingMode, MemoryAddress, Mnemonic};
 use crate::label::Label;
-use crate::r#macro::MacroSymbol;
+use crate::mcro::MacroSymbol;
 use crate::Token;
 
 /// The source code for an assembly error.

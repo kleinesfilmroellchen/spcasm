@@ -61,28 +61,29 @@ impl Environment {
 			match &token {
 				Token::Identifier(identifier, location) => {
 					let location_span = SourceOffset::from(location.offset());
+					// Global label
+					current_global_label = Some(self.get_global_label(identifier, token.source_span(), false));
+					label_for_next_instruction = Some(Label::Global(current_global_label.clone().unwrap()));
+					tokens.expect(&Token::Colon(location_span))?;
+				},
+				Token::Mnemonic(mnemonic, location) => {
+					let location_span = SourceOffset::from(location.offset());
 					let newline = Token::Newline(location_span);
-					if Mnemonic::is_valid(identifier) {
-						// Instruction
-						let mut tokens_for_instruction = tokens.make_substream();
-						tokens_for_instruction.limit_to_first(&newline);
-						tokens.advance_to_others_end(&tokens_for_instruction)?;
+					// Instruction
+					let mut tokens_for_instruction = tokens.make_substream();
+					tokens_for_instruction.limit_to_first(&newline);
+					tokens.advance_to_others_end(&tokens_for_instruction)?;
 
-						instructions.push(ProgramElement::Instruction(self.create_instruction(
-							&token,
-							tokens_for_instruction,
-							label_for_next_instruction,
-							current_global_label.clone(),
-						)?));
-						label_for_next_instruction = None;
-						if !tokens.is_end() {
-							tokens.expect(&newline)?;
-						}
-					} else {
-						// Global label
-						current_global_label = Some(self.get_global_label(identifier, token.source_span(), false));
-						label_for_next_instruction = Some(Label::Global(current_global_label.clone().unwrap()));
-						tokens.expect(&Token::Colon(location_span))?;
+					instructions.push(ProgramElement::Instruction(self.create_instruction(
+						*mnemonic,
+						token.source_span(),
+						tokens_for_instruction,
+						label_for_next_instruction,
+						current_global_label.clone(),
+					)?));
+					label_for_next_instruction = None;
+					if !tokens.is_end() {
+						tokens.expect(&newline)?;
 					}
 				},
 				Token::Macro(symbol, location) => {
@@ -141,18 +142,14 @@ impl Environment {
 		Ok(instructions)
 	}
 
-	fn create_instruction<'a, 'b>(
-		&'b mut self,
-		identifier: &'a Token,
-		mut tokens: TokenStream<'a>,
+	fn create_instruction(
+		&mut self,
+		mnemonic: Mnemonic,
+		location: SourceSpan,
+		mut tokens: TokenStream<'_>,
 		label: Option<Label>,
 		current_global_label: Option<Arc<GlobalLabel>>,
 	) -> Result<Instruction, AssemblyError> {
-		let identifier_name = match identifier {
-			Token::Identifier(identifier, ..) => identifier.to_lowercase(),
-			_ => unreachable!(),
-		};
-		let mnemonic = Mnemonic::parse(&identifier_name, identifier.source_span(), self.source_code.clone())?;
 		match mnemonic {
 			Mnemonic::Mov
 			| Mnemonic::Adc
@@ -173,13 +170,7 @@ impl Environment {
 			| Mnemonic::And1
 			| Mnemonic::Or1
 			| Mnemonic::Eor1
-			| Mnemonic::Mov1 => self.make_two_operand_instruction(
-				mnemonic,
-				&mut tokens,
-				label,
-				identifier.source_span(),
-				current_global_label,
-			),
+			| Mnemonic::Mov1 => self.make_two_operand_instruction(mnemonic, &mut tokens, label, location, current_global_label),
 			Mnemonic::Inc
 			| Mnemonic::Dec
 			| Mnemonic::Asl
@@ -211,13 +202,8 @@ impl Environment {
 			| Mnemonic::Clr1
 			| Mnemonic::Tset1
 			| Mnemonic::Tclr1
-			| Mnemonic::Not1 => self.make_single_operand_instruction(
-				mnemonic,
-				&mut tokens,
-				label,
-				identifier.source_span(),
-				current_global_label,
-			),
+			| Mnemonic::Not1 =>
+				self.make_single_operand_instruction(mnemonic, &mut tokens, label, location, current_global_label),
 			Mnemonic::Brk
 			| Mnemonic::Ret
 			| Mnemonic::Ret1
@@ -231,7 +217,7 @@ impl Environment {
 			| Mnemonic::Di
 			| Mnemonic::Nop
 			| Mnemonic::Sleep
-			| Mnemonic::Stop => self.make_zero_operand_instruction(mnemonic, &mut tokens, label, identifier.source_span()),
+			| Mnemonic::Stop => self.make_zero_operand_instruction(mnemonic, &mut tokens, label, location),
 		}
 	}
 
@@ -581,7 +567,8 @@ impl Environment {
 		}
 	}
 
-	fn get_global_label(&mut self, name: &'_ str, span: SourceSpan, used_as_address: bool) -> Arc<GlobalLabel> {
+	/// Lookup a global label in this environment, and create it if necessary.
+	pub fn get_global_label(&mut self, name: &'_ str, span: SourceSpan, used_as_address: bool) -> Arc<GlobalLabel> {
 		if let Some(matching_label) = self.labels.iter_mut().find(|label| label.name == name) {
 			if used_as_address && !matching_label.used_as_address {
 				unsafe { Arc::get_mut_unchecked(matching_label).used_as_address = true };

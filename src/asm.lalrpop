@@ -1,0 +1,122 @@
+use miette::{SourceOffset, SourceSpan};
+use std::sync::Weak;
+
+use crate::instruction::{Instruction, Mnemonic, Number};
+use crate::parser::Environment;
+use crate::error::AssemblyError;
+use crate::mcro::{MacroSymbol, Macro, MacroValue};
+use crate::program::ProgramElement;
+use crate::register::Register;
+use crate::token::Token;
+use crate::label::{Label, LocalLabel, GlobalLabel};
+
+grammar<'env>(environment: &'env mut Environment);
+
+pub Program: Vec<ProgramElement> = "\n"* <line:( <Line> )*> => line;
+
+Line: ProgramElement = <label:( <Label> "\n"* )?> <element:InstructionOrMacro> "\n"+ => element.set_label(label);
+
+InstructionOrMacro: ProgramElement = {
+	Instruction => ProgramElement::Instruction(<>),
+	Macro => ProgramElement::Macro(<>),
+};
+
+Instruction: Instruction = {
+	"mnemonic" => todo!(),
+};
+
+Macro: Macro = {	
+	<data_macro:TableMacro> <numbers:NumberList> => Macro {
+		value: MacroValue::Table {
+			values: numbers,
+			entry_size: match data_macro.0 {
+				MacroSymbol::Byte | MacroSymbol::Db => 1,
+				MacroSymbol::Dw | MacroSymbol::Word => 2,
+				MacroSymbol::Dl => 3,
+				MacroSymbol::Dd => 4,
+				_ => unreachable!(),
+			},
+		},
+		span: data_macro.1,
+		label: None,
+	},
+	<mcro:"org"> <address:Number> => Macro {
+		// FIXME: currently panics if label occurs
+		value: MacroValue::Org(address.value()),
+		span: mcro,
+		label: None,
+	},
+};
+
+TableMacro: (MacroSymbol, SourceSpan) = {
+	"db" => (MacroSymbol::Db, <>),
+	"byte" => (MacroSymbol::Db, <>),
+	"dw" => (MacroSymbol::Dw, <>),
+	"word" => (MacroSymbol::Dw, <>),
+	"dl" => (MacroSymbol::Dl, <>),
+	"dd" => (MacroSymbol::Dd, <>),
+};
+
+NumberList = Comma<Number>;
+
+Label: Label = {
+	"." <identifier:"identifier"> ":" => Label::Local(LocalLabel {
+		name: identifier.0.clone(),
+		location: None,
+		span: identifier.1,
+		// Don't rely on forward-to-backward parsing order; we can't know the parent label here.
+		parent: Weak::new(),
+	}),
+	<identifier:"identifier"> ":" => Label::Global(environment.get_global_label(&identifier.0, identifier.1, true)),
+};
+
+Number: Number = {
+	<number:"number"> => Number::Literal(number.0),
+	// TODO: other kinds of numbers.
+};
+
+Comma<T>: Vec<T> = {
+	<mut v:(<T> ",")*> <e:T> => {
+		v.push(e);
+		v
+	}
+};
+
+/// Lexer API information so that LALRPOP uses the spcasm lexer found in lexer.rs
+extern {
+	/// We provide this from the Token information.
+	type Location = usize;
+	type Error = AssemblyError;
+
+	enum Token {
+		"identifier" => Token::Identifier(<String>, <SourceSpan>),
+		"mnemonic" => Token::Mnemonic(<Mnemonic>, <SourceSpan>),
+		"A" => Token::Register(Register::A, <SourceSpan>),
+		"X" => Token::Register(Register::X, <SourceSpan>),
+		"Y" => Token::Register(Register::Y, <SourceSpan>),
+		"SP" => Token::Register(Register::SP, <SourceSpan>),
+		"PSW" => Token::Register(Register::PSW, <SourceSpan>),
+		"YA" => Token::Register(Register::YA, <SourceSpan>),
+		"C" => Token::Register(Register::C, <SourceSpan>),
+		"org" => Token::Macro(MacroSymbol::Org, <SourceSpan>),
+		"db" => Token::Macro(MacroSymbol::Db, <SourceSpan>),
+		"byte" => Token::Macro(MacroSymbol::Byte, <SourceSpan>),
+		"dw" => Token::Macro(MacroSymbol::Dw, <SourceSpan>),
+		"word" => Token::Macro(MacroSymbol::Word, <SourceSpan>),
+		"dl" => Token::Macro(MacroSymbol::Dl, <SourceSpan>),
+		"dd" => Token::Macro(MacroSymbol::Dd, <SourceSpan>),
+		"ascii" => Token::Macro(MacroSymbol::Ascii, <SourceSpan>),
+		"asciiz" => Token::Macro(MacroSymbol::Asciiz, <SourceSpan>),
+		"number" => Token::Number(<i64>, <SourceSpan>),
+		"#" => Token::Hash(<SourceOffset>),
+		"," => Token::Comma(<SourceOffset>),
+		"+" => Token::Plus(<SourceOffset>),
+		"/" => Token::Slash(<SourceOffset>),
+		"(" => Token::OpenParenthesis(<SourceOffset>),
+		")" => Token::CloseParenthesis(<SourceOffset>),
+		":" => Token::Colon(<SourceOffset>),
+		"." => Token::Period(<SourceOffset>),
+		"=" => Token::Equals(<SourceOffset>),
+		"\n" => Token::Newline(<SourceOffset>),
+	}
+}

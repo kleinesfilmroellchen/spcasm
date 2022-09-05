@@ -2,12 +2,14 @@
 
 use std::iter::Peekable;
 use std::sync::Arc;
+use std::vec::IntoIter;
 
 use miette::SourceOffset;
 
 use crate::error::{AssemblyCode, AssemblyError};
+use crate::instruction::Mnemonic;
+use crate::mcro::MacroSymbol;
 use crate::parser::Parse;
-use crate::r#macro::MacroSymbol;
 use crate::{Register, Token};
 
 /// Lex the given assembly into a list of tokens.
@@ -51,6 +53,8 @@ pub fn lex(source_code: Arc<AssemblyCode>) -> Result<Vec<Token>, AssemblyError> 
 								.map(|value| Token::Register(value, identifier_span))
 								.or_else(|_| MacroSymbol::parse(&identifier.to_lowercase(), identifier_span, source_code.clone())
 									.map(|value| Token::Macro(value, identifier_span)))
+								.or_else(|_| Mnemonic::parse(&identifier.to_lowercase(), identifier_span, source_code.clone())
+									.map(|mnemonic| Token::Mnemonic(mnemonic, identifier_span)))
 								.or(Ok(Token::Identifier(identifier, identifier_span)))?);
 			},
 			'0'..='9' => {
@@ -157,5 +161,24 @@ fn parse_single_char_tokens(chr: char, location: SourceOffset) -> Token {
 		'.' => Token::Period(location),
 		'=' => Token::Equals(location),
 		_ => unreachable!(),
+	}
+}
+
+/// An API adaptor that allows us to pass the Vec<Token> we lexed into LALRPOP.
+pub struct LalrpopAdaptor(IntoIter<Token>);
+
+impl From<Vec<Token>> for LalrpopAdaptor {
+	fn from(vec: Vec<Token>) -> Self {
+		Self(vec.into_iter())
+	}
+}
+
+impl Iterator for LalrpopAdaptor {
+	type Item = Result<(usize, Token, usize), AssemblyError>;
+
+	fn next(&mut self) -> Option<Self::Item> {
+		self.0.next().map(|token| {
+			Ok((token.source_span().offset(), token.clone(), token.source_span().offset() + token.source_span().len()))
+		})
 	}
 }

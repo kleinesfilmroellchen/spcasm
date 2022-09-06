@@ -1,12 +1,11 @@
 //! The Token struct.
 
 use std::fmt::Display;
-use std::mem::MaybeUninit;
 use std::sync::Arc;
 
 use miette::{SourceOffset, SourceSpan};
 
-use crate::error::{AssemblyCode, AssemblyError, TokenOrString};
+use crate::error::{AssemblyCode, AssemblyError};
 use crate::instruction::Mnemonic;
 use crate::mcro::MacroSymbol;
 use crate::Register;
@@ -188,136 +187,5 @@ impl Display for Token {
 			Self::TestComment(..) => "test comment (';=')",
 			_ => unreachable!(),
 		})
-	}
-}
-#[derive(Debug, Clone)]
-#[allow(clippy::module_name_repetitions)]
-pub struct TokenStream<'a> {
-	pub tokens: &'a [Token],
-	pub index:  usize,
-	source:     Arc<AssemblyCode>,
-}
-
-impl<'a> TokenStream<'a> {
-	pub fn new<'local>(tokens: &'a [Token], source: &'local Arc<AssemblyCode>) -> Self {
-		Self { tokens, index: 0, source: source.clone() }
-	}
-
-	pub const fn len(&self) -> usize {
-		self.tokens.len()
-	}
-
-	pub const fn remaining(&self) -> usize {
-		self.len() - self.index
-	}
-
-	pub const fn is_end(&self) -> bool {
-		self.index >= self.len()
-	}
-
-	pub fn next(&mut self) -> Result<Token, AssemblyError> {
-		if self.is_end() {
-			Err(AssemblyError::UnexpectedEndOfTokens {
-				expected: vec![TokenOrString::String("a token".to_string())],
-				location: self.tokens.last().map_or((0, 1).into(), Token::source_span),
-				src:      self.source.clone(),
-			})
-		} else {
-			self.index += 1;
-			Ok(self.tokens[self.index - 1].clone())
-		}
-	}
-
-	pub fn expect(&mut self, expected: &Token) -> Result<Token, AssemblyError> {
-		self.next()?.expect(expected, self.source.clone())
-	}
-
-	/// Passes the next token into the function for checking.
-	pub fn expect_and_map(
-		&mut self,
-		predicate: impl FnOnce(Token) -> Result<Token, AssemblyError>,
-	) -> Result<Token, AssemblyError> {
-		predicate(self.next()?)
-	}
-
-	pub fn lookahead<const Amount: usize>(&self) -> Result<[Token; Amount], AssemblyError> {
-		let token_span =
-			self.tokens.get(self.index .. self.index + Amount).ok_or_else(|| AssemblyError::UnexpectedEndOfTokens {
-				expected: vec![TokenOrString::String(format!("{} tokens", Amount))],
-				location: self.tokens.last().map_or((0, 1).into(), Token::source_span),
-				src:      self.source.clone(),
-			})?;
-		// HACK: This avoids initializing the array with dummy tokens, which should be faster.
-		let mut token_array = MaybeUninit::uninit_array();
-		for (i, token) in token_array.iter_mut().enumerate() {
-			token.write(token_span[i].clone());
-		}
-		Ok(unsafe { MaybeUninit::array_assume_init(token_array) })
-	}
-
-	pub fn end(&self) -> Result<&Token, AssemblyError> {
-		self.tokens.last().ok_or_else(|| AssemblyError::UnexpectedEndOfTokens {
-			expected: vec![TokenOrString::String("a token".to_string())],
-			location: (0, 1).into(),
-			src:      self.source.clone(),
-		})
-	}
-
-	pub fn backtrack(&mut self, amount: usize) {
-		self.index = self.index.checked_sub(amount).expect("backtrack beyond token stream beginning");
-	}
-
-	/// Move the token stream to this index.
-	///
-	/// **Use this API with great caution.**
-	pub fn move_to(&mut self, index: usize) {
-		self.index = index.min(self.tokens.len() - 1);
-	}
-
-	/// Create a substream that is almost identical, but all the previous visited tokens are cut off.
-	pub fn make_substream(&self) -> Self {
-		Self { tokens: &self.tokens[self.index ..], index: 0, source: self.source.clone() }
-	}
-
-	/// Limit the stream to the first token of the given type. If this token is never found, the stream size is
-	/// unchanged.
-	pub fn limit_to_first<'local>(&mut self, type_: &'local Token) -> &Self {
-		let mut current_index = self.index;
-		while let Some(next_token) = self.tokens.get(current_index ..= current_index) {
-			if next_token[0].equals_type(type_) {
-				break;
-			}
-			current_index += 1;
-		}
-		self.tokens = &self.tokens[.. current_index];
-
-		self
-	}
-
-	pub fn advance_past_other(&mut self, other_stream: &Self) -> Result<&Self, AssemblyError> {
-		let other_token = &other_stream.lookahead::<1>()?[0];
-		while let Ok(next_token) = self.next() {
-			if next_token == *other_token {
-				break;
-			}
-		}
-
-		Ok(self)
-	}
-
-	/// Advance this stream so that it is placed at the other stream's end. This
-	/// assumes that the streams start at the same place in the same physical
-	/// token slice, but have a different end point; the first stream was
-	/// carefully resized and the second stream should now start where the first
-	/// stream ends.
-	pub fn advance_to_others_end(&mut self, other_stream: &Self) -> Result<&Self, AssemblyError> {
-		for _ in 0 .. other_stream.remaining() {
-			self.next()?;
-		}
-		Ok(self)
-	}
-
-	pub fn iter(&self) -> impl Iterator<Item = &Token> {
-		self.tokens.iter()
 	}
 }

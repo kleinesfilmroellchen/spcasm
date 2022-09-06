@@ -18,6 +18,13 @@ pub struct AssemblyCode {
 	pub name: String,
 }
 
+impl AssemblyCode {
+	pub fn from_file(filename: &str) -> Result<Arc<Self>, std::io::Error> {
+		let contents = std::fs::read_to_string(filename)?;
+		Ok(Arc::new(Self { name: filename.to_string(), text: contents }))
+	}
+}
+
 impl SourceCode for AssemblyCode {
 	fn read_span<'a>(
 		&'a self,

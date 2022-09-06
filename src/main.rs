@@ -21,8 +21,7 @@
 
 use std::cmp::min;
 use std::env::args;
-use std::fs::{read_to_string, File};
-use std::sync::Arc;
+use std::fs::File;
 
 use error::AssemblyCode;
 
@@ -74,39 +73,20 @@ fn main() -> miette::Result<()> {
 	}
 	let file_name = unsafe { args().nth(1).unwrap_unchecked() };
 	let output = args().nth(2).expect("No output file given");
-	let assembly_function: fn(String) -> AssemblyResult =
-		if args().any(|arg| arg == "-n") { run_new_assembler } else { run_assembler };
 
-	let (_, assembled) = assembly_function(file_name)?;
+	let (_, assembled) = run_assembler(&file_name)?;
 	println!("{}", pretty_hex(&assembled));
 	let outfile =
 		File::options().create(true).truncate(true).write(true).open(output).expect("Couldn't open output file");
 	elf::write_to_elf(&mut std::io::BufWriter::new(outfile), &assembled).unwrap();
-	// outfile.write_all(&assembled).expect("I/O error while writing");
 	Ok(())
 }
 
-fn run_assembler(file_name: String) -> AssemblyResult {
-	let contents = read_to_string(file_name.clone()).expect("Couldn't read file contents");
-	let source_code = Arc::new(AssemblyCode { name: file_name, text: contents });
-	let lexed = lexer::lex(source_code.clone())?;
-	let mut env = parser::Environment::new(source_code);
-	let mut parsed = env.parse(&lexed)?;
-	let assembled = assembler::assemble(&env, &mut parsed)?;
-	Ok((parsed, assembled))
-}
-
-fn run_new_assembler(file_name: String) -> AssemblyResult {
-	let contents = std::fs::read_to_string(file_name.clone()).expect("Couldn't read file contents");
-	let source_code = std::sync::Arc::new(crate::error::AssemblyCode { name: file_name, text: contents });
-	let lexed = lalrpop_adaptor::disambiguate_indexing_parenthesis(lexer::lex(source_code.clone()).expect("must lex"));
-	println!("{:#?}", lexed);
-	let lexed = lalrpop_adaptor::LalrpopAdaptor::from(lexed);
+fn run_assembler(file_name: &str) -> AssemblyResult {
+	let source_code = AssemblyCode::from_file(file_name).expect("Couldn't read file contents");
 	let mut env = parser::Environment::new(source_code.clone());
-	let mut program = crate::asm::ProgramParser::new()
-		.parse(&mut env, lexed)
-		.map_err(|err| error::AssemblyError::from_lalrpop(err, source_code))?;
-	env.fill_in_label_references(&mut program)?;
+	let tokens = lexer::lex(source_code)?;
+	let mut program = env.parse(tokens)?;
 	let assembled = assembler::assemble(&env, &mut program)?;
 	Ok((program, assembled))
 }
@@ -137,7 +117,7 @@ mod test {
 	}
 
 	fn test_file(file: &str) {
-		let (parsed, assembled) = super::run_new_assembler(file.to_owned()).unwrap();
+		let (parsed, assembled) = super::run_assembler(file).unwrap();
 		let expected_binary = assemble_expected_binary(parsed);
 		for (byte, (expected, actual)) in expected_binary.iter().zip(assembled.iter()).enumerate() {
 			if let Some(expected) = expected {

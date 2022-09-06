@@ -98,7 +98,7 @@ pub fn disambiguate_indexing_parenthesis(tokens: Vec<Token>) -> Vec<Token> {
 	result.iter().fold(Vec::new(), |mut tokens, token| {
 		if let Some(plus @ Token::Plus(..)) = tokens.last().cloned() && let Token::Register(register @(Register::X | Register::Y), ..) = token {
 			tokens.pop();
-			tokens.push(Token::PlusRegister(*register, 
+			tokens.push(Token::PlusRegister(*register,
 				(plus.source_span().offset(), plus.source_span().offset() + plus.source_span().len() - token.source_span().offset()).into()));
 		} else {
 			tokens.push(token.clone());

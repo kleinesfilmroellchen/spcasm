@@ -2,7 +2,7 @@ use miette::{SourceOffset, SourceSpan};
 use std::sync::Weak;
 
 use crate::instruction::{Instruction, Mnemonic, Number, AddressingMode, Opcode};
-use crate::parser::{Environment, try_make_direct_page_addressing_mode};
+use crate::parser::{Environment, try_make_direct_page_addressing_mode, LabelUsageKind};
 use crate::error::AssemblyError;
 use crate::mcro::{MacroSymbol, Macro, MacroValue};
 use crate::program::ProgramElement;
@@ -93,7 +93,7 @@ LabelForInstruction: Label = {
 		// Don't rely on forward-to-backward parsing order; we can't know the parent label here.
 		parent: Weak::new(),
 	}),
-	<identifier:"identifier"> ":" => Label::Global(environment.get_global_label(&identifier.0, identifier.1, true)),
+	<identifier:"identifier"> ":" => Label::Global(environment.get_global_label(&identifier.0, identifier.1, LabelUsageKind::AsDefinition)),
 };
 
 Label: Label = {
@@ -104,7 +104,7 @@ Label: Label = {
 		// Don't rely on forward-to-backward parsing order; we can't know the parent label here.
 		parent: Weak::new(),
 	}),
-	<identifier:"identifier"> => Label::Global(environment.get_global_label(&identifier.0, identifier.1, false)),
+	<identifier:"identifier"> => Label::Global(environment.get_global_label(&identifier.0, identifier.1, LabelUsageKind::AsAddress)),
 };
 
 Number: Number = {

@@ -1,7 +1,7 @@
 //! Parsing and AST.
 use std::collections::HashMap;
 use std::result::Result;
-use std::sync::{Arc, Weak};
+use std::sync::Arc;
 
 use miette::{SourceOffset, SourceSpan};
 

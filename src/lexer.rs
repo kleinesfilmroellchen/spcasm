@@ -2,7 +2,6 @@
 
 use std::iter::Peekable;
 use std::sync::Arc;
-use std::vec::IntoIter;
 
 use miette::SourceOffset;
 

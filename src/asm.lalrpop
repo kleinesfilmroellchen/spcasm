@@ -8,7 +8,7 @@ use crate::mcro::{MacroSymbol, Macro, MacroValue};
 use crate::program::ProgramElement;
 use crate::register::Register;
 use crate::token::Token;
-use crate::label::{Label, LocalLabel, GlobalLabel};
+use crate::label::{Label, LocalLabel};
 
 grammar<'env>(environment: &'env mut Environment);
 

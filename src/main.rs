@@ -15,7 +15,7 @@
 )]
 #![deny(clippy::all, clippy::pedantic, clippy::nursery)]
 #![deny(missing_docs)]
-#![allow(non_upper_case_globals)]
+#![allow(non_upper_case_globals, unused_mut)]
 
 #[macro_use] extern crate lalrpop_util;
 

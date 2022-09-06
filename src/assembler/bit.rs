@@ -1,7 +1,6 @@
 //! Bitwise instructions.
 
 use super::super::instruction::{AddressingMode, Instruction, Mnemonic};
-use super::super::register::Register;
 use super::{AssembledData, AssemblyError};
 
 #[allow(clippy::too_many_lines)] // This is getting old

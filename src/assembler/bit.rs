@@ -53,7 +53,7 @@ pub(super) fn assemble_bit_instructions(
 			address,
 			instruction,
 		),
-		AddressingMode::Register(Register::C) => match &source {
+		AddressingMode::CarryFlag => match &source {
 			Some(
 				addressing_mode @ (AddressingMode::AddressBit(address, bit)
 				| AddressingMode::NegatedAddressBit(address, bit)),
@@ -101,7 +101,7 @@ pub(super) fn assemble_bit_instructions(
 					data.append_instruction_with_16_bit_operand_and_bit_index(0xEA, address, bit, instruction);
 				},
 			Mnemonic::Mov1 =>
-				if matches!(source, Some(AddressingMode::Register(Register::C))) {
+				if matches!(source, Some(AddressingMode::CarryFlag)) {
 					data.append_instruction_with_16_bit_operand_and_bit_index(0xCA, address, bit, instruction);
 				} else {
 					return make_error(true);

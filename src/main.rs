@@ -31,6 +31,7 @@ pub mod elf;
 mod error;
 pub mod instruction;
 mod label;
+mod lalrpop_adaptor;
 pub mod lexer;
 mod mcro;
 pub mod parser;
@@ -60,6 +61,8 @@ fn pretty_hex(bytes: &[u8]) -> String {
 	string
 }
 
+type AssemblyResult = miette::Result<(Vec<ProgramElement>, Vec<u8>)>;
+
 fn main() -> miette::Result<()> {
 	miette::set_hook(Box::new(|_| {
 		Box::new(miette::MietteHandlerOpts::new().unicode(true).context_lines(2).tab_width(4).build())
@@ -71,8 +74,10 @@ fn main() -> miette::Result<()> {
 	}
 	let file_name = unsafe { args().nth(1).unwrap_unchecked() };
 	let output = args().nth(2).expect("No output file given");
+	let assembly_function: fn(String) -> AssemblyResult =
+		if args().any(|arg| arg == "-n") { run_new_assembler } else { run_assembler };
 
-	let (_, assembled) = run_assembler(file_name)?;
+	let (_, assembled) = assembly_function(file_name)?;
 	println!("{}", pretty_hex(&assembled));
 	let outfile =
 		File::options().create(true).truncate(true).write(true).open(output).expect("Couldn't open output file");
@@ -81,7 +86,7 @@ fn main() -> miette::Result<()> {
 	Ok(())
 }
 
-fn run_assembler(file_name: String) -> miette::Result<(Vec<ProgramElement>, Vec<u8>)> {
+fn run_assembler(file_name: String) -> AssemblyResult {
 	let contents = read_to_string(file_name.clone()).expect("Couldn't read file contents");
 	let source_code = Arc::new(AssemblyCode { name: file_name, text: contents });
 	let lexed = lexer::lex(source_code.clone())?;
@@ -91,6 +96,21 @@ fn run_assembler(file_name: String) -> miette::Result<(Vec<ProgramElement>, Vec<
 	Ok((parsed, assembled))
 }
 
+fn run_new_assembler(file_name: String) -> AssemblyResult {
+	let contents = std::fs::read_to_string(file_name.clone()).expect("Couldn't read file contents");
+	let source_code = std::sync::Arc::new(crate::error::AssemblyCode { name: file_name, text: contents });
+	let lexed = lalrpop_adaptor::disambiguate_indexing_parenthesis(lexer::lex(source_code.clone()).expect("must lex"));
+	println!("{:#?}", lexed);
+	let lexed = lalrpop_adaptor::LalrpopAdaptor::from(lexed);
+	let mut env = parser::Environment::new(source_code.clone());
+	let mut program = crate::asm::ProgramParser::new()
+		.parse(&mut env, lexed)
+		.map_err(|err| error::AssemblyError::from_lalrpop(err, source_code))?;
+	env.fill_in_label_references(&mut program)?;
+	let assembled = assembler::assemble(&env, &mut program)?;
+	Ok((program, assembled))
+}
+
 #[cfg(test)]
 mod test {
 	extern crate test;
@@ -98,17 +118,7 @@ mod test {
 
 	use test::Bencher;
 
-	use crate::parser::Environment;
-	use crate::{lexer, pretty_hex};
-
-	#[test]
-	fn test_new_parser() {
-		let contents = std::fs::read_to_string("examples/new_parser.spcasm").expect("Couldn't read file contents");
-		let source_code = std::sync::Arc::new(crate::error::AssemblyCode { name: "fake".to_string(), text: contents });
-		let lexed = lexer::LalrpopAdaptor::from(lexer::lex(source_code.clone()).expect("must lex"));
-		let mut env = Environment::new(source_code);
-		println!("{:#?}", crate::asm::ProgramParser::new().parse(&mut env, lexed));
-	}
+	use crate::pretty_hex;
 
 	#[bench]
 	fn test_all_opcodes(bencher: &mut Bencher) {
@@ -127,7 +137,7 @@ mod test {
 	}
 
 	fn test_file(file: &str) {
-		let (parsed, assembled) = super::run_assembler(file.to_owned()).unwrap();
+		let (parsed, assembled) = super::run_new_assembler(file.to_owned()).unwrap();
 		let expected_binary = assemble_expected_binary(parsed);
 		for (byte, (expected, actual)) in expected_binary.iter().zip(assembled.iter()).enumerate() {
 			if let Some(expected) = expected {

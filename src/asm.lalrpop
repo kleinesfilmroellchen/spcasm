@@ -1,8 +1,8 @@
 use miette::{SourceOffset, SourceSpan};
 use std::sync::Weak;
 
-use crate::instruction::{Instruction, Mnemonic, Number};
-use crate::parser::Environment;
+use crate::instruction::{Instruction, Mnemonic, Number, AddressingMode, Opcode};
+use crate::parser::{Environment, try_make_direct_page_addressing_mode};
 use crate::error::AssemblyError;
 use crate::mcro::{MacroSymbol, Macro, MacroValue};
 use crate::program::ProgramElement;
@@ -14,15 +14,41 @@ grammar<'env>(environment: &'env mut Environment);
 
 pub Program: Vec<ProgramElement> = "\n"* <line:( <Line> )*> => line;
 
-Line: ProgramElement = <label:( <Label> "\n"* )?> <element:InstructionOrMacro> "\n"+ => element.set_label(label);
+Line: ProgramElement = <label:( <LabelForInstruction> "\n"* )?> <element:InstructionOrMacro> "\n"+ => element.set_label(label);
 
 InstructionOrMacro: ProgramElement = {
-	Instruction => ProgramElement::Instruction(<>),
+	InstructionWithTestComment => ProgramElement::Instruction(<>),
 	Macro => ProgramElement::Macro(<>),
 };
 
+InstructionWithTestComment: Instruction = <mut instruction:Instruction> <expected:";="?> => {
+	#[cfg(test)]
+	if let Some(expected) = expected {
+		instruction.expected_value = Some(expected.0);
+		instruction.span = (instruction.span.offset(), expected.1.offset() + expected.1.len() - instruction.span.offset()).into();
+	}
+	instruction
+};
+
 Instruction: Instruction = {
-	"mnemonic" => todo!(),
+	<mnemonic:"mnemonic"> <first_operand:AddressingMode> <second_operand:( "," <AddressingMode> )?> => Instruction {
+		opcode: Opcode {
+			mnemonic: mnemonic.0,
+			first_operand: Some(first_operand),
+			second_operand, 
+		},
+		span: mnemonic.1,
+		..Instruction::default()
+	},
+	<mnemonic:"mnemonic"> => Instruction {
+		opcode: Opcode {
+			mnemonic: mnemonic.0,
+			first_operand: None,
+			second_operand: None, 
+		},
+		span: mnemonic.1,
+		..Instruction::default()
+	},
 };
 
 Macro: Macro = {	
@@ -59,7 +85,7 @@ TableMacro: (MacroSymbol, SourceSpan) = {
 
 NumberList = Comma<Number>;
 
-Label: Label = {
+LabelForInstruction: Label = {
 	"." <identifier:"identifier"> ":" => Label::Local(LocalLabel {
 		name: identifier.0.clone(),
 		location: None,
@@ -70,9 +96,56 @@ Label: Label = {
 	<identifier:"identifier"> ":" => Label::Global(environment.get_global_label(&identifier.0, identifier.1, true)),
 };
 
+Label: Label = {
+	"." <identifier:"identifier"> => Label::Local(LocalLabel {
+		name: identifier.0.clone(),
+		location: None,
+		span: identifier.1,
+		// Don't rely on forward-to-backward parsing order; we can't know the parent label here.
+		parent: Weak::new(),
+	}),
+	<identifier:"identifier"> => Label::Global(environment.get_global_label(&identifier.0, identifier.1, false)),
+};
+
 Number: Number = {
-	<number:"number"> => Number::Literal(number.0),
-	// TODO: other kinds of numbers.
+	<lhs:Factor> "+" <rhs:Factor> => Number::Add(Box::new(lhs), Box::new(rhs)),
+	<lhs:Factor> "-" <rhs:Factor> => Number::Subtract(Box::new(lhs), Box::new(rhs)),
+	Factor,
+};
+
+Factor: Number = {
+	<lhs:Factor> "*" <rhs:Term> => Number::Multiply(Box::new(lhs), Box::new(rhs)),
+	<lhs:Factor> "/" <rhs:Term> => Number::Divide(Box::new(lhs), Box::new(rhs)),
+	Term,
+};
+
+Term: Number = {
+	"number" => Number::Literal(<>.0),
+	"+" <Term>,
+	"-" <Term> => Number::Negate(Box::new(<>)),
+	"(" <Number> ")",
+	Label => Number::Label(<>),
+};
+
+AddressingMode: AddressingMode = {
+	<Number> => try_make_direct_page_addressing_mode(<>, AddressingMode::DirectPage, AddressingMode::Address),
+	"#" <Number> => AddressingMode::Immediate(<>),
+	"A" => AddressingMode::Register(Register::A),
+	"X" => AddressingMode::Register(Register::X),
+	"Y" => AddressingMode::Register(Register::Y),
+	"SP" => AddressingMode::Register(Register::SP),
+	"PSW" => AddressingMode::Register(Register::PSW),
+	"YA" => AddressingMode::Register(Register::YA),
+	"C" => AddressingMode::CarryFlag,
+	<Number> "+X" => try_make_direct_page_addressing_mode(<>, AddressingMode::DirectPageXIndexed, AddressingMode::XIndexed),
+	<Number> "+Y" => try_make_direct_page_addressing_mode(<>, AddressingMode::DirectPageYIndexed, AddressingMode::YIndexed),
+	"[" <Number> "+X" "]" => try_make_direct_page_addressing_mode(<>, AddressingMode::DirectPageXIndexedIndirect, AddressingMode::DirectPageXIndexedIndirect),
+	"[" <Number> "]" "+Y" => try_make_direct_page_addressing_mode(<>, AddressingMode::DirectPageIndirectYIndexed, AddressingMode::DirectPageIndirectYIndexed),
+	<Number> "." <"number"> => try_make_direct_page_addressing_mode((<>), |(a, b)| AddressingMode::DirectPageBit(a, b.0 as u8), |(a, b)| AddressingMode::AddressBit(a, b.0 as u8)),
+	"/" <address:Number> "." <bit:"number"> => AddressingMode::NegatedAddressBit(address, bit.0 as u8),
+	"[" "X" "]" "+" => AddressingMode::IndirectXAutoIncrement,
+	"[" "X" "]" => AddressingMode::IndirectX,
+	"[" "Y" "]" => AddressingMode::IndirectY,
 };
 
 Comma<T>: Vec<T> = {
@@ -94,6 +167,8 @@ extern {
 		"A" => Token::Register(Register::A, <SourceSpan>),
 		"X" => Token::Register(Register::X, <SourceSpan>),
 		"Y" => Token::Register(Register::Y, <SourceSpan>),
+		"+X" => Token::PlusRegister(Register::X, <SourceSpan>),
+		"+Y" => Token::PlusRegister(Register::Y, <SourceSpan>),
 		"SP" => Token::Register(Register::SP, <SourceSpan>),
 		"PSW" => Token::Register(Register::PSW, <SourceSpan>),
 		"YA" => Token::Register(Register::YA, <SourceSpan>),
@@ -111,12 +186,19 @@ extern {
 		"#" => Token::Hash(<SourceOffset>),
 		"," => Token::Comma(<SourceOffset>),
 		"+" => Token::Plus(<SourceOffset>),
+		"*" => Token::Star(<SourceOffset>),
+		"-" => Token::Minus(<SourceOffset>),
 		"/" => Token::Slash(<SourceOffset>),
 		"(" => Token::OpenParenthesis(<SourceOffset>),
 		")" => Token::CloseParenthesis(<SourceOffset>),
+		"[" => Token::OpenIndexingParenthesis(<SourceOffset>),
+		"]" => Token::CloseIndexingParenthesis(<SourceOffset>),
 		":" => Token::Colon(<SourceOffset>),
 		"." => Token::Period(<SourceOffset>),
 		"=" => Token::Equals(<SourceOffset>),
 		"\n" => Token::Newline(<SourceOffset>),
+		// Do this once/if LALRPOP supports it
+		// #[cfg(test)]
+		";=" => Token::TestComment(<Vec<u8>>, <SourceSpan>),
 	}
 }

@@ -5,7 +5,6 @@ use std::mem::MaybeUninit;
 use std::sync::Arc;
 
 use miette::{SourceOffset, SourceSpan};
-use serde_variant::to_variant_name;
 
 use crate::error::{AssemblyCode, AssemblyError, TokenOrString};
 use crate::instruction::Mnemonic;
@@ -21,6 +20,8 @@ pub enum Token {
 	Identifier(String, SourceSpan),
 	/// Register name (this can never be used as an identifier).
 	Register(Register, SourceSpan),
+	/// + Register name; necessary for LALRPOP.
+	PlusRegister(Register, SourceSpan),
 	/// Start of a macro.
 	Macro(MacroSymbol, SourceSpan),
 	/// Literal number which was already parsed.
@@ -31,12 +32,20 @@ pub enum Token {
 	Comma(SourceOffset),
 	/// '+'
 	Plus(SourceOffset),
+	/// '-'
+	Minus(SourceOffset),
+	/// '*'
+	Star(SourceOffset),
 	/// '/'
 	Slash(SourceOffset),
 	/// '('
 	OpenParenthesis(SourceOffset),
 	/// ')'
 	CloseParenthesis(SourceOffset),
+	/// '(' but used for indexing addressing mode (necessary for LALRPOP)
+	OpenIndexingParenthesis(SourceOffset),
+	/// ')' but used for indexing addressing mode (necessary for LALRPOP)
+	CloseIndexingParenthesis(SourceOffset),
 	/// ':'
 	Colon(SourceOffset),
 	/// '.'
@@ -46,7 +55,7 @@ pub enum Token {
 	/// ASCII newline (\n).
 	Newline(SourceOffset),
 	/// Comments used for testing purposes.
-	#[cfg(test)]
+	// #[cfg(test)]
 	TestComment(Vec<u8>, SourceSpan),
 }
 
@@ -75,6 +84,7 @@ impl PartialEq for Token {
 	}
 }
 
+#[allow(clippy::match_same_arms)]
 impl Token {
 	/// Returns this token if it matches the given type. For all tokens that contain data, this data is ignored.
 	///
@@ -105,15 +115,20 @@ impl Token {
 			| (Self::Colon(..), Self::Colon(..))
 			| (Self::OpenParenthesis(..), Self::OpenParenthesis(..))
 			| (Self::CloseParenthesis(..), Self::CloseParenthesis(..))
+			| (Self::OpenIndexingParenthesis(..), Self::OpenIndexingParenthesis(..))
+			| (Self::CloseIndexingParenthesis(..), Self::CloseIndexingParenthesis(..))
 			| (Self::Hash(..), Self::Hash(..))
 			| (Self::Plus(..), Self::Plus(..))
+			| (Self::Star(..), Self::Star(..))
+			| (Self::Minus(..), Self::Minus(..))
 			| (Self::Slash(..), Self::Slash(..))
 			| (Self::Newline(..), Self::Newline(..))
 			| (Self::Comma(..), Self::Comma(..))
 			| (Self::Period(..), Self::Period(..)) => true,
 			(Self::Register(first, ..), Self::Register(second, ..)) => first == second,
+			(Self::PlusRegister(first, ..), Self::PlusRegister(second, ..)) => first == second,
 			(Self::Mnemonic(first, ..), Self::Mnemonic(second, ..)) => first == second,
-			#[cfg(test)]
+			// #[cfg(test)]
 			(Self::TestComment(..), Self::TestComment(..)) => true,
 			_ => false,
 		}
@@ -125,20 +140,25 @@ impl Token {
 		match self {
 			Self::Hash(location)
 			| Self::CloseParenthesis(location)
+			| Self::CloseIndexingParenthesis(location)
 			| Self::Colon(location)
 			| Self::Comma(location)
 			| Self::Equals(location)
+			| Self::Star(location)
+			| Self::Minus(location)
 			| Self::Newline(location)
 			| Self::OpenParenthesis(location)
+			| Self::OpenIndexingParenthesis(location)
 			| Self::Period(location)
 			| Self::Slash(location)
 			| Self::Plus(location) => (*location, SourceOffset::from(1)).into(),
 			Self::Identifier(_, location)
 			| Self::Number(_, location)
 			| Self::Register(_, location)
+			| Self::PlusRegister(_, location)
 			| Self::Mnemonic(_, location)
 			| Self::Macro(_, location) => *location,
-			#[cfg(test)]
+			// #[cfg(test)]
 			Self::TestComment(_, location) => *location,
 		}
 	}
@@ -159,12 +179,12 @@ impl Display for Token {
 			Self::Period(..) => "'.'",
 			Self::Plus(..) => "'+'",
 			Self::Equals(..) => "'='",
-			Self::OpenParenthesis(..) => "'('",
-			Self::CloseParenthesis(..) => "')'",
+			Self::CloseParenthesis(..) | Self::CloseIndexingParenthesis(..) => "')'",
+			Self::OpenIndexingParenthesis(..) | Self::OpenParenthesis(..) => "'('",
 			Self::Slash(..) => "'/'",
 			Self::Newline(..) => "new line",
 			Self::Colon(..) => "':'",
-			#[cfg(test)]
+			// #[cfg(test)]
 			Self::TestComment(..) => "test comment (';=')",
 			_ => unreachable!(),
 		})
@@ -198,7 +218,7 @@ impl<'a> TokenStream<'a> {
 	pub fn next(&mut self) -> Result<Token, AssemblyError> {
 		if self.is_end() {
 			Err(AssemblyError::UnexpectedEndOfTokens {
-				expected: TokenOrString::String("a token".to_string()),
+				expected: vec![TokenOrString::String("a token".to_string())],
 				location: self.tokens.last().map_or((0, 1).into(), Token::source_span),
 				src:      self.source.clone(),
 			})
@@ -223,7 +243,7 @@ impl<'a> TokenStream<'a> {
 	pub fn lookahead<const Amount: usize>(&self) -> Result<[Token; Amount], AssemblyError> {
 		let token_span =
 			self.tokens.get(self.index .. self.index + Amount).ok_or_else(|| AssemblyError::UnexpectedEndOfTokens {
-				expected: TokenOrString::String(format!("{} tokens", Amount)),
+				expected: vec![TokenOrString::String(format!("{} tokens", Amount))],
 				location: self.tokens.last().map_or((0, 1).into(), Token::source_span),
 				src:      self.source.clone(),
 			})?;
@@ -237,7 +257,7 @@ impl<'a> TokenStream<'a> {
 
 	pub fn end(&self) -> Result<&Token, AssemblyError> {
 		self.tokens.last().ok_or_else(|| AssemblyError::UnexpectedEndOfTokens {
-			expected: TokenOrString::String("a token".to_string()),
+			expected: vec![TokenOrString::String("a token".to_string())],
 			location: (0, 1).into(),
 			src:      self.source.clone(),
 		})

@@ -62,7 +62,7 @@ pub fn lex(source_code: Arc<AssemblyCode>) -> Result<Vec<Token>, AssemblyError> 
 				tokens.push(Token::Number(number, (index, size).into()));
 				index += size+1;
 			}
-			'#' | ',' | '+' | '(' | ')' | ':' | '.' | '/' | '=' => {
+			'#' | ',' | '+' | '-' | '*' | '(' | ')' | ':' | '.' | '/' | '=' => {
 				tokens.push(parse_single_char_tokens(chr, index.into()));
 				index += 1;
 			},
@@ -152,6 +152,8 @@ fn next_number(
 fn parse_single_char_tokens(chr: char, location: SourceOffset) -> Token {
 	match chr {
 		'+' => Token::Plus(location),
+		'-' => Token::Minus(location),
+		'*' => Token::Star(location),
 		',' => Token::Comma(location),
 		'#' => Token::Hash(location),
 		'(' => Token::OpenParenthesis(location),
@@ -161,24 +163,5 @@ fn parse_single_char_tokens(chr: char, location: SourceOffset) -> Token {
 		'.' => Token::Period(location),
 		'=' => Token::Equals(location),
 		_ => unreachable!(),
-	}
-}
-
-/// An API adaptor that allows us to pass the Vec<Token> we lexed into LALRPOP.
-pub struct LalrpopAdaptor(IntoIter<Token>);
-
-impl From<Vec<Token>> for LalrpopAdaptor {
-	fn from(vec: Vec<Token>) -> Self {
-		Self(vec.into_iter())
-	}
-}
-
-impl Iterator for LalrpopAdaptor {
-	type Item = Result<(usize, Token, usize), AssemblyError>;
-
-	fn next(&mut self) -> Option<Self::Item> {
-		self.0.next().map(|token| {
-			Ok((token.source_span().offset(), token.clone(), token.source_span().offset() + token.source_span().len()))
-		})
 	}
 }

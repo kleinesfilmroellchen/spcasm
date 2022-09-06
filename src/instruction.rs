@@ -3,6 +3,7 @@
 
 use std::fmt::{Display, Error, Formatter, UpperHex};
 use std::result::Result;
+use std::sync::Arc;
 
 use miette::SourceSpan;
 use serde::Serialize;
@@ -29,6 +30,24 @@ pub struct Instruction {
 	pub expected_value: Option<Vec<u8>>,
 	#[cfg(test)]
 	pub assembled_size: Option<u8>,
+}
+
+impl Default for Instruction {
+	fn default() -> Self {
+		Self {
+			label:                       None,
+			opcode:                      Opcode {
+				mnemonic:       Mnemonic::Nop,
+				first_operand:  None,
+				second_operand: None,
+			},
+			span:                        (0, 0).into(),
+			#[cfg(test)]
+			expected_value:              None,
+			#[cfg(test)]
+			assembled_size:              None,
+		}
+	}
 }
 
 /// An instruction's core data that's used to generate machine code.
@@ -172,6 +191,19 @@ impl Number {
 		}
 	}
 
+	/// Sets the given global label as the parent for all unresolved local labels.
+	pub fn set_global_label(&mut self, label: &Arc<GlobalLabel>) {
+		match self {
+			Self::Label(Label::Local(local)) => local.parent = Arc::downgrade(label),
+			Self::Negate(val) => val.set_global_label(label),
+			Self::Add(lhs, rhs) | Self::Subtract(lhs, rhs) | Self::Multiply(lhs, rhs) | Self::Divide(lhs, rhs) => {
+				lhs.set_global_label(label);
+				rhs.set_global_label(label);
+			},
+			Self::Literal(..) | Self::Label(Label::Global(..)) => (),
+		}
+	}
+
 	/// Extracts the actual value of this number.
 	/// # Panics
 	/// If the label was not yet resolved, this function panics as it assumes that that has already happened.
@@ -202,9 +234,10 @@ impl Number {
 				// Try to figure out whether this local label has been resolved in the parent.
 				// This is only necessary in local labels which are not refcounted to better distinguish them,
 				// so setting the address within the parent does not automatically set the address in all other identical local labels.
-				let parent = local.strong_parent();
-				parent.locals.get(&local.name).and_then(|parent_local| parent_local.location)
-					.map_or(self.clone(), Self::Literal)
+				if let Some(parent) = local.parent.upgrade() {
+					parent.locals.get(&local.name).and_then(|parent_local| parent_local.location)
+						.map_or(self.clone(), Self::Literal)
+				} else {self}
 			},
 			Number::Negate(number) => match number.try_resolve() {
 				Number::Literal(value) => Number::Literal(-value),
@@ -234,6 +267,12 @@ impl Number {
 impl From<MemoryAddress> for Number {
 	fn from(address: MemoryAddress) -> Self {
 		Self::Literal(address)
+	}
+}
+
+impl<T> From<(Number, T)> for Number {
+	fn from(value: (Number, T)) -> Self {
+		value.0
 	}
 }
 
@@ -293,6 +332,27 @@ pub enum AddressingMode {
 	CarryFlag,
 	/// A, X, Y, SP, ...
 	Register(Register),
+}
+
+impl AddressingMode {
+	/// Set this global label as the parent for all the unresolved local labels.
+	pub fn set_global_label(&mut self, label: &Arc<GlobalLabel>) {
+		match self {
+			Self::Immediate(number)
+			| Self::DirectPage(number)
+			| Self::DirectPageBit(number, ..)
+			| Self::DirectPageIndirectYIndexed(number, ..)
+			| Self::DirectPageXIndexed(number)
+			| Self::DirectPageXIndexedIndirect(number)
+			| Self::DirectPageYIndexed(number)
+			| Self::AddressBit(number, ..)
+			| Self::NegatedAddressBit(number, ..)
+			| Self::Address(number)
+			| Self::XIndexed(number)
+			| Self::YIndexed(number) => number.set_global_label(label),
+			_ => (),
+		}
+	}
 }
 
 impl Display for AddressingMode {

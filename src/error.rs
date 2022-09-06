@@ -2,6 +2,7 @@ use std::fmt::Display;
 use std::num::ParseIntError;
 use std::sync::Arc;
 
+use lalrpop_util::ParseError;
 use miette::{Diagnostic, MietteError, MietteSpanContents, SourceCode, SourceSpan, SpanContents};
 use thiserror::Error;
 
@@ -183,6 +184,17 @@ pub enum AssemblyError {
 		src:      Arc<AssemblyCode>,
 	},
 
+	#[error("Expected any of {}", expected.iter().map(std::string::ToString::to_string).collect::<Vec<_>>().join(", "))]
+	#[diagnostic(code(spcasm::syntax::expected_token), severity(Error))]
+	ExpectedTokens {
+		expected: Vec<TokenOrString>,
+		actual:   Token,
+		#[label("This {actual} is invalid here")]
+		location: SourceSpan,
+		#[source_code]
+		src:      Arc<AssemblyCode>,
+	},
+
 	#[error("Invalid number")]
 	#[diagnostic(code(spcasm::syntax::expected_token), severity(Error))]
 	InvalidNumber {
@@ -193,10 +205,10 @@ pub enum AssemblyError {
 		src:      Arc<AssemblyCode>,
 	},
 
-	#[error("Expected {expected}")]
+	#[error("Expected any of {}", expected.iter().map(std::string::ToString::to_string).collect::<Vec<_>>().join(", "))]
 	#[diagnostic(code(spcasm::syntax::expected_token), severity(Error))]
 	UnexpectedEndOfTokens {
-		expected: TokenOrString,
+		expected: Vec<TokenOrString>,
 		#[label("There should be a token here")]
 		location: SourceSpan,
 		#[source_code]
@@ -311,6 +323,32 @@ pub enum AssemblyError {
 		src:      Arc<AssemblyCode>,
 	},
 	//#endregion
+}
+
+impl AssemblyError {
+	pub fn from_lalrpop(error: ParseError<usize, Token, Self>, src: Arc<AssemblyCode>) -> Self {
+		match error {
+			ParseError::InvalidToken { location } => Self::UnexpectedCharacter {
+				chr: src.text.chars().nth(location).unwrap_or_default(),
+				location: (location, 1).into(),
+				src,
+			},
+			ParseError::UnrecognizedEOF { location, expected } => Self::UnexpectedEndOfTokens {
+				expected: expected.into_iter().map(TokenOrString::String).collect(),
+				location: (location, 1).into(),
+				src,
+			},
+			ParseError::UnrecognizedToken { token: (start, token, end), expected } => Self::ExpectedTokens {
+				expected: expected.into_iter().map(TokenOrString::String).collect(),
+				actual: token,
+				location: (start, end - start).into(),
+				src,
+			},
+			ParseError::ExtraToken { token: (start, _, end) } =>
+				Self::DanglingTokens { location: (start, end - start).into(), src },
+			ParseError::User { error } => error,
+		}
+	}
 }
 
 #[derive(Clone, Debug)]

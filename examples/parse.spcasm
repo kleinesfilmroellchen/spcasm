@@ -21,3 +21,8 @@ word $f707
 db zero_label, zero_label+$FF
 bytelabel: byte 0
 ; dl $50+3,$50/10,%1101
+
+MOV a,(40+X)
+MOV a,40
+MOV a,+(40)
+MOV a,--((40))

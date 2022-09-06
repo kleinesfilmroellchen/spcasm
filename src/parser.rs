@@ -1,7 +1,7 @@
 //! Parsing and AST.
 use std::collections::HashMap;
 use std::result::Result;
-use std::sync::Arc;
+use std::sync::{Arc, Weak};
 
 use miette::{SourceOffset, SourceSpan};
 
@@ -42,6 +42,45 @@ impl Environment {
 	#[must_use]
 	pub const fn new(source_code: Arc<AssemblyCode>) -> Self {
 		Self { labels: Vec::new(), source_code }
+	}
+
+	/// Fills in the global label references for all local labels. Existing ones are overwritten, so the labels are
+	/// always consistent.
+	/// # Errors
+	/// If a local label precedes any global labels.
+	pub fn fill_in_label_references(&self, program: &mut Vec<ProgramElement>) -> Result<(), AssemblyError> {
+		let mut current_global_label: Option<Arc<GlobalLabel>> = None;
+		for element in program {
+			// First match for label reference resolution in instruction position
+			match element {
+				// can't collapse the if into the pattern because then Rust has a stroke and thinks that
+				// actual_global_label is both initialized twice and possibly never.
+				ProgramElement::Instruction(Instruction { label: Some(Label::Local(ref mut local)), .. })
+				| ProgramElement::Macro(Macro { label: Some(Label::Local(ref mut local)), .. }) =>
+					if let Some(ref actual_global_label) = current_global_label {
+						local.parent = Arc::downgrade(actual_global_label);
+					} else {
+						return Err(AssemblyError::MissingGlobalLabel {
+							local_label: local.name.clone(),
+							src:         self.source_code.clone(),
+							location:    local.span,
+						});
+					},
+				ProgramElement::Instruction(Instruction { label: Some(Label::Global(ref global)), .. })
+				| ProgramElement::Macro(Macro { label: Some(Label::Global(ref global)), .. }) =>
+					current_global_label = Some(global.clone()),
+				_ => (),
+			}
+			if let ProgramElement::Instruction(Instruction {
+				opcode: Opcode { first_operand, second_operand, .. },
+				..
+			}) = element && let Some(ref actual_global_label) = current_global_label
+			{
+				if let Some(mode) = first_operand.as_mut() { mode.set_global_label(actual_global_label) }
+				if let Some(mode) = second_operand.as_mut() { mode.set_global_label(actual_global_label) }
+			}
+		}
+		Ok(())
 	}
 
 	/// Parses the token stream into a list of instructions while keeping track of labels internally. Note that no label
@@ -238,14 +277,14 @@ impl Environment {
 
 		if first_addressing_mode.is_end() {
 			return Err(AssemblyError::UnexpectedEndOfTokens {
-				expected: "first argument".into(),
+				expected: vec!["first argument".into()],
 				location: mnemonic_token_location,
 				src:      self.source_code.clone(),
 			});
 		}
 		if second_addressing_mode.is_end() {
 			return Err(AssemblyError::UnexpectedEndOfTokens {
-				expected: "second argument".into(),
+				expected: vec!["second argument".into()],
 				location: first_addressing_mode.end().unwrap().source_span(),
 				src:      self.source_code.clone(),
 			});
@@ -358,7 +397,11 @@ impl Environment {
 		let source_code_copy = self.source_code.clone();
 		let end_location = tokens.end().map_or((0, 0).into(), Token::source_span);
 		let missing_token_error = |expected| {
-			|| AssemblyError::UnexpectedEndOfTokens { expected, location: end_location, src: source_code_copy.clone() }
+			|| AssemblyError::UnexpectedEndOfTokens {
+				expected: vec![expected],
+				location: end_location,
+				src:      source_code_copy.clone(),
+			}
 		};
 
 		match tokens.next()? {
@@ -625,7 +668,7 @@ impl Environment {
 			// '+' does of course not require a closing parenthesis unlike above.
 			Token::Plus(..) => self.parse_number(tokens, current_global_label.clone()),
 			Token::Newline(span) => Err(AssemblyError::UnexpectedEndOfTokens {
-				expected: TokenOrString::Token(Token::Number(0, span.into())),
+				expected: vec![TokenOrString::Token(Token::Number(0, span.into()))],
 				location: span.into(),
 				src:      self.source_code.clone(),
 			}),
@@ -694,5 +737,24 @@ impl Environment {
 				src:      self.source_code.clone(),
 			}),
 		}
+	}
+}
+
+/// Creates the direct page addressing mode if the number is a legal direct page address.
+/// # Panics
+/// To-do: Handle errors properly in the given functions!
+pub fn try_make_direct_page_addressing_mode<T>(
+	value: T,
+	dp_mode: impl FnOnce(T) -> AddressingMode,
+	non_dp_mode: impl FnOnce(T) -> AddressingMode,
+) -> AddressingMode
+where
+	T: Into<Number> + Clone,
+{
+	let number: Number = value.clone().into().try_resolve();
+	println!("{:#?}", number);
+	match number {
+		Number::Literal(literal) if literal <= 0xFF => dp_mode(value),
+		_ => non_dp_mode(value),
 	}
 }

@@ -8,6 +8,9 @@
 	get_mut_unchecked,
 	iterator_try_collect,
 	if_let_guard,
+	int_log,
+	const_option_ext,
+	const_for,
 	let_chains,
 	option_result_contains,
 	maybe_uninit_uninit_array,
@@ -26,6 +29,7 @@ use std::fs::File;
 use error::AssemblyCode;
 
 pub mod assembler;
+pub mod brr;
 pub mod elf;
 mod error;
 pub mod instruction;

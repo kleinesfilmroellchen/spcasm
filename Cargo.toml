@@ -13,6 +13,9 @@ object = { version = "0.28.3", features = ["write_core"] }
 serde_variant = "0.1.1"
 thiserror = "1.0.30"
 lalrpop-util = "0.19"
+wav = "1.0.0"
+num-traits = "0.2"
+num-derive = "0.3"
 
 [build-dependencies]
 lalrpop = { version = "0.19", default-features = false }

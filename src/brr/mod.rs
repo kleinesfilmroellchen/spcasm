@@ -3,6 +3,7 @@
 
 use std::convert::TryInto;
 
+use fixed::traits::LossyInto;
 use num_derive::FromPrimitive;
 use num_traits::FromPrimitive;
 
@@ -10,9 +11,13 @@ use num_traits::FromPrimitive;
 type EncodedSample = u8;
 /// The DAC internally uses 16-bit signed samples.
 type DecodedSample = i16;
+/// This matches the fixed-point arithmetic (16.16) used in the SNES DAC.
+type FilterCoefficient = fixed::FixedI32<fixed::types::extra::U16>;
 
 type DecodedBlockSamples = [DecodedSample; 16];
 type EncodedBlockSamples = [EncodedSample; 16];
+
+type FilterCoefficients = [FilterCoefficient; 2];
 
 /// A 9-byte encoded BRR block.
 ///
@@ -58,6 +63,75 @@ impl Block {
 
 		(encoded, necessary_shift as i8)
 	}
+
+	pub const fn is_end(&self) -> bool {
+		self.header.flags.is_end()
+	}
+
+	pub const fn is_loop(&self) -> bool {
+		self.header.flags.is_loop()
+	}
+
+	pub fn decode(&self, warm_up_samples: [DecodedSample; 2]) -> (DecodedBlockSamples, FilterCoefficients) {
+		(match self.header.filter {
+			LPCFilter::Zero => Self::internal_decode_0,
+			LPCFilter::One => Self::internal_decode_1,
+			LPCFilter::Two => Self::internal_decode_2,
+			LPCFilter::Three => Self::internal_decode_3,
+		})(self, warm_up_samples)
+	}
+
+	fn internal_decode_0(&self, _warm_up_samples: [DecodedSample; 2]) -> (DecodedBlockSamples, FilterCoefficients) {
+		let mut decoded_samples: DecodedBlockSamples = [0; 16];
+		for (decoded, encoded) in decoded_samples.iter_mut().zip(self.encoded_samples) {
+			// This conversion pipeline ensures that signed numbers stay signed.
+			*decoded = i16::from(encoded as i8) << self.header.real_shift;
+		}
+		(decoded_samples, [fixed(decoded_samples[14]), fixed(decoded_samples[15])])
+	}
+
+	fn internal_decode_1(&self, mut warm_up_samples: [DecodedSample; 2]) -> (DecodedBlockSamples, FilterCoefficients) {
+		self.internal_decode_lpc([fixed(warm_up_samples[0]), fixed(warm_up_samples[1])], [
+			FilterCoefficient::from_num(15) / 16,
+			0i16.into(),
+		])
+	}
+
+	fn internal_decode_2(&self, warm_up_samples: [DecodedSample; 2]) -> (DecodedBlockSamples, FilterCoefficients) {
+		self.internal_decode_lpc([fixed(warm_up_samples[0]), fixed(warm_up_samples[1])], [
+			FilterCoefficient::from_num(61) / 32,
+			FilterCoefficient::from_num(15) / 16,
+		])
+	}
+
+	fn internal_decode_3(&self, warm_up_samples: [DecodedSample; 2]) -> (DecodedBlockSamples, FilterCoefficients) {
+		self.internal_decode_lpc([fixed(warm_up_samples[0]), fixed(warm_up_samples[1])], [
+			FilterCoefficient::from_num(115) / 64,
+			FilterCoefficient::from_num(13) / 16,
+		])
+	}
+
+	fn internal_decode_lpc(
+		&self,
+		mut warm_up_samples: FilterCoefficients,
+		filter_coefficients: FilterCoefficients,
+	) -> (DecodedBlockSamples, FilterCoefficients) {
+		let mut decoded_samples: DecodedBlockSamples = [0; 16];
+		for (decoded, encoded) in decoded_samples.iter_mut().zip(self.encoded_samples) {
+			let decimal_decoded = fixed(i16::from(encoded as i8) << self.header.real_shift)
+				+ filter_coefficients[0] * warm_up_samples[0]
+				+ filter_coefficients[1] * warm_up_samples[0];
+			*decoded = decimal_decoded.lossy_into();
+			// Shift last samples through the buffer
+			warm_up_samples[1] = warm_up_samples[0];
+			warm_up_samples[0] = decimal_decoded;
+		}
+		(decoded_samples, warm_up_samples)
+	}
+}
+
+fn fixed(int: i16) -> FilterCoefficient {
+	FilterCoefficient::from(int)
 }
 
 impl From<[u8; 9]> for Block {
@@ -143,4 +217,18 @@ enum LoopEndFlags {
 	Ignored = 2,
 	/// Loop back to the sample specified in the sample table.
 	Loop = 3,
+}
+
+impl LoopEndFlags {
+	pub fn new(is_end: bool, is_loop: bool) -> Self {
+		Self::from_u8(if is_loop { 0b10 } else { 0 } | if is_end { 0b01 } else { 0 }).unwrap()
+	}
+
+	pub const fn is_end(self) -> bool {
+		self as u8 & 0b01 > 0
+	}
+
+	pub const fn is_loop(self) -> bool {
+		self as u8 & 0b10 > 0
+	}
 }

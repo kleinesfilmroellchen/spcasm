@@ -7,6 +7,8 @@ use fixed::traits::LossyInto;
 use num_derive::FromPrimitive;
 use num_traits::FromPrimitive;
 
+#[cfg(test)] mod test;
+
 /// Only the lower 4 bits are used.
 type EncodedSample = u8;
 /// The DAC internally uses 16-bit signed samples.
@@ -31,6 +33,10 @@ struct Block {
 
 // Most of the encode/decode functions can *almost* be const...
 impl Block {
+	pub const fn new(header: Header, encoded_samples: EncodedBlockSamples) -> Self {
+		Self { header, encoded_samples }
+	}
+
 	/// Encode the given sample block using the most accurate filter possible. The given
 	pub fn encode(warm_up_samples: [DecodedSample; 2], samples: DecodedBlockSamples, flags: LoopEndFlags) -> Self {
 		todo!()
@@ -49,12 +55,15 @@ impl Block {
 		_warm_up_samples: [DecodedSample; 2],
 		samples: DecodedBlockSamples,
 	) -> (EncodedBlockSamples, i8) {
-		let maximum_sample = *samples.iter().max_by_key(|x| x.checked_abs().unwrap_or(i16::MAX)).unwrap_or(&0);
+		// Comparing the unsigned values means that negative values are always larger, as they have their highest bit
+		// set. This is intended!
+		let maximum_sample = *samples.iter().max_by_key(|x| **x as u16).unwrap_or(&0);
 		let maximum_bits_used = match maximum_sample {
 			i16::MIN ..= -1 => i16::BITS,
 			0 => 0,
 			_ => maximum_sample.ilog2(),
 		};
+		// Only shift as far as necessary to get the most significant bits within the 4-bit value we can store.
 		let necessary_shift = maximum_bits_used.saturating_sub(4);
 		let mut encoded = [0; 16];
 		for (encoded, sample) in encoded.iter_mut().zip(samples.iter()) {

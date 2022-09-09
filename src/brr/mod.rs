@@ -180,7 +180,8 @@ impl Block {
 		let mut decoded_samples: DecodedBlockSamples = [0; 16];
 		for (decoded, encoded) in decoded_samples.iter_mut().zip(self.encoded_samples) {
 			// TODO: Check whether overflowing (i.e. wrap-around) arithmetic is correct here.
-			let decimal_decoded = fixed(i16::from(encoded as i8) << self.header.real_shift)
+			// The convoluted cast ensures we retain the nybble sign bit.
+			let decimal_decoded = fixed(i16::from(((encoded as i8) << 4) >> 4) << self.header.real_shift)
 				.wrapping_add(filter_coefficients[0].wrapping_mul(warm_up_samples[0]))
 				.wrapping_add(filter_coefficients[1].wrapping_mul(warm_up_samples[1]));
 			*decoded = decimal_decoded.round_to_zero().az::<i16>();
@@ -206,8 +207,22 @@ fn fixed_arr(ints: DecodedBlockSamples) -> DecimalBlockSamples {
 
 impl From<[u8; 9]> for Block {
 	fn from(data: [u8; 9]) -> Self {
-		Self { header: data[0].into(), encoded_samples: data[1 .. 9].try_into().unwrap() }
+		Self {
+			header:          data[0].into(),
+			encoded_samples: split_bytes_into_nybbles(data[1 .. 9].try_into().unwrap()),
+		}
 	}
+}
+
+fn split_bytes_into_nybbles(bytes: [u8; 8]) -> EncodedBlockSamples {
+	let mut nybbles: EncodedBlockSamples = [0; 16];
+	for (index, byte) in bytes.into_iter().enumerate() {
+		let index = index * 2;
+		// most significant nybble order (is that even a word?)
+		nybbles[index] = (byte & 0xf0) >> 4;
+		nybbles[index + 1] = byte & 0x0f;
+	}
+	nybbles
 }
 
 /// A BRR header byte.

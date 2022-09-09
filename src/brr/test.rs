@@ -61,3 +61,16 @@ fn header_decode() {
 	assert_eq!(Header::from(filter3).filter, LPCFilter::Three);
 	assert_eq!(Header::from(ignored).flags, LoopEndFlags::Ignored);
 }
+
+#[test]
+fn full_decode_filter_0() {
+	// https://youtu.be/bgh5_gxT2eg?t=1230
+	const data: [u8; 9] = [0x90, 0x00, 0x01, 0x64, 0xae, 0x76, 0x46, 0x42, 0x3e]; //, 0x8c, 0xa0, 0x07, 0x77, 0x55, 0xf9,
+																			  //, 0xb8, 0x75, 0x64];
+	let block = Block::from(data);
+	assert_eq!(block.header.real_shift, 8);
+	assert_eq!(block.header.filter, LPCFilter::Zero);
+	assert_eq!(block.decode([0, 0]).0, [
+		0, 0, 0, 0x100, 0x600, 0x400, -0x600, -0x200, 0x700, 0x600, 0x400, 0x600, 0x400, 0x200, 0x300, -0x200
+	]);
+}

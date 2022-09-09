@@ -6,7 +6,7 @@
 
 use super::*;
 
-const zero_warmup: FilterCoefficients = [FilterCoefficient::ZERO, FilterCoefficient::ZERO];
+const zero_warmup: WarmUpSamples = [0, 0];
 
 #[test]
 fn no_shift_filter_0_roundtrip() {
@@ -63,14 +63,22 @@ fn header_decode() {
 }
 
 #[test]
-fn full_decode_filter_0() {
+fn full_decode() {
 	// https://youtu.be/bgh5_gxT2eg?t=1230
-	const data: [u8; 9] = [0x90, 0x00, 0x01, 0x64, 0xae, 0x76, 0x46, 0x42, 0x3e]; //, 0x8c, 0xa0, 0x07, 0x77, 0x55, 0xf9,
-																			  //, 0xb8, 0x75, 0x64];
-	let block = Block::from(data);
-	assert_eq!(block.header.real_shift, 8);
-	assert_eq!(block.header.filter, LPCFilter::Zero);
-	assert_eq!(block.decode([0, 0]).0, [
+	const data_block_1: [u8; 9] = [0x90, 0x00, 0x01, 0x64, 0xae, 0x76, 0x46, 0x42, 0x3e];
+	const data_block_2: [u8; 9] = [0x8c, 0xa0, 0x07, 0x77, 0x55, 0xf9, 0xb8, 0x75, 0x64];
+	let block_1 = Block::from(data_block_1);
+	assert_eq!(block_1.header.real_shift, 8);
+	assert_eq!(block_1.header.filter, LPCFilter::Zero);
+	let (block_1_decoded, warm_up) = block_1.decode([0, 0]);
+	assert_eq!(block_1_decoded, [
 		0, 0, 0, 0x100, 0x600, 0x400, -0x600, -0x200, 0x700, 0x600, 0x400, 0x600, 0x400, 0x200, 0x300, -0x200
+	]);
+	let block_2 = Block::from(data_block_2);
+	assert_eq!(block_2.header.real_shift, 7);
+	assert_eq!(block_2.header.filter, LPCFilter::Three);
+	assert_eq!(block_2.decode(warm_up).0, [
+		-0x908, -0xe9b, -0x12e9, -0x129e, -0xe97, -0x798, 0xb4, 0x9ee, 0x10c4, 0x128e, 0x1137, 0xbda, 0xace, 0xc48,
+		0x1049, 0x1548
 	]);
 }

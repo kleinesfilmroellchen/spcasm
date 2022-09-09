@@ -109,8 +109,7 @@ impl Block {
 		let necessary_shift = Self::necessary_shift_for(&decimal_encoded_samples);
 		let mut encoded = [0; 16];
 		for (encoded, sample) in encoded.iter_mut().zip(decimal_encoded_samples.iter()) {
-			// TODO: Check whether this rounding is correct.
-			*encoded = sample.round_to_zero().az::<i16>().wrapping_shr(necessary_shift) as u8;
+			*encoded = sample.floor().az::<i16>().wrapping_shr(necessary_shift) as u8;
 		}
 
 		(encoded, necessary_shift as i8)
@@ -137,7 +136,7 @@ impl Block {
 		samples
 			.iter()
 			.map(|x| {
-				let rounded = x.round_to_zero().az::<i16>();
+				let rounded = x.floor().az::<i16>();
 				match rounded {
 					i16::MIN ..= -1 => (-rounded).ilog2(),
 					0 => 0,
@@ -165,29 +164,26 @@ impl Block {
 	/// Decodes this block and returns the decoded samples as well as the last two internal fixed-point samples used for
 	/// filters. These two should be fed into the next decode call as the warm-up samples.
 	#[must_use]
-	pub fn decode(&self, warm_up_samples: WarmUpSamples) -> (DecodedBlockSamples, FilterCoefficients) {
-		self.internal_decode_lpc(
-			[fixed(warm_up_samples[0]), fixed(warm_up_samples[1])],
-			self.header.filter.coefficient(),
-		)
+	pub fn decode(&self, warm_up_samples: WarmUpSamples) -> (DecodedBlockSamples, WarmUpSamples) {
+		self.internal_decode_lpc(warm_up_samples, self.header.filter.coefficient())
 	}
 
 	fn internal_decode_lpc(
 		&self,
-		mut warm_up_samples: FilterCoefficients,
+		mut warm_up_samples: WarmUpSamples,
 		filter_coefficients: FilterCoefficients,
-	) -> (DecodedBlockSamples, FilterCoefficients) {
+	) -> (DecodedBlockSamples, WarmUpSamples) {
 		let mut decoded_samples: DecodedBlockSamples = [0; 16];
 		for (decoded, encoded) in decoded_samples.iter_mut().zip(self.encoded_samples) {
 			// TODO: Check whether overflowing (i.e. wrap-around) arithmetic is correct here.
 			// The convoluted cast ensures we retain the nybble sign bit.
 			let decimal_decoded = fixed(i16::from(((encoded as i8) << 4) >> 4) << self.header.real_shift)
-				.wrapping_add(filter_coefficients[0].wrapping_mul(warm_up_samples[0]))
-				.wrapping_add(filter_coefficients[1].wrapping_mul(warm_up_samples[1]));
-			*decoded = decimal_decoded.round_to_zero().az::<i16>();
+				.wrapping_add(filter_coefficients[0].wrapping_mul(fixed(warm_up_samples[0]))).floor()
+				.wrapping_add(filter_coefficients[1].wrapping_mul(fixed(warm_up_samples[1]))).floor();
+			*decoded = decimal_decoded.az::<i16>();
 			// Shift last samples through the buffer
 			warm_up_samples[1] = warm_up_samples[0];
-			warm_up_samples[0] = decimal_decoded;
+			warm_up_samples[0] = *decoded;
 		}
 		(decoded_samples, warm_up_samples)
 	}
@@ -288,7 +284,7 @@ pub enum LPCFilter {
 	/// Filter 2, something extremely close to polynomial order 2 predictive coding (which would be s[t] + 2* s[t-1] -
 	/// s[t-2]).
 	Two = 2,
-	/// Filter 3, again very close to polynomial order 3 predictive coding but more off than filter 2. I can't make
+	/// Filter 3, again very close to polynomial order 2 predictive coding but more off than filter 2. I can't make
 	/// sense of this one.
 	Three = 3,
 }
@@ -301,8 +297,8 @@ impl LPCFilter {
 		match self {
 			Self::Zero => [0i16.into(), 0i16.into()],
 			Self::One => [FilterCoefficient::from_num(15) / 16, 0i16.into()],
-			Self::Two => [FilterCoefficient::from_num(61) / 32, FilterCoefficient::from_num(15) / 16],
-			Self::Three => [FilterCoefficient::from_num(115) / 64, FilterCoefficient::from_num(13) / 16],
+			Self::Two => [FilterCoefficient::from_num(61) / 32, -FilterCoefficient::from_num(15) / 16],
+			Self::Three => [FilterCoefficient::from_num(115) / 64, -FilterCoefficient::from_num(13) / 16],
 		}
 	}
 

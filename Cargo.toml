@@ -5,8 +5,20 @@ name = "spcasm"
 version = "0.1.0"
 build = "build.rs"
 
+[lib]
+name = "spcasm"
+
+[[bin]]
+name = "spcasm"
+
+[[bin]]
+name = "brri"
+path = "src/brr/interactive.rs"
+required-features = ["clap"]
+
 [features]
 test_bootrom = []
+clap = ["dep:clap"]
 
 [dependencies]
 object = { version = "0.28.3", features = ["write_core"] }
@@ -17,6 +29,7 @@ wav = "1.0.0"
 num-traits = "0.2"
 num-derive = "0.3"
 fixed = "1"
+az = "1.2"
 
 [build-dependencies]
 lalrpop = { version = "0.19", default-features = false }
@@ -28,6 +41,12 @@ version = "4.6.0"
 [dependencies.serde]
 features = ["derive"]
 version = "1.0.136"
+
+# Only compile clap for the interactive BRR CLI. 
+[dependencies.clap]
+version = "3"
+optional = true
+features = ["derive"]
 
 [dependencies.spcasm_derive]
 path = "spcasm_derive"

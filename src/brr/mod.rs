@@ -1,8 +1,15 @@
 //! BRR (Bit Rate Reduced) a.k.a. SNES ADPCM sample format parsing, writing and reading.
-#![allow(clippy::cast_possible_wrap, clippy::cast_possible_truncation, clippy::fallible_impl_from, clippy::use_self)]
+#![allow(
+	clippy::cast_possible_wrap,
+	clippy::cast_possible_truncation,
+	clippy::cast_sign_loss,
+	clippy::fallible_impl_from,
+	clippy::use_self
+)]
 
 use std::convert::TryInto;
 
+use az::Az;
 use fixed::traits::LossyInto;
 use num_derive::FromPrimitive;
 use num_traits::FromPrimitive;
@@ -10,114 +17,146 @@ use num_traits::FromPrimitive;
 #[cfg(test)] mod test;
 
 /// Only the lower 4 bits are used.
-type EncodedSample = u8;
+pub type EncodedSample = u8;
 /// The DAC internally uses 16-bit signed samples.
-type DecodedSample = i16;
+pub type DecodedSample = i16;
 /// This matches the fixed-point arithmetic (16.16) used in the SNES DAC.
 type FilterCoefficient = fixed::FixedI32<fixed::types::extra::U16>;
 
-type DecodedBlockSamples = [DecodedSample; 16];
-type EncodedBlockSamples = [EncodedSample; 16];
+/// A block's samples, decoded.
+pub type DecodedBlockSamples = [DecodedSample; 16];
+/// A block's samples, encoded.
+pub type EncodedBlockSamples = [EncodedSample; 16];
 
 type FilterCoefficients = [FilterCoefficient; 2];
+type WarmUpSamples = [DecodedSample; 2];
+/// A block's samples' representation internally in the DAC.
+type DecimalBlockSamples = [FilterCoefficient; 16];
 
 /// A 9-byte encoded BRR block.
 ///
 /// Each BRR block starts with a header byte followed by 8 sample bytes. Each sample byte in turn holds 2 4-bit samples.
 /// each.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
-struct Block {
-	header:          Header,
-	encoded_samples: EncodedBlockSamples,
+pub struct Block {
+	/// The header of this block.
+	pub header:          Header,
+	/// The encoded samples in this block.
+	pub encoded_samples: EncodedBlockSamples,
 }
 
-// Most of the encode/decode functions can *almost* be const...
+// Most of the encode/decode functions can *almost* be const... but the loops and iterators destroy everything even
+// though they are even unrolled on optimization level 3.
 impl Block {
+	/// Create a new block from already-encoded data.
+	#[must_use]
 	pub const fn new(header: Header, encoded_samples: EncodedBlockSamples) -> Self {
 		Self { header, encoded_samples }
 	}
 
-	/// Encode the given sample block using the most accurate filter possible. The given
-	pub fn encode(warm_up_samples: [DecodedSample; 2], samples: DecodedBlockSamples, flags: LoopEndFlags) -> Self {
-		todo!()
+	/// Encode the given sample block using the most accurate filter possible. The given warm-up samples are possibly
+	/// used in some filter types and should come from the previously encoded filter block.
+	#[must_use]
+	#[allow(clippy::missing_panics_doc)]
+	pub fn encode(warm_up_samples: WarmUpSamples, samples: DecodedBlockSamples, flags: LoopEndFlags) -> Self {
+		// FIXME: This might be too slow. We try all four filters and return the most accurate encode.
+		[
+			Self::encode_with_filter(warm_up_samples, samples, LPCFilter::Zero, flags),
+			Self::encode_with_filter(warm_up_samples, samples, LPCFilter::One, flags),
+			Self::encode_with_filter(warm_up_samples, samples, LPCFilter::Two, flags),
+			Self::encode_with_filter(warm_up_samples, samples, LPCFilter::Three, flags),
+		]
+		.into_iter()
+		.min_by_key(|encoded| encoded.total_encode_error(warm_up_samples, &samples))
+		.unwrap()
 	}
 
-	/// Encode the given sample block using filter 0. This is necessary for the first block of a sample and recommended
-	/// for the first block at the loop point.
-	pub fn encode_0(samples: DecodedBlockSamples, flags: LoopEndFlags) -> Self {
-		const zeroes: [DecodedSample; 2] = [0, 0];
-		let (encoded, real_shift) = Self::internal_encode_0(zeroes, samples);
-		Self { header: Header { filter: LPCFilter::Zero, flags, real_shift }, encoded_samples: encoded }
+	/// Calculate and return the total encoding error that this block has, given that it was encoded from the
+	/// `real_samples`. This is an important internal utility function for finding the best filter for these samples.
+	#[must_use]
+	pub fn total_encode_error(&self, warm_up_samples: WarmUpSamples, real_samples: &DecodedBlockSamples) -> u128 {
+		let (decoded, _) = self.decode(warm_up_samples);
+		decoded.iter().zip(real_samples.iter()).map(|(actual, expected)| u128::from(actual.abs_diff(*expected))).sum()
 	}
 
-	#[allow(clippy::cast_sign_loss)]
-	fn internal_encode_0(
-		_warm_up_samples: [DecodedSample; 2],
+	/// Encode the given sample block using the given filter.
+	#[must_use]
+	pub fn encode_with_filter(
+		warm_up_samples: WarmUpSamples,
 		samples: DecodedBlockSamples,
+		filter: LPCFilter,
+		flags: LoopEndFlags,
+	) -> Self {
+		let (encoded, real_shift) = Self::internal_encode_lpc(warm_up_samples, samples, filter.coefficient());
+		Self { header: Header { real_shift, filter, flags }, encoded_samples: encoded }
+	}
+
+	fn internal_encode_lpc(
+		mut warm_up_samples: WarmUpSamples,
+		samples: DecodedBlockSamples,
+		filter_coefficients: FilterCoefficients,
 	) -> (EncodedBlockSamples, i8) {
+		let mut previous_samples = [fixed(warm_up_samples[0]), fixed(warm_up_samples[1])];
+		// Let's first encode without concerning ourselves with the shift amount. That can be dealt with later.
+		let mut decimal_encoded_samples = [FilterCoefficient::ZERO; 16];
+		for (decimal_encoded, sample) in decimal_encoded_samples.iter_mut().zip(samples.iter()) {
+			let fixed_sample = fixed(*sample);
+			*decimal_encoded = fixed_sample
+				- previous_samples[0].checked_div(filter_coefficients[0]).unwrap_or(FilterCoefficient::ZERO)
+				- previous_samples[1].checked_div(filter_coefficients[1]).unwrap_or(FilterCoefficient::ZERO);
+			previous_samples[1] = previous_samples[0];
+			previous_samples[0] = fixed_sample;
+		}
+		println!("vv before shift: {:?}", decimal_encoded_samples);
+		let necessary_shift = Self::necessary_shift_for(&decimal_encoded_samples);
+		let mut encoded = [0; 16];
+		for (encoded, sample) in encoded.iter_mut().zip(decimal_encoded_samples.iter()) {
+			// TODO: Check whether this rounding is correct.
+			*encoded = sample.round_to_zero().az::<i16>().wrapping_shr(necessary_shift) as u8;
+		}
+
+		(encoded, necessary_shift as i8)
+	}
+
+	fn necessary_shift_for(samples: &DecimalBlockSamples) -> u32 {
 		// Comparing the unsigned values means that negative values are always larger, as they have their highest bit
 		// set. This is intended!
-		let maximum_sample = *samples.iter().max_by_key(|x| **x as u16).unwrap_or(&0);
+		// TODO: Check whether this rounding is correct.
+		let maximum_sample = samples
+			.iter()
+			.max_by_key(|x| x.round_to_zero().az::<i16>() as u16)
+			.unwrap_or(&fixed(0))
+			.round_to_zero()
+			.az::<i16>();
 		let maximum_bits_used = match maximum_sample {
 			i16::MIN ..= -1 => i16::BITS,
 			0 => 0,
 			_ => maximum_sample.ilog2(),
 		};
 		// Only shift as far as necessary to get the most significant bits within the 4-bit value we can store.
-		let necessary_shift = maximum_bits_used.saturating_sub(4);
-		let mut encoded = [0; 16];
-		for (encoded, sample) in encoded.iter_mut().zip(samples.iter()) {
-			*encoded = sample.wrapping_shr(necessary_shift) as u8;
-		}
-
-		(encoded, necessary_shift as i8)
+		maximum_bits_used.saturating_sub(4)
 	}
 
+	/// Returns whether playback will end or loop after this block.
+	#[must_use]
 	pub const fn is_end(&self) -> bool {
 		self.header.flags.is_end()
 	}
 
+	/// Returns whether playback will loop after this block.
+	#[must_use]
 	pub const fn is_loop(&self) -> bool {
-		self.header.flags.is_loop()
+		self.header.flags.will_loop_afterwards()
 	}
 
-	pub fn decode(&self, warm_up_samples: [DecodedSample; 2]) -> (DecodedBlockSamples, FilterCoefficients) {
-		(match self.header.filter {
-			LPCFilter::Zero => Self::internal_decode_0,
-			LPCFilter::One => Self::internal_decode_1,
-			LPCFilter::Two => Self::internal_decode_2,
-			LPCFilter::Three => Self::internal_decode_3,
-		})(self, warm_up_samples)
-	}
-
-	fn internal_decode_0(&self, _warm_up_samples: [DecodedSample; 2]) -> (DecodedBlockSamples, FilterCoefficients) {
-		let mut decoded_samples: DecodedBlockSamples = [0; 16];
-		for (decoded, encoded) in decoded_samples.iter_mut().zip(self.encoded_samples) {
-			// This conversion pipeline ensures that signed numbers stay signed.
-			*decoded = i16::from(encoded as i8) << self.header.real_shift;
-		}
-		(decoded_samples, [fixed(decoded_samples[14]), fixed(decoded_samples[15])])
-	}
-
-	fn internal_decode_1(&self, mut warm_up_samples: [DecodedSample; 2]) -> (DecodedBlockSamples, FilterCoefficients) {
-		self.internal_decode_lpc([fixed(warm_up_samples[0]), fixed(warm_up_samples[1])], [
-			FilterCoefficient::from_num(15) / 16,
-			0i16.into(),
-		])
-	}
-
-	fn internal_decode_2(&self, warm_up_samples: [DecodedSample; 2]) -> (DecodedBlockSamples, FilterCoefficients) {
-		self.internal_decode_lpc([fixed(warm_up_samples[0]), fixed(warm_up_samples[1])], [
-			FilterCoefficient::from_num(61) / 32,
-			FilterCoefficient::from_num(15) / 16,
-		])
-	}
-
-	fn internal_decode_3(&self, warm_up_samples: [DecodedSample; 2]) -> (DecodedBlockSamples, FilterCoefficients) {
-		self.internal_decode_lpc([fixed(warm_up_samples[0]), fixed(warm_up_samples[1])], [
-			FilterCoefficient::from_num(115) / 64,
-			FilterCoefficient::from_num(13) / 16,
-		])
+	/// Decodes this block and returns the decoded samples as well as the last two internal fixed-point samples used for
+	/// filters. These two should be fed into the next decode call as the warm-up samples.
+	#[must_use]
+	pub fn decode(&self, warm_up_samples: WarmUpSamples) -> (DecodedBlockSamples, FilterCoefficients) {
+		self.internal_decode_lpc(
+			[fixed(warm_up_samples[0]), fixed(warm_up_samples[1])],
+			self.header.filter.coefficient(),
+		)
 	}
 
 	fn internal_decode_lpc(
@@ -127,10 +166,11 @@ impl Block {
 	) -> (DecodedBlockSamples, FilterCoefficients) {
 		let mut decoded_samples: DecodedBlockSamples = [0; 16];
 		for (decoded, encoded) in decoded_samples.iter_mut().zip(self.encoded_samples) {
+			// TODO: Check whether overflowing (i.e. wrap-around) arithmetic is correct here.
 			let decimal_decoded = fixed(i16::from(encoded as i8) << self.header.real_shift)
-				+ filter_coefficients[0] * warm_up_samples[0]
-				+ filter_coefficients[1] * warm_up_samples[0];
-			*decoded = decimal_decoded.lossy_into();
+				.wrapping_add(filter_coefficients[0].wrapping_mul(warm_up_samples[0]))
+				.wrapping_add(filter_coefficients[1].wrapping_mul(warm_up_samples[1]));
+			*decoded = decimal_decoded.round_to_zero().az::<i16>();
 			// Shift last samples through the buffer
 			warm_up_samples[1] = warm_up_samples[0];
 			warm_up_samples[0] = decimal_decoded;
@@ -141,6 +181,14 @@ impl Block {
 
 fn fixed(int: i16) -> FilterCoefficient {
 	FilterCoefficient::from(int)
+}
+
+fn fixed_arr(ints: DecodedBlockSamples) -> DecimalBlockSamples {
+	let mut ret: DecimalBlockSamples = [fixed(0); 16];
+	for (ret, int) in ret.iter_mut().zip(ints.into_iter()) {
+		*ret = fixed(int);
+	}
+	ret
 }
 
 impl From<[u8; 9]> for Block {
@@ -171,10 +219,13 @@ impl From<[u8; 9]> for Block {
 ///   after this block. Note that a `l` bit set without an `e` bit set has no effect.
 /// * `e` is the end bit, indicating that the sample has ended.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
-struct Header {
-	real_shift: i8,
-	filter:     LPCFilter,
-	flags:      LoopEndFlags,
+pub struct Header {
+	/// The real amount of shift this header specifies for the samples in its block.
+	pub real_shift: i8,
+	/// The filter the header specifies for its block.
+	pub filter:     LPCFilter,
+	/// Flags for the header's block.
+	pub flags:      LoopEndFlags,
 }
 
 impl From<u8> for Header {
@@ -201,7 +252,7 @@ impl From<u8> for Header {
 /// | 3    | 115/64 ~ 2   | -13/16 ~ -1  | ???                                 |
 #[derive(Clone, Copy, Debug, Eq, PartialEq, FromPrimitive)]
 #[repr(u8)]
-enum LPCFilter {
+pub enum LPCFilter {
 	/// Filter 0, verbatim samples.
 	Zero = 0,
 	/// Filter 1, differential coding.
@@ -214,10 +265,36 @@ enum LPCFilter {
 	Three = 3,
 }
 
+impl LPCFilter {
+	/// Return the coefficients used by this filter. The first coefficent is for the last sample, while the second
+	/// coefficient is for the second-to-last sample.
+	#[must_use]
+	pub fn coefficient(self) -> FilterCoefficients {
+		match self {
+			Self::Zero => [0i16.into(), 0i16.into()],
+			Self::One => [FilterCoefficient::from_num(15) / 16, 0i16.into()],
+			Self::Two => [FilterCoefficient::from_num(61) / 32, FilterCoefficient::from_num(15) / 16],
+			Self::Three => [FilterCoefficient::from_num(115) / 64, FilterCoefficient::from_num(13) / 16],
+		}
+	}
+
+	/// Return all possible filters.
+	#[must_use]
+	pub const fn all_filters() -> [Self; 4] {
+		[Self::Zero, Self::One, Self::Two, Self::Three]
+	}
+}
+
+impl std::fmt::Display for LPCFilter {
+	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+		write!(f, "{}", *self as u8)
+	}
+}
+
 /// Loop and end flags used in the BRR block header to determine sample end and looping.
-#[derive(Clone, Copy, Debug, Eq, PartialEq, FromPrimitive)]
+#[derive(Clone, Copy, Debug, Eq, FromPrimitive)]
 #[repr(u8)]
-enum LoopEndFlags {
+pub enum LoopEndFlags {
 	/// Nothing special happens, this is a normal sample.
 	Nothing = 0,
 	/// End the sample playback without looping.
@@ -228,16 +305,41 @@ enum LoopEndFlags {
 	Loop = 3,
 }
 
+impl PartialEq for LoopEndFlags {
+	fn eq(&self, other: &Self) -> bool {
+		self.eq_(*other)
+	}
+}
+
 impl LoopEndFlags {
+	/// Creates combined flags.
+	#[must_use]
+	#[allow(clippy::missing_panics_doc)]
 	pub fn new(is_end: bool, is_loop: bool) -> Self {
 		Self::from_u8(if is_loop { 0b10 } else { 0 } | if is_end { 0b01 } else { 0 }).unwrap()
 	}
 
+	const fn eq_(self, other: Self) -> bool {
+		self as u8 == other as u8
+	}
+
+	/// Returns whether these flags signal the end of the sample.
+	#[must_use]
 	pub const fn is_end(self) -> bool {
 		self as u8 & 0b01 > 0
 	}
 
-	pub const fn is_loop(self) -> bool {
+	/// Returns whether these flags signal that after this block, playback should jump back to the loop point specified
+	/// in the sample table. Note that this raw loop flag only has effect if ``is_end`` is set.
+	#[must_use]
+	pub const fn is_raw_loop(self) -> bool {
 		self as u8 & 0b10 > 0
+	}
+
+	/// Returns whether the playback will *actually* loop after this sample, i.e. jump to the loop point. This is
+	/// different from the raw loop flag (``Self::is_raw_loop``), which has no effect without the end flag.
+	#[must_use]
+	pub const fn will_loop_afterwards(self) -> bool {
+		self.eq_(Self::Loop)
 	}
 }

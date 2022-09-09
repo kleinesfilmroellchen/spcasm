@@ -9,7 +9,7 @@ use super::*;
 #[test]
 fn no_shift_filter_0_roundtrip() {
 	const data: DecodedBlockSamples = [1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2];
-	let (encoded, shift) = Block::internal_encode_0([0, 0], data);
+	let (encoded, shift) = Block::internal_encode_lpc([0, 0], data, LPCFilter::Zero.coefficient());
 	assert_eq!(shift, 0);
 	let block =
 		Block::new(Header { real_shift: shift, filter: LPCFilter::Zero, flags: LoopEndFlags::Nothing }, encoded);
@@ -20,7 +20,7 @@ fn no_shift_filter_0_roundtrip() {
 #[test]
 fn shift_filter_0_roundtrip() {
 	const data: DecodedBlockSamples = [64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64];
-	let (encoded, shift) = Block::internal_encode_0([0, 0], data);
+	let (encoded, shift) = Block::internal_encode_lpc([0, 0], data, LPCFilter::Zero.coefficient());
 	assert_eq!(shift, 2);
 	let block =
 		Block::new(Header { real_shift: shift, filter: LPCFilter::Zero, flags: LoopEndFlags::Nothing }, encoded);
@@ -31,7 +31,7 @@ fn shift_filter_0_roundtrip() {
 #[test]
 fn negative_1_filter_0_roundtrip() {
 	const data: DecodedBlockSamples = [1, -1, 1, -1, 1, -1, 1, -1, 1, -1, 1, -1, 1, -1, 1, -1];
-	let (encoded, shift) = Block::internal_encode_0([0, 0], data);
+	let (encoded, shift) = Block::internal_encode_lpc([0, 0], data, LPCFilter::Zero.coefficient());
 	assert_eq!(shift, 12);
 	let block =
 		Block::new(Header { real_shift: shift, filter: LPCFilter::Zero, flags: LoopEndFlags::Nothing }, encoded);

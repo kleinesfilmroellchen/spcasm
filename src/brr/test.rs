@@ -6,6 +6,8 @@
 
 use super::*;
 
+const zero_warmup: FilterCoefficients = [FilterCoefficient::ZERO, FilterCoefficient::ZERO];
+
 #[test]
 fn no_shift_filter_0_roundtrip() {
 	const data: DecodedBlockSamples = [1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2];
@@ -13,7 +15,7 @@ fn no_shift_filter_0_roundtrip() {
 	assert_eq!(shift, 0);
 	let block =
 		Block::new(Header { real_shift: shift, filter: LPCFilter::Zero, flags: LoopEndFlags::Nothing }, encoded);
-	let (decoded, _) = block.internal_decode_0([0, 0]);
+	let (decoded, _) = block.internal_decode_lpc(zero_warmup, LPCFilter::Zero.coefficient());
 	assert_eq!(data, decoded);
 }
 
@@ -21,10 +23,10 @@ fn no_shift_filter_0_roundtrip() {
 fn shift_filter_0_roundtrip() {
 	const data: DecodedBlockSamples = [64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64];
 	let (encoded, shift) = Block::internal_encode_lpc([0, 0], data, LPCFilter::Zero.coefficient());
-	assert_eq!(shift, 2);
+	assert_eq!(shift, 4);
 	let block =
 		Block::new(Header { real_shift: shift, filter: LPCFilter::Zero, flags: LoopEndFlags::Nothing }, encoded);
-	let (decoded, _) = block.internal_decode_0([0, 0]);
+	let (decoded, _) = block.internal_decode_lpc(zero_warmup, LPCFilter::Zero.coefficient());
 	assert_eq!(data, decoded);
 }
 
@@ -32,19 +34,11 @@ fn shift_filter_0_roundtrip() {
 fn negative_1_filter_0_roundtrip() {
 	const data: DecodedBlockSamples = [1, -1, 1, -1, 1, -1, 1, -1, 1, -1, 1, -1, 1, -1, 1, -1];
 	let (encoded, shift) = Block::internal_encode_lpc([0, 0], data, LPCFilter::Zero.coefficient());
-	assert_eq!(shift, 12);
+	assert_eq!(shift, 0);
 	let block =
 		Block::new(Header { real_shift: shift, filter: LPCFilter::Zero, flags: LoopEndFlags::Nothing }, encoded);
-	let (decoded, _) = block.internal_decode_0([0, 0]);
-	// This roundtrip actually loses data. Because we shift so much to the right, the lower three nibbles of the -1 get
-	// discarded.
-	for (index, sample) in decoded.iter().enumerate() {
-		assert_eq!(*sample, match index % 2 {
-			0 => 0,
-			1 => 0xf000i16,
-			_ => unreachable!(),
-		});
-	}
+	let (decoded, _) = block.internal_decode_lpc(zero_warmup, LPCFilter::Zero.coefficient());
+	assert_eq!(data, decoded);
 }
 
 #[test]

@@ -7,6 +7,7 @@ build = "build.rs"
 
 [lib]
 name = "spcasm"
+test = false
 
 [[bin]]
 name = "spcasm"

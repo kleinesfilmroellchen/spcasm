@@ -10,7 +10,6 @@
 use std::convert::TryInto;
 
 use az::Az;
-use fixed::traits::LossyInto;
 use num_derive::FromPrimitive;
 use num_traits::FromPrimitive;
 
@@ -107,7 +106,6 @@ impl Block {
 			previous_samples[1] = previous_samples[0];
 			previous_samples[0] = fixed_sample;
 		}
-		println!("vv before shift: {:?}", decimal_encoded_samples);
 		let necessary_shift = Self::necessary_shift_for(&decimal_encoded_samples);
 		let mut encoded = [0; 16];
 		for (encoded, sample) in encoded.iter_mut().zip(decimal_encoded_samples.iter()) {
@@ -118,23 +116,38 @@ impl Block {
 		(encoded, necessary_shift as i8)
 	}
 
+	/// Computes the necessary shift in order to get all of the given samples in range for 4-bit signed integers.
+	///
+	/// # Implementation details
+	/// *This section tries to explain some of the reasoning behind the innocent-looking logic below.*
+	///
+	/// First of all, we need to realize that the necessary shift depends on the necessary bits for a number, computable
+	/// with (floored) logarithm base 2. As we only need to deal with bit counts above 4, we can subtract 4 from that
+	/// and clamp at 0? The first problem is that the logarithm effectively gives us a zero-based index, so log = 0
+	/// means that we need 1 bit for the value. Therefore, we instead subtract 3 from the bit index so that if the
+	/// highest bit set is the fourth bit (the lowest bit in the second nybble!), we indicate a shift of 1.
+	///
+	/// The next concern is about negative and positive numbers. The output must be 4-bit signed, so the highest bit in
+	/// the nybble is still a sign bit! Therefore, the shift must be even one more than previously expected to retain
+	/// the sign bit, and we only want to subtract 2.
+	///
+	/// If you're still not satisfied: 0 -> 0 to indicate no shift. Also, input data is rounded to zero as I *think*
+	/// that's what the DSP does as well.
 	fn necessary_shift_for(samples: &DecimalBlockSamples) -> u32 {
-		// Comparing the unsigned values means that negative values are always larger, as they have their highest bit
-		// set. This is intended!
-		// TODO: Check whether this rounding is correct.
-		let maximum_sample = samples
+		samples
 			.iter()
-			.max_by_key(|x| x.round_to_zero().az::<i16>() as u16)
-			.unwrap_or(&fixed(0))
-			.round_to_zero()
-			.az::<i16>();
-		let maximum_bits_used = match maximum_sample {
-			i16::MIN ..= -1 => i16::BITS,
-			0 => 0,
-			_ => maximum_sample.ilog2(),
-		};
-		// Only shift as far as necessary to get the most significant bits within the 4-bit value we can store.
-		maximum_bits_used.saturating_sub(4)
+			.map(|x| {
+				let rounded = x.round_to_zero().az::<i16>();
+				match rounded {
+					i16::MIN ..= -1 => (-rounded).ilog2(),
+					0 => 0,
+					1.. => rounded.ilog2(),
+				}
+			})
+			.max()
+			.unwrap_or(0)
+			// Only shift as far as necessary to get the most significant bits within the 4-bit value we can store.
+			.saturating_sub(2)
 	}
 
 	/// Returns whether playback will end or loop after this block.

@@ -19,9 +19,14 @@ This is a normal Rust project without special dependencies. Use `cargo` for buil
 
 `spcasm [input file] [output file]`
 
-The input is UTF-8 encoded assembly. The output will be a binary memory dump.
+The input is UTF-8 encoded assembly. The output will be an ELF with a single `.data` section containing the SPC700's RAM.
 
 spcasm follows the mnemonic conventions from [this APU manual](https://web.archive.org/web/20060208001231/http://www.alpha-ii.com/snesmusic/files/spc700_apu_manual.txt). The directive and macro syntax is a subset of the [VASM oldstyle syntax](http://sun.hasenbraten.de/vasm/release/vasm_6.html#Oldstyle-Syntax-Module). If you're missing one of the features here, it would definitely be appreciated here!
+
+### Troubleshooting
+
+- *There is no error at the location that spcasm tells me!* While decently good, spcasm still sometimes suffers from incorrect source code indices. Look at the lines above the error and what the error actually says.
+- *BRR encoding is slow!* The BRR encoder benefits massively from Rust optimizations. An expected encode speed on modern hardware is only ~700KB/s unoptimized, but up to 50MB/s optimized. Run any BRR-related commands (benchmarks, tests, assembly that invokes the encoder a lot) under an optimized spcasm build. It is usually enough to compile spcasm in release mode by passing `--release` to any cargo command (build, run, test, ...)
 
 ## Architectural Overview
 

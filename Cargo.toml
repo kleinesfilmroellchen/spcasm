@@ -19,8 +19,10 @@ path = "src/brr/interactive.rs"
 required-features = ["clap"]
 
 [features]
+default = ["expensive_tests"]
 test_bootrom = []
 clap = ["dep:clap"]
+expensive_tests = []
 
 [dependencies]
 object = { version = "0.28.3", features = ["write_core"] }

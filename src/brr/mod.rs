@@ -32,6 +32,72 @@ type WarmUpSamples = [DecodedSample; 2];
 /// A block's samples' representation internally in the DAC.
 type DecimalBlockSamples = [FilterCoefficient; 16];
 
+/// Encode the given 16-bit samples as BRR samples. The data may be padded via repetition to fit a multiple of 16; if
+/// you don't want this to happen, provide a multiple of 16 samples.
+///
+/// TODO: We don't know about the loop point, so we can't set that block to use filter 0.
+#[must_use]
+#[allow(clippy::module_name_repetitions)]
+pub fn encode_to_brr(samples: &Vec<DecodedSample>, is_loop: bool) -> Vec<u8> {
+	if samples.is_empty() {
+		return Vec::new();
+	}
+	let (sample_chunks, maybe_last_chunk) = samples.as_chunks::<16>();
+
+	if sample_chunks.is_empty() {
+		// Just process the remainder chunk as the first and last chunk.
+		let single_chunk = fill_slice_to_16(maybe_last_chunk);
+		let encoded = <[u8; 9]>::from(Block::encode_with_filter(
+			[0, 0],
+			single_chunk,
+			LPCFilter::Zero,
+			LoopEndFlags::new(true, is_loop),
+		));
+		return encoded.to_vec();
+	}
+	let mut sample_chunks = sample_chunks.to_vec();
+	let first_chunk = sample_chunks.remove(0);
+
+	let last_chunk =
+		if maybe_last_chunk.is_empty() { sample_chunks.pop() } else { Some(fill_slice_to_16(maybe_last_chunk)) };
+
+	// Determine whether the first chunk is also the last; i.e. there are exactly 16 samples.
+	let first_block_is_end = last_chunk.is_none();
+
+	// This should allocate enough so the vector never needs to reallocate.
+	let mut result = Vec::with_capacity(samples.len() / 2 + sample_chunks.len() + 9);
+
+	// The first chunk must be encoded with filter 0 to prevent glitches.
+	let first_block_data = Block::encode_with_filter(
+		[0, 0],
+		first_chunk,
+		LPCFilter::Zero,
+		LoopEndFlags::new(first_block_is_end, first_block_is_end && is_loop),
+	);
+	result.extend_from_slice(&<[u8; 9]>::from(first_block_data));
+	let mut warm_up: WarmUpSamples = [first_chunk[first_chunk.len() - 1], first_chunk[first_chunk.len() - 2]];
+	for (i, chunk) in sample_chunks.into_iter().enumerate() {
+		let block_data = Block::encode(warm_up, chunk, LoopEndFlags::Nothing);
+		result.extend_from_slice(&<[u8; 9]>::from(block_data));
+		warm_up = [chunk[chunk.len() - 1], chunk[chunk.len() - 2]];
+	}
+
+	if let Some(last_chunk) = last_chunk {
+		let last_block_data = Block::encode(warm_up, last_chunk, LoopEndFlags::new(true, is_loop));
+		result.extend_from_slice(&<[u8; 9]>::from(last_block_data));
+	}
+
+	result
+}
+
+fn fill_slice_to_16(slice: &[i16]) -> DecodedBlockSamples {
+	let mut result_chunk = [0; 16];
+	for (i, entry) in result_chunk.iter_mut().enumerate() {
+		*entry = *slice.get(i).or_else(|| slice.last()).unwrap();
+	}
+	result_chunk
+}
+
 /// A 9-byte encoded BRR block.
 ///
 /// Each BRR block starts with a header byte followed by 8 sample bytes. Each sample byte in turn holds 2 4-bit samples.

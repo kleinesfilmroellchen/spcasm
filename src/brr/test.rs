@@ -155,3 +155,25 @@ fn microbench_decode_block_filter_3(bencher: &mut Bencher) {
 	let block_2 = test::black_box(Block::from(data_block_2));
 	bencher.iter(|| block_2.decode(warm_up));
 }
+
+#[bench]
+fn short_sample_encode(bencher: &mut Bencher) {
+	use wav::read as wav_read;
+
+	let (_, data) = wav_read(&mut std::fs::File::open("src/brr/yoshi.wav").unwrap()).unwrap();
+	let data = data.as_sixteen().expect("must be signed 16-bit WAV");
+	bencher.iter(|| encode_to_brr(data, false));
+}
+
+#[cfg(feature = "expensive_tests")]
+#[bench]
+fn extremely_long_encode(bencher: &mut Bencher) {
+	use wav::read as wav_read;
+
+	let (_, data) = wav_read(&mut std::fs::File::open("src/brr/song.wav").unwrap()).unwrap();
+	let data = data.as_sixteen().expect("must be signed 16-bit WAV");
+	let now = std::time::Instant::now();
+	bencher.iter(|| encode_to_brr(data, false));
+	let diff = now.elapsed();
+	println!("took: {}ns ({} samples/s)", diff.as_nanos(), data.len() as f64 / diff.as_secs_f64());
+}

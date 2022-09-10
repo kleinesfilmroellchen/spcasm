@@ -169,7 +169,7 @@ impl Block {
 				.ceil()
 				.wrapping_sub(filter_coefficients[1].wrapping_mul(fixed(warm_up_samples[1])))
 				.ceil()
-				.az();
+				.to_num();
 			warm_up_samples[1] = warm_up_samples[0];
 			warm_up_samples[0] = *sample;
 		}
@@ -239,7 +239,7 @@ impl Block {
 				.floor()
 				.wrapping_add(filter_coefficients[1].wrapping_mul(fixed(warm_up_samples[1])))
 				.floor();
-			*decoded = decimal_decoded.az::<i16>();
+			*decoded = decimal_decoded.to_num();
 			// Shift last samples through the buffer
 			warm_up_samples[1] = warm_up_samples[0];
 			warm_up_samples[0] = *decoded;

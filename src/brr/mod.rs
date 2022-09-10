@@ -11,7 +11,7 @@ use std::convert::TryInto;
 
 use az::Az;
 use num_derive::FromPrimitive;
-use num_traits::FromPrimitive;
+use num_traits::{CheckedShr, FromPrimitive};
 
 #[cfg(test)] mod test;
 
@@ -95,21 +95,22 @@ impl Block {
 		samples: DecodedBlockSamples,
 		filter_coefficients: FilterCoefficients,
 	) -> (EncodedBlockSamples, i8) {
-		let mut previous_samples = [fixed(warm_up_samples[0]), fixed(warm_up_samples[1])];
 		// Let's first encode without concerning ourselves with the shift amount. That can be dealt with later.
-		let mut decimal_encoded_samples = [FilterCoefficient::ZERO; 16];
-		for (decimal_encoded, sample) in decimal_encoded_samples.iter_mut().zip(samples.iter()) {
-			let fixed_sample = fixed(*sample);
-			*decimal_encoded = fixed_sample
-				- previous_samples[0].checked_div(filter_coefficients[0]).unwrap_or(FilterCoefficient::ZERO)
-				- previous_samples[1].checked_div(filter_coefficients[1]).unwrap_or(FilterCoefficient::ZERO);
-			previous_samples[1] = previous_samples[0];
-			previous_samples[0] = fixed_sample;
+		let mut unshifted_encoded_samples = [0; 16];
+		for (unshifted_encoded, sample) in unshifted_encoded_samples.iter_mut().zip(samples.iter()) {
+			*unshifted_encoded = fixed(*sample)
+				.wrapping_sub(filter_coefficients[0].wrapping_mul(fixed(warm_up_samples[0])))
+				.ceil()
+				.wrapping_sub(filter_coefficients[1].wrapping_mul(fixed(warm_up_samples[1])))
+				.ceil()
+				.az();
+			warm_up_samples[1] = warm_up_samples[0];
+			warm_up_samples[0] = *sample;
 		}
-		let necessary_shift = Self::necessary_shift_for(&decimal_encoded_samples);
+		let necessary_shift = Self::necessary_shift_for(&unshifted_encoded_samples);
 		let mut encoded = [0; 16];
-		for (encoded, sample) in encoded.iter_mut().zip(decimal_encoded_samples.iter()) {
-			*encoded = sample.floor().az::<i16>().wrapping_shr(necessary_shift) as u8;
+		for (encoded, sample) in encoded.iter_mut().zip(unshifted_encoded_samples.iter()) {
+			*encoded = sample.checked_shr(necessary_shift).unwrap_or(0) as u8;
 		}
 
 		(encoded, necessary_shift as i8)
@@ -120,33 +121,21 @@ impl Block {
 	/// # Implementation details
 	/// *This section tries to explain some of the reasoning behind the innocent-looking logic below.*
 	///
-	/// First of all, we need to realize that the necessary shift depends on the necessary bits for a number, computable
-	/// with (floored) logarithm base 2. As we only need to deal with bit counts above 4, we can subtract 4 from that
-	/// and clamp at 0? The first problem is that the logarithm effectively gives us a zero-based index, so log = 0
-	/// means that we need 1 bit for the value. Therefore, we instead subtract 3 from the bit index so that if the
-	/// highest bit set is the fourth bit (the lowest bit in the second nybble!), we indicate a shift of 1.
-	///
-	/// The next concern is about negative and positive numbers. The output must be 4-bit signed, so the highest bit in
-	/// the nybble is still a sign bit! Therefore, the shift must be even one more than previously expected to retain
-	/// the sign bit, and we only want to subtract 2.
-	///
-	/// If you're still not satisfied: 0 -> 0 to indicate no shift. Also, input data is rounded to zero as I *think*
-	/// that's what the DSP does as well.
-	fn necessary_shift_for(samples: &DecimalBlockSamples) -> u32 {
+	/// We need to realize that the necessary shift depends on the necessary bits for a number. As we only
+	/// need to deal with bit counts above 4, we can subtract 4 from that and clamp at 0? However, the output must be
+	/// 4-bit signed, so the highest bit in the nybble is still a sign bit! Therefore, the shift must be one more
+	/// than previously expected to retain the sign bit, and we only want to subtract 3.
+	fn necessary_shift_for(samples: &DecodedBlockSamples) -> u32 {
 		samples
 			.iter()
-			.map(|x| {
-				let rounded = x.floor().az::<i16>();
-				match rounded {
-					i16::MIN ..= -1 => (-rounded).ilog2(),
-					0 => 0,
-					1.. => rounded.ilog2(),
-				}
+			.map(|x| match x {
+				i16::MIN ..= -1 => i16::BITS - x.leading_ones(),
+				0 => 0,
+				1 .. => i16::BITS - x.leading_zeros(),
 			})
 			.max()
 			.unwrap_or(0)
-			// Only shift as far as necessary to get the most significant bits within the 4-bit value we can store.
-			.saturating_sub(2)
+			.saturating_sub(3)
 	}
 
 	/// Returns whether playback will end or loop after this block.
@@ -174,12 +163,16 @@ impl Block {
 		filter_coefficients: FilterCoefficients,
 	) -> (DecodedBlockSamples, WarmUpSamples) {
 		let mut decoded_samples: DecodedBlockSamples = [0; 16];
-		for (decoded, encoded) in decoded_samples.iter_mut().zip(self.encoded_samples) {
+		let shifted_encoded =
+			self.encoded_samples.map(|encoded| i16::from(((encoded as i8) << 4) >> 4) << self.header.real_shift);
+		for (decoded, encoded) in decoded_samples.iter_mut().zip(shifted_encoded) {
 			// TODO: Check whether overflowing (i.e. wrap-around) arithmetic is correct here.
 			// The convoluted cast ensures we retain the nybble sign bit.
-			let decimal_decoded = fixed(i16::from(((encoded as i8) << 4) >> 4) << self.header.real_shift)
-				.wrapping_add(filter_coefficients[0].wrapping_mul(fixed(warm_up_samples[0]))).floor()
-				.wrapping_add(filter_coefficients[1].wrapping_mul(fixed(warm_up_samples[1]))).floor();
+			let decimal_decoded = fixed(encoded)
+				.wrapping_add(filter_coefficients[0].wrapping_mul(fixed(warm_up_samples[0])))
+				.floor()
+				.wrapping_add(filter_coefficients[1].wrapping_mul(fixed(warm_up_samples[1])))
+				.floor();
 			*decoded = decimal_decoded.az::<i16>();
 			// Shift last samples through the buffer
 			warm_up_samples[1] = warm_up_samples[0];
@@ -210,6 +203,12 @@ impl From<[u8; 9]> for Block {
 	}
 }
 
+impl From<Block> for [u8; 9] {
+	fn from(block: Block) -> [u8; 9] {
+		arrcat::concat_arrays![[block.header.into()], (merge_nybbles_into_bytes(block.encoded_samples)): [_; 8]]
+	}
+}
+
 fn split_bytes_into_nybbles(bytes: [u8; 8]) -> EncodedBlockSamples {
 	let mut nybbles: EncodedBlockSamples = [0; 16];
 	for (index, byte) in bytes.into_iter().enumerate() {
@@ -219,6 +218,14 @@ fn split_bytes_into_nybbles(bytes: [u8; 8]) -> EncodedBlockSamples {
 		nybbles[index + 1] = byte & 0x0f;
 	}
 	nybbles
+}
+
+fn merge_nybbles_into_bytes(nybbles: EncodedBlockSamples) -> [u8; 8] {
+	let mut bytes = [0; 8];
+	for (index, [high_nybble, low_nybble]) in nybbles.as_chunks::<2>().0.iter().enumerate() {
+		bytes[index] = ((high_nybble << 4) & 0xf0) | (low_nybble & 0x0f);
+	}
+	bytes
 }
 
 /// A BRR header byte.
@@ -259,6 +266,14 @@ impl From<u8> for Header {
 			filter:     LPCFilter::from_u8((data >> 2) & 0b11).unwrap(),
 			flags:      LoopEndFlags::from_u8(data & 0b11).unwrap(),
 		}
+	}
+}
+
+impl From<Header> for u8 {
+	fn from(header: Header) -> u8 {
+		((((header.real_shift + 1) as u8) << 4) & 0xf0)
+			| (((header.filter as u8) << 2) & 0b1100)
+			| ((header.flags as u8) & 0b11)
 	}
 }
 

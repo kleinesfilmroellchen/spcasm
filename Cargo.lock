@@ -38,6 +38,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "arrcat"
+version = "0.1.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "98a2f6f53f9419b4445e2786ce1f44bc6648998a2dc71e7db0b44bddc2536da5"
+
+[[package]]
 name = "ascii-canvas"
 version = "3.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -695,6 +701,7 @@ checksum = "f67ad224767faa3c7d8b6d91985b78e70a1324408abcb1cfcc2be4c06bc06043"
 name = "spcasm"
 version = "0.1.0"
 dependencies = [
+ "arrcat",
  "az",
  "clap",
  "fixed",

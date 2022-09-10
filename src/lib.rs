@@ -13,6 +13,7 @@
 	const_for,
 	let_chains,
 	option_result_contains,
+	slice_as_chunks,
 	maybe_uninit_uninit_array,
 	maybe_uninit_array_assume_init
 )]

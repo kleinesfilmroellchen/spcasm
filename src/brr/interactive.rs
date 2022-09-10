@@ -14,10 +14,11 @@ struct Arguments {
 
 #[derive(Subcommand)]
 enum ExecMode {
-	// FIXME: allow for the specification of warm-up samples
 	Encode {
 		#[clap(value_parser)]
 		samples: Vec<DecodedSample>,
+		#[clap(short, long, help = "Override the previous samples to use for encoding")]
+		warm_up: Option<Vec<DecodedSample>>,
 	},
 }
 
@@ -25,24 +26,28 @@ fn main() {
 	let arguments = Arguments::parse();
 
 	match arguments.mode {
-		ExecMode::Encode { samples } => {
+		ExecMode::Encode { samples, warm_up } => {
+			let warm_up = warm_up.unwrap_or(vec![0, 0]).try_into().unwrap_or_else(|_| {
+				eprintln!("error: you must provide exactly 2 warm-up samples");
+				std::process::exit(1);
+			});
 			let samples: DecodedBlockSamples = samples.try_into().unwrap_or_else(|_| {
 				eprintln!("error: you must provide exactly 16 unencoded samples");
 				std::process::exit(1);
 			});
 			println!("Encoding {:?} as BRR block.", samples);
 			for filter in LPCFilter::all_filters() {
-				let block = Block::encode_with_filter([0, 0], samples, filter, LoopEndFlags::Nothing);
+				let block = Block::encode_with_filter(warm_up, samples, filter, LoopEndFlags::Nothing);
 				println!(
 					"{}: encode to: {:?}\n\tshift: {:2}\n\tdecoded: {:?}\n\terror: {:10}",
 					filter,
 					block.encoded_samples,
 					block.header.real_shift,
-					block.decode([0, 0]).0,
-					block.total_encode_error([0, 0], &samples)
+					block.decode(warm_up).0,
+					block.total_encode_error(warm_up, &samples)
 				)
 			}
-			let actual_encoded = Block::encode([0, 0], samples, LoopEndFlags::Nothing);
+			let actual_encoded = Block::encode(warm_up, samples, LoopEndFlags::Nothing);
 			println!("optimal encoding: filter {}", actual_encoded.header.filter);
 		},
 	}

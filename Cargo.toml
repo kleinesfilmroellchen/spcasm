@@ -32,6 +32,7 @@ num-traits = "0.2"
 num-derive = "0.3"
 fixed = "1"
 az = "1.2"
+arrcat = "0.1"
 
 [build-dependencies]
 lalrpop = { version = "0.19", default-features = false }

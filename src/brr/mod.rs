@@ -15,6 +15,8 @@ use num_traits::{CheckedShr, FromPrimitive};
 
 #[cfg(test)] mod test;
 
+pub mod wav;
+
 /// Only the lower 4 bits are used.
 pub type EncodedSample = u8;
 /// The DAC internally uses 16-bit signed samples.

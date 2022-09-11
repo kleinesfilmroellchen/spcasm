@@ -14,6 +14,7 @@
 	let_chains,
 	option_result_contains,
 	slice_as_chunks,
+	exact_size_is_empty,
 	maybe_uninit_uninit_array,
 	maybe_uninit_array_assume_init
 )]

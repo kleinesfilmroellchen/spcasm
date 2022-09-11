@@ -73,11 +73,23 @@ Macro: Macro = {
 		label: None,
 	},
 	<mcro:"brr"> <filename:"string"> => Macro {
-		value: MacroValue::Brr(filename.0),
+		value: MacroValue::Brr(String::from_utf8_lossy(&filename.0).into_owned()),
 		// TODO: Chain the two spans.
 		span: mcro,
 		label: None,
-	}
+	},
+	<mcro:"ascii"> <text:"string"> => Macro {
+		value: MacroValue::String{ text: text.0, has_null_terminator: false },
+		// TODO: Chain the two spans.
+		span: mcro,
+		label: None,
+	},
+	<mcro:"asciiz"> <text:"string"> => Macro {
+		value: MacroValue::String{ text: text.0, has_null_terminator: true },
+		// TODO: Chain the two spans.
+		span: mcro,
+		label: None,
+	},
 };
 
 TableMacro: (MacroSymbol, SourceSpan) = {
@@ -190,7 +202,7 @@ extern {
 		"asciiz" => Token::Macro(MacroSymbol::Asciiz, <SourceSpan>),
 		"brr" => Token::Macro(MacroSymbol::Brr, <SourceSpan>),
 		"number" => Token::Number(<i64>, <SourceSpan>),
-		"string" => Token::String(<String>, <SourceSpan>),
+		"string" => Token::String(<Vec<u8>>, <SourceSpan>),
 		"#" => Token::Hash(<SourceOffset>),
 		"," => Token::Comma(<SourceOffset>),
 		"+" => Token::Plus(<SourceOffset>),

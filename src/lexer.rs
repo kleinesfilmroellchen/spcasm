@@ -46,8 +46,8 @@ pub fn lex(source_code: Arc<AssemblyCode>) -> Result<Vec<Token>, AssemblyError> 
 			'"' => {
 				let start_index = index;
 				index += 1;
-				let text = next_string(&mut chars, source_code.clone(), &mut index)?;
-				let text_span = (start_index, text.len() + 2).into();
+				let text = next_string(&mut chars, source_code.clone(), &mut index)?.into_iter().map(|chr| chr as u8).collect();
+				let text_span = (start_index, index - start_index).into();
 				tokens.push(Token::String(text, text_span));
 			}
 			'A' ..= 'Z' | 'a' ..= 'z' | '_' | '@' => {
@@ -159,8 +159,8 @@ fn next_string(
 	chars: &mut Peekable<std::str::Chars>,
 	source_code: Arc<AssemblyCode>,
 	start_index: &mut usize,
-) -> Result<String, AssemblyError> {
-	let mut text = String::new();
+) -> Result<Vec<char>, AssemblyError> {
+	let mut text = Vec::new();
 	while let Some(chr) = chars.next() {
 		*start_index += 1;
 		match chr {
@@ -212,7 +212,7 @@ fn next_escape_sequence(
 						src:      source_code.clone(),
 					})?
 					.to_ascii_lowercase();
-				if !first_number.is_ascii_hexdigit() || second_number.is_ascii_hexdigit() {
+				if !first_number.is_ascii_hexdigit() || !second_number.is_ascii_hexdigit() {
 					return Err(AssemblyError::InvalidNumber {
 						// HACK: We can't create an invalid digit error manually, so let's hijack a stdlib parser to do
 						// it for us.
@@ -229,7 +229,7 @@ fn next_escape_sequence(
 			},
 			_ => Err(AssemblyError::ExpectedTokens {
 				expected: vec!["'".into(), "\"".into(), "t".into(), "n".into(), "0".into(), "r".into(), "x".into()],
-				actual:   Token::String(format!("{}", chr), (*start_index, 0).into()),
+				actual:   Token::String(vec![chr as u8], (*start_index, 0).into()),
 				location: (*start_index, 0).into(),
 				src:      source_code,
 			}),

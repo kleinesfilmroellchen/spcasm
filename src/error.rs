@@ -235,7 +235,7 @@ pub enum AssemblyError {
 		src:      Arc<AssemblyCode>,
 	},
 
-	#[error("Invalid number")]
+	#[error("Invalid number: {error}")]
 	#[diagnostic(code(spcasm::syntax::expected_token), severity(Error))]
 	InvalidNumber {
 		error:    ParseIntError,

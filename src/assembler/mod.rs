@@ -247,6 +247,16 @@ fn assemble_macro(data: &mut AssembledData, mcro: &Macro) -> Result<(), Assembly
 				is_first = false;
 			}
 		},
+		MacroValue::String { ref text, has_null_terminator } => {
+			let mut is_first = true;
+			for chr in text {
+				data.append(*chr, if is_first { mcro.label.clone() } else { None }, mcro.span);
+				is_first = false;
+			}
+			if has_null_terminator {
+				data.append(0, if is_first { mcro.label.clone() } else { None }, mcro.span);
+			}
+		},
 	}
 	Ok(())
 }

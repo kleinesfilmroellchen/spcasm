@@ -26,7 +26,7 @@ pub enum Token {
 	/// Literal number which was already parsed.
 	Number(i64, SourceSpan),
 	/// Text string delimited by "".
-	String(String, SourceSpan),
+	String(Vec<u8>, SourceSpan),
 	/// '#'
 	Hash(SourceOffset),
 	/// ','

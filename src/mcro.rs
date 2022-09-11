@@ -61,6 +61,8 @@ pub enum MacroValue {
 		/// How many bytes each entry occupies; depends on the specific macro used.
 		entry_size: u8,
 	},
-	// brr <file name>
+	/// brr <file name>
 	Brr(String),
+	/// ascii(z) <string>
+	String { text: Vec<u8>, has_null_terminator: bool },
 }

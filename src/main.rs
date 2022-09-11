@@ -5,7 +5,6 @@
 	test,
 	result_flattening,
 	is_some_with,
-	get_mut_unchecked,
 	iterator_try_collect,
 	if_let_guard,
 	int_log,
@@ -120,6 +119,11 @@ mod test {
 	#[test]
 	fn test_parser() {
 		test_file("examples/parse.spcasm");
+	}
+
+	#[test]
+	fn labels() {
+		test_file("examples/labels.spcasm");
 	}
 
 	#[bench]

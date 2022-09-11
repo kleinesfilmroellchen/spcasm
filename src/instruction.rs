@@ -1,6 +1,7 @@
 //! Instruction/AST-related structs created in the parser and consumed in the assembler.
 #![allow(clippy::use_self)]
 
+use std::cell::RefCell;
 use std::fmt::{Display, Error, Formatter, UpperHex};
 use std::result::Result;
 use std::sync::Arc;
@@ -12,7 +13,7 @@ use spcasm_derive::Parse;
 
 use super::label::{GlobalLabel, Label};
 use super::Register;
-use crate::label::LocalLabel;
+use crate::label;
 /// Types for representing data and memory addresses (this is overkill).
 pub type MemoryAddress = i64;
 
@@ -192,9 +193,12 @@ impl Number {
 	}
 
 	/// Sets the given global label as the parent for all unresolved local labels.
-	pub fn set_global_label(&mut self, label: &Arc<GlobalLabel>) {
+	/// # Panics
+	/// All panics are programming errors.
+	pub fn set_global_label(&mut self, label: &Arc<RefCell<GlobalLabel>>) {
 		match self {
-			Self::Label(Label::Local(local)) => local.parent = Arc::downgrade(label),
+			Self::Label(Label::Local(local)) =>
+				*local = label::merge_local_into_parent(local.clone(), Some(label.clone()), &Arc::default()).unwrap(),
 			Self::Negate(val) => val.set_global_label(label),
 			Self::Add(lhs, rhs) | Self::Subtract(lhs, rhs) | Self::Multiply(lhs, rhs) | Self::Divide(lhs, rhs) => {
 				lhs.set_global_label(label);
@@ -213,7 +217,7 @@ impl Number {
 			Self::Literal(value) => *value,
 			// necessary because matching through an Rc is not possible right now (would be super dope though).
 			Self::Label(ref label) => match label {
-				Label::Global(global_label) if let Some(value) = global_label.location => value,
+				Label::Global(global_label) if let Some(ref value) = global_label.borrow().location => value.value(),
 				_ => panic!("Unresolved label {:?}", label),
 			},
 			Self::Negate(number) => -number.value(),
@@ -229,16 +233,8 @@ impl Number {
 	#[must_use]
 	pub fn try_resolve(self) -> Self {
 		match self {
-			Self::Label(Label::Global(ref global)) if let Some(memory_location) = global.location => Self::Literal(memory_location),
-			Self::Label(Label::Local(ref local)) => {
-				// Try to figure out whether this local label has been resolved in the parent.
-				// This is only necessary in local labels which are not refcounted to better distinguish them,
-				// so setting the address within the parent does not automatically set the address in all other identical local labels.
-				if let Some(parent) = local.parent.upgrade() {
-					parent.locals.get(&local.name).and_then(|parent_local| parent_local.location)
-						.map_or(self.clone(), Self::Literal)
-				} else {self}
-			},
+			Self::Label(Label::Global(global)) if let Some(memory_location) = global.clone().borrow().location.clone() => memory_location.try_resolve(),
+			Self::Label(Label::Local(local)) if let Some(memory_location) = local.clone().borrow().location.clone() => memory_location.try_resolve(),
 			Number::Negate(number) => match number.try_resolve() {
 				Number::Literal(value) => Number::Literal(-value),
 				resolved => Number::Negate(Box::new(resolved)),
@@ -279,13 +275,21 @@ impl<T> From<(Number, T)> for Number {
 impl UpperHex for Number {
 	fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), Error> {
 		match self {
-			Self::Label(Label::Global(ref unresolved_label)) => match &**unresolved_label {
-				GlobalLabel { location: Some(numeric_address), .. } => write!(f, "${:X}", numeric_address),
-				GlobalLabel { name, .. } => write!(f, "{}", name),
+			Self::Label(Label::Global(ref unresolved_label)) => {
+				let unresolved_label = unresolved_label.borrow();
+				match unresolved_label.location {
+					Some(ref numeric_address) => write!(f, "${:X}", numeric_address),
+					None => write!(f, "{}", unresolved_label.name),
+				}
 			},
-			Self::Label(Label::Local(LocalLabel { location: Some(numeric_address), .. }))
-			| Self::Literal(numeric_address) => write!(f, "${:X}", numeric_address),
-			Self::Label(Label::Local(LocalLabel { name, .. })) => write!(f, "{}", name),
+			Self::Label(Label::Local(ref local)) => {
+				let local = local.borrow();
+				match &local.location {
+					Some(numeric_address) => write!(f, "{:X}", **numeric_address),
+					None => write!(f, "{}", local.name),
+				}
+			},
+			Self::Literal(numeric_address) => write!(f, "${:X}", numeric_address),
 			Number::Negate(number) => write!(f, "-{:X}", number.as_ref()),
 			Number::Add(lhs, rhs) => write!(f, "({:X}+{:X})", lhs.as_ref(), rhs.as_ref()),
 			Number::Subtract(lhs, rhs) => write!(f, "({:X}-{:X})", lhs.as_ref(), rhs.as_ref()),
@@ -336,7 +340,7 @@ pub enum AddressingMode {
 
 impl AddressingMode {
 	/// Set this global label as the parent for all the unresolved local labels.
-	pub fn set_global_label(&mut self, label: &Arc<GlobalLabel>) {
+	pub fn set_global_label(&mut self, label: &Arc<RefCell<GlobalLabel>>) {
 		match self {
 			Self::Immediate(number)
 			| Self::DirectPage(number)

@@ -93,8 +93,8 @@ fn assemble_instruction(data: &mut AssembledData, instruction: &mut Instruction)
 		} => {
 			let make_movw_error = || {
 				Err(AssemblyError::InvalidAddressingModeCombination {
-					first_mode:  target.clone(),
-					second_mode: source.clone(),
+					first_mode:  target.to_string(),
+					second_mode: source.to_string(),
 					src:         data.source_code.clone(),
 					location:    instruction.span,
 					mnemonic:    Mnemonic::Movw,
@@ -206,7 +206,7 @@ fn assemble_instruction(data: &mut AssembledData, instruction: &mut Instruction)
 }
 
 #[allow(clippy::unnecessary_wraps)]
-fn assemble_macro(data: &mut AssembledData, mcro: &Macro) -> Result<(), AssemblyError> {
+fn assemble_macro(data: &mut AssembledData, mcro: &mut Macro) -> Result<(), AssemblyError> {
 	match mcro.value {
 		MacroValue::Org(address) => {
 			data.new_segment(address);
@@ -256,6 +256,14 @@ fn assemble_macro(data: &mut AssembledData, mcro: &Macro) -> Result<(), Assembly
 			if has_null_terminator {
 				data.append(0, if is_first { mcro.label.clone() } else { None }, mcro.span);
 			}
+		},
+		MacroValue::AssignLabel { ref mut label, ref value } => match label {
+			Label::Local(label) => {
+				label.borrow_mut().location = Some(Box::new(value.clone().try_resolve()));
+			},
+			Label::Global(ref mut global) => {
+				global.borrow_mut().location = Some(value.clone().try_resolve());
+			},
 		},
 	}
 	Ok(())
@@ -327,7 +335,7 @@ impl LabeledMemoryValue {
 			let first_label =
 				number.first_label().expect("Number resolution failure was not caused by label; this is a bug!");
 			AssemblyError::UnresolvedLabel {
-				label:          first_label.clone(),
+				label:          first_label.to_string(),
 				label_location: first_label.source_span(),
 				usage_location: self.instruction_location,
 				src:            src.clone(),
@@ -700,21 +708,14 @@ impl AssembledData {
 				// Resolve the actual label definition; i.e. if the below code executes, we're at the memory location
 				// which is labeled.
 				datum.label.as_mut().filter(|existing_label| !existing_label.is_resolved()).map(|resolved_label| {
+					had_modifications |= true;
 					match *resolved_label {
 						Label::Global(ref mut global) => {
-							// Modifying Rc-contained data is dangerous in general, but safe for labels if we don't
-							// modify the name.
-							unsafe { Arc::get_mut_unchecked(global) }
-								.resolve_to(memory_address, self.source_code.clone());
-							had_modifications |= true;
+							global.borrow_mut().resolve_to(memory_address, self.source_code.clone());
 							resolved_label
 						},
 						Label::Local(ref mut local) => {
-							local.resolve_to(memory_address, self.source_code.clone());
-							let mut parent = local.strong_parent();
-							unsafe { Arc::get_mut_unchecked(&mut parent) }
-								.locals
-								.insert(local.name.clone(), local.clone());
+							local.borrow_mut().resolve_to(memory_address, self.source_code.clone());
 							resolved_label
 						},
 					}

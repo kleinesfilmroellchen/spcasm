@@ -137,7 +137,7 @@ pub(super) fn assemble_arithmetic_instruction(
 					is_first_operand: false,
 					// TODO
 					legal_modes: vec![],
-					mode: source,
+					mode: source.to_string(),
 					location: instruction.span,
 					src: data.source_code.clone(),
 				}),
@@ -159,7 +159,7 @@ pub(super) fn assemble_arithmetic_instruction(
 			} else {
 				return Err(AssemblyError::InvalidAddressingMode {
 					is_first_operand: false,
-					mode: source,
+					mode: source.to_string(),
 					mnemonic,
 					src: data.source_code.clone(),
 					location: instruction.span,
@@ -191,7 +191,7 @@ pub(super) fn assemble_arithmetic_instruction(
 				_ =>
 					return Err(AssemblyError::InvalidAddressingMode {
 						is_first_operand: false,
-						mode: source,
+						mode: source.to_string(),
 						mnemonic,
 						src: data.source_code.clone(),
 						location: instruction.span,
@@ -205,7 +205,7 @@ pub(super) fn assemble_arithmetic_instruction(
 				_ =>
 					return Err(AssemblyError::InvalidAddressingMode {
 						is_first_operand: false,
-						mode: source,
+						mode: source.to_string(),
 						mnemonic,
 						src: data.source_code.clone(),
 						location: instruction.span,
@@ -246,7 +246,7 @@ pub(super) fn assemble_arithmetic_instruction(
 			_ =>
 				return Err(AssemblyError::InvalidAddressingMode {
 					is_first_operand: false,
-					mode: source,
+					mode: source.to_string(),
 					mnemonic,
 					src: data.source_code.clone(),
 					location: instruction.span,
@@ -257,7 +257,7 @@ pub(super) fn assemble_arithmetic_instruction(
 		_ =>
 			return Err(AssemblyError::InvalidAddressingMode {
 				is_first_operand: true,
-				mode: target,
+				mode: target.to_string(),
 				mnemonic,
 				src: data.source_code.clone(),
 				location: instruction.span,
@@ -302,17 +302,17 @@ pub(super) fn assemble_inc_dec_instruction(
 		_ =>
 			return Err(AssemblyError::InvalidAddressingMode {
 				is_first_operand: true,
-				mode:             target,
+				mode:             target.to_string(),
 				mnemonic:         if is_increment { Mnemonic::Inc } else { Mnemonic::Dec },
 				src:              data.source_code.clone(),
 				location:         instruction.span,
 				legal_modes:      vec![
-					AddressingMode::Register(Register::A),
-					AddressingMode::Register(Register::X),
-					AddressingMode::Register(Register::Y),
-					AddressingMode::DirectPageXIndexed(0.into()),
-					AddressingMode::DirectPage(0.into()),
-					AddressingMode::Address(0.into()),
+					AddressingMode::Register(Register::A).to_string(),
+					AddressingMode::Register(Register::X).to_string(),
+					AddressingMode::Register(Register::Y).to_string(),
+					AddressingMode::DirectPageXIndexed(0.into()).to_string(),
+					AddressingMode::DirectPage(0.into()).to_string(),
+					AddressingMode::Address(0.into()).to_string(),
 				],
 			}),
 	}
@@ -329,11 +329,11 @@ pub(super) fn assemble_shift_rotation_instruction(
 	let source_code_copy = data.source_code.clone();
 	let make_xcn_err = || {
 		Err(AssemblyError::InvalidAddressingMode {
-			mode: target_copy,
+			mode: target_copy.to_string(),
 			is_first_operand: true,
 			mnemonic,
 			location: instruction.span,
-			legal_modes: vec![AddressingMode::Register(Register::A)],
+			legal_modes: vec![AddressingMode::Register(Register::A).to_string()],
 			src: source_code_copy,
 		})
 	};
@@ -388,15 +388,15 @@ pub(super) fn assemble_shift_rotation_instruction(
 		),
 		_ =>
 			return Err(AssemblyError::InvalidAddressingMode {
-				mode: target,
+				mode: target.to_string(),
 				is_first_operand: true,
 				mnemonic,
 				location: instruction.span,
 				legal_modes: vec![
-					AddressingMode::Register(Register::A),
-					AddressingMode::Address(0.into()),
-					AddressingMode::DirectPage(0.into()),
-					AddressingMode::DirectPageXIndexed(0.into()),
+					AddressingMode::Register(Register::A).to_string(),
+					AddressingMode::Address(0.into()).to_string(),
+					AddressingMode::DirectPage(0.into()).to_string(),
+					AddressingMode::DirectPageXIndexed(0.into()).to_string(),
 				],
 				src: data.source_code.clone(),
 			}),

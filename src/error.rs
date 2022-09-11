@@ -6,13 +6,12 @@ use lalrpop_util::ParseError;
 use miette::{Diagnostic, MietteError, MietteSpanContents, SourceCode, SourceSpan, SpanContents};
 use thiserror::Error;
 
-use crate::instruction::{AddressingMode, MemoryAddress, Mnemonic};
-use crate::label::Label;
+use crate::instruction::{MemoryAddress, Mnemonic};
 use crate::mcro::MacroSymbol;
 use crate::Token;
 
 /// The source code for an assembly error.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub struct AssemblyCode {
 	pub text: String,
 	pub name: String,
@@ -90,10 +89,10 @@ pub enum AssemblyError {
 		help("The instruction `{mnemonic}` accepts the modes {} here", .legal_modes.iter().map(|mode| format!("{} ", mode)).collect::<String>().trim()),
 	)]
 	InvalidAddressingMode {
-		mode:             AddressingMode,
+		mode:             String,
 		is_first_operand: bool,
 		mnemonic:         Mnemonic,
-		legal_modes:      Vec<AddressingMode>,
+		legal_modes:      Vec<String>,
 		#[source_code]
 		src:              Arc<AssemblyCode>,
 		#[label("For this instruction")]
@@ -118,7 +117,7 @@ pub enum AssemblyError {
 		help("Any symbolic label must be defined somewhere. Did you misspell the label's name?")
 	)]
 	UnresolvedLabel {
-		label:          Label,
+		label:          String,
 		#[label("'{label}' used here")]
 		label_location: SourceSpan,
 		#[label("In this instruction")]
@@ -130,8 +129,8 @@ pub enum AssemblyError {
 	#[error("Invalid addressing mode combination: `{first_mode}` with `{second_mode}` for `{mnemonic}`")]
 	#[diagnostic(code(spcasm::invalid_addressing_mode), severity(Error))]
 	InvalidAddressingModeCombination {
-		first_mode:  AddressingMode,
-		second_mode: AddressingMode,
+		first_mode:  String,
+		second_mode: String,
 		mnemonic:    Mnemonic,
 		#[source_code]
 		src:         Arc<AssemblyCode>,

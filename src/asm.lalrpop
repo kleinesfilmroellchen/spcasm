@@ -1,5 +1,6 @@
 use miette::{SourceOffset, SourceSpan};
-use std::sync::Weak;
+use std::sync::{Weak, Arc};
+use std::cell::RefCell;
 
 use crate::instruction::{Instruction, Mnemonic, Number, AddressingMode, Opcode};
 use crate::parser::{Environment, try_make_direct_page_addressing_mode, LabelUsageKind};
@@ -90,6 +91,7 @@ Macro: Macro = {
 		span: mcro,
 		label: None,
 	},
+	LabelAssignment,
 };
 
 TableMacro: (MacroSymbol, SourceSpan) = {
@@ -104,25 +106,38 @@ TableMacro: (MacroSymbol, SourceSpan) = {
 NumberList = Comma<Number>;
 
 LabelForInstruction: Label = {
-	"." <identifier:"identifier"> ":" => Label::Local(LocalLabel {
-		name: identifier.0.clone(),
-		location: None,
-		span: identifier.1,
-		// Don't rely on forward-to-backward parsing order; we can't know the parent label here.
-		parent: Weak::new(),
-	}),
+	"." <identifier:"identifier"> ":" => Label::Local(
+		// Create a new local label that might be merged in the future.
+		Arc::new(RefCell::new(LocalLabel {
+			name: identifier.0.clone(),
+			location: None,
+			span: identifier.1,
+			// Don't rely on forward-to-backward parsing order; we can't know the parent label here.
+			parent: Weak::new(),
+		}))
+	),
 	<identifier:"identifier"> ":" => Label::Global(environment.get_global_label(&identifier.0, identifier.1, LabelUsageKind::AsDefinition)),
 };
 
 Label: Label = {
-	"." <identifier:"identifier"> => Label::Local(LocalLabel {
+	"." <identifier:"identifier"> => Label::Local(Arc::new(RefCell::new(LocalLabel {
 		name: identifier.0.clone(),
 		location: None,
 		span: identifier.1,
 		// Don't rely on forward-to-backward parsing order; we can't know the parent label here.
 		parent: Weak::new(),
-	}),
+	}))),
 	<identifier:"identifier"> => Label::Global(environment.get_global_label(&identifier.0, identifier.1, LabelUsageKind::AsAddress)),
+};
+
+LabelAssignment: Macro = <mut label:Label> "=" <value:Number> => {
+	label.set_location(value.clone());
+	Macro {
+		value: MacroValue::AssignLabel { label: label.clone(), value },
+		// TODO: Chain the two spans.
+		span: label.source_span(),
+		label: None,
+	}
 };
 
 Number: Number = {

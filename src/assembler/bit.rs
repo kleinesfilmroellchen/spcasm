@@ -16,7 +16,7 @@ pub(super) fn assemble_bit_instructions(
 	let source_code_copy = data.source_code.clone();
 	let make_error = |is_first_operand| {
 		Err(AssemblyError::InvalidAddressingMode {
-			mode: if is_first_operand { target_copy } else { source_copy.unwrap() },
+			mode: if is_first_operand { target_copy.to_string() } else { source_copy.unwrap().to_string() },
 			is_first_operand,
 			mnemonic,
 			location: instruction.span,

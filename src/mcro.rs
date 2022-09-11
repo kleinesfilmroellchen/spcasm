@@ -64,5 +64,13 @@ pub enum MacroValue {
 	/// brr <file name>
 	Brr(String),
 	/// ascii(z) <string>
-	String { text: Vec<u8>, has_null_terminator: bool },
+	String {
+		text:                Vec<u8>,
+		has_null_terminator: bool,
+	},
+	/// <label> = <value>
+	AssignLabel {
+		label: Label,
+		value: Number,
+	},
 }

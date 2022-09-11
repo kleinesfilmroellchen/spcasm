@@ -18,7 +18,7 @@ pub(super) fn assemble_branching_instruction(
 	let source_code_copy = data.source_code.clone();
 	let make_target_error = |legal_modes| {
 		Err(AssemblyError::InvalidAddressingMode {
-			mode: target_copy,
+			mode: target_copy.to_string(),
 			is_first_operand: true,
 			mnemonic,
 			location: instruction.span,
@@ -46,8 +46,8 @@ pub(super) fn assemble_branching_instruction(
 						Number::Literal(value) => (value & 0x0F) as u8,
 						_ => return Err(AssemblyError::InvalidAddressingMode {
 							is_first_operand: true,
-							mode: target.clone(),
-							mnemonic, legal_modes: vec![AddressingMode::Address(0.into())],
+							mode: target.to_string(),
+							mnemonic, legal_modes: vec![AddressingMode::Address(0.into()).to_string()],
 							src: data.source_code.clone(),
 							location: instruction.span
 						}),
@@ -84,8 +84,8 @@ pub(super) fn assemble_branching_instruction(
 						}
 					} else {
 						return if let Some(source) = source { Err(AssemblyError::InvalidAddressingModeCombination {
-							second_mode: source,
-							first_mode: target,
+							second_mode: source.to_string(),
+							first_mode: target.to_string(),
 							src: data.source_code.clone(),
 							location: instruction.span,mnemonic
 						})} else {
@@ -130,7 +130,7 @@ pub(super) fn assemble_branching_instruction(
 		AddressingMode::DirectPageBit(page_address, bit) | AddressingMode::AddressBit(page_address, bit) => {
 			let is_bbs = mnemonic == Mnemonic::Bbs;
 			if !is_bbs && mnemonic != Mnemonic::Bbc {
-				return make_target_error(vec![AddressingMode::DirectPageBit(0.into(),0)]);
+				return make_target_error(vec![AddressingMode::DirectPageBit(0.into(),0).to_string()]);
 			}
 			let jump_target = if let Some(AddressingMode::DirectPage(jump_target) | AddressingMode::Address(jump_target)) = source {
 				jump_target
@@ -138,8 +138,8 @@ pub(super) fn assemble_branching_instruction(
 				return Err(AssemblyError::InvalidAddressingMode {
 					is_first_operand: false,
 					mnemonic,
-					mode: source.unwrap_or(AddressingMode::Register(Register::A)),
-					legal_modes: vec![AddressingMode::DirectPage(0.into())],
+					mode: source.unwrap_or(AddressingMode::Register(Register::A)).to_string(),
+					legal_modes: vec![AddressingMode::DirectPage(0.into()).to_string()],
 					location: instruction.span,
 					src: data.source_code.clone(),
 				})

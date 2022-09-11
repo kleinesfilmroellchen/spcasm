@@ -12,46 +12,46 @@ pub(super) fn assemble_mov(
 	instruction: &mut Instruction,
 ) -> Result<(), AssemblyError> {
 	let source_code_copy = data.source_code.clone();
-	let make_error = |mode, is_first_operand| {
+	let make_error = |mode: AddressingMode, is_first_operand| {
 		Err(AssemblyError::InvalidAddressingMode {
 			is_first_operand,
 			location: instruction.span,
 			src: source_code_copy,
-			mode,
+			mode: mode.to_string(),
 			mnemonic: Mnemonic::Mov,
 			legal_modes: if is_first_operand {
 				vec![
-					AddressingMode::Register(Register::A),
-					AddressingMode::Register(Register::X),
-					AddressingMode::Register(Register::Y),
-					AddressingMode::Register(Register::SP),
-					AddressingMode::IndirectX,
-					AddressingMode::IndirectXAutoIncrement,
-					AddressingMode::DirectPage(Number::Literal(0)),
-					AddressingMode::DirectPageXIndexed(Number::Literal(0)),
-					AddressingMode::DirectPageYIndexed(Number::Literal(0)),
-					AddressingMode::Address(Number::Literal(0)),
-					AddressingMode::XIndexed(Number::Literal(0)),
-					AddressingMode::YIndexed(Number::Literal(0)),
-					AddressingMode::DirectPageXIndexedIndirect(Number::Literal(0)),
-					AddressingMode::DirectPageIndirectYIndexed(Number::Literal(0)),
+					AddressingMode::Register(Register::A).to_string(),
+					AddressingMode::Register(Register::X).to_string(),
+					AddressingMode::Register(Register::Y).to_string(),
+					AddressingMode::Register(Register::SP).to_string(),
+					AddressingMode::IndirectX.to_string(),
+					AddressingMode::IndirectXAutoIncrement.to_string(),
+					AddressingMode::DirectPage(Number::Literal(0)).to_string(),
+					AddressingMode::DirectPageXIndexed(Number::Literal(0)).to_string(),
+					AddressingMode::DirectPageYIndexed(Number::Literal(0)).to_string(),
+					AddressingMode::Address(Number::Literal(0)).to_string(),
+					AddressingMode::XIndexed(Number::Literal(0)).to_string(),
+					AddressingMode::YIndexed(Number::Literal(0)).to_string(),
+					AddressingMode::DirectPageXIndexedIndirect(Number::Literal(0)).to_string(),
+					AddressingMode::DirectPageIndirectYIndexed(Number::Literal(0)).to_string(),
 				]
 			} else {
 				vec![
-					AddressingMode::Register(Register::A),
-					AddressingMode::Register(Register::X),
-					AddressingMode::Register(Register::Y),
-					AddressingMode::Register(Register::SP),
-					AddressingMode::Immediate(Number::Literal(0)),
-					AddressingMode::IndirectX,
-					AddressingMode::IndirectXAutoIncrement,
-					AddressingMode::DirectPage(Number::Literal(0)),
-					AddressingMode::DirectPageXIndexed(Number::Literal(0)),
-					AddressingMode::Address(Number::Literal(0)),
-					AddressingMode::XIndexed(Number::Literal(0)),
-					AddressingMode::YIndexed(Number::Literal(0)),
-					AddressingMode::DirectPageXIndexedIndirect(Number::Literal(0)),
-					AddressingMode::DirectPageIndirectYIndexed(Number::Literal(0)),
+					AddressingMode::Register(Register::A).to_string(),
+					AddressingMode::Register(Register::X).to_string(),
+					AddressingMode::Register(Register::Y).to_string(),
+					AddressingMode::Register(Register::SP).to_string(),
+					AddressingMode::Immediate(Number::Literal(0)).to_string(),
+					AddressingMode::IndirectX.to_string(),
+					AddressingMode::IndirectXAutoIncrement.to_string(),
+					AddressingMode::DirectPage(Number::Literal(0)).to_string(),
+					AddressingMode::DirectPageXIndexed(Number::Literal(0)).to_string(),
+					AddressingMode::Address(Number::Literal(0)).to_string(),
+					AddressingMode::XIndexed(Number::Literal(0)).to_string(),
+					AddressingMode::YIndexed(Number::Literal(0)).to_string(),
+					AddressingMode::DirectPageXIndexedIndirect(Number::Literal(0)).to_string(),
+					AddressingMode::DirectPageIndirectYIndexed(Number::Literal(0)).to_string(),
 				]
 			},
 		})
@@ -106,11 +106,11 @@ pub(super) fn assemble_mov(
 			} else {
 				return Err(AssemblyError::InvalidAddressingMode {
 					is_first_operand: false,
-					mode:             source,
+					mode:             source.to_string(),
 					mnemonic:         Mnemonic::Mov,
 					src:              data.source_code.clone(),
 					location:         instruction.span,
-					legal_modes:      vec![AddressingMode::Register(Register::X)],
+					legal_modes:      vec![AddressingMode::Register(Register::X).to_string()],
 				});
 			},
 		AddressingMode::IndirectX => match source {
@@ -208,7 +208,7 @@ pub(super) fn assemble_push_pop(
 			is_first_operand: true,
 			location:         instruction.span,
 			src:              source_code_copy,
-			mode:             AddressingMode::Register(target),
+			mode:             AddressingMode::Register(target).to_string(),
 			mnemonic:         Mnemonic::Mov,
 			// TODO
 			legal_modes:      vec![],

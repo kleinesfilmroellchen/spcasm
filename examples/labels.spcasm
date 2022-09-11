@@ -1,0 +1,17 @@
+org 0
+
+zero:
+nop ;= 00
+
+.local_cool = $aa
+coolvalue = $bb
+
+mov x,coolvalue ;= F8 BB
+mov x,zero ;= E9 00 00
+mov x,.local_cool ;= E9 AA 00
+
+later_on:
+nop ;= 00
+.local_cool = $cc
+
+mov x,.local_cool ;= E9 CC 00

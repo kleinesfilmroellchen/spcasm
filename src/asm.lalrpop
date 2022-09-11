@@ -72,6 +72,12 @@ Macro: Macro = {
 		span: mcro,
 		label: None,
 	},
+	<mcro:"brr"> <filename:"string"> => Macro {
+		value: MacroValue::Brr(filename.0),
+		// TODO: Chain the two spans.
+		span: mcro,
+		label: None,
+	}
 };
 
 TableMacro: (MacroSymbol, SourceSpan) = {
@@ -182,7 +188,9 @@ extern {
 		"dd" => Token::Macro(MacroSymbol::Dd, <SourceSpan>),
 		"ascii" => Token::Macro(MacroSymbol::Ascii, <SourceSpan>),
 		"asciiz" => Token::Macro(MacroSymbol::Asciiz, <SourceSpan>),
+		"brr" => Token::Macro(MacroSymbol::Brr, <SourceSpan>),
 		"number" => Token::Number(<i64>, <SourceSpan>),
+		"string" => Token::String(<String>, <SourceSpan>),
 		"#" => Token::Hash(<SourceOffset>),
 		"," => Token::Comma(<SourceOffset>),
 		"+" => Token::Plus(<SourceOffset>),

@@ -3,6 +3,8 @@
 #![allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
 
 use std::collections::BTreeMap;
+use std::fs::File;
+use std::path::PathBuf;
 use std::sync::Arc;
 
 use miette::{Result, SourceSpan};
@@ -10,6 +12,7 @@ use r16bit::MovDirection;
 
 use super::mcro::MacroValue;
 use super::{pretty_hex, Macro, ProgramElement};
+use crate::brr::{self, wav};
 use crate::error::{AssemblyCode, AssemblyError};
 use crate::instruction::{AddressingMode, Instruction, MemoryAddress, Mnemonic, Number, Opcode};
 use crate::label::{Label, Resolvable};
@@ -218,6 +221,30 @@ fn assemble_macro(data: &mut AssembledData, mcro: &Macro) -> Result<(), Assembly
 					_ => unreachable!(),
 				}
 				label = None;
+			}
+		},
+		MacroValue::Brr(ref file_name) => {
+			// Resolve the audio file's path relative to the source file.
+			let actual_path = PathBuf::from(data.source_code.name.clone()).parent().unwrap().to_owned().join(file_name);
+			let file = File::open(actual_path).map_err(|err| AssemblyError::FileNotFound {
+				os_error:  err.kind().to_string(),
+				file_name: file_name.clone(),
+				src:       data.source_code.clone(),
+				location:  mcro.span,
+			})?;
+			let sample_data =
+				wav::read_wav_for_brr(file).map_err(|error_text| AssemblyError::AudioProcessingError {
+					error_text,
+					file_name: file_name.clone(),
+					src: data.source_code.clone(),
+					location: mcro.span,
+				})?;
+			let encoded = brr::encode_to_brr(&sample_data, false);
+
+			let mut is_first = true;
+			for value in encoded {
+				data.append(value, if is_first { mcro.label.clone() } else { None }, mcro.span);
+				is_first = false;
 			}
 		},
 	}

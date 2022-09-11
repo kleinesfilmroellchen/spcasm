@@ -50,6 +50,39 @@ impl SourceCode for AssemblyCode {
 #[allow(clippy::module_name_repetitions)]
 pub enum AssemblyError {
 	//#region Semantic errors: detected while parsing or assembling
+	#[error("File \"{file_name}\" was not found")]
+	#[diagnostic(
+		code(spcasm::file_not_found),
+		severity(Error),
+		help("While trying to open the file, the operating system reported: {os_error}")
+	)]
+	FileNotFound {
+		os_error:  String,
+		file_name: String,
+		#[source_code]
+		src:       Arc<AssemblyCode>,
+		#[label("File was requested here")]
+		location:  SourceSpan,
+	},
+
+	#[error("{error_text}")]
+	#[diagnostic(
+		code(scpasm::audio_processing_error),
+		severity(Error),
+		help(
+			"This error is caused by the malformed input audio file \"{file_name}\". If your audio player understands \
+			 this file just fine, please file an spcasm bug."
+		)
+	)]
+	AudioProcessingError {
+		error_text: String,
+		file_name:  String,
+		#[source_code]
+		src:        Arc<AssemblyCode>,
+		#[label("While processing audio here")]
+		location:   SourceSpan,
+	},
+
 	#[error("Invalid addressing mode `{mode}` as {} operand for `{mnemonic}`", if *.is_first_operand { "first" } else { "second" })]
 	#[diagnostic(
 		code(spcasm::invalid_addressing_mode),

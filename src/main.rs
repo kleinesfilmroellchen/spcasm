@@ -122,6 +122,11 @@ mod test {
 		test_file("examples/parse.spcasm");
 	}
 
+	#[bench]
+	fn brr_integration(bencher: &mut Bencher) {
+		bencher.iter(|| test_file("examples/brr.spcasm"));
+	}
+
 	fn test_file(file: &str) {
 		let (parsed, assembled) = super::run_assembler(file).unwrap();
 		let expected_binary = assemble_expected_binary(parsed);

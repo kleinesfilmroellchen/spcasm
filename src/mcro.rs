@@ -30,6 +30,7 @@ pub enum MacroSymbol {
 	Dd,
 	Ascii,
 	Asciiz,
+	Brr,
 }
 
 impl Display for MacroSymbol {
@@ -42,6 +43,7 @@ impl Display for MacroSymbol {
 			Self::Dd => "dd",
 			Self::Ascii => "ascii",
 			Self::Asciiz => "asciiz",
+			Self::Brr => "brr",
 		})
 	}
 }
@@ -59,4 +61,6 @@ pub enum MacroValue {
 		/// How many bytes each entry occupies; depends on the specific macro used.
 		entry_size: u8,
 	},
+	// brr <file name>
+	Brr(String),
 }

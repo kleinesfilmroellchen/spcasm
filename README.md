@@ -6,6 +6,10 @@ spcasm assembles an ELF that hijacks another architecture (this must be ignored)
 
 [This project is just for fun](https://justforfunnoreally.dev/). Still, some reasons to use spcasm:
 * Extremely fast: spcasm assembles about 124.858 KB/s on a modern computer. This means that the entire SPC700 address space (64KB), if it were entirely program RAM, can be assembled by spcasm in about half a second.
+* BRR integration: Including S-SMP samples ("BRR" samples) in your binary (useful if all your samples fit in ARAM at once) is as simple as
+```assembly
+brr "my-sample.wav"
+```
 * Nice errors: spcasm reports errors in a nice format, if your terminal supports it:
 ![image](https://user-images.githubusercontent.com/28656157/164973851-d66c5fa3-8bed-43b6-b7c2-e66cc53592c6.png)
 * Helpful warnings and information about possible pitfalls:

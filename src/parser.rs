@@ -66,6 +66,7 @@ impl Environment {
 			.parse(self, lexed)
 			.map_err(|err| AssemblyError::from_lalrpop(err, self.source_code.clone()))?;
 		self.fill_in_label_references(&mut program)?;
+		Self::coerce_to_direct_page_addressing(&mut program);
 		Ok(program)
 	}
 
@@ -125,6 +126,20 @@ impl Environment {
 			}
 		}
 		Ok(())
+	}
+
+	/// Tries to coerce addressing modes to direct page addressing wherever possible. This needs to be done again as the
+	/// unresolved local labels did not provide memory locations before merging.
+	pub fn coerce_to_direct_page_addressing(program: &mut Vec<ProgramElement>) {
+		for element in program {
+			if let ProgramElement::Instruction(Instruction {
+					opcode: Opcode { first_operand, second_operand, .. },
+					..
+				}) = element {
+					*first_operand = first_operand.clone().map(AddressingMode::coerce_to_direct_page_addressing);
+					*second_operand = second_operand.clone().map(AddressingMode::coerce_to_direct_page_addressing);
+				}
+		}
 	}
 
 	/// Lookup a global label in this environment, and create it if necessary.

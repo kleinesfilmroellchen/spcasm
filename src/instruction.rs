@@ -341,6 +341,14 @@ pub enum AddressingMode {
 impl AddressingMode {
 	/// Set this global label as the parent for all the unresolved local labels.
 	pub fn set_global_label(&mut self, label: &Arc<RefCell<GlobalLabel>>) {
+		if let Some(number) = self.number_mut() {
+			number.set_global_label(label);
+		}
+	}
+
+	/// Return the number that this addressing mode references (mostly as an address), if any.
+	#[must_use]
+	pub fn number(&self) -> Option<Number> {
 		match self {
 			Self::Immediate(number)
 			| Self::DirectPage(number)
@@ -353,8 +361,44 @@ impl AddressingMode {
 			| Self::NegatedAddressBit(number, ..)
 			| Self::Address(number)
 			| Self::XIndexed(number)
-			| Self::YIndexed(number) => number.set_global_label(label),
-			_ => (),
+			| Self::YIndexed(number) => Some(number.clone()),
+			_ => None,
+		}
+	}
+
+	/// Returns a mutable reference to the number this addressing mode references, if any.
+	pub fn number_mut(&mut self) -> Option<&mut Number> {
+		match self {
+			Self::Immediate(number)
+			| Self::DirectPage(number)
+			| Self::DirectPageBit(number, ..)
+			| Self::DirectPageIndirectYIndexed(number, ..)
+			| Self::DirectPageXIndexed(number)
+			| Self::DirectPageXIndexedIndirect(number)
+			| Self::DirectPageYIndexed(number)
+			| Self::AddressBit(number, ..)
+			| Self::NegatedAddressBit(number, ..)
+			| Self::Address(number)
+			| Self::XIndexed(number)
+			| Self::YIndexed(number) => Some(number),
+			_ => None,
+		}
+	}
+
+	/// Try to coerce this addressing mode to direct page addressing if the internal number allows it.
+	#[must_use]
+	pub fn coerce_to_direct_page_addressing(self) -> Self {
+		if let Some(Number::Literal(resolved_address)) = self.number().map(Number::try_resolve) && resolved_address <= 0xFF {
+			let number = Number::Literal(resolved_address);
+			match self {
+				Self::Address(..) => Self::DirectPage(number),
+				Self::XIndexed(..) => Self::DirectPageXIndexed(number),
+				Self::YIndexed(..) => Self::DirectPageYIndexed(number),
+				Self::AddressBit(_, bit) => Self::DirectPageBit(number, bit),
+				_ => self,
+			}
+		} else {
+			self
 		}
 	}
 }

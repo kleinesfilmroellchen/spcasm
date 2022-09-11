@@ -25,6 +25,8 @@ pub enum Token {
 	Macro(MacroSymbol, SourceSpan),
 	/// Literal number which was already parsed.
 	Number(i64, SourceSpan),
+	/// Text string delimited by "".
+	String(String, SourceSpan),
 	/// '#'
 	Hash(SourceOffset),
 	/// ','
@@ -119,6 +121,7 @@ impl Token {
 			| (Self::Hash(..), Self::Hash(..))
 			| (Self::Plus(..), Self::Plus(..))
 			| (Self::Star(..), Self::Star(..))
+			| (Self::String(..), Self::String(..))
 			| (Self::Minus(..), Self::Minus(..))
 			| (Self::Slash(..), Self::Slash(..))
 			| (Self::Newline(..), Self::Newline(..))
@@ -154,6 +157,7 @@ impl Token {
 			Self::Identifier(_, location)
 			| Self::Number(_, location)
 			| Self::Register(_, location)
+			| Self::String(_, location)
 			| Self::PlusRegister(_, location)
 			| Self::Mnemonic(_, location)
 			| Self::Macro(_, location) => *location,
@@ -170,13 +174,17 @@ impl Display for Token {
 		};
 		write!(f, "{}", match self {
 			Self::Identifier(..) => "identifier",
+			Self::String(..) => "string",
 			Self::Register(..) => "register name",
+			Self::PlusRegister(..) => "'+' register name",
 			Self::Macro(..) => "macro",
 			Self::Number(..) => "number",
 			Self::Hash(..) => "hash",
 			Self::Comma(..) => "comma",
 			Self::Period(..) => "'.'",
 			Self::Plus(..) => "'+'",
+			Self::Minus(..) => "'-'",
+			Self::Star(..) => "'*'",
 			Self::Equals(..) => "'='",
 			Self::CloseParenthesis(..) | Self::CloseIndexingParenthesis(..) => "')'",
 			Self::OpenIndexingParenthesis(..) | Self::OpenParenthesis(..) => "'('",
@@ -185,7 +193,7 @@ impl Display for Token {
 			Self::Colon(..) => "':'",
 			// #[cfg(test)]
 			Self::TestComment(..) => "test comment (';=')",
-			_ => unreachable!(),
+			Self::Mnemonic(..) => unreachable!(),
 		})
 	}
 }

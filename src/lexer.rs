@@ -43,6 +43,13 @@ pub fn lex(source_code: Arc<AssemblyCode>) -> Result<Vec<Token>, AssemblyError> 
 			continue;
 		}
 		match chr {
+			'"' => {
+				let start_index = index;
+				index += 1;
+				let text = next_string(&mut chars, source_code.clone(), &mut index)?;
+				let text_span = (start_index, text.len() + 2).into();
+				tokens.push(Token::String(text, text_span));
+			}
 			'A' ..= 'Z' | 'a' ..= 'z' | '_' | '@' => {
 				let start_index = index;
 				let identifier = next_identifier(&mut chars, chr);
@@ -146,6 +153,94 @@ fn next_number(
 			src: source_code,
 		})
 		.map(|value| (value, number_chars.len()))
+}
+
+fn next_string(
+	chars: &mut Peekable<std::str::Chars>,
+	source_code: Arc<AssemblyCode>,
+	start_index: &mut usize,
+) -> Result<String, AssemblyError> {
+	let mut text = String::new();
+	while let Some(chr) = chars.next() {
+		*start_index += 1;
+		match chr {
+			'"' => return Ok(text),
+			'\\' => text.push(next_escape_sequence(chars, source_code.clone(), start_index)?),
+			_ => text.push(chr),
+		}
+	}
+	Err(AssemblyError::UnexpectedEndOfTokens {
+		expected: vec!["\"".into()],
+		location: (source_code.text.len() - 1, 0).into(),
+		src:      source_code,
+	})
+}
+
+/// Used for parsing escape sequences both in string and character literals; for this reason allow escaping ' and " even
+/// though you don't need to escape ' in a string (and vice-versa).
+fn next_escape_sequence(
+	chars: &mut Peekable<std::str::Chars>,
+	source_code: Arc<AssemblyCode>,
+	start_index: &mut usize,
+) -> Result<char, AssemblyError> {
+	if let Some(chr) = chars.next() {
+		*start_index += 1;
+		// TODO: Do we want to support unicode literals, and with which format? The plain format of many languages
+		// (\u1234) or the Rust format (\u{1234})?
+		match chr {
+			// The usual suspects...
+			'"' | '\'' | '\\' => Ok(chr),
+			'n' => Ok('\n'),
+			'r' => Ok('\r'),
+			't' => Ok('\t'),
+			'0' => Ok('\0'),
+			// Byte literals
+			'x' => {
+				let first_number = chars
+					.next()
+					.ok_or(AssemblyError::UnexpectedEndOfTokens {
+						expected: vec!["first byte literal digit".into()],
+						location: (source_code.text.len() - 1, 0).into(),
+						src:      source_code.clone(),
+					})?
+					.to_ascii_lowercase();
+				let second_number = chars
+					.next()
+					.ok_or(AssemblyError::UnexpectedEndOfTokens {
+						expected: vec!["second byte literal digit".into()],
+						location: (source_code.text.len() - 1, 0).into(),
+						src:      source_code.clone(),
+					})?
+					.to_ascii_lowercase();
+				if !first_number.is_ascii_hexdigit() || second_number.is_ascii_hexdigit() {
+					return Err(AssemblyError::InvalidNumber {
+						// HACK: We can't create an invalid digit error manually, so let's hijack a stdlib parser to do
+						// it for us.
+						error:    u32::from_str_radix("HACK", 2).unwrap_err(),
+						src:      source_code,
+						location: (*start_index + 1, 2).into(),
+					});
+				}
+				let value =
+					char::from_u32(u32::from_str_radix(&format!("{}{}", first_number, second_number), 16).unwrap())
+						.unwrap();
+				*start_index += 2;
+				Ok(value)
+			},
+			_ => Err(AssemblyError::ExpectedTokens {
+				expected: vec!["'".into(), "\"".into(), "t".into(), "n".into(), "0".into(), "r".into(), "x".into()],
+				actual:   Token::String(format!("{}", chr), (*start_index, 0).into()),
+				location: (*start_index, 0).into(),
+				src:      source_code,
+			}),
+		}
+	} else {
+		Err(AssemblyError::UnexpectedEndOfTokens {
+			expected: vec!["escape sequence".into()],
+			location: (source_code.text.len() - 1, 0).into(),
+			src:      source_code.clone(),
+		})
+	}
 }
 
 fn parse_single_char_tokens(chr: char, location: SourceOffset) -> Token {

@@ -66,7 +66,7 @@ pub fn lex(source_code: Arc<AssemblyCode>) -> Result<Vec<Token>, AssemblyError> 
 			'0'..='9' => {
 				let (number, size) = next_number(&mut chars, Some(chr), 10, |chr| chr.is_ascii_digit(), index, source_code.clone())?;
 				tokens.push(Token::Number(number, (index, size).into()));
-				index += size+1;
+				index += size;
 			}
 			'#' | ',' | '+' | '-' | '*' | '(' | ')' | ':' | '.' | '/' | '=' => {
 				tokens.push(parse_single_char_tokens(chr, index.into()));

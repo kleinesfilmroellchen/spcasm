@@ -4,6 +4,7 @@ license = "BSD 2-clause"
 name = "spcasm"
 version = "0.1.0"
 build = "build.rs"
+default-run = "spcasm"
 
 [lib]
 name = "spcasm"

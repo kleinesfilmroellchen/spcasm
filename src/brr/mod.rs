@@ -9,7 +9,6 @@
 
 use std::convert::TryInto;
 
-use az::Az;
 use num_derive::FromPrimitive;
 use num_traits::{CheckedShr, FromPrimitive};
 
@@ -31,8 +30,6 @@ pub type EncodedBlockSamples = [EncodedSample; 16];
 
 type FilterCoefficients = [FilterCoefficient; 2];
 type WarmUpSamples = [DecodedSample; 2];
-/// A block's samples' representation internally in the DAC.
-type DecimalBlockSamples = [FilterCoefficient; 16];
 
 /// Encode the given 16-bit samples as BRR samples. The data may be padded via repetition to fit a multiple of 16; if
 /// you don't want this to happen, provide a multiple of 16 samples.
@@ -78,7 +75,7 @@ pub fn encode_to_brr(samples: &Vec<DecodedSample>, is_loop: bool) -> Vec<u8> {
 	);
 	result.extend_from_slice(&<[u8; 9]>::from(first_block_data));
 	let mut warm_up: WarmUpSamples = [first_chunk[first_chunk.len() - 1], first_chunk[first_chunk.len() - 2]];
-	for (i, chunk) in sample_chunks.into_iter().enumerate() {
+	for chunk in sample_chunks {
 		let block_data = Block::encode(warm_up, chunk, LoopEndFlags::Nothing);
 		result.extend_from_slice(&<[u8; 9]>::from(block_data));
 		warm_up = [chunk[chunk.len() - 1], chunk[chunk.len() - 2]];
@@ -252,14 +249,6 @@ impl Block {
 
 fn fixed(int: i16) -> FilterCoefficient {
 	FilterCoefficient::from(int)
-}
-
-fn fixed_arr(ints: DecodedBlockSamples) -> DecimalBlockSamples {
-	let mut ret: DecimalBlockSamples = [fixed(0); 16];
-	for (ret, int) in ret.iter_mut().zip(ints.into_iter()) {
-		*ret = fixed(int);
-	}
-	ret
 }
 
 impl From<[u8; 9]> for Block {

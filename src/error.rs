@@ -119,9 +119,9 @@ pub enum AssemblyError {
 	)]
 	UnresolvedLabel {
 		label:          String,
-		#[label("'{label}' used here")]
+		#[label("'{label}' defined here")]
 		label_location: SourceSpan,
-		#[label("In this instruction")]
+		#[label("Used here")]
 		usage_location: SourceSpan,
 		#[source_code]
 		src:            Arc<AssemblyCode>,

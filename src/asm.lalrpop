@@ -1,4 +1,9 @@
+//! LALRPOP grammar for a modified version of SPC700 assembly.
+//! Note that this grammar can not parse plain SPC700 assembly, as it is not LR(1).
+
 use miette::{SourceOffset, SourceSpan};
+use lalrpop_util::ParseError;
+
 use std::sync::{Weak, Arc};
 use std::cell::RefCell;
 
@@ -68,12 +73,11 @@ Macro: Macro = {
 		span: data_macro.1,
 		label: None,
 	},
-	<mcro:"org"> <address:Number> => Macro {
-		// FIXME: currently panics if label occurs
-		value: MacroValue::Org(address.value()),
+	<mcro:"org"> <address:Number> =>? Ok(Macro {
+		value: MacroValue::Org(address.try_value(mcro, environment.source_code.clone()).map_err(|err| ParseError::User { error: err })?),
 		span: mcro,
 		label: None,
-	},
+	}),
 	<mcro:"brr"> <filename:"string"> => Macro {
 		value: MacroValue::Brr(String::from_utf8_lossy(&filename.0).into_owned()),
 		span: source_range(mcro.into(), filename.1.into()),

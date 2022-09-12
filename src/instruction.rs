@@ -14,6 +14,7 @@ use spcasm_derive::Parse;
 
 use super::label::{GlobalLabel, Label};
 use super::Register;
+use crate::error::{AssemblyCode, AssemblyError};
 use crate::label;
 /// Types for representing data and memory addresses (this is overkill).
 pub type MemoryAddress = i64;
@@ -214,19 +215,37 @@ impl Number {
 	/// If the label was not yet resolved, this function panics as it assumes that that has already happened.
 	#[must_use]
 	pub fn value(&self) -> MemoryAddress {
-		match self {
+		self.try_value((0,0).into(), Arc::default()).unwrap()
+	}
+
+	/// Extracts the actual value of this number, if possible.
+	/// # Errors
+	/// If the number cannot be resolved to a final numeric value.
+	pub fn try_value(&self, location: SourceSpan, source_code: Arc<AssemblyCode>) -> Result<MemoryAddress, AssemblyError> {
+		Ok(match self {
 			Self::Literal(value) => *value,
 			// necessary because matching through an Rc is not possible right now (would be super dope though).
 			Self::Label(ref label) => match label {
 				Label::Global(global_label) if let Some(ref value) = global_label.borrow().location => value.value(),
-				_ => panic!("Unresolved label {:?}", label),
+				Label::Local(local) => return Err(AssemblyError::UnresolvedLabel { 
+					label: local.borrow().name.clone(),
+					label_location: local.borrow().span,
+					usage_location: location,
+					src: source_code
+				}),
+				Label::Global(global) => return Err(AssemblyError::UnresolvedLabel {
+					label: global.borrow().name.clone(),
+					label_location: global.borrow().span,
+					usage_location: location,
+					src: source_code
+				}),
 			},
-			Self::Negate(number) => -number.value(),
-			Self::Add(lhs, rhs) => lhs.value() + rhs.value(),
-			Self::Subtract(lhs, rhs) => lhs.value() - rhs.value(),
-			Self::Multiply(lhs, rhs) => lhs.value() * rhs.value(),
-			Self::Divide(lhs, rhs) => lhs.value() / rhs.value(),
-		}
+			Self::Negate(number) => -number.try_value(location, source_code)?,
+			Self::Add(lhs, rhs) => lhs.try_value(location, source_code.clone())? + rhs.try_value(location, source_code)?,
+			Self::Subtract(lhs, rhs) => lhs.try_value(location, source_code.clone())? - rhs.try_value(location, source_code)?,
+			Self::Multiply(lhs, rhs) => lhs.try_value(location, source_code.clone())? * rhs.try_value(location, source_code)?,
+			Self::Divide(lhs, rhs) => lhs.try_value(location, source_code.clone())? / rhs.try_value(location, source_code)?,
+		})
 	}
 
 	/// Try to resolve this number down to a literal. Even if that's not entirely possible, sub-expressions are

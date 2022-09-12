@@ -126,6 +126,18 @@ mod test {
 		test_file("examples/labels.spcasm");
 	}
 
+	#[test]
+	fn errors() {
+		let error_sources = std::fs::read_dir("examples/errors").unwrap();
+		for error_source in error_sources {
+			let error_source = error_source.unwrap().path();
+			let error_source = &*error_source.to_string_lossy();
+			let result = super::run_assembler(error_source);
+			println!("running {}...\n{:?}", error_source, result);
+			assert!(result.is_err());
+		}
+	}
+
 	#[bench]
 	fn brr_integration(bencher: &mut Bencher) {
 		bencher.iter(|| test_file("examples/brr.spcasm"));

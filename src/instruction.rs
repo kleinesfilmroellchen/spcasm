@@ -1,8 +1,9 @@
 //! Instruction/AST-related structs created in the parser and consumed in the assembler.
 #![allow(clippy::use_self)]
 
+use core::fmt;
 use std::cell::RefCell;
-use std::fmt::{Display, Error, Formatter, UpperHex};
+use std::fmt::{Display, Error, Formatter, UpperHex, Write};
 use std::result::Result;
 use std::sync::Arc;
 
@@ -272,29 +273,44 @@ impl<T> From<(Number, T)> for Number {
 	}
 }
 
+// should be closure in upperhex formatter but borrow checker says no, again, no passing references to other closures
+fn write_correctly(prefix: char, f: &mut Formatter<'_>, address: &Number) -> Result<(), Error> {
+	f.write_char(prefix)?;
+	fmt::UpperHex::fmt(address, f)
+}
+
 impl UpperHex for Number {
 	fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), Error> {
+		let write_binary = |op, f: &mut Formatter, lhs: &Number, rhs: &Number| {
+			write_correctly('(', f, lhs)?;
+			write_correctly(op, f, rhs)?;
+			f.write_char(')')
+		};
+
 		match self {
 			Self::Label(Label::Global(ref unresolved_label)) => {
 				let unresolved_label = unresolved_label.borrow();
 				match unresolved_label.location {
-					Some(ref numeric_address) => write!(f, "${:X}", numeric_address),
+					Some(ref numeric_address) => write_correctly('$', f, numeric_address),
 					None => write!(f, "{}", unresolved_label.name),
 				}
 			},
 			Self::Label(Label::Local(ref local)) => {
 				let local = local.borrow();
 				match &local.location {
-					Some(numeric_address) => write!(f, "{:X}", **numeric_address),
+					Some(numeric_address) => f.pad(&format!("{:0X}", **numeric_address)),
 					None => write!(f, "{}", local.name),
 				}
 			},
-			Self::Literal(numeric_address) => write!(f, "${:X}", numeric_address),
-			Number::Negate(number) => write!(f, "-{:X}", number.as_ref()),
-			Number::Add(lhs, rhs) => write!(f, "({:X}+{:X})", lhs.as_ref(), rhs.as_ref()),
-			Number::Subtract(lhs, rhs) => write!(f, "({:X}-{:X})", lhs.as_ref(), rhs.as_ref()),
-			Number::Multiply(lhs, rhs) => write!(f, "({:X}*{:X})", lhs.as_ref(), rhs.as_ref()),
-			Number::Divide(lhs, rhs) => write!(f, "({:X}/{:X})", lhs.as_ref(), rhs.as_ref()),
+			Self::Literal(numeric_address) => {
+				f.write_char('$')?;
+				fmt::UpperHex::fmt(numeric_address, f)
+			},
+			Number::Negate(number) => write_correctly('-', f, number.as_ref()),
+			Number::Add(lhs, rhs) => write_binary('+', f, lhs, rhs),
+			Number::Subtract(lhs, rhs) => write_binary('-', f, lhs.as_ref(), rhs.as_ref()),
+			Number::Multiply(lhs, rhs) => write_binary('*', f, lhs.as_ref(), rhs.as_ref()),
+			Number::Divide(lhs, rhs) => write_binary('/', f, lhs.as_ref(), rhs.as_ref()),
 		}
 	}
 }
@@ -405,7 +421,7 @@ impl AddressingMode {
 
 impl Display for AddressingMode {
 	fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), Error> {
-		write!(f, "{}", match self {
+		f.pad(&match self {
 			Self::Immediate(number) => format!("#{:02X}", number),
 			Self::IndirectX => "(X)".to_owned(),
 			Self::IndirectY => "(Y)".to_owned(),

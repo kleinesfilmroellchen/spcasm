@@ -711,11 +711,11 @@ impl AssembledData {
 					had_modifications |= true;
 					match *resolved_label {
 						Label::Global(ref mut global) => {
-							global.borrow_mut().resolve_to(memory_address, self.source_code.clone());
+							global.borrow_mut().resolve_to(memory_address, datum.instruction_location, self.source_code.clone());
 							resolved_label
 						},
 						Label::Local(ref mut local) => {
-							local.borrow_mut().resolve_to(memory_address, self.source_code.clone());
+							local.borrow_mut().resolve_to(memory_address, datum.instruction_location, self.source_code.clone());
 							resolved_label
 						},
 					}

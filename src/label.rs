@@ -15,7 +15,7 @@ pub trait Resolvable {
 	/// Whether this label has already been resolved to a memory location.
 	fn is_resolved(&self) -> bool;
 	/// Resolves the label to the given memory location.
-	fn resolve_to(&mut self, location: MemoryAddress, source_code: Arc<AssemblyCode>);
+	fn resolve_to(&mut self, location: MemoryAddress, usage_span: SourceSpan, source_code: Arc<AssemblyCode>);
 }
 
 /// A textual label that refers to some location in memory and resolves to a numeric value at some point.
@@ -73,10 +73,10 @@ impl Resolvable for Label {
 		}
 	}
 
-	fn resolve_to(&mut self, location: MemoryAddress, source_code: Arc<AssemblyCode>) {
+	fn resolve_to(&mut self, location: MemoryAddress, usage_span: SourceSpan, source_code: Arc<AssemblyCode>) {
 		match self {
-			Self::Global(label) => label.borrow_mut().resolve_to(location, source_code),
-			Self::Local(label) => label.borrow_mut().resolve_to(location, source_code),
+			Self::Global(label) => label.borrow_mut().resolve_to(location, usage_span, source_code),
+			Self::Local(label) => label.borrow_mut().resolve_to(location, usage_span, source_code),
 		}
 	}
 }
@@ -110,14 +110,16 @@ impl Resolvable for GlobalLabel {
 		self.location.is_some()
 	}
 
-	fn resolve_to(&mut self, location: MemoryAddress, source_code: Arc<AssemblyCode>) {
+	fn resolve_to(&mut self, location: MemoryAddress, usage_span: SourceSpan, source_code: Arc<AssemblyCode>) {
 		if location <= 0xFF && self.used_as_address {
 			println!(
 				"{:?}",
 				miette::Report::new(AssemblyError::NonDirectPageLabel {
-					name:     self.name.clone(),
-					location: self.span,
-					src:      source_code,
+					name:             self.name.clone(),
+					label_definition: self.span,
+					address:          location,
+					location:         usage_span,
+					src:              source_code,
 				})
 			);
 		}
@@ -153,14 +155,16 @@ impl Resolvable for LocalLabel {
 		self.location.is_some()
 	}
 
-	fn resolve_to(&mut self, location: MemoryAddress, source_code: Arc<AssemblyCode>) {
+	fn resolve_to(&mut self, location: MemoryAddress, usage_span: SourceSpan, source_code: Arc<AssemblyCode>) {
 		if location <= 0xFF {
 			println!(
 				"{:?}",
 				miette::Report::new(AssemblyError::NonDirectPageLabel {
-					name:     format!(".{}", self.name),
-					location: self.span,
-					src:      source_code,
+					name:             format!(".{}", self.name),
+					label_definition: self.span,
+					address:          location,
+					location:         usage_span,
+					src:              source_code,
 				})
 			);
 		}

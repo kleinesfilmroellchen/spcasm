@@ -17,13 +17,13 @@ use crate::{Register, Token};
 #[allow(clippy::missing_panics_doc)]
 pub fn lex(source_code: Arc<AssemblyCode>) -> Result<Vec<Token>, AssemblyError> {
 	let mut chars = source_code.text.chars().peekable();
-	let mut index = 0;
+	let mut index = 0usize;
 	let mut tokens = Vec::new();
 
 	while let Some(chr) = chars.next() {
 		// \r is treated as white space and ignored.
 		if chr == '\n' {
-			tokens.push(Token::Newline(index.into()));
+			tokens.push(Token::Newline(index.saturating_sub(1).into()));
 			index += 1;
 			continue;
 		} else if chr.is_whitespace() {

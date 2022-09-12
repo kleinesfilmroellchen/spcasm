@@ -3,6 +3,7 @@
 use std::vec::IntoIter;
 
 use crate::error::AssemblyError;
+use crate::parser::source_range;
 use crate::{Register, Token};
 
 /// An API adaptor that allows us to pass the Vec<Token> we lexed into LALRPOP.
@@ -34,7 +35,9 @@ pub fn disambiguate_indexing_parenthesis(tokens: Vec<Token>) -> Vec<Token> {
 	let mut expecting_indexing_addressing_mode = false;
 	// We're currently on a line that has a mnemonic; important for determining what purpose commas have.
 	let mut in_mnemonic_line = false;
+	let mut last_offset = 0;
 	while let Some(next_token) = tokens.next() {
+		last_offset = next_token.source_span().offset() + next_token.source_span().len() - 1;
 		match next_token {
 			Token::Mnemonic(..) => {
 				in_mnemonic_line = true;
@@ -93,13 +96,13 @@ pub fn disambiguate_indexing_parenthesis(tokens: Vec<Token>) -> Vec<Token> {
 		}
 		result.push(next_token);
 	}
-	result.push(Token::Newline(0.into()));
+	result.push(Token::Newline(last_offset.into()));
 
 	result.iter().fold(Vec::new(), |mut tokens, token| {
 		if let Some(plus @ Token::Plus(..)) = tokens.last().cloned() && let Token::Register(register @(Register::X | Register::Y), ..) = token {
 			tokens.pop();
 			tokens.push(Token::PlusRegister(*register,
-				(plus.source_span().offset(), plus.source_span().offset() + plus.source_span().len() - token.source_span().offset()).into()));
+				source_range(plus.source_span().into(), token.source_span().into())));
 		} else {
 			tokens.push(token.clone());
 		}

@@ -4,7 +4,7 @@ use std::collections::HashMap;
 use std::result::Result;
 use std::sync::Arc;
 
-use miette::SourceSpan;
+use miette::{SourceOffset, SourceSpan};
 
 use super::error::{AssemblyCode, AssemblyError};
 use super::instruction::{AddressingMode, Instruction, Number, Opcode};
@@ -133,12 +133,13 @@ impl Environment {
 	pub fn coerce_to_direct_page_addressing(program: &mut Vec<ProgramElement>) {
 		for element in program {
 			if let ProgramElement::Instruction(Instruction {
-					opcode: Opcode { first_operand, second_operand, .. },
-					..
-				}) = element {
-					*first_operand = first_operand.clone().map(AddressingMode::coerce_to_direct_page_addressing);
-					*second_operand = second_operand.clone().map(AddressingMode::coerce_to_direct_page_addressing);
-				}
+				opcode: Opcode { first_operand, second_operand, .. },
+				..
+			}) = element
+			{
+				*first_operand = first_operand.clone().map(AddressingMode::coerce_to_direct_page_addressing);
+				*second_operand = second_operand.clone().map(AddressingMode::coerce_to_direct_page_addressing);
+			}
 		}
 	}
 
@@ -190,4 +191,56 @@ where
 		Number::Literal(literal) if literal <= 0xFF => dp_mode(value),
 		_ => non_dp_mode(value),
 	}
+}
+
+/// A simple union type for source spans and (zero-width) source offsets.
+#[derive(Debug, Clone, Copy, Eq, PartialEq)]
+pub enum SpanOrOffset {
+	///
+	Span(SourceSpan),
+	///
+	Offset(SourceOffset),
+}
+
+impl Default for SpanOrOffset {
+	fn default() -> Self {
+		Self::Offset(0.into())
+	}
+}
+
+impl From<SourceOffset> for SpanOrOffset {
+	fn from(offset: SourceOffset) -> Self {
+		Self::Offset(offset)
+	}
+}
+
+impl From<SourceSpan> for SpanOrOffset {
+	fn from(span: SourceSpan) -> Self {
+		Self::Span(span)
+	}
+}
+
+impl From<&SourceSpan> for SpanOrOffset {
+	fn from(span: &SourceSpan) -> Self {
+		Self::Span(*span)
+	}
+}
+
+#[allow(clippy::from_over_into)]
+impl Into<SourceSpan> for SpanOrOffset {
+	fn into(self) -> SourceSpan {
+		match self {
+			Self::Span(span) => span,
+			Self::Offset(offset) => (offset, 0.into()).into(),
+		}
+	}
+}
+
+/// Creates a new source span from the given start and end source spans. This is used for constructing larger syntactic
+/// elements that span multiple tokens or sub-elements.
+#[must_use]
+pub fn source_range(start: SpanOrOffset, end: SpanOrOffset) -> SourceSpan {
+	let start: SourceSpan = start.into();
+	let end: SourceSpan = end.into();
+	(start.offset(), end.offset() + end.len() - start.offset()).into()
 }

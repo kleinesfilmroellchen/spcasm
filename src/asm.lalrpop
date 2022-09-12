@@ -3,7 +3,7 @@ use std::sync::{Weak, Arc};
 use std::cell::RefCell;
 
 use crate::instruction::{Instruction, Mnemonic, Number, AddressingMode, Opcode};
-use crate::parser::{Environment, try_make_direct_page_addressing_mode, LabelUsageKind};
+use crate::parser::{Environment, try_make_direct_page_addressing_mode, LabelUsageKind, source_range};
 use crate::error::AssemblyError;
 use crate::mcro::{MacroSymbol, Macro, MacroValue};
 use crate::program::ProgramElement;
@@ -15,7 +15,8 @@ grammar<'env>(environment: &'env mut Environment);
 
 pub Program: Vec<ProgramElement> = "\n"* <line:( <Line> )*> => line;
 
-Line: ProgramElement = <label:( <LabelForInstruction> "\n"* )?> <element:InstructionOrMacro> "\n"+ => element.set_label(label);
+Line: ProgramElement = <label:( <LabelForInstruction> "\n"* )?> <element:InstructionOrMacro> <newlines:("\n"+)> => 
+	element.set_label(label).extend_span(newlines[0].into());
 
 InstructionOrMacro: ProgramElement = {
 	InstructionWithTestComment => ProgramElement::Instruction(<>),
@@ -26,7 +27,7 @@ InstructionWithTestComment: Instruction = <mut instruction:Instruction> <expecte
 	#[cfg(test)]
 	if let Some(expected) = expected {
 		instruction.expected_value = Some(expected.0);
-		instruction.span = (instruction.span.offset(), expected.1.offset() + expected.1.len() - instruction.span.offset()).into();
+		instruction.span = source_range(instruction.span.into(), expected.1.into());
 	}
 	instruction
 };
@@ -75,20 +76,17 @@ Macro: Macro = {
 	},
 	<mcro:"brr"> <filename:"string"> => Macro {
 		value: MacroValue::Brr(String::from_utf8_lossy(&filename.0).into_owned()),
-		// TODO: Chain the two spans.
-		span: mcro,
+		span: source_range(mcro.into(), filename.1.into()),
 		label: None,
 	},
 	<mcro:"ascii"> <text:"string"> => Macro {
 		value: MacroValue::String{ text: text.0, has_null_terminator: false },
-		// TODO: Chain the two spans.
-		span: mcro,
+		span: source_range(mcro.into(), text.1.into()),
 		label: None,
 	},
 	<mcro:"asciiz"> <text:"string"> => Macro {
 		value: MacroValue::String{ text: text.0, has_null_terminator: true },
-		// TODO: Chain the two spans.
-		span: mcro,
+		span: source_range(mcro.into(), text.1.into()),
 		label: None,
 	},
 	LabelAssignment,
@@ -130,12 +128,11 @@ Label: Label = {
 	<identifier:"identifier"> => Label::Global(environment.get_global_label(&identifier.0, identifier.1, LabelUsageKind::AsAddress)),
 };
 
-LabelAssignment: Macro = <mut label:Label> "=" <value:Number> => {
+LabelAssignment: Macro = <mut label:Label> <eq:"="> <value:Number> => {
 	label.set_location(value.clone());
 	Macro {
 		value: MacroValue::AssignLabel { label: label.clone(), value },
-		// TODO: Chain the two spans.
-		span: label.source_span(),
+		span: source_range(label.source_span().into(), eq.into()),
 		label: None,
 	}
 };
@@ -177,6 +174,7 @@ AddressingMode: AddressingMode = {
 	<Number> "." <"number"> => try_make_direct_page_addressing_mode((<>), |(a, b)| AddressingMode::DirectPageBit(a, b.0 as u8), |(a, b)| AddressingMode::AddressBit(a, b.0 as u8)),
 	"/" <address:Number> "." <bit:"number"> => AddressingMode::NegatedAddressBit(address, bit.0 as u8),
 	"[" "X" "]" "+" => AddressingMode::IndirectXAutoIncrement,
+	"[" "X" "+" "]" => AddressingMode::IndirectXAutoIncrement,
 	"[" "X" "]" => AddressingMode::IndirectX,
 	"[" "Y" "]" => AddressingMode::IndirectY,
 };

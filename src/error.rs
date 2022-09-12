@@ -86,7 +86,8 @@ pub enum AssemblyError {
 	#[diagnostic(
 		code(spcasm::invalid_addressing_mode),
 		severity(Error),
-		help("The instruction `{mnemonic}` accepts the modes {} here", .legal_modes.iter().map(|mode| format!("{} ", mode)).collect::<String>().trim()),
+		help("The instruction `{mnemonic}` accepts the modes {} here", 
+			.legal_modes.iter().map(|mode| format!("{}, ", mode)).collect::<String>().strip_suffix(", ").unwrap()),
 	)]
 	InvalidAddressingMode {
 		mode:             String,
@@ -346,11 +347,14 @@ pub enum AssemblyError {
 		url("https://github.com/kleinesfilmroellchen/spcasm/issues/1")
 	)]
 	NonDirectPageLabel {
-		name:     String,
+		name:             String,
+		address:          MemoryAddress,
 		#[label("Might point at a direct page address")]
-		location: SourceSpan,
+		label_definition: SourceSpan,
+		#[label("Memory address {address:02X}")]
+		location:         SourceSpan,
 		#[source_code]
-		src:      Arc<AssemblyCode>,
+		src:              Arc<AssemblyCode>,
 	},
 
 	#[error("There's dangling tokens after this, spcasm ignores these for now")]

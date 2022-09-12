@@ -5,6 +5,7 @@ use miette::SourceSpan;
 use super::instruction::Instruction;
 use super::Macro;
 use crate::label::Label;
+use crate::parser::source_range;
 
 /// A program element of an assenbled program. A list of program elements makes an assembled program itself.
 #[derive(Clone, Debug)]
@@ -22,6 +23,16 @@ impl ProgramElement {
 		match self {
 			Self::Macro(Macro { span, .. }) | Self::Instruction(Instruction { span, .. }) => span,
 		}
+	}
+
+	/// Extends the source span for this program element to reach until the new end span.
+	#[must_use]
+	pub fn extend_span(mut self, end: SourceSpan) -> Self {
+		match &mut self {
+			Self::Macro(Macro { span, .. }) | Self::Instruction(Instruction { span, .. }) =>
+				*span = source_range((*span).into(), end.into()),
+		}
+		self
 	}
 
 	/// Set the label on this program element, returning itself.

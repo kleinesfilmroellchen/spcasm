@@ -12,6 +12,7 @@ brr "my-sample.wav"
 ```
 * Nice errors: spcasm reports errors in a nice format, if your terminal supports it:
 ![image](https://user-images.githubusercontent.com/28656157/164973851-d66c5fa3-8bed-43b6-b7c2-e66cc53592c6.png)
+![image](https://user-images.githubusercontent.com/28656157/189650000-b299a7d8-53ca-42d8-9601-911889a99517.png)
 * Helpful warnings and information about possible pitfalls:
 ![image](https://user-images.githubusercontent.com/28656157/164979501-4ece4431-735e-471c-a9a8-674df64b23c3.png)
 

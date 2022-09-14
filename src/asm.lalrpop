@@ -84,12 +84,17 @@ Macro: Macro = {
 		label: None,
 	},
 	<mcro:"ascii"> <text:"string"> => Macro {
-		value: MacroValue::String{ text: text.0, has_null_terminator: false },
+		value: MacroValue::String { text: text.0, has_null_terminator: false },
 		span: source_range(mcro.into(), text.1.into()),
 		label: None,
 	},
 	<mcro:"asciiz"> <text:"string"> => Macro {
-		value: MacroValue::String{ text: text.0, has_null_terminator: true },
+		value: MacroValue::String { text: text.0, has_null_terminator: true },
+		span: source_range(mcro.into(), text.1.into()),
+		label: None,
+	},
+	<mcro:"incbin"> <text:"string"> => Macro {
+		value: MacroValue::Include { file: String::from_utf8_lossy(&text.0).into_owned(), is_binary: true },
 		span: source_range(mcro.into(), text.1.into()),
 		label: None,
 	},
@@ -217,6 +222,7 @@ extern {
 		"dd" => Token::Macro(MacroSymbol::Dd, <SourceSpan>),
 		"ascii" => Token::Macro(MacroSymbol::Ascii, <SourceSpan>),
 		"asciiz" => Token::Macro(MacroSymbol::Asciiz, <SourceSpan>),
+		"incbin" => Token::Macro(MacroSymbol::Incbin, <SourceSpan>),
 		"brr" => Token::Macro(MacroSymbol::Brr, <SourceSpan>),
 		"number" => Token::Number(<i64>, <SourceSpan>),
 		"string" => Token::String(<Vec<u8>>, <SourceSpan>),

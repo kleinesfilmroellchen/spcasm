@@ -31,6 +31,7 @@ pub enum MacroSymbol {
 	Ascii,
 	Asciiz,
 	Brr,
+	Incbin,
 }
 
 impl Display for MacroSymbol {
@@ -44,6 +45,7 @@ impl Display for MacroSymbol {
 			Self::Ascii => "ascii",
 			Self::Asciiz => "asciiz",
 			Self::Brr => "brr",
+			Self::Incbin => "incbin",
 		})
 	}
 }
@@ -72,5 +74,10 @@ pub enum MacroValue {
 	AssignLabel {
 		label: Label,
 		value: Number,
+	},
+	/// incbin <file name> or include <file name>
+	Include {
+		file: String,
+		is_binary: bool,
 	},
 }

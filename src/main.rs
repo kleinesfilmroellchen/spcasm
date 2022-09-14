@@ -126,6 +126,11 @@ mod test {
 		test_file("examples/labels.spcasm");
 	}
 
+	#[bench]
+	fn include(bencher: &mut Bencher) {
+		bencher.iter(|| test_file("examples/include.spcasm"));
+	}
+
 	#[test]
 	fn errors() {
 		let error_sources = std::fs::read_dir("examples/errors").unwrap();

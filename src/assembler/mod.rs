@@ -225,7 +225,7 @@ fn assemble_macro(data: &mut AssembledData, mcro: &mut Macro) -> Result<(), Asse
 		},
 		MacroValue::Brr(ref file_name) => {
 			// Resolve the audio file's path relative to the source file.
-			let actual_path = PathBuf::from(data.source_code.name.clone()).parent().unwrap().to_owned().join(file_name);
+			let actual_path = resolve_file(&data.source_code, mcro.span, file_name)?;
 			let file = File::open(actual_path).map_err(|err| AssemblyError::FileNotFound {
 				os_error:  err.kind().to_string(),
 				file_name: file_name.clone(),
@@ -241,11 +241,7 @@ fn assemble_macro(data: &mut AssembledData, mcro: &mut Macro) -> Result<(), Asse
 				})?;
 			let encoded = brr::encode_to_brr(&sample_data, false);
 
-			let mut is_first = true;
-			for value in encoded {
-				data.append(value, if is_first { mcro.label.clone() } else { None }, mcro.span);
-				is_first = false;
-			}
+			data.append_bytes(encoded, &mcro.label, mcro.span);
 		},
 		MacroValue::String { ref text, has_null_terminator } => {
 			let mut is_first = true;
@@ -265,6 +261,19 @@ fn assemble_macro(data: &mut AssembledData, mcro: &mut Macro) -> Result<(), Asse
 				global.borrow_mut().location = Some(value.clone().try_resolve());
 			},
 		},
+		MacroValue::Include { ref file, is_binary } if is_binary => {
+			let binary_file = resolve_file(&data.source_code, mcro.span, file)?;
+			let binary_data = std::fs::read(binary_file).map_err(|err| AssemblyError::FileNotFound {
+				os_error:  err.kind().to_string(),
+				file_name: file.clone(),
+				src:       data.source_code.clone(),
+				location:  mcro.span,
+			})?;
+
+			data.append_bytes(binary_data, &mcro.label, mcro.span);
+		},
+		MacroValue::Include { is_binary, .. } if !is_binary => todo!(),
+		MacroValue::Include { .. } => unreachable!(),
 	}
 	Ok(())
 }
@@ -295,6 +304,21 @@ fn assemble_operandless_instruction(data: &mut AssembledData, mnemonic: Mnemonic
 	{
 		instruction.assembled_size = Some(1);
 	}
+}
+
+fn resolve_file(
+	source_code: &Arc<AssemblyCode>,
+	span: SourceSpan,
+	target_file: &str,
+) -> Result<PathBuf, AssemblyError> {
+	PathBuf::from(source_code.name.clone()).parent().map(|directory| directory.to_owned().join(target_file)).ok_or_else(
+		|| AssemblyError::FileNotFound {
+			os_error:  "no parent directory for source file".to_string(),
+			file_name: source_code.name.clone(),
+			src:       source_code.clone(),
+			location:  span,
+		},
+	)
 }
 
 /// Data in memory while we still need to resolve labels.
@@ -536,6 +560,14 @@ impl AssembledData {
 		});
 	}
 
+	fn append_bytes(&mut self, values: Vec<u8>, label: &Option<Label>, span: SourceSpan) {
+		let mut is_first = true;
+		for value in values {
+			self.append(value, if is_first { label.clone() } else { None }, span);
+			is_first = false;
+		}
+	}
+
 	/// Appends an unresolved value to the current segment. The `byte` parameter decides
 	/// which byte will be used in this memory address when the label is resolved.
 	pub fn append_8_bits_unresolved(&mut self, value: Number, byte: u8, label: Option<Label>, span: SourceSpan) {
@@ -711,11 +743,19 @@ impl AssembledData {
 					had_modifications |= true;
 					match *resolved_label {
 						Label::Global(ref mut global) => {
-							global.borrow_mut().resolve_to(memory_address, datum.instruction_location, self.source_code.clone());
+							global.borrow_mut().resolve_to(
+								memory_address,
+								datum.instruction_location,
+								self.source_code.clone(),
+							);
 							resolved_label
 						},
 						Label::Local(ref mut local) => {
-							local.borrow_mut().resolve_to(memory_address, datum.instruction_location, self.source_code.clone());
+							local.borrow_mut().resolve_to(
+								memory_address,
+								datum.instruction_location,
+								self.source_code.clone(),
+							);
 							resolved_label
 						},
 					}

@@ -1,0 +1,6 @@
+; Include macro tests
+
+incbin "binary.bin"
+
+org $10
+incbin "../src/brr/yoshi.wav"

@@ -1,0 +1,1 @@
+incbin "../binary.bin":2-3-1

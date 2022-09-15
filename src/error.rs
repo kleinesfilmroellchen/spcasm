@@ -196,9 +196,41 @@ pub enum AssemblyError {
 	)]
 	MissingGlobalLabel {
 		local_label: String,
+		#[source_code]
 		src:         Arc<AssemblyCode>,
 		#[label("Local label defined here")]
 		location:    SourceSpan,
+	},
+
+	#[error("{start} is greater than {end}")]
+	#[diagnostic(
+		code(spcasm::invalid_range),
+		help("Switch the range limits around: `{end}-{start}`"),
+		severity(Error)
+	)]
+	StartAboveEnd {
+		start:    usize,
+		end:      usize,
+		#[source_code]
+		src:      Arc<AssemblyCode>,
+		#[label("In this range")]
+		location: SourceSpan,
+	},
+	#[error("The range {start}-{end} is out of bounds for the input file \"{file}\"")]
+	#[diagnostic(
+		code(spcasm::invalid_range),
+		help("The input's length is {file_len}"),
+		severity(Error)
+	)]
+	RangeOutOfBounds {
+		start:    usize,
+		end:      usize,
+		file: String,
+		file_len: usize,
+		#[source_code]
+		src:      Arc<AssemblyCode>,
+		#[label("Out of bounds range defined here")]
+		location: SourceSpan,
 	},
 
 	#[cfg(test)]

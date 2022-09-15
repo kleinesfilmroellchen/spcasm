@@ -25,8 +25,12 @@ impl Iterator for LalrpopAdaptor {
 	}
 }
 
-/// Because LALRPOP's grammar needs to be LR(1), it cannot disambiguate the use of parentheses for expressions and
-/// indexing addressing modes. Therefore, we do this in a preprocessing step which is (somewhat) LL(2).
+/// Because LALRPOP's grammar needs to be LR(1) but SPC700 assembly by default is not, we do a preprocessing step which
+/// is (somewhat) LL(2). Things we do here:
+/// - insert final newline to allow simpler newline-related grammar rules
+/// - disambiguate parenthesis used for expressions and for addressing
+/// - combine '+X' and '+Y' into one token
+/// - transform simple '-' into a "range dash" for range specifications
 pub fn disambiguate_indexing_parenthesis(tokens: Vec<Token>) -> Vec<Token> {
 	let mut tokens = tokens.into_iter();
 	let mut result = Vec::new();
@@ -86,6 +90,25 @@ pub fn disambiguate_indexing_parenthesis(tokens: Vec<Token>) -> Vec<Token> {
 					.push(Token::CloseIndexingParenthesis(inner_tokens.last().unwrap().source_span().offset().into()));
 
 				// Don't push the parenthesis token.
+				continue;
+			},
+			// Protect dashes from getting transformed into range dashes inside parenthesis.
+			Token::OpenParenthesis(..) if !expecting_indexing_addressing_mode && !in_mnemonic_line => {
+				result.push(next_token);
+				let mut depth = 1usize;
+				while depth > 0 && let Some(next_inner_token) = tokens.next() {
+					match &next_inner_token {
+						Token::CloseParenthesis(..) => depth -= 1,
+						Token::OpenParenthesis(..) => depth += 1,
+						Token::Newline(..) => depth = 0,
+						_ => (),
+					}
+					result.push(next_inner_token);
+				}
+				continue;
+			},
+			Token::Minus(offset) if !in_mnemonic_line => {
+				result.push(Token::RangeMinus(offset));
 				continue;
 			},
 			// After all of these tokens we can be sure we can't have an indexing addressing mode, so parentheses can

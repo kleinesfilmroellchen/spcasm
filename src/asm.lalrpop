@@ -93,8 +93,12 @@ Macro: Macro = {
 		span: source_range(mcro.into(), text.1.into()),
 		label: None,
 	},
-	<mcro:"incbin"> <text:"string"> => Macro {
-		value: MacroValue::Include { file: String::from_utf8_lossy(&text.0).into_owned(), is_binary: true },
+	<mcro:"incbin"> <text:"string"> <range:InclusionRange?> => Macro {
+		value: MacroValue::Include {
+			file: String::from_utf8_lossy(&text.0).into_owned(),
+			is_binary: true,
+			range,
+		},
 		span: source_range(mcro.into(), text.1.into()),
 		label: None,
 	},
@@ -111,6 +115,33 @@ TableMacro: (MacroSymbol, SourceSpan) = {
 };
 
 NumberList = Comma<Number>;
+
+/// Allows both vasm and asar syntax; note that asar requires an end point.
+/// vasm: `, start [, length]`
+/// asar: `: start - end`
+InclusionRange: SourceSpan = {
+	<comma:","> <start:Number> <length:( "," <Number> )?> =>? {
+		// FIXME: dangerous conversions
+		let start = start.try_value(comma.into(), environment.source_code.clone())? as usize;
+		let length = length.map(|length| length.try_value(comma.into(), environment.source_code.clone())).transpose()?.unwrap_or(i64::MAX) as usize;
+		Ok((start, length).into())
+	},
+	<colon:":"> <start:Number> <dash:"-range-"> <end:Number> =>? {
+		let colon_dash_range = source_range(colon.into(), dash.into());
+		let start = start.try_value(colon_dash_range, environment.source_code.clone())? as usize;
+		let end = end.try_value(colon_dash_range, environment.source_code.clone())? as usize;
+		if start > end {
+			Err(ParseError::User { error: AssemblyError::StartAboveEnd {
+				start,
+				end,
+				src: environment.source_code.clone(),
+				location: source_range(colon.into(), dash.into()),
+			}})
+		} else {
+			Ok((start, end - start).into())
+		}
+	},
+};
 
 LabelForInstruction: Label = {
 	"." <identifier:"identifier"> ":" => Label::Local(
@@ -231,6 +262,7 @@ extern {
 		"+" => Token::Plus(<SourceOffset>),
 		"*" => Token::Star(<SourceOffset>),
 		"-" => Token::Minus(<SourceOffset>),
+		"-range-" => Token::RangeMinus(<SourceOffset>),
 		"/" => Token::Slash(<SourceOffset>),
 		"(" => Token::OpenParenthesis(<SourceOffset>),
 		")" => Token::CloseParenthesis(<SourceOffset>),

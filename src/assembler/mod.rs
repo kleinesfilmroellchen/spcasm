@@ -261,14 +261,28 @@ fn assemble_macro(data: &mut AssembledData, mcro: &mut Macro) -> Result<(), Asse
 				global.borrow_mut().location = Some(value.clone().try_resolve());
 			},
 		},
-		MacroValue::Include { ref file, is_binary } if is_binary => {
+		MacroValue::Include { ref file, is_binary, range } if is_binary => {
 			let binary_file = resolve_file(&data.source_code, mcro.span, file)?;
-			let binary_data = std::fs::read(binary_file).map_err(|err| AssemblyError::FileNotFound {
+			let mut binary_data = std::fs::read(binary_file).map_err(|err| AssemblyError::FileNotFound {
 				os_error:  err.kind().to_string(),
 				file_name: file.clone(),
 				src:       data.source_code.clone(),
 				location:  mcro.span,
 			})?;
+			if let Some(range) = range {
+				let max_number_of_bytes = binary_data.len() - range.offset();
+				binary_data = binary_data
+					.get(range.offset() .. range.offset().saturating_add(range.len()).min(max_number_of_bytes))
+					.ok_or(AssemblyError::RangeOutOfBounds {
+						start:    range.offset(),
+						end:      range.offset() + range.len(),
+						file:     file.clone(),
+						file_len: binary_data.len(),
+						src:      data.source_code.clone(),
+						location: mcro.span,
+					})?
+					.to_vec();
+			}
 
 			data.append_bytes(binary_data, &mcro.label, mcro.span);
 		},

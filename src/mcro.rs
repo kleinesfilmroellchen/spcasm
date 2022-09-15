@@ -78,6 +78,7 @@ pub enum MacroValue {
 	/// incbin <file name> or include <file name>
 	Include {
 		file: String,
+		range: Option<SourceSpan>,
 		is_binary: bool,
 	},
 }

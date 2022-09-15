@@ -35,6 +35,8 @@ pub enum Token {
 	Plus(SourceOffset),
 	/// '-'
 	Minus(SourceOffset),
+	/// '-' but used in range expressions like for 'incbin'
+	RangeMinus(SourceOffset),
 	/// '*'
 	Star(SourceOffset),
 	/// '/'
@@ -68,13 +70,21 @@ impl PartialEq for Token {
 			(Self::Macro(name, ..), Self::Macro(other_name, ..)) => name == other_name,
 			(Self::Number(value, ..), Self::Number(other_value, ..)) => value == other_value,
 			(Self::Register(register, ..), Self::Register(other_register, ..)) => register == other_register,
+			(Self::PlusRegister(register, ..), Self::PlusRegister(other_register, ..)) => register == other_register,
 			(Self::Mnemonic(mnemonic, ..), Self::Mnemonic(other_mnemonic, ..)) => mnemonic == other_mnemonic,
+			(Self::String(text, ..), Self::String(other_text, ..)) => text == other_text,
 			(Self::Colon(..), Self::Colon(..))
 			| (Self::OpenParenthesis(..), Self::OpenParenthesis(..))
+			| (Self::OpenIndexingParenthesis(..), Self::OpenIndexingParenthesis(..))
 			| (Self::CloseParenthesis(..), Self::CloseParenthesis(..))
+			| (Self::CloseIndexingParenthesis(..), Self::CloseIndexingParenthesis(..))
 			| (Self::Hash(..), Self::Hash(..))
 			| (Self::Plus(..), Self::Plus(..))
+			| (Self::Equals(..), Self::Equals(..))
+			| (Self::Minus(..), Self::Minus(..))
+			| (Self::RangeMinus(..), Self::RangeMinus(..))
 			| (Self::Slash(..), Self::Slash(..))
+			| (Self::Star(..), Self::Star(..))
 			| (Self::Newline(..), Self::Newline(..))
 			| (Self::Comma(..), Self::Comma(..))
 			| (Self::Period(..), Self::Period(..)) => true,
@@ -123,6 +133,7 @@ impl Token {
 			| (Self::Star(..), Self::Star(..))
 			| (Self::String(..), Self::String(..))
 			| (Self::Minus(..), Self::Minus(..))
+			| (Self::RangeMinus(..), Self::RangeMinus(..))
 			| (Self::Slash(..), Self::Slash(..))
 			| (Self::Newline(..), Self::Newline(..))
 			| (Self::Comma(..), Self::Comma(..))
@@ -148,6 +159,7 @@ impl Token {
 			| Self::Equals(location)
 			| Self::Star(location)
 			| Self::Minus(location)
+			| Self::RangeMinus(location)
 			| Self::Newline(location)
 			| Self::OpenParenthesis(location)
 			| Self::OpenIndexingParenthesis(location)
@@ -183,7 +195,7 @@ impl Display for Token {
 			Self::Comma(..) => "comma",
 			Self::Period(..) => "'.'",
 			Self::Plus(..) => "'+'",
-			Self::Minus(..) => "'-'",
+			Self::Minus(..) | Self::RangeMinus(..) => "'-'",
 			Self::Star(..) => "'*'",
 			Self::Equals(..) => "'='",
 			Self::CloseParenthesis(..) | Self::CloseIndexingParenthesis(..) => "')'",

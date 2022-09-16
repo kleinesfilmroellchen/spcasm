@@ -160,7 +160,7 @@ fn microbench_decode_block_filter_3(bencher: &mut Bencher) {
 fn short_sample_encode(bencher: &mut Bencher) {
 	use ::wav::read as wav_read;
 
-	let (_, data) = wav_read(&mut std::fs::File::open("src/brr/yoshi.wav").unwrap()).unwrap();
+	let (_, data) = wav_read(&mut std::fs::File::open("examples/yoshi.wav").unwrap()).unwrap();
 	let data = data.as_sixteen().expect("must be signed 16-bit WAV");
 	bencher.iter(|| encode_to_brr(data, false));
 }
@@ -170,7 +170,7 @@ fn short_sample_encode(bencher: &mut Bencher) {
 fn extremely_long_encode(bencher: &mut Bencher) {
 	use ::wav::read as wav_read;
 
-	let (_, data) = wav_read(&mut std::fs::File::open("src/brr/song.wav").unwrap()).unwrap();
+	let (_, data) = wav_read(&mut std::fs::File::open("examples/song.wav").unwrap()).unwrap();
 	let data = data.as_sixteen().expect("must be signed 16-bit WAV");
 	let now = std::time::Instant::now();
 	bencher.iter(|| encode_to_brr(data, false));

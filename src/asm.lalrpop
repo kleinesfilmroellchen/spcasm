@@ -102,6 +102,11 @@ Macro: Macro = {
 		span: source_range(mcro.into(), text.1.into()),
 		label: None,
 	},
+	"end" => Macro {
+		value: MacroValue::End,
+		span: <>,
+		label: None,
+	},
 	LabelAssignment,
 };
 
@@ -254,6 +259,7 @@ extern {
 		"ascii" => Token::Macro(MacroSymbol::Ascii, <SourceSpan>),
 		"asciiz" => Token::Macro(MacroSymbol::Asciiz, <SourceSpan>),
 		"incbin" => Token::Macro(MacroSymbol::Incbin, <SourceSpan>),
+		"end" => Token::Macro(MacroSymbol::End, <SourceSpan>),
 		"brr" => Token::Macro(MacroSymbol::Brr, <SourceSpan>),
 		"number" => Token::Number(<i64>, <SourceSpan>),
 		"string" => Token::String(<Vec<u8>>, <SourceSpan>),

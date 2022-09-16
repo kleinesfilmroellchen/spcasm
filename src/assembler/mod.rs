@@ -41,6 +41,9 @@ pub fn assemble(environment: &Environment, instructions: &mut Vec<ProgramElement
 			ProgramElement::Instruction(instruction) => assemble_instruction(&mut data, instruction)?,
 			ProgramElement::Macro(r#macro) => assemble_macro(&mut data, r#macro)?,
 		}
+		if data.should_stop {
+			break;
+		}
 	}
 	let mut pass_count = 0;
 	while data.execute_label_resolution_pass() && pass_count < MAX_PASSES {
@@ -288,6 +291,9 @@ fn assemble_macro(data: &mut AssembledData, mcro: &mut Macro) -> Result<(), Asse
 		},
 		MacroValue::Include { is_binary, .. } if !is_binary => todo!(),
 		MacroValue::Include { .. } => unreachable!(),
+		MacroValue::End => {
+			data.should_stop = true;
+		},
 	}
 	Ok(())
 }
@@ -444,6 +450,8 @@ pub struct AssembledData {
 	pub current_segment_start: Option<MemoryAddress>,
 	/// The source code behind this assembled data
 	pub source_code:           Arc<AssemblyCode>,
+	/// Assembler subroutines use this as a flag to signal an end of assembly as soon as possible.
+	should_stop:               bool,
 }
 
 impl AssembledData {
@@ -480,7 +488,12 @@ impl AssembledData {
 	#[must_use]
 	#[inline]
 	pub fn new(source_code: Arc<AssemblyCode>) -> Self {
-		Self { segments: BTreeMap::default(), current_segment_start: Option::default(), source_code }
+		Self {
+			segments: BTreeMap::default(),
+			current_segment_start: Option::default(),
+			source_code,
+			should_stop: false,
+		}
 	}
 
 	/// Starts a new segment at the given memory address and set it as the current segment.

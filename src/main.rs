@@ -168,15 +168,19 @@ mod test {
 	}
 
 	/// Assembles the contents of the expected value comments, which is what the file should assemble to.
-	#[allow(clippy::match_wildcard_for_single_variants)]
 	fn assemble_expected_binary(instructions: Vec<crate::ProgramElement>) -> Vec<Option<u8>> {
-		instructions
+		let mut filtered_instructions = Vec::new();
+		for program_element in instructions {
+			match program_element {
+				crate::ProgramElement::Instruction(instruction) => filtered_instructions.push(instruction),
+				crate::ProgramElement::Macro(crate::Macro { value: crate::mcro::MacroValue::End, .. }) => break,
+				_ => (),
+			}
+		}
+		filtered_instructions
 			.into_iter()
-			.filter_map(|program_element| match program_element {
-				crate::ProgramElement::Instruction(instruction) => Some(instruction),
-				_ => None,
-			})
 			.flat_map(|instruction| {
+				println!("< {:?}", instruction);
 				instruction.expected_value.clone().map_or(
 					vec![
 						None;

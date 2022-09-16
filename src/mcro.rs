@@ -32,6 +32,7 @@ pub enum MacroSymbol {
 	Asciiz,
 	Brr,
 	Incbin,
+	End,
 }
 
 impl Display for MacroSymbol {
@@ -46,6 +47,7 @@ impl Display for MacroSymbol {
 			Self::Asciiz => "asciiz",
 			Self::Brr => "brr",
 			Self::Incbin => "incbin",
+			Self::End => "end",
 		})
 	}
 }
@@ -81,4 +83,6 @@ pub enum MacroValue {
 		range: Option<SourceSpan>,
 		is_binary: bool,
 	},
+	/// end
+	End,
 }

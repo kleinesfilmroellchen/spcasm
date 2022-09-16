@@ -2,7 +2,7 @@
 use std::cell::RefCell;
 use std::collections::HashMap;
 use std::result::Result;
-use std::sync::Arc;
+use std::sync::{Arc, Weak};
 
 use miette::{SourceOffset, SourceSpan};
 
@@ -52,16 +52,26 @@ where
 #[derive(Debug)]
 pub struct Environment {
 	/// The list of labels.
-	pub labels:      Vec<Arc<RefCell<GlobalLabel>>>,
-	/// The source code of the assembly code.
+	pub labels:       Vec<Arc<RefCell<GlobalLabel>>>,
+	/// The files included in this "tree" created by include statements.
+	pub(crate) files: Vec<Arc<RefCell<AssemblyFile>>>,
+}
+
+#[derive(Debug)]
+pub(crate) struct AssemblyFile {
+	/// Parsed contents.
+	pub content:     Vec<ProgramElement>,
+	/// Underlying source code and file name.
 	pub source_code: Arc<AssemblyCode>,
+	/// The environment that this file is parsed in.
+	pub parent:      Weak<RefCell<Environment>>,
 }
 
 impl Environment {
 	/// Creates an empty environment.
 	#[must_use]
-	pub const fn new(source_code: Arc<AssemblyCode>) -> Self {
-		Self { labels: Vec::new(), source_code }
+	pub fn new() -> Arc<RefCell<Self>> {
+		Arc::new(RefCell::new(Self { labels: Vec::new(), files: Vec::new() }))
 	}
 
 	/// Parse a program given a set of tokens straight from the lexer.
@@ -69,88 +79,27 @@ impl Environment {
 	/// performed.
 	/// # Errors
 	/// Whenever something goes wrong in parsing.
-	pub fn parse(&mut self, tokens: Vec<Token>) -> Result<Vec<ProgramElement>, AssemblyError> {
+	pub(crate) fn parse(
+		this: &Arc<RefCell<Self>>,
+		tokens: Vec<Token>,
+		source_code: Arc<AssemblyCode>,
+	) -> Result<Arc<RefCell<AssemblyFile>>, AssemblyError> {
 		let lexed = lalrpop_adaptor::disambiguate_indexing_parenthesis(tokens);
 		let lexed = lalrpop_adaptor::LalrpopAdaptor::from(lexed);
 		let mut program = crate::asm::ProgramParser::new()
-			.parse(self, lexed)
-			.map_err(|err| AssemblyError::from_lalrpop(err, self.source_code.clone()))?;
-		self.fill_in_label_references(&mut program)?;
-		Self::coerce_to_direct_page_addressing(&mut program);
-		Ok(program)
-	}
+			.parse(this, &source_code, lexed)
+			.map_err(|err| AssemblyError::from_lalrpop(err, source_code.clone()))?;
 
-	/// Fills in the global label references for all local labels. Existing ones are overwritten, so the labels are
-	/// always consistent.
-	/// # Errors
-	/// If a local label precedes any global labels.
-	/// # Panics
-	/// All panics are programming errors.
-	pub fn fill_in_label_references(&self, program: &mut Vec<ProgramElement>) -> Result<(), AssemblyError> {
-		let mut current_global_label: Option<Arc<RefCell<GlobalLabel>>> = None;
+		let mut rc_file =
+			Arc::new(RefCell::new(AssemblyFile { content: program, source_code, parent: Arc::downgrade(this) }));
+		let mut file = rc_file.borrow_mut();
 
-		for element in program {
-			// First match for label reference resolution in instruction position
-			match element {
-				ProgramElement::Macro(Macro { value, label: Some(Label::Local(ref mut local)), .. }) => {
-					if let MacroValue::AssignLabel { label: Label::Local(assigned_local), .. } = value {
-						*assigned_local = label::merge_local_into_parent(
-							assigned_local.clone(),
-							current_global_label.clone(),
-							&self.source_code,
-						)?;
-					}
-					*local =
-						label::merge_local_into_parent(local.clone(), current_global_label.clone(), &self.source_code)?;
-				},
-				ProgramElement::Macro(Macro { label: Some(Label::Global(ref global)), value, .. }) => {
-					current_global_label = Some(global.clone());
-					if let MacroValue::AssignLabel { label: Label::Local(local), .. } = value {
-						*local = label::merge_local_into_parent(
-							local.clone(),
-							current_global_label.clone(),
-							&self.source_code,
-						)?;
-					}
-				},
-				ProgramElement::Instruction(Instruction { label: Some(Label::Global(ref global)), .. }) =>
-					current_global_label = Some(global.clone()),
-				ProgramElement::Macro(Macro {
-					value: MacroValue::AssignLabel { label: Label::Local(ref mut local), .. },
-					..
-				})
-				| ProgramElement::Instruction(Instruction { label: Some(Label::Local(ref mut local)), .. }) =>
-					*local =
-						label::merge_local_into_parent(local.clone(), current_global_label.clone(), &self.source_code)?,
+		file.fill_in_label_references()?;
+		file.coerce_to_direct_page_addressing();
 
-				ProgramElement::Instruction(Instruction { label: None, .. })
-				| ProgramElement::Macro(Macro { label: None, .. }) => (),
-			}
-			if let ProgramElement::Instruction(Instruction {
-				opcode: Opcode { first_operand, second_operand, .. },
-				..
-			}) = element && let Some(ref actual_global_label) = current_global_label
-			{
-				if let Some(mode) = first_operand.as_mut() { mode.set_global_label(actual_global_label) }
-				if let Some(mode) = second_operand.as_mut() { mode.set_global_label(actual_global_label) }
-			}
-		}
-		Ok(())
-	}
-
-	/// Tries to coerce addressing modes to direct page addressing wherever possible. This needs to be done again as the
-	/// unresolved local labels did not provide memory locations before merging.
-	pub fn coerce_to_direct_page_addressing(program: &mut Vec<ProgramElement>) {
-		for element in program {
-			if let ProgramElement::Instruction(Instruction {
-				opcode: Opcode { first_operand, second_operand, .. },
-				..
-			}) = element
-			{
-				*first_operand = first_operand.clone().map(AddressingMode::coerce_to_direct_page_addressing);
-				*second_operand = second_operand.clone().map(AddressingMode::coerce_to_direct_page_addressing);
-			}
-		}
+		drop(file);
+		this.borrow_mut().files.push(rc_file.clone());
+		Ok(rc_file)
 	}
 
 	/// Lookup a global label in this environment, and create it if necessary.
@@ -181,6 +130,84 @@ impl Environment {
 			}));
 			self.labels.push(new_label.clone());
 			new_label
+		}
+	}
+}
+
+impl AssemblyFile {
+	/// Fills in the global label references for all local labels. Existing ones are overwritten, so the labels are
+	/// always consistent.
+	/// # Errors
+	/// If a local label precedes any global labels.
+	/// # Panics
+	/// All panics are programming errors.
+	pub fn fill_in_label_references(&mut self) -> Result<(), AssemblyError> {
+		let mut current_global_label: Option<Arc<RefCell<GlobalLabel>>> = None;
+
+		for element in &mut self.content {
+			// First match for label reference resolution in instruction position
+			match element {
+				ProgramElement::Macro(Macro { value, label: Some(Label::Local(ref mut local)), .. }) => {
+					if let MacroValue::AssignLabel { label: Label::Local(assigned_local), .. } = value {
+						*assigned_local = label::merge_local_into_parent(
+							assigned_local.clone(),
+							current_global_label.clone(),
+							&self.source_code,
+						)?;
+					}
+					*local =
+						label::merge_local_into_parent(local.clone(), current_global_label.clone(), &self.source_code)?;
+				},
+				ProgramElement::Macro(Macro { label: Some(Label::Global(ref global)), value, .. }) => {
+					current_global_label = Some(global.clone());
+					if let MacroValue::AssignLabel { label: Label::Local(local), .. } = value {
+						*local = label::merge_local_into_parent(
+							local.clone(),
+							current_global_label.clone(),
+							&self.source_code,
+						)?;
+					}
+				},
+				ProgramElement::Instruction(Instruction { label: Some(Label::Global(ref global)), .. })
+				| ProgramElement::IncludeSource { label: Some(Label::Global(ref global)), .. } =>
+					current_global_label = Some(global.clone()),
+				ProgramElement::Macro(Macro {
+					value: MacroValue::AssignLabel { label: Label::Local(ref mut local), .. },
+					..
+				})
+				| ProgramElement::Instruction(Instruction { label: Some(Label::Local(ref mut local)), .. })
+				| ProgramElement::IncludeSource { label: Some(Label::Local(ref mut local)), .. } =>
+					*local =
+						label::merge_local_into_parent(local.clone(), current_global_label.clone(), &self.source_code)?,
+
+				ProgramElement::Instruction(Instruction { label: None, .. })
+				| ProgramElement::IncludeSource { label: None, .. }
+				| ProgramElement::Macro(Macro { label: None, .. }) => (),
+			}
+			if let ProgramElement::Instruction(Instruction {
+				opcode: Opcode { first_operand, second_operand, .. },
+				..
+			}) = element && let Some(ref actual_global_label) = current_global_label
+			{
+				if let Some(mode) = first_operand.as_mut() { mode.set_global_label(actual_global_label) }
+				if let Some(mode) = second_operand.as_mut() { mode.set_global_label(actual_global_label) }
+			}
+		}
+		Ok(())
+	}
+
+	/// Tries to coerce addressing modes to direct page addressing wherever possible. This needs to be done again as the
+	/// unresolved local labels did not provide memory locations before merging.
+	pub fn coerce_to_direct_page_addressing(&mut self) {
+		for element in &mut self.content {
+			if let ProgramElement::Instruction(Instruction {
+				opcode: Opcode { first_operand, second_operand, .. },
+				..
+			}) = element
+			{
+				*first_operand = first_operand.clone().map(AddressingMode::coerce_to_direct_page_addressing);
+				*second_operand = second_operand.clone().map(AddressingMode::coerce_to_direct_page_addressing);
+			}
 		}
 	}
 }

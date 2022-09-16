@@ -2,6 +2,7 @@
 
 #![allow(clippy::cast_possible_truncation, clippy::cast_sign_loss, clippy::wildcard_imports)]
 
+use std::cell::RefCell;
 use std::collections::BTreeMap;
 use std::fs::File;
 use std::path::PathBuf;
@@ -15,7 +16,7 @@ use crate::error::{AssemblyCode, AssemblyError};
 use crate::mcro::MacroValue;
 use crate::parser::instruction::{AddressingMode, Instruction, MemoryAddress, Mnemonic, Number, Opcode};
 use crate::parser::label::{Label, Resolvable};
-use crate::parser::{Environment, ProgramElement, Register};
+use crate::parser::{AssemblyFile, ProgramElement, Register};
 use crate::{pretty_hex, Macro};
 
 mod arithmetic_logic;
@@ -30,15 +31,18 @@ pub const MAX_PASSES: usize = 10;
 /// Assembles the instructions into a byte sequence.
 /// # Errors
 /// Unencodeable instructions will cause errors.
-pub fn assemble(environment: &Environment, instructions: &mut Vec<ProgramElement>) -> Result<Vec<u8>, AssemblyError> {
-	let mut data = AssembledData::new(environment.source_code.clone());
+pub(crate) fn assemble(main_file: &Arc<RefCell<AssemblyFile>>) -> Result<Vec<u8>, AssemblyError> {
+	let mut main_file = main_file.borrow_mut();
+	let mut data = AssembledData::new(main_file.source_code.clone());
 
 	data.new_segment(0);
 
-	for program_element in instructions {
+	for program_element in &mut main_file.content {
 		match program_element {
 			ProgramElement::Instruction(instruction) => assemble_instruction(&mut data, instruction)?,
 			ProgramElement::Macro(r#macro) => assemble_macro(&mut data, r#macro)?,
+			ProgramElement::IncludeSource { .. } =>
+				unreachable!("there should not be any remaining unincluded source code at assembly time"),
 		}
 		if data.should_stop {
 			break;

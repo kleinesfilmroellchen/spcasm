@@ -38,6 +38,7 @@ lalrpop_mod!(asm);
 
 use error::AssemblyCode;
 pub use mcro::Macro;
+use parser::Environment;
 
 fn pretty_hex(bytes: &[u8]) -> String {
 	let mut string = String::new();
@@ -55,7 +56,7 @@ fn pretty_hex(bytes: &[u8]) -> String {
 	string
 }
 
-type AssemblyResult = miette::Result<(Vec<parser::ProgramElement>, Vec<u8>)>;
+type AssemblyResult = miette::Result<(std::sync::Arc<std::cell::RefCell<Environment>>, Vec<u8>)>;
 
 fn main() -> miette::Result<()> {
 	miette::set_hook(Box::new(|_| {
@@ -79,11 +80,11 @@ fn main() -> miette::Result<()> {
 
 fn run_assembler(file_name: &str) -> AssemblyResult {
 	let source_code = AssemblyCode::from_file(file_name).expect("Couldn't read file contents");
-	let mut env = parser::Environment::new(source_code.clone());
-	let tokens = parser::lexer::lex(source_code)?;
-	let mut program = env.parse(tokens)?;
-	let assembled = assembler::assemble(&env, &mut program)?;
-	Ok((program, assembled))
+	let mut env = parser::Environment::new();
+	let tokens = parser::lexer::lex(source_code.clone())?;
+	let program = parser::Environment::parse(&env, tokens, source_code)?;
+	let assembled = assembler::assemble(&program)?;
+	Ok((env, assembled))
 }
 
 #[cfg(test)]
@@ -141,7 +142,7 @@ mod test {
 
 	fn test_file(file: &str) {
 		let (parsed, assembled) = super::run_assembler(file).unwrap();
-		let expected_binary = assemble_expected_binary(parsed);
+		let expected_binary = assemble_expected_binary(parsed.borrow().files[0].borrow().content.clone());
 		for (byte, (expected, actual)) in expected_binary.iter().zip(assembled.iter()).enumerate() {
 			if let Some(expected) = expected {
 				assert_eq!(

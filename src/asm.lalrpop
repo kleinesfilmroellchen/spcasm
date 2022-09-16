@@ -20,8 +20,9 @@ use crate::parser::{
 };
 use crate::mcro::{MacroSymbol, Macro, MacroValue};
 use crate::error::AssemblyError;
+use crate::AssemblyCode;
 
-grammar<'env>(environment: &'env mut Environment);
+grammar<'env, 'src>(environment: &'env Arc<RefCell<Environment>>, source_code: &'src Arc<AssemblyCode>);
 
 pub Program: Vec<ProgramElement> = "\n"* <line:( <Line> )*> => line;
 
@@ -79,7 +80,7 @@ Macro: Macro = {
 		label: None,
 	},
 	<mcro:"org"> <address:Number> =>? Ok(Macro {
-		value: MacroValue::Org(address.try_value(mcro, environment.source_code.clone()).map_err(|err| ParseError::User { error: err })?),
+		value: MacroValue::Org(address.try_value(mcro, source_code.clone()).map_err(|err| ParseError::User { error: err })?),
 		span: mcro,
 		label: None,
 	}),
@@ -131,19 +132,19 @@ NumberList = Comma<Number>;
 InclusionRange: SourceSpan = {
 	<comma:","> <start:Number> <length:( "," <Number> )?> =>? {
 		// FIXME: dangerous conversions
-		let start = start.try_value(comma.into(), environment.source_code.clone())? as usize;
-		let length = length.map(|length| length.try_value(comma.into(), environment.source_code.clone())).transpose()?.unwrap_or(i64::MAX) as usize;
+		let start = start.try_value(comma.into(), source_code.clone())? as usize;
+		let length = length.map(|length| length.try_value(comma.into(), source_code.clone())).transpose()?.unwrap_or(i64::MAX) as usize;
 		Ok((start, length).into())
 	},
 	<colon:":"> <start:Number> <dash:"-range-"> <end:Number> =>? {
 		let colon_dash_range = source_range(colon.into(), dash.into());
-		let start = start.try_value(colon_dash_range, environment.source_code.clone())? as usize;
-		let end = end.try_value(colon_dash_range, environment.source_code.clone())? as usize;
+		let start = start.try_value(colon_dash_range, source_code.clone())? as usize;
+		let end = end.try_value(colon_dash_range, source_code.clone())? as usize;
 		if start > end {
 			Err(ParseError::User { error: AssemblyError::StartAboveEnd {
 				start,
 				end,
-				src: environment.source_code.clone(),
+				src: source_code.clone(),
 				location: source_range(colon.into(), dash.into()),
 			}})
 		} else {
@@ -163,7 +164,7 @@ LabelForInstruction: Label = {
 			parent: Weak::new(),
 		}))
 	),
-	<identifier:"identifier"> ":" => Label::Global(environment.get_global_label(&identifier.0, identifier.1, LabelUsageKind::AsDefinition)),
+	<identifier:"identifier"> ":" => Label::Global(environment.borrow_mut().get_global_label(&identifier.0, identifier.1, LabelUsageKind::AsDefinition)),
 };
 
 Label: Label = {
@@ -174,7 +175,7 @@ Label: Label = {
 		// Don't rely on forward-to-backward parsing order; we can't know the parent label here.
 		parent: Weak::new(),
 	}))),
-	<identifier:"identifier"> => Label::Global(environment.get_global_label(&identifier.0, identifier.1, LabelUsageKind::AsAddress)),
+	<identifier:"identifier"> => Label::Global(environment.borrow_mut().get_global_label(&identifier.0, identifier.1, LabelUsageKind::AsAddress)),
 };
 
 LabelAssignment: Macro = <mut label:Label> <eq:"="> <value:Number> => {

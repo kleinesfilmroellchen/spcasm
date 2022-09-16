@@ -14,6 +14,15 @@ pub enum ProgramElement {
 	Macro(Macro),
 	/// A processor instruction that corresponds to some assembled data.
 	Instruction(Instruction),
+	/// Include directive that copy-pastes another file's assembly into this one.
+	IncludeSource {
+		/// The file that is included as source code.
+		file:  String,
+		/// Source code location of the include directive.
+		span:  SourceSpan,
+		/// Label before the include directive. This label will be used for the first instruction in the included file.
+		label: Option<Label>,
+	},
 }
 
 impl ProgramElement {
@@ -21,7 +30,9 @@ impl ProgramElement {
 	#[must_use]
 	pub const fn span(&self) -> &SourceSpan {
 		match self {
-			Self::Macro(Macro { span, .. }) | Self::Instruction(Instruction { span, .. }) => span,
+			Self::Macro(Macro { span, .. })
+			| Self::Instruction(Instruction { span, .. })
+			| Self::IncludeSource { span, .. } => span,
 		}
 	}
 
@@ -29,8 +40,9 @@ impl ProgramElement {
 	#[must_use]
 	pub fn extend_span(mut self, end: SourceSpan) -> Self {
 		match &mut self {
-			Self::Macro(Macro { span, .. }) | Self::Instruction(Instruction { span, .. }) =>
-				*span = source_range((*span).into(), end.into()),
+			Self::Macro(Macro { span, .. })
+			| Self::Instruction(Instruction { span, .. })
+			| Self::IncludeSource { span, .. } => *span = source_range((*span).into(), end.into()),
 		}
 		self
 	}
@@ -48,6 +60,7 @@ impl ProgramElement {
 				instruction.label = label;
 				Self::Instruction(instruction)
 			},
+			Self::IncludeSource { file, span, .. } => Self::IncludeSource { file, span, label },
 		}
 	}
 }

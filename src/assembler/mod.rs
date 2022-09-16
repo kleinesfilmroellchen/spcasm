@@ -264,7 +264,7 @@ fn assemble_macro(data: &mut AssembledData, mcro: &mut Macro) -> Result<(), Asse
 				global.borrow_mut().location = Some(value.clone().try_resolve());
 			},
 		},
-		MacroValue::Include { ref file, is_binary, range } if is_binary => {
+		MacroValue::Include { ref file, range } => {
 			let binary_file = resolve_file(&data.source_code, mcro.span, file)?;
 			let mut binary_data = std::fs::read(binary_file).map_err(|err| AssemblyError::FileNotFound {
 				os_error:  err.kind().to_string(),
@@ -289,8 +289,6 @@ fn assemble_macro(data: &mut AssembledData, mcro: &mut Macro) -> Result<(), Asse
 
 			data.append_bytes(binary_data, &mcro.label, mcro.span);
 		},
-		MacroValue::Include { is_binary, .. } if !is_binary => todo!(),
-		MacroValue::Include { .. } => unreachable!(),
 		MacroValue::End => {
 			data.should_stop = true;
 		},

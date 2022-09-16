@@ -96,7 +96,6 @@ Macro: Macro = {
 	<mcro:"incbin"> <text:"string"> <range:InclusionRange?> => Macro {
 		value: MacroValue::Include {
 			file: String::from_utf8_lossy(&text.0).into_owned(),
-			is_binary: true,
 			range,
 		},
 		span: source_range(mcro.into(), text.1.into()),

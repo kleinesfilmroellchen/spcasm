@@ -77,11 +77,10 @@ pub enum MacroValue {
 		label: Label,
 		value: Number,
 	},
-	/// incbin <file name> or include <file name>
+	/// incbin <file name>
 	Include {
 		file: String,
 		range: Option<SourceSpan>,
-		is_binary: bool,
 	},
 	/// end
 	End,

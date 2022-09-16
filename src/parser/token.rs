@@ -6,9 +6,9 @@ use std::sync::Arc;
 use miette::{SourceOffset, SourceSpan};
 
 use crate::error::{AssemblyCode, AssemblyError};
-use crate::instruction::Mnemonic;
 use crate::mcro::MacroSymbol;
-use crate::Register;
+use crate::parser::instruction::Mnemonic;
+use crate::parser::Register;
 
 /// Assembly language tokens.
 #[derive(Debug, Clone)]

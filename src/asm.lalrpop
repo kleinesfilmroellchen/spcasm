@@ -7,14 +7,19 @@ use lalrpop_util::ParseError;
 use std::sync::{Weak, Arc};
 use std::cell::RefCell;
 
-use crate::instruction::{Instruction, Mnemonic, Number, AddressingMode, Opcode};
-use crate::parser::{Environment, try_make_direct_page_addressing_mode, LabelUsageKind, source_range};
-use crate::error::AssemblyError;
+use crate::parser::{
+	instruction::{Instruction, Mnemonic, Number, AddressingMode, Opcode},
+	Environment,
+	LabelUsageKind, 
+	Token,
+	Register,
+	label::{Label, LocalLabel},
+	try_make_direct_page_addressing_mode,
+	source_range,
+	program::ProgramElement,
+};
 use crate::mcro::{MacroSymbol, Macro, MacroValue};
-use crate::program::ProgramElement;
-use crate::register::Register;
-use crate::token::Token;
-use crate::label::{Label, LocalLabel};
+use crate::error::AssemblyError;
 
 grammar<'env>(environment: &'env mut Environment);
 

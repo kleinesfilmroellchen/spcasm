@@ -1,7 +1,5 @@
 //! Assembling the 16-bit (word) instructions.
-
-use crate::assembler::AssembledData;
-use crate::instruction::{Instruction, Mnemonic, Number};
+use super::*;
 
 #[repr(u8)]
 pub(super) enum MovDirection {

@@ -6,12 +6,22 @@ use std::sync::Arc;
 
 use miette::{SourceOffset, SourceSpan};
 
-use super::error::{AssemblyCode, AssemblyError};
-use super::instruction::{AddressingMode, Instruction, Number, Opcode};
-use super::label::{GlobalLabel, Label};
-use super::ProgramElement;
+use self::instruction::{AddressingMode, Instruction, Number, Opcode};
+use self::label::{GlobalLabel, Label};
+use crate::error::{AssemblyCode, AssemblyError};
 use crate::mcro::MacroValue;
-use crate::{label, lalrpop_adaptor, Macro, Token};
+use crate::{lalrpop_adaptor, Macro};
+
+pub mod instruction;
+pub(crate) mod label;
+pub mod lexer;
+pub(crate) mod program;
+pub(crate) mod register;
+pub mod token;
+
+pub use program::ProgramElement;
+pub use register::Register;
+pub use token::Token;
 
 /// How a looked-up label is used. See ``Environment::get_global_label``.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

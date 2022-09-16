@@ -3,8 +3,7 @@
 use std::vec::IntoIter;
 
 use crate::error::AssemblyError;
-use crate::parser::source_range;
-use crate::{Register, Token};
+use crate::parser::{source_range, Register, Token};
 
 /// An API adaptor that allows us to pass the Vec<Token> we lexed into LALRPOP.
 pub struct LalrpopAdaptor(IntoIter<Token>);

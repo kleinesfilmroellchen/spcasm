@@ -1,7 +1,5 @@
 //! Bitwise instructions.
-
-use super::super::instruction::{AddressingMode, Instruction, Mnemonic};
-use super::{AssembledData, AssemblyError};
+use super::*;
 
 #[allow(clippy::too_many_lines)] // This is getting old
 pub(super) fn assemble_bit_instructions(

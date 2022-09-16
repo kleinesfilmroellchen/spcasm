@@ -3,8 +3,8 @@
 use miette::SourceSpan;
 
 use super::instruction::Instruction;
+use super::label::Label;
 use super::Macro;
-use crate::label::Label;
 use crate::parser::source_range;
 
 /// A program element of an assenbled program. A list of program elements makes an assembled program itself.

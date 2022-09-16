@@ -1,6 +1,6 @@
 //! Assembler/codegen
 
-#![allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
+#![allow(clippy::cast_possible_truncation, clippy::cast_sign_loss, clippy::wildcard_imports)]
 
 use std::collections::BTreeMap;
 use std::fs::File;
@@ -10,14 +10,13 @@ use std::sync::Arc;
 use miette::{Result, SourceSpan};
 use r16bit::MovDirection;
 
-use super::mcro::MacroValue;
-use super::{pretty_hex, Macro, ProgramElement};
 use crate::brr::{self, wav};
 use crate::error::{AssemblyCode, AssemblyError};
-use crate::instruction::{AddressingMode, Instruction, MemoryAddress, Mnemonic, Number, Opcode};
-use crate::label::{Label, Resolvable};
-use crate::parser::Environment;
-use crate::Register;
+use crate::mcro::MacroValue;
+use crate::parser::instruction::{AddressingMode, Instruction, MemoryAddress, Mnemonic, Number, Opcode};
+use crate::parser::label::{Label, Resolvable};
+use crate::parser::{Environment, ProgramElement, Register};
+use crate::{pretty_hex, Macro};
 
 mod arithmetic_logic;
 mod bit;

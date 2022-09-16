@@ -7,9 +7,8 @@ use std::sync::{Arc, Weak};
 
 use miette::SourceSpan;
 
-use super::error::{AssemblyCode, AssemblyError};
-use super::instruction::MemoryAddress;
-use crate::instruction::Number;
+use super::instruction::{MemoryAddress, Number};
+use crate::error::{AssemblyCode, AssemblyError};
 
 pub trait Resolvable {
 	/// Whether this label has already been resolved to a memory location.

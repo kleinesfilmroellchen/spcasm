@@ -1,9 +1,5 @@
 //! Assembling the branching instructions.
-
-use crate::assembler::AssembledData;
-use crate::error::AssemblyError;
-use crate::instruction::{AddressingMode, Instruction, Mnemonic, Number};
-use crate::Register;
+use super::*;
 
 #[allow(clippy::too_many_lines)] // bruh
 #[allow(clippy::needless_pass_by_value)]

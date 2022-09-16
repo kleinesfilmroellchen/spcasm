@@ -5,11 +5,12 @@ use std::sync::Arc;
 
 use miette::SourceOffset;
 
+use super::instruction::Mnemonic;
+use super::register::Register;
+use super::token::Token;
+use super::Parse;
 use crate::error::{AssemblyCode, AssemblyError};
-use crate::instruction::Mnemonic;
 use crate::mcro::MacroSymbol;
-use crate::parser::Parse;
-use crate::{Register, Token};
 
 /// Lex the given assembly into a list of tokens.
 /// # Errors

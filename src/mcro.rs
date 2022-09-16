@@ -5,8 +5,8 @@ use std::fmt::Display;
 use miette::SourceSpan;
 use spcasm_derive::Parse;
 
-use crate::instruction::{MemoryAddress, Number};
-use crate::label::Label;
+use crate::parser::instruction::{MemoryAddress, Number};
+use crate::parser::label::Label;
 
 /// An assembly macro.
 #[derive(Clone, Debug)]
@@ -68,20 +68,11 @@ pub enum MacroValue {
 	/// brr <file name>
 	Brr(String),
 	/// ascii(z) <string>
-	String {
-		text:                Vec<u8>,
-		has_null_terminator: bool,
-	},
+	String { text: Vec<u8>, has_null_terminator: bool },
 	/// <label> = <value>
-	AssignLabel {
-		label: Label,
-		value: Number,
-	},
+	AssignLabel { label: Label, value: Number },
 	/// incbin <file name>
-	Include {
-		file: String,
-		range: Option<SourceSpan>,
-	},
+	Include { file: String, range: Option<SourceSpan> },
 	/// end
 	End,
 }

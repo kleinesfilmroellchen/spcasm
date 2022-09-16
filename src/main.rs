@@ -27,27 +27,17 @@ use std::cmp::min;
 use std::env::args;
 use std::fs::File;
 
-use error::AssemblyCode;
-
 pub mod assembler;
 pub mod brr;
 pub mod elf;
 mod error;
-pub mod instruction;
-mod label;
 mod lalrpop_adaptor;
-pub mod lexer;
 mod mcro;
 pub mod parser;
-mod program;
-mod register;
-mod token;
 lalrpop_mod!(asm);
 
+use error::AssemblyCode;
 pub use mcro::Macro;
-pub use program::ProgramElement;
-pub use register::Register;
-pub use token::Token;
 
 fn pretty_hex(bytes: &[u8]) -> String {
 	let mut string = String::new();
@@ -65,7 +55,7 @@ fn pretty_hex(bytes: &[u8]) -> String {
 	string
 }
 
-type AssemblyResult = miette::Result<(Vec<ProgramElement>, Vec<u8>)>;
+type AssemblyResult = miette::Result<(Vec<parser::ProgramElement>, Vec<u8>)>;
 
 fn main() -> miette::Result<()> {
 	miette::set_hook(Box::new(|_| {
@@ -90,7 +80,7 @@ fn main() -> miette::Result<()> {
 fn run_assembler(file_name: &str) -> AssemblyResult {
 	let source_code = AssemblyCode::from_file(file_name).expect("Couldn't read file contents");
 	let mut env = parser::Environment::new(source_code.clone());
-	let tokens = lexer::lex(source_code)?;
+	let tokens = parser::lexer::lex(source_code)?;
 	let mut program = env.parse(tokens)?;
 	let assembled = assembler::assemble(&env, &mut program)?;
 	Ok((program, assembled))
@@ -103,6 +93,7 @@ mod test {
 
 	use test::Bencher;
 
+	use crate::parser::ProgramElement;
 	use crate::pretty_hex;
 
 	#[bench]
@@ -168,12 +159,12 @@ mod test {
 	}
 
 	/// Assembles the contents of the expected value comments, which is what the file should assemble to.
-	fn assemble_expected_binary(instructions: Vec<crate::ProgramElement>) -> Vec<Option<u8>> {
+	fn assemble_expected_binary(instructions: Vec<ProgramElement>) -> Vec<Option<u8>> {
 		let mut filtered_instructions = Vec::new();
 		for program_element in instructions {
 			match program_element {
-				crate::ProgramElement::Instruction(instruction) => filtered_instructions.push(instruction),
-				crate::ProgramElement::Macro(crate::Macro { value: crate::mcro::MacroValue::End, .. }) => break,
+				ProgramElement::Instruction(instruction) => filtered_instructions.push(instruction),
+				ProgramElement::Macro(crate::Macro { value: crate::mcro::MacroValue::End, .. }) => break,
 				_ => (),
 			}
 		}

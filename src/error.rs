@@ -6,18 +6,21 @@ use lalrpop_util::ParseError;
 use miette::{Diagnostic, MietteError, MietteSpanContents, SourceCode, SourceSpan, SpanContents};
 use thiserror::Error;
 
-use crate::instruction::{MemoryAddress, Mnemonic};
 use crate::mcro::MacroSymbol;
-use crate::Token;
+use crate::parser::instruction::{MemoryAddress, Mnemonic};
+use crate::parser::Token;
 
 /// The source code for an assembly error.
 #[derive(Debug, Clone, Default)]
 pub struct AssemblyCode {
-	pub text: String,
-	pub name: String,
+	pub(crate) text: String,
+	pub(crate) name: String,
 }
 
 impl AssemblyCode {
+	/// Create a new source code struct by loading a file's contents.
+	/// # Errors
+	/// If reading the file fails (doesn't exist, permissions wrong, I/O error etc.)
 	pub fn from_file(filename: &str) -> Result<Arc<Self>, std::io::Error> {
 		let contents = std::fs::read_to_string(filename)?;
 		Ok(Arc::new(Self { name: filename.to_string(), text: contents }))
@@ -46,7 +49,7 @@ impl SourceCode for AssemblyCode {
 
 /// All types of errors that the assembler can report to the user.
 #[derive(Error, Debug, Diagnostic)]
-#[allow(clippy::module_name_repetitions)]
+#[allow(clippy::module_name_repetitions, missing_docs)]
 pub enum AssemblyError {
 	//#region Semantic errors: detected while parsing or assembling
 	#[error("File \"{file_name}\" was not found")]
@@ -217,15 +220,11 @@ pub enum AssemblyError {
 		location: SourceSpan,
 	},
 	#[error("The range {start}-{end} is out of bounds for the input file \"{file}\"")]
-	#[diagnostic(
-		code(spcasm::invalid_range),
-		help("The input's length is {file_len}"),
-		severity(Error)
-	)]
+	#[diagnostic(code(spcasm::invalid_range), help("The input's length is {file_len}"), severity(Error))]
 	RangeOutOfBounds {
 		start:    usize,
 		end:      usize,
-		file: String,
+		file:     String,
 		file_len: usize,
 		#[source_code]
 		src:      Arc<AssemblyCode>,
@@ -401,7 +400,7 @@ pub enum AssemblyError {
 }
 
 impl AssemblyError {
-	pub fn from_lalrpop(error: ParseError<usize, Token, Self>, src: Arc<AssemblyCode>) -> Self {
+	pub(crate) fn from_lalrpop(error: ParseError<usize, Token, Self>, src: Arc<AssemblyCode>) -> Self {
 		match error {
 			ParseError::InvalidToken { location } => Self::UnexpectedCharacter {
 				chr: src.text.chars().nth(location).unwrap_or_default(),

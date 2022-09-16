@@ -30,21 +30,13 @@ pub mod assembler;
 pub mod brr;
 pub mod elf;
 mod error;
-pub mod instruction;
-mod label;
 mod lalrpop_adaptor;
-pub mod lexer;
 mod mcro;
 pub mod parser;
-mod program;
-mod register;
-mod token;
 lalrpop_mod!(asm);
 
+pub use error::{AssemblyCode, AssemblyError};
 pub use mcro::Macro;
-pub use program::ProgramElement;
-pub use register::Register;
-pub use token::Token;
 
 fn pretty_hex(bytes: &[u8]) -> String {
 	let mut string = String::new();

@@ -12,10 +12,10 @@ use serde::Serialize;
 use serde_variant::to_variant_name;
 use spcasm_derive::Parse;
 
-use super::label::{GlobalLabel, Label};
-use super::Register;
+use super::label::{self, GlobalLabel, Label};
+use super::register::Register;
 use crate::error::{AssemblyCode, AssemblyError};
-use crate::label;
+
 /// Types for representing data and memory addresses (this is overkill).
 pub type MemoryAddress = i64;
 

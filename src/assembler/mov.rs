@@ -1,8 +1,5 @@
 //! Assembling the MOV instruction.
-use crate::assembler::AssembledData;
-use crate::error::AssemblyError;
-use crate::instruction::{AddressingMode, Instruction, Mnemonic, Number};
-use crate::Register;
+use super::*;
 
 #[allow(clippy::too_many_lines)] //heh
 pub(super) fn assemble_mov(

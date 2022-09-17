@@ -35,11 +35,9 @@ impl AssemblyCode {
 	}
 
 	/// Returns a copy of the file name of this source code.
-	/// # Panics
-	/// Programming error.
 	#[must_use]
 	pub fn file_name(&self) -> String {
-		self.name.canonicalize().unwrap().as_os_str().to_string_lossy().to_string()
+		self.name.as_os_str().to_string_lossy().to_string()
 	}
 }
 
@@ -69,13 +67,10 @@ impl SourceCode for AssemblyCode {
 pub enum AssemblyError {
 	//#region Semantic errors: detected while parsing or assembling
 	#[error("File \"{file_name}\" was not found")]
-	#[diagnostic(
-		code(spcasm::file_not_found),
-		severity(Error),
-		help("While trying to open the file, the operating system reported: {os_error}")
-	)]
+	#[diagnostic(code(spcasm::file_not_found), severity(Error))]
 	FileNotFound {
-		os_error:  String,
+		#[source]
+		os_error:  std::io::Error,
 		file_name: String,
 		#[source_code]
 		src:       Arc<AssemblyCode>,

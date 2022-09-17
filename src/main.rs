@@ -81,7 +81,16 @@ fn main() -> miette::Result<()> {
 }
 
 fn run_assembler(file_name: &str) -> AssemblyResult {
-	let source_code = AssemblyCode::from_file(file_name).expect("Couldn't read file contents");
+	let source_code = AssemblyCode::from_file(file_name).map_err(|os_error| error::AssemblyError::FileNotFound {
+		os_error,
+		file_name: file_name.to_string(),
+		src: std::sync::Arc::new(AssemblyCode {
+			name: std::path::PathBuf::from("<<arguments>>"),
+			text: file_name.to_string(),
+			..Default::default()
+		}),
+		location: (0, file_name.len()).into(),
+	})?;
 	let mut env = parser::Environment::new();
 	let tokens = parser::lexer::lex(source_code.clone())?;
 	let program = parser::Environment::parse(&env, tokens, &source_code)?;

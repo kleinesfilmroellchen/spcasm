@@ -288,12 +288,13 @@ impl AssemblyFile {
 			if let ProgramElement::IncludeSource { ref file, label, span } = element {
 				let environment = self.parent.upgrade().expect("parent deleted while we're still parsing");
 				let file = resolve_file(&self.source_code, span, file)?.to_string_lossy().to_string();
-				let mut included_code = AssemblyCode::from_file(&file).map_err(|err| AssemblyError::FileNotFound {
-					os_error:  err.kind().to_string(),
-					file_name: file,
-					src:       self.source_code.clone(),
-					location:  span,
-				})?;
+				let mut included_code =
+					AssemblyCode::from_file(&file).map_err(|os_error| AssemblyError::FileNotFound {
+						os_error,
+						file_name: file,
+						src: self.source_code.clone(),
+						location: span,
+					})?;
 				let mut child_include_path = &mut unsafe { Arc::get_mut_unchecked(&mut included_code) }.include_path;
 				child_include_path.push(self.source_code.name.clone());
 				child_include_path.append(&mut self.source_code.include_path.clone());

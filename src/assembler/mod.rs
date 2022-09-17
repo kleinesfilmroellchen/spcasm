@@ -5,6 +5,7 @@
 use std::cell::RefCell;
 use std::collections::BTreeMap;
 use std::fs::File;
+use std::io::ErrorKind;
 use std::path::PathBuf;
 use std::sync::Arc;
 
@@ -232,11 +233,11 @@ fn assemble_macro(data: &mut AssembledData, mcro: &mut Macro) -> Result<(), Asse
 		MacroValue::Brr(ref file_name) => {
 			// Resolve the audio file's path relative to the source file.
 			let actual_path = resolve_file(&data.source_code, mcro.span, file_name)?;
-			let file = File::open(actual_path).map_err(|err| AssemblyError::FileNotFound {
-				os_error:  err.kind().to_string(),
+			let file = File::open(actual_path).map_err(|os_error| AssemblyError::FileNotFound {
+				os_error,
 				file_name: file_name.clone(),
-				src:       data.source_code.clone(),
-				location:  mcro.span,
+				src: data.source_code.clone(),
+				location: mcro.span,
 			})?;
 			let sample_data =
 				wav::read_wav_for_brr(file).map_err(|error_text| AssemblyError::AudioProcessingError {
@@ -269,11 +270,11 @@ fn assemble_macro(data: &mut AssembledData, mcro: &mut Macro) -> Result<(), Asse
 		},
 		MacroValue::Include { ref file, range } => {
 			let binary_file = resolve_file(&data.source_code, mcro.span, file)?;
-			let mut binary_data = std::fs::read(binary_file).map_err(|err| AssemblyError::FileNotFound {
-				os_error:  err.kind().to_string(),
+			let mut binary_data = std::fs::read(binary_file).map_err(|os_error| AssemblyError::FileNotFound {
+				os_error,
 				file_name: file.clone(),
-				src:       data.source_code.clone(),
-				location:  mcro.span,
+				src: data.source_code.clone(),
+				location: mcro.span,
 			})?;
 			if let Some(range) = range {
 				let max_number_of_bytes = binary_data.len() - range.offset();
@@ -334,7 +335,7 @@ pub(crate) fn resolve_file(
 ) -> Result<PathBuf, AssemblyError> {
 	source_code.name.clone().parent().map(|directory| directory.to_owned().join(target_file)).ok_or_else(|| {
 		AssemblyError::FileNotFound {
-			os_error:  "no parent directory for source file".to_string(),
+			os_error:  std::io::Error::new(ErrorKind::NotFound, "no parent directory for source file"),
 			file_name: source_code.file_name(),
 			src:       source_code.clone(),
 			location:  span,

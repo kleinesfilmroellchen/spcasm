@@ -32,6 +32,11 @@ Line: ProgramElement = <label:( <LabelForInstruction> "\n"* )?> <element:Instruc
 InstructionOrMacro: ProgramElement = {
 	InstructionWithTestComment => ProgramElement::Instruction(<>),
 	Macro => ProgramElement::Macro(<>),
+	<mcro:"include"> <file:"string"> => ProgramElement::IncludeSource {
+		file: String::from_utf8_lossy(&file.0).to_string(),
+		span: source_range(mcro.into(), file.1.into()),
+		label: None,
+	},
 };
 
 InstructionWithTestComment: Instruction = <mut instruction:Instruction> <expected:";="?> => {
@@ -264,6 +269,7 @@ extern {
 		"ascii" => Token::Macro(MacroSymbol::Ascii, <SourceSpan>),
 		"asciiz" => Token::Macro(MacroSymbol::Asciiz, <SourceSpan>),
 		"incbin" => Token::Macro(MacroSymbol::Incbin, <SourceSpan>),
+		"include" => Token::Macro(MacroSymbol::Include, <SourceSpan>),
 		"end" => Token::Macro(MacroSymbol::End, <SourceSpan>),
 		"brr" => Token::Macro(MacroSymbol::Brr, <SourceSpan>),
 		"number" => Token::Number(<i64>, <SourceSpan>),

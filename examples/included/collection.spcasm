@@ -1,0 +1,3 @@
+include "liba.spcasm"
+include "libb.spcasm"
+include "../library.spcasm"

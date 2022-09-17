@@ -1,5 +1,6 @@
 use std::fmt::Display;
 use std::num::ParseIntError;
+use std::path::PathBuf;
 use std::sync::Arc;
 
 use lalrpop_util::ParseError;
@@ -11,10 +12,12 @@ use crate::parser::instruction::{MemoryAddress, Mnemonic};
 use crate::parser::Token;
 
 /// The source code for an assembly error.
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Clone, Default, Eq, PartialEq)]
 pub struct AssemblyCode {
-	pub(crate) text: String,
-	pub(crate) name: String,
+	pub(crate) text:         String,
+	/// The source code location must be canonicalized!
+	pub(crate) name:         PathBuf,
+	pub(crate) include_path: Vec<PathBuf>,
 }
 
 impl AssemblyCode {
@@ -22,8 +25,21 @@ impl AssemblyCode {
 	/// # Errors
 	/// If reading the file fails (doesn't exist, permissions wrong, I/O error etc.)
 	pub fn from_file(filename: &str) -> Result<Arc<Self>, std::io::Error> {
-		let contents = std::fs::read_to_string(filename)?;
-		Ok(Arc::new(Self { name: filename.to_string(), text: contents }))
+		let mut path = PathBuf::from(filename);
+		if path.is_relative() {
+			path = std::env::current_dir()?.join(path);
+		}
+		path = path.canonicalize()?;
+		let contents = std::fs::read_to_string(&path)?;
+		Ok(Arc::new(Self { name: path, text: contents, include_path: Vec::new() }))
+	}
+
+	/// Returns a copy of the file name of this source code.
+	/// # Panics
+	/// Programming error.
+	#[must_use]
+	pub fn file_name(&self) -> String {
+		self.name.canonicalize().unwrap().as_os_str().to_string_lossy().to_string()
 	}
 }
 
@@ -36,7 +52,7 @@ impl SourceCode for AssemblyCode {
 	) -> Result<Box<dyn SpanContents<'a> + 'a>, MietteError> {
 		let result = self.text.read_span(span, context_lines_before, context_lines_after)?;
 		let retval = Box::new(MietteSpanContents::new_named(
-			self.name.clone(),
+			self.file_name(),
 			result.data(),
 			*result.span(),
 			result.line(),
@@ -65,6 +81,22 @@ pub enum AssemblyError {
 		src:       Arc<AssemblyCode>,
 		#[label("File was requested here")]
 		location:  SourceSpan,
+	},
+
+	#[error("Include cycle detected while trying to include \"{cycle_trigger_file}\"")]
+	#[diagnostic(
+		code(spcasm::include_cycle),
+		severity(Error),
+		help(
+			"This file was included:\n{}", src.include_path.iter().map(|path| format!("from {}", path.to_string_lossy())).intersperse("\n".to_string()).collect::<String>()
+		)
+	)]
+	IncludeCycle {
+		cycle_trigger_file: String,
+		#[source_code]
+		src:                Arc<AssemblyCode>,
+		#[label("While trying to include this file")]
+		include:            SourceSpan,
 	},
 
 	#[error("{error_text}")]

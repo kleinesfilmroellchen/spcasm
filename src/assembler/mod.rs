@@ -327,19 +327,19 @@ fn assemble_operandless_instruction(data: &mut AssembledData, mnemonic: Mnemonic
 	}
 }
 
-fn resolve_file(
+pub(crate) fn resolve_file(
 	source_code: &Arc<AssemblyCode>,
 	span: SourceSpan,
 	target_file: &str,
 ) -> Result<PathBuf, AssemblyError> {
-	PathBuf::from(source_code.name.clone()).parent().map(|directory| directory.to_owned().join(target_file)).ok_or_else(
-		|| AssemblyError::FileNotFound {
+	source_code.name.clone().parent().map(|directory| directory.to_owned().join(target_file)).ok_or_else(|| {
+		AssemblyError::FileNotFound {
 			os_error:  "no parent directory for source file".to_string(),
-			file_name: source_code.name.clone(),
+			file_name: source_code.file_name(),
 			src:       source_code.clone(),
 			location:  span,
-		},
-	)
+		}
+	})
 }
 
 /// Data in memory while we still need to resolve labels.
@@ -467,8 +467,9 @@ impl AssembledData {
 			if *starting_address < all_data.len() as i64 {
 				return Err(AssemblyError::SectionMismatch {
 					src:           Arc::new(AssemblyCode {
-						text: pretty_hex(&all_data),
-						name: self.source_code.name.clone(),
+						text:         pretty_hex(&all_data),
+						name:         self.source_code.name.clone(),
+						include_path: Vec::new(),
 					}),
 					// TODO: This location is wrong.
 					location:      (*starting_address as usize, 1).into(),

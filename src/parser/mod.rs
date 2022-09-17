@@ -1,6 +1,7 @@
 //! Parser infrastructure; Utility functions for LALRPOP driver code.
 use std::cell::RefCell;
 use std::collections::HashMap;
+use std::path::PathBuf;
 use std::result::Result;
 use std::sync::{Arc, Weak};
 
@@ -8,6 +9,8 @@ use miette::{SourceOffset, SourceSpan};
 
 use self::instruction::{AddressingMode, Instruction, Number, Opcode};
 use self::label::{GlobalLabel, Label};
+use self::lexer::lex;
+use crate::assembler::resolve_file;
 use crate::error::{AssemblyCode, AssemblyError};
 use crate::mcro::MacroValue;
 use crate::{lalrpop_adaptor, Macro};
@@ -54,7 +57,7 @@ pub struct Environment {
 	/// The list of labels.
 	pub labels:       Vec<Arc<RefCell<GlobalLabel>>>,
 	/// The files included in this "tree" created by include statements.
-	pub(crate) files: Vec<Arc<RefCell<AssemblyFile>>>,
+	pub(crate) files: HashMap<PathBuf, Arc<RefCell<AssemblyFile>>>,
 }
 
 #[derive(Debug)]
@@ -71,34 +74,85 @@ impl Environment {
 	/// Creates an empty environment.
 	#[must_use]
 	pub fn new() -> Arc<RefCell<Self>> {
-		Arc::new(RefCell::new(Self { labels: Vec::new(), files: Vec::new() }))
+		Arc::new(RefCell::new(Self { labels: Vec::new(), files: HashMap::new() }))
+	}
+
+	/// Searches for an existing parsed file in this environment given that file's source code.
+	/// Note that the source code does not have to be the identical object in memory, it just has to compare equal.
+	/// See ``AssemblyCode::eq`` for the equality semantics of the source code objects.
+	pub(crate) fn find_file_by_source(
+		&self,
+		source_code: &Arc<AssemblyCode>,
+	) -> Result<Option<Arc<RefCell<AssemblyFile>>>, AssemblyError> {
+		self.files
+			.get(&source_code.name)
+			// Keep around a tuple with the original Arc so we can return it at the end.
+			.map(|file| file.try_borrow().map(|maybe_file| (file, maybe_file)))
+			.transpose()
+			.map(|maybe_file| {
+				maybe_file.filter(|(_, file)| *file.source_code == **source_code).map(|(file, _)| file.clone())
+			})
+			.map_err(|_| AssemblyError::IncludeCycle {
+				cycle_trigger_file: source_code.file_name(),
+				src:                source_code.clone(),
+				include:            (0, 0).into(),
+			})
 	}
 
 	/// Parse a program given a set of tokens straight from the lexer.
 	/// The parser makes sure that all pre-processing of the token stream and the final reference resolutions are
 	/// performed.
+	///
+	/// In terms of multi-file behavior, the resulting file is added to this environment's list of source files. If the
+	/// source code already was parsed in this environment, that parsed data is returned instead. If, however, the
+	/// source code was parsed but didn't have its includes fully resolved yet, that constitutes an include cycle and an
+	/// error is returned.
+	///
 	/// # Errors
 	/// Whenever something goes wrong in parsing.
 	pub(crate) fn parse(
 		this: &Arc<RefCell<Self>>,
 		tokens: Vec<Token>,
-		source_code: Arc<AssemblyCode>,
+		source_code: &Arc<AssemblyCode>,
 	) -> Result<Arc<RefCell<AssemblyFile>>, AssemblyError> {
+		if let Some(already_parsed_file) = this.borrow().find_file_by_source(source_code)? {
+			// If we're in a cycle, the already parsed file still has unresolved labels.
+			// I'm not sure whether this can happen in the first place given that find_file_by_source can't borrow such
+			// a file and therefore won't return it, but let's better be safe than sorry.
+			return if already_parsed_file.try_borrow().is_ok_and(|file| file.has_unresolved_source_includes()) {
+				Ok(already_parsed_file)
+			} else {
+				Err(AssemblyError::IncludeCycle {
+					cycle_trigger_file: source_code.file_name(),
+					src:                source_code.clone(),
+					include:            (0, 0).into(),
+				})
+			};
+		}
+
 		let lexed = lalrpop_adaptor::disambiguate_indexing_parenthesis(tokens);
 		let lexed = lalrpop_adaptor::LalrpopAdaptor::from(lexed);
 		let mut program = crate::asm::ProgramParser::new()
-			.parse(this, &source_code, lexed)
+			.parse(this, source_code, lexed)
 			.map_err(|err| AssemblyError::from_lalrpop(err, source_code.clone()))?;
 
-		let mut rc_file =
-			Arc::new(RefCell::new(AssemblyFile { content: program, source_code, parent: Arc::downgrade(this) }));
+		let mut rc_file = Arc::new(RefCell::new(AssemblyFile {
+			content:     program,
+			source_code: source_code.clone(),
+			parent:      Arc::downgrade(this),
+		}));
 		let mut file = rc_file.borrow_mut();
 
 		file.fill_in_label_references()?;
 		file.coerce_to_direct_page_addressing();
 
 		drop(file);
-		this.borrow_mut().files.push(rc_file.clone());
+		// Insert the file into the list of source files so that we can detect cycles...
+		this.borrow_mut().files.insert(source_code.name.clone(), rc_file.clone());
+
+		// ...once we start including source files here.
+		rc_file.borrow_mut().resolve_source_includes()?;
+
 		Ok(rc_file)
 	}
 
@@ -209,6 +263,51 @@ impl AssemblyFile {
 				*second_operand = second_operand.clone().map(AddressingMode::coerce_to_direct_page_addressing);
 			}
 		}
+	}
+
+	/// Sets the first label in this file if a label was given.
+	pub fn set_first_label(&mut self, label: Option<Label>) {
+		if let Some(first) = self.content.get_mut(0) {
+			*first = first.clone().set_label(label);
+		}
+	}
+
+	/// Returns whether this file's parsed content contains any unresolved include directives.
+	pub(crate) fn has_unresolved_source_includes(&self) -> bool {
+		self.content.iter().any(|element| matches!(element, ProgramElement::IncludeSource { .. }))
+	}
+
+	/// Resolves all source include directives by recursively calling into lexer and parser.
+	///
+	/// # Errors
+	/// All errors from other files are propagated, as well as include cycles.
+	pub fn resolve_source_includes(&mut self) -> Result<(), AssemblyError> {
+		let mut index = 0;
+		while index < self.content.len() {
+			let mut element = self.content[index].clone();
+			if let ProgramElement::IncludeSource { ref file, label, span } = element {
+				let environment = self.parent.upgrade().expect("parent deleted while we're still parsing");
+				let file = resolve_file(&self.source_code, span, file)?.to_string_lossy().to_string();
+				let mut included_code = AssemblyCode::from_file(&file).map_err(|err| AssemblyError::FileNotFound {
+					os_error:  err.kind().to_string(),
+					file_name: file,
+					src:       self.source_code.clone(),
+					location:  span,
+				})?;
+				let mut child_include_path = &mut unsafe { Arc::get_mut_unchecked(&mut included_code) }.include_path;
+				child_include_path.push(self.source_code.name.clone());
+				child_include_path.append(&mut self.source_code.include_path.clone());
+
+				let tokens = lex(included_code.clone())?;
+				let mut included_file = Environment::parse(&environment, tokens, &included_code)?;
+
+				included_file.borrow_mut().set_first_label(label);
+				self.content.splice(index ..= index, included_file.borrow().content.clone());
+				continue;
+			}
+			index += 1;
+		}
+		Ok(())
 	}
 }
 

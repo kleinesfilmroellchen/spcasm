@@ -53,14 +53,15 @@ impl ProgramElement {
 	pub fn set_label(self, label: Option<Label>) -> Self {
 		match self {
 			Self::Macro(mut r#macro) => {
-				r#macro.label = label;
+				r#macro.label = r#macro.label.or(label);
 				Self::Macro(r#macro)
 			},
 			Self::Instruction(mut instruction) => {
-				instruction.label = label;
+				instruction.label = instruction.label.or(label);
 				Self::Instruction(instruction)
 			},
-			Self::IncludeSource { file, span, .. } => Self::IncludeSource { file, span, label },
+			Self::IncludeSource { file, span, label: original_label } =>
+				Self::IncludeSource { file, span, label: original_label.or(label) },
 		}
 	}
 }

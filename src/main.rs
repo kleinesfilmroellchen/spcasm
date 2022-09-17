@@ -8,6 +8,8 @@
 	iterator_try_collect,
 	if_let_guard,
 	int_log,
+	get_mut_unchecked,
+	iter_intersperse,
 	const_option_ext,
 	const_for,
 	let_chains,
@@ -82,7 +84,7 @@ fn run_assembler(file_name: &str) -> AssemblyResult {
 	let source_code = AssemblyCode::from_file(file_name).expect("Couldn't read file contents");
 	let mut env = parser::Environment::new();
 	let tokens = parser::lexer::lex(source_code.clone())?;
-	let program = parser::Environment::parse(&env, tokens, source_code)?;
+	let program = parser::Environment::parse(&env, tokens, &source_code)?;
 	let assembled = assembler::assemble(&program)?;
 	Ok((env, assembled))
 }
@@ -91,6 +93,7 @@ fn run_assembler(file_name: &str) -> AssemblyResult {
 mod test {
 	extern crate test;
 	use std::cmp::min;
+	use std::path::PathBuf;
 
 	use test::Bencher;
 
@@ -119,7 +122,12 @@ mod test {
 	}
 
 	#[bench]
-	fn include(bencher: &mut Bencher) {
+	fn source_include(bencher: &mut Bencher) {
+		bencher.iter(|| test_file("examples/multifile.spcasm"));
+	}
+
+	#[bench]
+	fn binary_include(bencher: &mut Bencher) {
 		bencher.iter(|| test_file("examples/include.spcasm"));
 	}
 
@@ -142,7 +150,9 @@ mod test {
 
 	fn test_file(file: &str) {
 		let (parsed, assembled) = super::run_assembler(file).unwrap();
-		let expected_binary = assemble_expected_binary(parsed.borrow().files[0].borrow().content.clone());
+		let expected_binary = assemble_expected_binary(
+			parsed.borrow().files.get(&PathBuf::from(file).canonicalize().unwrap()).unwrap().borrow().content.clone(),
+		);
 		for (byte, (expected, actual)) in expected_binary.iter().zip(assembled.iter()).enumerate() {
 			if let Some(expected) = expected {
 				assert_eq!(

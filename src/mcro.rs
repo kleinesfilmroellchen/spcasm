@@ -32,6 +32,7 @@ pub enum MacroSymbol {
 	Asciiz,
 	Brr,
 	Incbin,
+	Include,
 	End,
 }
 
@@ -47,6 +48,7 @@ impl Display for MacroSymbol {
 			Self::Asciiz => "asciiz",
 			Self::Brr => "brr",
 			Self::Incbin => "incbin",
+			Self::Include => "include",
 			Self::End => "end",
 		})
 	}

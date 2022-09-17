@@ -11,6 +11,7 @@
 	int_log,
 	const_option_ext,
 	const_for,
+	iter_intersperse,
 	let_chains,
 	option_result_contains,
 	slice_as_chunks,
@@ -20,7 +21,7 @@
 )]
 #![deny(clippy::all, clippy::pedantic, clippy::nursery)]
 #![deny(missing_docs)]
-#![allow(non_upper_case_globals, unused_mut)]
+#![allow(non_upper_case_globals, unused)]
 
 #[macro_use] extern crate lalrpop_util;
 

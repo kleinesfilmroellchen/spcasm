@@ -1,20 +1,55 @@
 # Using spcasm
 
-*To run spcasm from source, use `cargo r --` and provide your arguments after the two dashes.*
+_To run spcasm from source, use `cargo r --` and provide your arguments after the two dashes._
 
-At the moment, the spcasm command line interface is very simple:
+```
+SPC700 assembler
 
-```sh
-spcasm INPUT OUTPUT
+USAGE:
+    spcasm.exe [OPTIONS] <INPUT> [OUTPUT]
+
+ARGS:
+    <INPUT>
+            Assembly file to assemble
+
+    <OUTPUT>
+            Binary output file
+
+OPTIONS:
+    -f, --output-format <OUTPUT_FORMAT>
+            Format to output to.
+
+            - elf: Output the binary data within a .data section of an ELF file.
+
+            - plain: Output just the binary data.
+
+            - hexdump: Dump hexadecimal representation in a pretty format like in a hex editor.
+
+            [default: elf]
+            [possible values: elf, plain, hex-dump]
+
+    -h, --help
+            Print help information
+
+    -V, --version
+            Print version information
+
+    -w, --ignore <IGNORE>
+            Warnings to silence
+
+    -W, --error <ERROR>
+            Warnings to turn into a hard error
 ```
 
-spcasm will read the assembly file INPUT and assemble it into a contiguous binary. This binary represents the SPC700's memory space. spcasm then writes an ELF to OUTPUT with a single .data section that contains this binary. Note that no other properties of the output ELF are specified and must be disregarded if the ELF is processed further.
+spcasm will read the assembly file INPUT and assemble it into a contiguous binary. This binary represents the SPC700's memory space.
+
+The output file is optional; omit it in order to dry-run the assembler and check that the assembly code does indeed compile. Use `-` to output to stdout, this is especially useful in combination with a hexdump.
 
 If an error occurs during any step of the assembly process, spcasm will provide you with a nice error of what went wrong and possibly how to solve it:
 
 ![spcasm error demonstration](https://user-images.githubusercontent.com/28656157/164973851-d66c5fa3-8bed-43b6-b7c2-e66cc53592c6.png)
 
-There may also be hints and warnings (identifiable by the pointing finger or exclamation mark that replace the red x) which inform you of possible problems with the assembly code that aren't fatal.
+There may also be hints and warnings (identifiable by the pointing finger or exclamation mark that replace the red x) which inform you of possible problems with the assembly code that aren't fatal. These warnings can be turned off with `-w` or turned into hard errors with `-W`.
 
 ## brri
 

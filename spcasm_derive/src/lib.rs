@@ -51,3 +51,50 @@ pub fn parse_macro_derive(input: TokenStream) -> TokenStream {
 		_ => panic!("Parse cannot be derived for non-enum types."),
 	}
 }
+
+#[proc_macro_derive(ErrorCodes)]
+pub fn error_codes_derive(input: TokenStream) -> TokenStream {
+	let type_ = syn::parse::<syn::DeriveInput>(input).unwrap();
+
+	match type_.data {
+		syn::Data::Enum(enum_) => {
+			let name = type_.ident;
+			let variant_identifiers_and_strings = enum_
+				.variants
+				.iter()
+				.map(|variant| {
+					(variant.ident.clone(), format!("{}", variant.ident).to_lowercase(), variant.fields.clone())
+				})
+				.collect::<Vec<(syn::Ident, String, syn::Fields)>>();
+			let variant_identifiers = variant_identifiers_and_strings.iter().map(|(identifier, _, _)| identifier);
+			let variant_strings =
+				variant_identifiers_and_strings.iter().map(|(_, string, ..)| string).collect::<Vec<_>>();
+			let variant_fields = variant_identifiers_and_strings
+				.iter()
+				.map(|(_, _, fields)| {
+					fields.iter().map(|field| {
+						// println!("{} -> {}", var.clone(), field.clone().ident.unwrap().to_string());
+						field.clone().ident.expect("Unnamed fields, e.g. with tuple elements, are not allowed!")
+					})
+				})
+				.map(|fields| quote! { #( #fields: crate::default_hacks::FakeDefaultForIgnoredValues::default(), )*})
+				.collect::<Vec<_>>();
+
+			quote! {
+				#[automatically_derived]
+				#[allow(missing_docs)]
+				impl crate::error::ErrorCodes for #name {
+					fn all_codes() -> std::collections::HashMap<std::mem::Discriminant<crate::error::AssemblyError>, String> {
+						let mut map = std::collections::HashMap::new();
+						#( map.insert(std::mem::discriminant(&Self::#variant_identifiers {
+							#variant_fields
+						 }), #variant_strings.to_string()); )*
+						return map;
+					}
+				}
+			}
+			.into()
+		},
+		_ => panic!("ErrorCodes cannot be derived for non-enum types."),
+	}
+}

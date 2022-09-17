@@ -1,10 +1,13 @@
+use std::collections::HashMap;
 use std::fmt::Display;
+use std::mem::Discriminant;
 use std::num::ParseIntError;
 use std::path::PathBuf;
 use std::sync::Arc;
 
 use lalrpop_util::ParseError;
 use miette::{Diagnostic, MietteError, MietteSpanContents, SourceCode, SourceSpan, SpanContents};
+use spcasm_derive::ErrorCodes;
 use thiserror::Error;
 
 use crate::mcro::MacroSymbol;
@@ -61,8 +64,13 @@ impl SourceCode for AssemblyCode {
 	}
 }
 
+#[allow(clippy::module_name_repetitions)]
+pub trait ErrorCodes {
+	fn all_codes() -> HashMap<Discriminant<AssemblyError>, String>;
+}
+
 /// All types of errors that the assembler can report to the user.
-#[derive(Error, Debug, Diagnostic)]
+#[derive(Error, Debug, Diagnostic, ErrorCodes)]
 #[allow(clippy::module_name_repetitions, missing_docs)]
 pub enum AssemblyError {
 	//#region Semantic errors: detected while parsing or assembling

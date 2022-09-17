@@ -8,11 +8,12 @@ default-run = "spcasm"
 
 [lib]
 name = "spcasm"
-test = false
-bench = false
 
 [[bin]]
 name = "spcasm"
+required-features = ["clap"]
+test = false
+bench = false
 
 [[bin]]
 name = "brri"
@@ -20,7 +21,7 @@ path = "src/brr/interactive.rs"
 required-features = ["clap"]
 
 [features]
-default = ["expensive_tests"]
+default = ["expensive_tests", "clap"]
 test_bootrom = []
 clap = ["dep:clap"]
 expensive_tests = []
@@ -48,7 +49,7 @@ version = "5.3"
 features = ["derive"]
 version = "1.0.136"
 
-# Only compile clap for the interactive BRR CLI. 
+# Only compile clap for the CLIs.
 [dependencies.clap]
 version = "3"
 optional = true

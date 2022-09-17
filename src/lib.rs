@@ -25,10 +25,14 @@
 
 #[macro_use] extern crate lalrpop_util;
 
-use std::cmp::min;
+#[allow(clippy::wildcard_imports)]
+pub use common::*;
 
 pub mod assembler;
 pub mod brr;
+mod cli;
+mod common;
+mod default_hacks;
 pub mod elf;
 mod error;
 mod lalrpop_adaptor;
@@ -36,21 +40,4 @@ mod mcro;
 pub mod parser;
 lalrpop_mod!(asm);
 
-pub use error::{AssemblyCode, AssemblyError};
-pub use mcro::Macro;
-
-fn pretty_hex(bytes: &[u8]) -> String {
-	let mut string = String::new();
-	// need approximately high nibble + low nibble + ' ' per byte
-	string.reserve(bytes.len() * 3);
-	let mut index = 0;
-	while index * 16 < bytes.len() {
-		let section = &bytes[index * 16 .. min((index + 1) * 16, bytes.len())];
-		for byte in section {
-			string += &format!(" {:02X}", byte);
-		}
-		string.push('\n');
-		index += 1;
-	}
-	string
-}
+#[cfg(test)] mod test;

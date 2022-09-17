@@ -13,6 +13,8 @@ use miette::{Result, SourceSpan};
 use r16bit::MovDirection;
 
 use crate::brr::{self, wav};
+#[cfg(feature = "clap")]
+use crate::cli::ErrorOptions;
 use crate::error::{AssemblyCode, AssemblyError};
 use crate::mcro::MacroValue;
 use crate::parser::instruction::{AddressingMode, Instruction, MemoryAddress, Mnemonic, Number, Opcode};
@@ -454,6 +456,9 @@ pub struct AssembledData {
 	pub source_code:           Arc<AssemblyCode>,
 	/// Assembler subroutines use this as a flag to signal an end of assembly as soon as possible.
 	should_stop:               bool,
+	/// Options that command line received; used for determining what to do with warnings.
+	#[cfg(feature = "clap")]
+	options:                   ErrorOptions,
 }
 
 impl AssembledData {
@@ -496,6 +501,8 @@ impl AssembledData {
 			current_segment_start: Option::default(),
 			source_code,
 			should_stop: false,
+			#[cfg(feature = "clap")]
+			options: ErrorOptions::default(),
 		}
 	}
 

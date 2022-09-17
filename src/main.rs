@@ -101,18 +101,18 @@ mod test {
 	use crate::pretty_hex;
 
 	#[bench]
-	fn test_all_opcodes(bencher: &mut Bencher) {
+	fn all_opcodes(bencher: &mut Bencher) {
 		bencher.iter(|| test_file("examples/test.spcasm"));
 	}
 
 	#[test]
 	#[cfg(feature = "test_bootrom")]
-	fn test_boot_rom() {
+	fn boot_rom() {
 		test_file("examples/bootrom.spcasm");
 	}
 
 	#[test]
-	fn test_parser() {
+	fn parser() {
 		test_file("examples/parse.spcasm");
 	}
 

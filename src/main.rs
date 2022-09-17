@@ -62,7 +62,14 @@ type AssemblyResult = miette::Result<(std::sync::Arc<std::cell::RefCell<Environm
 
 fn main() -> miette::Result<()> {
 	miette::set_hook(Box::new(|_| {
-		Box::new(miette::MietteHandlerOpts::new().unicode(true).context_lines(2).tab_width(4).build())
+		Box::new(
+			miette::MietteHandlerOpts::new()
+				.unicode(true)
+				.context_lines(3)
+				.tab_width(4)
+				.with_cause_chain()
+				.build(),
+		)
 	}))?;
 
 	if args().nth(1).expect("No file name given") == "--help" {

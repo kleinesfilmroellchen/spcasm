@@ -42,7 +42,7 @@ lalrpop = { version = "0.19", default-features = false }
 
 [dependencies.miette]
 features = ["fancy"]
-version = "4.6.0"
+version = "5.3"
 
 [dependencies.serde]
 features = ["derive"]

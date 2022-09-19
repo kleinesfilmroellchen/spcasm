@@ -467,21 +467,28 @@ impl AssemblyError {
 		}
 	}
 
-	/// Report or throw this warning (or error), depending on what the user specified on the command line.
-	#[cfg(feature = "clap")]
+	/// Report or throw this warning (or error), depending on what the user specified on the command line. On non-clap
+	/// builds, this always reports the error.
 	pub(crate) fn report_or_throw(self, options: &ErrorOptions) -> Result<(), Box<Self>> {
 		// Always rethrow errors.
 		if self.severity().is_some_and(|s| s == &miette::Severity::Error) {
 			return Err(self.into());
 		}
-
-		let discriminant = std::mem::discriminant(&self);
-		if options.error.contains(&discriminant.into()) {
-			return Err(self.into());
-		} else if !options.ignore.contains(&discriminant.into()) {
-			println!("{:?}", miette::Report::new(self));
+		#[cfg(feature = "clap")]
+		{
+			let discriminant = std::mem::discriminant(&self);
+			if options.error.contains(&discriminant.into()) {
+				return Err(self.into());
+			} else if !options.ignore.contains(&discriminant.into()) {
+				println!("{:?}", miette::Report::new(self));
+			}
+			Ok(())
 		}
-		Ok(())
+		#[cfg(not(feature = "clap"))]
+		{
+			println!("{:?}", miette::Report::new(self));
+			Ok(())
+		}
 	}
 }
 

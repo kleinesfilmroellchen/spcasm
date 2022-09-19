@@ -215,19 +215,23 @@ impl Number {
 	/// If the label was not yet resolved, this function panics as it assumes that that has already happened.
 	#[must_use]
 	pub fn value(&self) -> MemoryAddress {
-		self.try_value((0,0).into(), Arc::default()).unwrap()
+		self.try_value((0, 0).into(), Arc::default()).unwrap()
 	}
 
 	/// Extracts the actual value of this number, if possible.
 	/// # Errors
 	/// If the number cannot be resolved to a final numeric value.
-	pub fn try_value(&self, location: SourceSpan, source_code: Arc<AssemblyCode>) -> Result<MemoryAddress, AssemblyError> {
+	pub fn try_value(
+		&self,
+		location: SourceSpan,
+		source_code: Arc<AssemblyCode>,
+	) -> Result<MemoryAddress, AssemblyError> {
 		Ok(match self {
 			Self::Literal(value) => *value,
 			// necessary because matching through an Rc is not possible right now (would be super dope though).
 			Self::Label(ref label) => match label {
 				Label::Global(global_label) if let Some(ref value) = global_label.borrow().location => value.value(),
-				Label::Local(local) => return Err(AssemblyError::UnresolvedLabel { 
+				Label::Local(local) => return Err(AssemblyError::UnresolvedLabel {
 					label: local.borrow().name.clone(),
 					label_location: local.borrow().span,
 					usage_location: location,

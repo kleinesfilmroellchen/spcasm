@@ -13,11 +13,16 @@ use crate::error::{AssemblyError, ErrorCodes};
 pub struct ErrorOptions {
 	/// Warnings to silence.
 	#[clap(value_parser, multiple_occurrences = true, long, short = 'w')]
-	ignore: Vec<ErrorCodeSpec>,
+	pub(crate) ignore: Vec<ErrorCodeSpec>,
 	/// Warnings to turn into a hard error.
 	#[clap(value_parser, multiple_occurrences = true, long, short = 'W')]
-	error:  Vec<ErrorCodeSpec>,
+	pub(crate) error:  Vec<ErrorCodeSpec>,
 }
+
+/// Non-clap builds get this fake ErrorOptions struct which is a ZST and does nothing.
+#[cfg(not(feature = "clap"))]
+#[derive(Default, Debug, Clone, Copy, Eq, PartialEq)]
+pub struct ErrorOptions {}
 
 #[derive(Debug, Clone, Eq, PartialEq)]
 #[repr(transparent)]
@@ -29,6 +34,8 @@ impl From<Discriminant<AssemblyError>> for ErrorCodeSpec {
 	}
 }
 
+const error_prefix: &'static str = "spcasm::";
+
 impl FromStr for ErrorCodeSpec {
 	type Err = String;
 
@@ -36,7 +43,11 @@ impl FromStr for ErrorCodeSpec {
 		let code_map = AssemblyError::all_codes();
 		let discriminant = code_map
 			.iter()
-			.find(|(_, value)| value == &string_code)
+			.find(|(_, value)| {
+				(value == &string_code)
+				// If the user provided an error code not starting with spcasm:: (very reasonable), just ignore the prefix.
+					|| (!string_code.starts_with(error_prefix) && value[error_prefix.len() ..] == *string_code)
+			})
 			.map(|(key, _)| *key)
 			.ok_or_else(|| "invalid error code".to_string())?;
 

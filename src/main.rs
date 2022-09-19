@@ -55,7 +55,7 @@ fn main() -> miette::Result<()> {
 	let file_name = args.input;
 
 	// TODO: respect flags
-	let (_, assembled) = run_assembler(&file_name.to_string_lossy())?;
+	let (_, assembled) = run_assembler(&file_name.to_string_lossy(), &args.warning_flags)?;
 
 	if let Some(outfile) = args.output {
 		let mut outfile: Box<dyn Write> = if outfile.to_string_lossy() == "-" {

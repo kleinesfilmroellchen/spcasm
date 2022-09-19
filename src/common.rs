@@ -6,6 +6,7 @@ use std::cmp::min;
 pub use super::error::{AssemblyCode, AssemblyError};
 pub use super::mcro::Macro;
 pub use super::parser::Environment;
+use crate::cli::ErrorOptions;
 
 /// Assembler result type.
 pub type AssemblyResult = miette::Result<(std::sync::Arc<std::cell::RefCell<Environment>>, Vec<u8>)>;
@@ -28,10 +29,19 @@ pub fn pretty_hex(bytes: &[u8]) -> String {
 	string
 }
 
+/// Run the assembler on a single file. No errors options are provided; this is mainly intended for non-clap builds
+/// where that has no effect anyways.
+///
+/// # Errors
+/// Any assembler errors are propagated to the caller.
+pub fn run_assembler_with_default_options(file_name: &str) -> AssemblyResult {
+	run_assembler(file_name, &ErrorOptions::default())
+}
+
 /// Run the assembler on a single file.
 /// # Errors
 /// Any assembler errors are propagated to the caller.
-pub fn run_assembler(file_name: &str) -> AssemblyResult {
+pub fn run_assembler(file_name: &str, options: &ErrorOptions) -> AssemblyResult {
 	let source_code = AssemblyCode::from_file(file_name).map_err(|os_error| crate::AssemblyError::FileNotFound {
 		os_error,
 		file_name: file_name.to_string(),
@@ -45,6 +55,6 @@ pub fn run_assembler(file_name: &str) -> AssemblyResult {
 	let mut env = crate::Environment::new();
 	let tokens = crate::parser::lexer::lex(source_code.clone()).map_err(AssemblyError::from)?;
 	let program = crate::Environment::parse(&env, tokens, &source_code).map_err(AssemblyError::from)?;
-	let assembled = crate::assembler::assemble(&program).map_err(AssemblyError::from)?;
+	let assembled = crate::assembler::assemble(&program, options).map_err(AssemblyError::from)?;
 	Ok((env, assembled))
 }

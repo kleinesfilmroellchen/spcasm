@@ -12,6 +12,7 @@ use miette::{Diagnostic, MietteError, MietteSpanContents, SourceCode, SourceSpan
 use spcasm_derive::ErrorCodes;
 use thiserror::Error;
 
+use crate::cli::ErrorOptions;
 use crate::mcro::MacroSymbol;
 use crate::parser::instruction::{MemoryAddress, Mnemonic};
 use crate::parser::Token;
@@ -459,6 +460,19 @@ impl AssemblyError {
 				Self::DanglingTokens { location: (start, end - start).into(), src },
 			ParseError::User { error } => error,
 		}
+	}
+
+	/// Report or throw this warning (or error), depending on what the user specified on the command line.
+	#[cfg(feature = "clap")]
+	pub(crate) fn report_or_throw(self, options: &ErrorOptions) -> Result<(), Box<Self>> {
+		use std::mem::discriminant;
+		let descriptor = discriminant(&self);
+		if options.error.contains(&descriptor.into()) {
+			return Err(self.into());
+		} else if !options.ignore.contains(&descriptor.into()) {
+			println!("{:?}", miette::Report::new(self));
+		}
+		Ok(())
 	}
 }
 

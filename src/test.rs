@@ -46,7 +46,7 @@ fn errors() {
 	for error_source in error_sources {
 		let error_source = error_source.unwrap().path();
 		let error_source = &*error_source.to_string_lossy();
-		let result = super::run_assembler(error_source);
+		let result = super::run_assembler_with_default_options(error_source);
 		println!("running {}...\n{:?}", error_source, result);
 		assert!(result.is_err());
 	}
@@ -58,7 +58,7 @@ fn brr_integration(bencher: &mut Bencher) {
 }
 
 fn test_file(file: &str) {
-	let (parsed, assembled) = super::run_assembler(file).unwrap();
+	let (parsed, assembled) = super::run_assembler_with_default_options(file).unwrap();
 	let expected_binary = assemble_expected_binary(
 		parsed.borrow().files.get(&PathBuf::from(file).canonicalize().unwrap()).unwrap().borrow().content.clone(),
 	);

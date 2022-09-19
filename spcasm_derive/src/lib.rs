@@ -67,8 +67,6 @@ pub fn error_codes_derive(input: TokenStream) -> TokenStream {
 				})
 				.collect::<Vec<(syn::Ident, String, syn::Fields)>>();
 			let variant_identifiers = variant_identifiers_and_strings.iter().map(|(identifier, _, _)| identifier);
-			let variant_strings =
-				variant_identifiers_and_strings.iter().map(|(_, string, ..)| string).collect::<Vec<_>>();
 			let variant_fields = variant_identifiers_and_strings
 				.iter()
 				.map(|(_, _, fields)| {
@@ -85,9 +83,10 @@ pub fn error_codes_derive(input: TokenStream) -> TokenStream {
 				impl crate::error::ErrorCodes for #name {
 					fn all_codes() -> std::collections::HashMap<std::mem::Discriminant<crate::error::AssemblyError>, String> {
 						let mut map = std::collections::HashMap::new();
-						#( map.insert(std::mem::discriminant(&Self::#variant_identifiers {
-							#variant_fields
-						 }), #variant_strings.to_string()); )*
+						#( let error_instance = &Self::#variant_identifiers {
+								#variant_fields
+							};
+							map.insert(std::mem::discriminant(error_instance), error_instance.code().expect("error must have a code").to_string()); )*
 						return map;
 					}
 				}

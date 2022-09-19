@@ -13,7 +13,6 @@ use miette::{Result, SourceSpan};
 use r16bit::MovDirection;
 
 use crate::brr::{self, wav};
-#[cfg(feature = "clap")]
 use crate::cli::ErrorOptions;
 use crate::error::{AssemblyCode, AssemblyError};
 use crate::mcro::MacroValue;
@@ -34,9 +33,14 @@ pub const MAX_PASSES: usize = 10;
 /// Assembles the instructions into a byte sequence.
 /// # Errors
 /// Unencodeable instructions will cause errors.
-pub(crate) fn assemble(main_file: &Arc<RefCell<AssemblyFile>>) -> Result<Vec<u8>, Box<AssemblyError>> {
+pub(crate) fn assemble(
+	main_file: &Arc<RefCell<AssemblyFile>>,
+	options: &ErrorOptions,
+) -> Result<Vec<u8>, Box<AssemblyError>> {
 	let mut main_file = main_file.borrow_mut();
 	let mut data = AssembledData::new(main_file.source_code.clone());
+	#[cfg(feature = "clap")]
+	data.set_error_options(options.clone());
 
 	data.new_segment(0);
 
@@ -466,7 +470,6 @@ pub struct AssembledData {
 	/// Assembler subroutines use this as a flag to signal an end of assembly as soon as possible.
 	should_stop:               bool,
 	/// Options that command line received; used for determining what to do with warnings.
-	#[cfg(feature = "clap")]
 	options:                   ErrorOptions,
 }
 
@@ -511,8 +514,31 @@ impl AssembledData {
 			current_segment_start: Option::default(),
 			source_code,
 			should_stop: false,
-			#[cfg(feature = "clap")]
 			options: ErrorOptions::default(),
+		}
+	}
+
+	/// Change the error options for assembler warning and error reporting.
+	#[cfg(feature = "clap")]
+	pub fn set_error_options(&mut self, options: ErrorOptions) -> &mut Self {
+		self.options = options;
+		self
+	}
+
+	/// Report or throw an error depending on what command-line options this assembly data object knows about. If error
+	/// options are not available (on non-clap builds, e.g. tests), this always reports the error.
+	/// # Errors
+	/// The provided error is re-thrown if the error options specify to do so. On non-clap builds, this function never
+	/// errors.
+	pub fn report_or_throw(&self, error: AssemblyError) -> Result<(), Box<AssemblyError>> {
+		#[cfg(feature = "clap")]
+		{
+			error.report_or_throw(&self.options)
+		}
+		#[cfg(not(feature = "clap"))]
+		{
+			println!("{:?}", miette::Report::new(error));
+			Ok(())
 		}
 	}
 
@@ -563,15 +589,12 @@ impl AssembledData {
 		span: SourceSpan,
 	) -> Result<(), Box<AssemblyError>> {
 		if (value & 0xFFFF) != value {
-			println!(
-				"{:?}",
-				miette::Report::new(AssemblyError::ValueTooLarge {
-					value,
-					location: span,
-					src: self.source_code.clone(),
-					size: 16,
-				})
-			);
+			self.report_or_throw(AssemblyError::ValueTooLarge {
+				value,
+				location: span,
+				src: self.source_code.clone(),
+				size: 16,
+			})?;
 		}
 		self.append((value & 0xFF) as u8, label, span);
 		self.append(((value & 0xFF00) >> 8) as u8, None, span);
@@ -591,15 +614,12 @@ impl AssembledData {
 		span: SourceSpan,
 	) -> Result<(), Box<AssemblyError>> {
 		if (value & 0xFF) != value {
-			println!(
-				"{:?}",
-				miette::Report::new(AssemblyError::ValueTooLarge {
-					value,
-					location: span,
-					src: self.source_code.clone(),
-					size: 8,
-				})
-			);
+			self.report_or_throw(AssemblyError::ValueTooLarge {
+				value,
+				location: span,
+				src: self.source_code.clone(),
+				size: 8,
+			})?;
 		}
 		self.append((value & 0xFF) as u8, label, span);
 		Ok(())

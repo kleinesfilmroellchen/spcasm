@@ -56,7 +56,7 @@ pub(crate) fn assemble(
 		}
 	}
 	let mut pass_count = 0;
-	while data.execute_label_resolution_pass() && pass_count < MAX_PASSES {
+	while data.execute_label_resolution_pass()? && pass_count < MAX_PASSES {
 		pass_count += 1;
 	}
 	data.combine_segments()
@@ -831,9 +831,10 @@ impl AssembledData {
 	/// This means that data which references labels declared later needs one additional resolution pass.
 	/// # Returns
 	/// Whether any modifications were actually done during the resolution pass.
-	#[must_use]
+	/// # Errors
+	/// Any warnings and warning-promoted errors from resolution are passed on.
 	#[allow(clippy::missing_panics_doc)]
-	pub fn execute_label_resolution_pass(&mut self) -> bool {
+	pub fn execute_label_resolution_pass(&mut self) -> Result<bool, Box<AssemblyError>> {
 		let mut had_modifications = true;
 		for (segment_start, segment_data) in &mut self.segments {
 			let mut current_global_label = None;
@@ -843,31 +844,31 @@ impl AssembledData {
 					datum.label.clone().filter(|label| matches!(label, Label::Global(..))).or(current_global_label);
 				// Resolve the actual label definition; i.e. if the below code executes, we're at the memory location
 				// which is labeled.
-				datum.label.as_mut().filter(|existing_label| !existing_label.is_resolved()).map(|resolved_label| {
-					had_modifications |= true;
-					match *resolved_label {
-						Label::Global(ref mut global) => {
-							global.borrow_mut().resolve_to(
+				datum
+					.label
+					.as_mut()
+					.filter(|existing_label| !existing_label.is_resolved())
+					.and_then(|resolved_label| {
+						had_modifications |= true;
+						match *resolved_label {
+							Label::Global(ref mut global) => global.borrow_mut().resolve_to(
 								memory_address,
 								datum.instruction_location,
 								self.source_code.clone(),
-							);
-							resolved_label
-						},
-						Label::Local(ref mut local) => {
-							local.borrow_mut().resolve_to(
+							),
+							Label::Local(ref mut local) => local.borrow_mut().resolve_to(
 								memory_address,
 								datum.instruction_location,
 								self.source_code.clone(),
-							);
-							resolved_label
-						},
-					}
-				});
+							),
+						}
+						.err()
+					})
+					.map_or_else(|| Ok(()), |err| err.report_or_throw(&self.options))?;
 				// Resolve a label used as a memory address, e.g. in an instruction operand like a jump target.
 				had_modifications |= datum.try_resolve(memory_address);
 			}
 		}
-		had_modifications
+		Ok(had_modifications)
 	}
 }

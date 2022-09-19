@@ -465,11 +465,15 @@ impl AssemblyError {
 	/// Report or throw this warning (or error), depending on what the user specified on the command line.
 	#[cfg(feature = "clap")]
 	pub(crate) fn report_or_throw(self, options: &ErrorOptions) -> Result<(), Box<Self>> {
-		use std::mem::discriminant;
-		let descriptor = discriminant(&self);
-		if options.error.contains(&descriptor.into()) {
+		// Always rethrow errors.
+		if self.severity().is_some_and(|s| s == &miette::Severity::Error) {
 			return Err(self.into());
-		} else if !options.ignore.contains(&descriptor.into()) {
+		}
+
+		let discriminant = std::mem::discriminant(&self);
+		if options.error.contains(&discriminant.into()) {
+			return Err(self.into());
+		} else if !options.ignore.contains(&discriminant.into()) {
 			println!("{:?}", miette::Report::new(self));
 		}
 		Ok(())

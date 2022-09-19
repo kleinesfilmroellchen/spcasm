@@ -20,6 +20,7 @@ jobs:
       uses: actions-rs/toolchain@v1
       with:
           toolchain: nightly
+          components: clippy, rustfmt, cargo-fmt
           override: true
           default: true
     - name: Build
@@ -27,10 +28,9 @@ jobs:
     - name: Run tests
       run: cargo test --verbose --no-default-features
     - name: Check style
-      uses: LoliGothick/clippy-check@v.0.2.2
+      uses: actions-rs/clippy-check@v1.0.7
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
-        options: --verbose --no-default-features
-        name: Check style
+        args: --verbose --no-default-features
     - name: Check code format
       run: cargo fmt --check --verbose

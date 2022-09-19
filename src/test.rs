@@ -1,3 +1,5 @@
+#![deny(clippy::all, clippy::pedantic, clippy::nursery)]
+
 extern crate test;
 use std::cmp::min;
 use std::path::PathBuf;

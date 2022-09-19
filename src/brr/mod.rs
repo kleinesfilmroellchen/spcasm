@@ -1,4 +1,5 @@
 //! BRR (Bit Rate Reduced) a.k.a. SNES ADPCM sample format parsing, writing and reading.
+#![deny(clippy::all, clippy::pedantic, clippy::nursery)]
 #![allow(
 	clippy::cast_possible_wrap,
 	clippy::cast_possible_truncation,

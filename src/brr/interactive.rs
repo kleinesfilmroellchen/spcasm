@@ -1,8 +1,10 @@
 //! Interactive BRR test program.
+#![deny(clippy::all, clippy::nursery, clippy::pedantic)]
 
 use std::convert::TryInto;
 
 use clap::{Parser, Subcommand};
+#[allow(clippy::wildcard_imports)]
 use spcasm::brr::*;
 
 #[derive(Parser)]
@@ -27,7 +29,7 @@ fn main() {
 
 	match arguments.mode {
 		ExecMode::Encode { samples, warm_up } => {
-			let warm_up = warm_up.unwrap_or(vec![0, 0]).try_into().unwrap_or_else(|_| {
+			let warm_up = warm_up.unwrap_or_else(|| vec![0, 0]).try_into().unwrap_or_else(|_| {
 				eprintln!("error: you must provide exactly 2 warm-up samples");
 				std::process::exit(1);
 			});
@@ -45,7 +47,7 @@ fn main() {
 					block.header.real_shift,
 					block.decode(warm_up).0,
 					block.total_encode_error(warm_up, &samples)
-				)
+				);
 			}
 			let actual_encoded = Block::encode(warm_up, samples, LoopEndFlags::Nothing);
 			println!("optimal encoding: filter {}", actual_encoded.header.filter);

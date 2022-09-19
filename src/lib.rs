@@ -19,9 +19,8 @@
 	maybe_uninit_uninit_array,
 	maybe_uninit_array_assume_init
 )]
-#![deny(clippy::all, clippy::pedantic, clippy::nursery)]
 #![deny(missing_docs)]
-#![allow(non_upper_case_globals, unused)]
+#![allow(non_upper_case_globals, unused, clippy::all, clippy::pedantic, clippy::nursery)]
 
 #[macro_use] extern crate lalrpop_util;
 

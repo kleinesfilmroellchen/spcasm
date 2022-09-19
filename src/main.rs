@@ -19,9 +19,8 @@
 	maybe_uninit_uninit_array,
 	maybe_uninit_array_assume_init
 )]
-#![deny(clippy::all, clippy::pedantic, clippy::nursery)]
 #![deny(missing_docs)]
-#![allow(non_upper_case_globals, unused)]
+#![allow(non_upper_case_globals, unused, clippy::all, clippy::pedantic, clippy::nursery)]
 
 #[macro_use] extern crate lalrpop_util;
 
@@ -73,9 +72,7 @@ fn main() -> miette::Result<()> {
 		};
 		match args.output_format {
 			cli::OutputFormat::Elf => elf::write_to_elf(&mut outfile, &assembled).unwrap(),
-			cli::OutputFormat::Plain => {
-				outfile.write(&assembled).unwrap();
-			},
+			cli::OutputFormat::Plain => outfile.write_all(&assembled).unwrap(),
 			cli::OutputFormat::HexDump => outfile.write_fmt(format_args!("{}", crate::pretty_hex(&assembled))).unwrap(),
 		};
 	}

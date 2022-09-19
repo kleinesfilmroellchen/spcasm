@@ -167,6 +167,7 @@ fn short_sample_encode(bencher: &mut Bencher) {
 
 #[cfg(feature = "expensive_tests")]
 #[bench]
+#[allow(clippy::cast_precision_loss)]
 fn extremely_long_encode(bencher: &mut Bencher) {
 	use ::wav::read as wav_read;
 

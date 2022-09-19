@@ -1,5 +1,7 @@
 //! Assembly directives and macros.
+#![deny(clippy::all, clippy::pedantic, clippy::nursery)]
 #![allow(clippy::module_name_repetitions)]
+
 use std::fmt::Display;
 
 use miette::SourceSpan;

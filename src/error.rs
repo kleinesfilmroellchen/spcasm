@@ -1,3 +1,5 @@
+#![deny(clippy::all, clippy::pedantic, clippy::nursery)]
+
 use std::collections::HashMap;
 use std::fmt::Display;
 use std::mem::Discriminant;

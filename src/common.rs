@@ -1,4 +1,5 @@
 //! Common includes and functions for both library and executable.
+#![deny(clippy::all, clippy::pedantic, clippy::nursery)]
 
 use std::cmp::min;
 
@@ -28,6 +29,8 @@ pub fn pretty_hex(bytes: &[u8]) -> String {
 }
 
 /// Run the assembler on a single file.
+/// # Errors
+/// Any assembler errors are propagated to the caller.
 pub fn run_assembler(file_name: &str) -> AssemblyResult {
 	let source_code = AssemblyCode::from_file(file_name).map_err(|os_error| crate::AssemblyError::FileNotFound {
 		os_error,

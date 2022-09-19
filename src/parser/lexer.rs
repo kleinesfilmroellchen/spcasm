@@ -16,7 +16,7 @@ use crate::mcro::MacroSymbol;
 /// # Errors
 /// Errors are returned for any syntactical error at the token level, e.g. invalid number literals.
 #[allow(clippy::missing_panics_doc)]
-pub fn lex(source_code: Arc<AssemblyCode>) -> Result<Vec<Token>, AssemblyError> {
+pub fn lex(source_code: Arc<AssemblyCode>) -> Result<Vec<Token>, Box<AssemblyError>> {
 	let mut chars = source_code.text.chars().peekable();
 	let mut index = 0usize;
 	let mut tokens = Vec::new();
@@ -62,7 +62,7 @@ pub fn lex(source_code: Arc<AssemblyCode>) -> Result<Vec<Token>, AssemblyError> 
 									.map(|value| Token::Macro(value, identifier_span)))
 								.or_else(|_| Mnemonic::parse(&identifier.to_lowercase(), identifier_span, source_code.clone())
 									.map(|mnemonic| Token::Mnemonic(mnemonic, identifier_span)))
-								.or(Ok(Token::Identifier(identifier, identifier_span)))?);
+								.or::<AssemblyError>(Ok(Token::Identifier(identifier, identifier_span)))?);
 			},
 			'0'..='9' => {
 				let (number, size) = next_number(&mut chars, Some(chr), 10, |chr| chr.is_ascii_digit(), index, source_code.clone())?;
@@ -116,7 +116,7 @@ pub fn lex(source_code: Arc<AssemblyCode>) -> Result<Vec<Token>, AssemblyError> 
 				chr,
 				location: index.into(),
 				src: source_code
-			}),
+			}.into()),
 		}
 	}
 
@@ -139,19 +139,15 @@ fn next_number(
 	checker: fn(char) -> bool,
 	start_index: usize,
 	source_code: Arc<AssemblyCode>,
-) -> Result<(i64, usize), AssemblyError> {
-	let mut number_chars = match first_char {
-		Some(chr) => String::from(chr),
-		None => String::default(),
-	};
+) -> Result<(i64, usize), Box<AssemblyError>> {
+	let mut number_chars = first_char.map_or_else(String::default, String::from);
 	while let Some(chr) = chars.peek() && checker(*chr) {
 		number_chars.push(chars.next().unwrap());
 	}
 	i64::from_str_radix(&number_chars, radix.into())
-		.map_err(|error| AssemblyError::InvalidNumber {
-			error,
-			location: (start_index, number_chars.len()).into(),
-			src: source_code,
+		.map_err(|error| {
+			AssemblyError::InvalidNumber { error, location: (start_index, number_chars.len()).into(), src: source_code }
+				.into()
 		})
 		.map(|value| (value, number_chars.len()))
 }
@@ -160,7 +156,7 @@ fn next_string(
 	chars: &mut Peekable<std::str::Chars>,
 	source_code: Arc<AssemblyCode>,
 	start_index: &mut usize,
-) -> Result<Vec<char>, AssemblyError> {
+) -> Result<Vec<char>, Box<AssemblyError>> {
 	let mut text = Vec::new();
 	while let Some(chr) = chars.next() {
 		*start_index += 1;
@@ -174,7 +170,8 @@ fn next_string(
 		expected: vec!["\"".into()],
 		location: (source_code.text.len() - 1, 0).into(),
 		src:      source_code,
-	})
+	}
+	.into())
 }
 
 /// Used for parsing escape sequences both in string and character literals; for this reason allow escaping ' and " even
@@ -183,7 +180,7 @@ fn next_escape_sequence(
 	chars: &mut Peekable<std::str::Chars>,
 	source_code: Arc<AssemblyCode>,
 	start_index: &mut usize,
-) -> Result<char, AssemblyError> {
+) -> Result<char, Box<AssemblyError>> {
 	if let Some(chr) = chars.next() {
 		*start_index += 1;
 		// TODO: Do we want to support unicode literals, and with which format? The plain format of many languages
@@ -220,7 +217,8 @@ fn next_escape_sequence(
 						error:    u32::from_str_radix("HACK", 2).unwrap_err(),
 						src:      source_code,
 						location: (*start_index + 1, 2).into(),
-					});
+					}
+					.into());
 				}
 				let value =
 					char::from_u32(u32::from_str_radix(&format!("{}{}", first_number, second_number), 16).unwrap())
@@ -233,14 +231,16 @@ fn next_escape_sequence(
 				actual:   Token::String(vec![chr as u8], (*start_index, 0).into()),
 				location: (*start_index, 0).into(),
 				src:      source_code,
-			}),
+			}
+			.into()),
 		}
 	} else {
 		Err(AssemblyError::UnexpectedEndOfTokens {
 			expected: vec!["escape sequence".into()],
 			location: (source_code.text.len() - 1, 0).into(),
 			src:      source_code.clone(),
-		})
+		}
+		.into())
 	}
 }
 

@@ -101,7 +101,7 @@ impl Token {
 	///
 	/// # Errors
 	/// If the token doesn't match, an "Expected XYZ" error string is returned.
-	pub fn expect(self, type_: &Self, src: Arc<AssemblyCode>) -> Result<Self, AssemblyError> {
+	pub fn expect(self, type_: &Self, src: Arc<AssemblyCode>) -> Result<Self, Box<AssemblyError>> {
 		if self.equals_type(type_) {
 			Ok(self)
 		} else {
@@ -110,7 +110,8 @@ impl Token {
 				actual: type_.clone(),
 				location: self.source_span(),
 				src,
-			})
+			}
+			.into())
 		}
 	}
 

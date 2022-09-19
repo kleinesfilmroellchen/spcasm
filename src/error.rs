@@ -462,6 +462,12 @@ impl AssemblyError {
 	}
 }
 
+impl From<Box<Self>> for AssemblyError {
+	fn from(boxed: Box<Self>) -> Self {
+		*boxed
+	}
+}
+
 #[derive(Clone, Debug)]
 pub enum TokenOrString {
 	Token(Token),

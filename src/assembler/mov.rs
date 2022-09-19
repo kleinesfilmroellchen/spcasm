@@ -7,7 +7,7 @@ pub(super) fn assemble_mov(
 	target: &AddressingMode,
 	source: AddressingMode,
 	instruction: &mut Instruction,
-) -> Result<(), AssemblyError> {
+) -> Result<(), Box<AssemblyError>> {
 	let source_code_copy = data.source_code.clone();
 	let make_error = |mode: AddressingMode, is_first_operand| {
 		Err(AssemblyError::InvalidAddressingMode {
@@ -51,49 +51,53 @@ pub(super) fn assemble_mov(
 					AddressingMode::DirectPageIndirectYIndexed(Number::Literal(0)).to_string(),
 				]
 			},
-		})
+		}
+		.into())
 	};
 
 	match target {
 		AddressingMode::Register(Register::A) => match source {
-			AddressingMode::Immediate(value) => data.append_instruction_with_8_bit_operand(0xE8, value, instruction),
+			AddressingMode::Immediate(value) => data.append_instruction_with_8_bit_operand(0xE8, value, instruction)?,
 			AddressingMode::IndirectX => data.append_instruction(0xE6, instruction),
 			AddressingMode::IndirectXAutoIncrement => data.append_instruction(0xBF, instruction),
 			AddressingMode::DirectPage(page_address) =>
-				data.append_instruction_with_8_bit_operand(0xE4, page_address, instruction),
+				data.append_instruction_with_8_bit_operand(0xE4, page_address, instruction)?,
 			AddressingMode::DirectPageXIndexed(page_base_address) =>
-				data.append_instruction_with_8_bit_operand(0xF4, page_base_address, instruction),
-			AddressingMode::Address(address) => data.append_instruction_with_16_bit_operand(0xE5, address, instruction),
+				data.append_instruction_with_8_bit_operand(0xF4, page_base_address, instruction)?,
+			AddressingMode::Address(address) =>
+				data.append_instruction_with_16_bit_operand(0xE5, address, instruction)?,
 			AddressingMode::XIndexed(address) =>
-				data.append_instruction_with_16_bit_operand(0xF5, address, instruction),
+				data.append_instruction_with_16_bit_operand(0xF5, address, instruction)?,
 			AddressingMode::YIndexed(address) =>
-				data.append_instruction_with_16_bit_operand(0xF6, address, instruction),
+				data.append_instruction_with_16_bit_operand(0xF6, address, instruction)?,
 			AddressingMode::DirectPageXIndexedIndirect(page_base_address) =>
-				data.append_instruction_with_8_bit_operand(0xE7, page_base_address, instruction),
+				data.append_instruction_with_8_bit_operand(0xE7, page_base_address, instruction)?,
 			AddressingMode::DirectPageIndirectYIndexed(page_base_address) =>
-				data.append_instruction_with_8_bit_operand(0xF7, page_base_address, instruction),
+				data.append_instruction_with_8_bit_operand(0xF7, page_base_address, instruction)?,
 			AddressingMode::Register(Register::X) => data.append_instruction(0x7D, instruction),
 			AddressingMode::Register(Register::Y) => data.append_instruction(0xDD, instruction),
 			mode => return make_error(mode, false),
 		},
 		AddressingMode::Register(Register::X) => match source {
-			AddressingMode::Immediate(value) => data.append_instruction_with_8_bit_operand(0xCD, value, instruction),
+			AddressingMode::Immediate(value) => data.append_instruction_with_8_bit_operand(0xCD, value, instruction)?,
 			AddressingMode::DirectPage(page_address) =>
-				data.append_instruction_with_8_bit_operand(0xF8, page_address, instruction),
+				data.append_instruction_with_8_bit_operand(0xF8, page_address, instruction)?,
 			AddressingMode::DirectPageYIndexed(page_address) =>
-				data.append_instruction_with_8_bit_operand(0xF9, page_address, instruction),
-			AddressingMode::Address(address) => data.append_instruction_with_16_bit_operand(0xE9, address, instruction),
+				data.append_instruction_with_8_bit_operand(0xF9, page_address, instruction)?,
+			AddressingMode::Address(address) =>
+				data.append_instruction_with_16_bit_operand(0xE9, address, instruction)?,
 			AddressingMode::Register(Register::A) => data.append_instruction(0x5D, instruction),
 			AddressingMode::Register(Register::SP) => data.append_instruction(0x9D, instruction),
 			mode => return make_error(mode, false),
 		},
 		AddressingMode::Register(Register::Y) => match source {
-			AddressingMode::Immediate(value) => data.append_instruction_with_8_bit_operand(0x8D, value, instruction),
+			AddressingMode::Immediate(value) => data.append_instruction_with_8_bit_operand(0x8D, value, instruction)?,
 			AddressingMode::DirectPage(page_address) =>
-				data.append_instruction_with_8_bit_operand(0xEB, page_address, instruction),
+				data.append_instruction_with_8_bit_operand(0xEB, page_address, instruction)?,
 			AddressingMode::DirectPageXIndexed(page_address) =>
-				data.append_instruction_with_8_bit_operand(0xFB, page_address, instruction),
-			AddressingMode::Address(address) => data.append_instruction_with_16_bit_operand(0xEC, address, instruction),
+				data.append_instruction_with_8_bit_operand(0xFB, page_address, instruction)?,
+			AddressingMode::Address(address) =>
+				data.append_instruction_with_16_bit_operand(0xEC, address, instruction)?,
 			AddressingMode::Register(Register::A) => data.append_instruction(0xFD, instruction),
 			mode => return make_error(mode, false),
 		},
@@ -101,14 +105,14 @@ pub(super) fn assemble_mov(
 			if source == AddressingMode::Register(Register::X) {
 				data.append_instruction(0xBD, instruction);
 			} else {
-				return Err(AssemblyError::InvalidAddressingMode {
-					is_first_operand: false,
-					mode:             source.to_string(),
-					mnemonic:         Mnemonic::Mov,
-					src:              data.source_code.clone(),
-					location:         instruction.span,
-					legal_modes:      vec![AddressingMode::Register(Register::X).to_string()],
-				});
+				return Err(AssemblyError::InvalidAddressingModeCombination {
+					first_mode:  target.to_string(),
+					mnemonic:    Mnemonic::Mov,
+					src:         data.source_code.clone(),
+					location:    instruction.span,
+					second_mode: source.to_string(),
+				}
+				.into());
 			},
 		AddressingMode::IndirectX => match source {
 			AddressingMode::Register(Register::A) => data.append_instruction(0xC6, instruction),
@@ -120,15 +124,19 @@ pub(super) fn assemble_mov(
 		},
 		AddressingMode::DirectPage(page_address) => match source {
 			AddressingMode::Register(Register::A) =>
-				data.append_instruction_with_8_bit_operand(0xC4, page_address.clone(), instruction),
+				data.append_instruction_with_8_bit_operand(0xC4, page_address.clone(), instruction)?,
 			AddressingMode::Register(Register::X) =>
-				data.append_instruction_with_8_bit_operand(0xD8, page_address.clone(), instruction),
+				data.append_instruction_with_8_bit_operand(0xD8, page_address.clone(), instruction)?,
 			AddressingMode::Register(Register::Y) =>
-				data.append_instruction_with_8_bit_operand(0xCB, page_address.clone(), instruction),
-			AddressingMode::DirectPage(source_address) =>
-				data.append_instruction_with_two_8_bit_operands(0xFA, page_address.clone(), source_address, instruction),
+				data.append_instruction_with_8_bit_operand(0xCB, page_address.clone(), instruction)?,
+			AddressingMode::DirectPage(source_address) => data.append_instruction_with_two_8_bit_operands(
+				0xFA,
+				page_address.clone(),
+				source_address,
+				instruction,
+			)?,
 			AddressingMode::Immediate(literal_value) =>
-				data.append_instruction_with_two_8_bit_operands(0x8F, page_address.clone(), literal_value, instruction),
+				data.append_instruction_with_two_8_bit_operands(0x8F, page_address.clone(), literal_value, instruction)?,
 			mode => return make_error(mode, false),
 		},
 		AddressingMode::DirectPageXIndexed(page_address) => data.append_instruction_with_8_bit_operand(
@@ -139,7 +147,7 @@ pub(super) fn assemble_mov(
 			},
 			page_address.clone(),
 			instruction,
-		),
+		)?,
 		AddressingMode::DirectPageYIndexed(page_address) => data.append_instruction_with_8_bit_operand(
 			match source {
 				AddressingMode::Register(Register::X) => 0xD9,
@@ -147,7 +155,7 @@ pub(super) fn assemble_mov(
 			},
 			page_address.clone(),
 			instruction,
-		),
+		)?,
 		AddressingMode::Address(address) => data.append_instruction_with_16_bit_operand(
 			match source {
 				AddressingMode::Register(Register::A) => 0xC5,
@@ -157,28 +165,28 @@ pub(super) fn assemble_mov(
 			},
 			address.clone(),
 			instruction,
-		),
+		)?,
 		AddressingMode::XIndexed(address) =>
 			if AddressingMode::Register(Register::A) == source {
-				data.append_instruction_with_16_bit_operand(0xD5, address.clone(), instruction);
+				data.append_instruction_with_16_bit_operand(0xD5, address.clone(), instruction)?;
 			} else {
 				return make_error(source, false);
 			},
 		AddressingMode::YIndexed(address) =>
 			if AddressingMode::Register(Register::A) == source {
-				data.append_instruction_with_16_bit_operand(0xD6, address.clone(), instruction);
+				data.append_instruction_with_16_bit_operand(0xD6, address.clone(), instruction)?;
 			} else {
 				return make_error(source, false);
 			},
 		AddressingMode::DirectPageXIndexedIndirect(page_address) =>
 			if source == AddressingMode::Register(Register::A) {
-				data.append_instruction_with_8_bit_operand(0xC7, page_address.clone(), instruction);
+				data.append_instruction_with_8_bit_operand(0xC7, page_address.clone(), instruction)?;
 			} else {
 				return make_error(source, false);
 			},
 		AddressingMode::DirectPageIndirectYIndexed(page_address) =>
 			if source == AddressingMode::Register(Register::A) {
-				data.append_instruction_with_8_bit_operand(0xD7, page_address.clone(), instruction);
+				data.append_instruction_with_8_bit_operand(0xD7, page_address.clone(), instruction)?;
 			} else {
 				return make_error(source, false);
 			},
@@ -192,7 +200,7 @@ pub(super) fn assemble_push_pop(
 	is_push: bool,
 	target: Register,
 	instruction: &mut Instruction,
-) -> Result<(), AssemblyError> {
+) -> Result<(), Box<AssemblyError>> {
 	let source_code_copy = data.source_code.clone();
 
 	#[cfg(test)]
@@ -209,7 +217,8 @@ pub(super) fn assemble_push_pop(
 			mnemonic:         Mnemonic::Mov,
 			// TODO
 			legal_modes:      vec![],
-		})
+		}
+		.into())
 	};
 	data.append_8_bits(
 		if is_push {

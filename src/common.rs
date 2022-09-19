@@ -43,8 +43,8 @@ pub fn run_assembler(file_name: &str) -> AssemblyResult {
 		location: (0, file_name.len()).into(),
 	})?;
 	let mut env = crate::Environment::new();
-	let tokens = crate::parser::lexer::lex(source_code.clone())?;
-	let program = crate::Environment::parse(&env, tokens, &source_code)?;
-	let assembled = crate::assembler::assemble(&program)?;
+	let tokens = crate::parser::lexer::lex(source_code.clone()).map_err(AssemblyError::from)?;
+	let program = crate::Environment::parse(&env, tokens, &source_code).map_err(AssemblyError::from)?;
+	let assembled = crate::assembler::assemble(&program).map_err(AssemblyError::from)?;
 	Ok((env, assembled))
 }

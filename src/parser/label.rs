@@ -178,7 +178,7 @@ pub fn merge_local_into_parent(
 	mut local: Arc<RefCell<LocalLabel>>,
 	mut current_global_label: Option<Arc<RefCell<GlobalLabel>>>,
 	source_code: &Arc<AssemblyCode>,
-) -> Result<Arc<RefCell<LocalLabel>>, AssemblyError> {
+) -> Result<Arc<RefCell<LocalLabel>>, Box<AssemblyError>> {
 	if let Some(mut actual_global_label) = current_global_label {
 		let mut mutable_global = actual_global_label.borrow_mut();
 		let label_value = local.borrow().location.clone();
@@ -195,6 +195,7 @@ pub fn merge_local_into_parent(
 			local_label: local.borrow().name.clone(),
 			src:         source_code.clone(),
 			location:    local.borrow().span,
-		})
+		}
+		.into())
 	}
 }

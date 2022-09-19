@@ -8,7 +8,7 @@ pub(super) fn assemble_bit_instructions(
 	target: AddressingMode,
 	source: &Option<AddressingMode>,
 	instruction: &mut Instruction,
-) -> Result<(), AssemblyError> {
+) -> Result<(), Box<AssemblyError>> {
 	let target_copy = target.clone();
 	let source_copy = source.clone();
 	let source_code_copy = data.source_code.clone();
@@ -21,7 +21,8 @@ pub(super) fn assemble_bit_instructions(
 			// TODO
 			legal_modes: vec![],
 			src: source_code_copy,
-		})
+		}
+		.into())
 	};
 
 	match target {
@@ -33,7 +34,8 @@ pub(super) fn assemble_bit_instructions(
 					location: instruction.span,
 					src: data.source_code.clone(),
 					mnemonic,
-				});
+				}
+				.into());
 			}
 			data.append_instruction_with_8_bit_operand(
 				if mnemonic == Mnemonic::Set1 { 0x02 } else { 0x12 } | (bit << 5),
@@ -49,7 +51,7 @@ pub(super) fn assemble_bit_instructions(
 			},
 			address,
 			instruction,
-		),
+		)?,
 		AddressingMode::CarryFlag => match &source {
 			Some(
 				addressing_mode @ (AddressingMode::AddressBit(address, bit)
@@ -93,7 +95,8 @@ pub(super) fn assemble_bit_instructions(
 						mnemonic,
 						location: instruction.span,
 						src: data.source_code.clone(),
-					});
+					}
+					.into());
 				} else {
 					data.append_instruction_with_16_bit_operand_and_bit_index(0xEA, address, bit, instruction);
 				},

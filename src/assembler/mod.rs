@@ -34,7 +34,7 @@ pub const MAX_PASSES: usize = 10;
 /// Assembles the instructions into a byte sequence.
 /// # Errors
 /// Unencodeable instructions will cause errors.
-pub(crate) fn assemble(main_file: &Arc<RefCell<AssemblyFile>>) -> Result<Vec<u8>, AssemblyError> {
+pub(crate) fn assemble(main_file: &Arc<RefCell<AssemblyFile>>) -> Result<Vec<u8>, Box<AssemblyError>> {
 	let mut main_file = main_file.borrow_mut();
 	let mut data = AssembledData::new(main_file.source_code.clone());
 
@@ -59,7 +59,7 @@ pub(crate) fn assemble(main_file: &Arc<RefCell<AssemblyFile>>) -> Result<Vec<u8>
 }
 
 #[allow(clippy::too_many_lines)] // ¯\_(ツ)_/¯
-fn assemble_instruction(data: &mut AssembledData, instruction: &mut Instruction) -> Result<(), AssemblyError> {
+fn assemble_instruction(data: &mut AssembledData, instruction: &mut Instruction) -> Result<(), Box<AssemblyError>> {
 	match instruction.opcode.clone() {
 		Opcode { mnemonic: Mnemonic::Mov, first_operand: Some(target), second_operand: Some(source) } =>
 			mov::assemble_mov(data, &target, source, instruction)?,
@@ -107,7 +107,8 @@ fn assemble_instruction(data: &mut AssembledData, instruction: &mut Instruction)
 					src:         data.source_code.clone(),
 					location:    instruction.span,
 					mnemonic:    Mnemonic::Movw,
-				})
+				}
+				.into())
 			};
 			let (direction, page_address) = if target == AddressingMode::Register(Register::YA) {
 				(MovDirection::IntoYA, match source {
@@ -202,20 +203,22 @@ fn assemble_instruction(data: &mut AssembledData, instruction: &mut Instruction)
 				mnemonic,
 				src: data.source_code.clone(),
 				location: instruction.span,
-			}),
+			}
+			.into()),
 		Opcode { mnemonic, first_operand: Some(_), .. } =>
 			return Err(AssemblyError::OperandNotAllowed {
 				mnemonic,
 				src: data.source_code.clone(),
 				location: instruction.span,
-			}),
+			}
+			.into()),
 		_ => unreachable!(),
 	}
 	Ok(())
 }
 
 #[allow(clippy::unnecessary_wraps)]
-fn assemble_macro(data: &mut AssembledData, mcro: &mut Macro) -> Result<(), AssemblyError> {
+fn assemble_macro(data: &mut AssembledData, mcro: &mut Macro) -> Result<(), Box<AssemblyError>> {
 	match mcro.value {
 		MacroValue::Org(address) => {
 			data.new_segment(address);
@@ -334,14 +337,17 @@ pub(crate) fn resolve_file(
 	source_code: &Arc<AssemblyCode>,
 	span: SourceSpan,
 	target_file: &str,
-) -> Result<PathBuf, AssemblyError> {
+) -> Result<PathBuf, Box<AssemblyError>> {
 	source_code.name.clone().parent().map(|directory| directory.to_owned().join(target_file)).ok_or_else(|| {
-		AssemblyError::FileNotFound {
-			os_error:  std::io::Error::new(ErrorKind::NotFound, "no parent directory for source file"),
-			file_name: source_code.file_name(),
-			src:       source_code.clone(),
-			location:  span,
+		{
+			AssemblyError::FileNotFound {
+				os_error:  std::io::Error::new(ErrorKind::NotFound, "no parent directory for source file"),
+				file_name: source_code.file_name(),
+				src:       source_code.clone(),
+				location:  span,
+			}
 		}
+		.into()
 	})
 }
 
@@ -378,16 +384,19 @@ impl LabeledMemoryValue {
 	/// # Errors
 	/// If the memory value is not resolved, a nice "unresolved label" error is returned.
 	#[inline]
-	pub fn try_as_resolved(&self, src: &Arc<AssemblyCode>) -> Result<u8, AssemblyError> {
+	pub fn try_as_resolved(&self, src: &Arc<AssemblyCode>) -> Result<u8, Box<AssemblyError>> {
 		self.value.try_resolved().map_err(|number| {
-			let first_label =
-				number.first_label().expect("Number resolution failure was not caused by label; this is a bug!");
-			AssemblyError::UnresolvedLabel {
-				label:          first_label.to_string(),
-				label_location: first_label.source_span(),
-				usage_location: self.instruction_location,
-				src:            src.clone(),
+			{
+				let first_label =
+					number.first_label().expect("Number resolution failure was not caused by label; this is a bug!");
+				AssemblyError::UnresolvedLabel {
+					label:          first_label.to_string(),
+					label_location: first_label.source_span(),
+					usage_location: self.instruction_location,
+					src:            src.clone(),
+				}
 			}
+			.into()
 		})
 	}
 }
@@ -466,7 +475,7 @@ impl AssembledData {
 	/// memory address 0 etc.
 	/// # Errors
 	/// If the segments contain overlapping data, errors are returned.
-	pub fn combine_segments(&self) -> Result<Vec<u8>, AssemblyError> {
+	pub fn combine_segments(&self) -> Result<Vec<u8>, Box<AssemblyError>> {
 		let mut all_data = Vec::new();
 		// The iteration is sorted
 		for (starting_address, segment_data) in &self.segments {
@@ -481,7 +490,8 @@ impl AssembledData {
 					location:      (*starting_address as usize, 1).into(),
 					section_start: *starting_address,
 					section_end:   all_data.len() as MemoryAddress,
-				});
+				}
+				.into());
 			}
 			let try_resolve = |lmv: &LabeledMemoryValue| lmv.try_as_resolved(&self.source_code);
 			let resolved_segment_data = segment_data.iter().map(try_resolve).try_collect::<Vec<u8>>()?;
@@ -542,8 +552,16 @@ impl AssembledData {
 
 	/// Appends a little endian (LSB first) 16-bit value to the current segment. The given number is truncated to 16
 	/// bits.
+	/// # Errors
+	/// If the given value is too large for the memory address and the related warning is promoted to an error via
+	/// command-line arguments, this error will be returned.
 	#[inline]
-	pub fn append_16_bits(&mut self, value: MemoryAddress, label: Option<Label>, span: SourceSpan) {
+	pub fn append_16_bits(
+		&mut self,
+		value: MemoryAddress,
+		label: Option<Label>,
+		span: SourceSpan,
+	) -> Result<(), Box<AssemblyError>> {
 		if (value & 0xFFFF) != value {
 			println!(
 				"{:?}",
@@ -557,11 +575,21 @@ impl AssembledData {
 		}
 		self.append((value & 0xFF) as u8, label, span);
 		self.append(((value & 0xFF00) >> 8) as u8, None, span);
+		Ok(())
 	}
 
 	/// Appends an 8-bit value to the current segment. The given number is truncated to 8 bits.
+	///
+	/// # Errors
+	/// If the given value is too large for the memory address and the related warning is promoted to an error via
+	/// command-line arguments, this error will be returned.
 	#[inline]
-	pub fn append_8_bits(&mut self, value: MemoryAddress, label: Option<Label>, span: SourceSpan) {
+	pub fn append_8_bits(
+		&mut self,
+		value: MemoryAddress,
+		label: Option<Label>,
+		span: SourceSpan,
+	) -> Result<(), Box<AssemblyError>> {
 		if (value & 0xFF) != value {
 			println!(
 				"{:?}",
@@ -574,6 +602,7 @@ impl AssembledData {
 			);
 		}
 		self.append((value & 0xFF) as u8, label, span);
+		Ok(())
 	}
 
 	/// Appends the opcode of an instruction that doesn't take any operands.
@@ -642,16 +671,19 @@ impl AssembledData {
 	}
 
 	/// Appends an instruction with an 8-bit operand.
+	/// # Errors
+	/// If the given value is too large for the memory address and the related warning is promoted to an error via
+	/// command-line arguments, this error will be returned.
 	#[inline]
 	pub fn append_instruction_with_8_bit_operand(
 		&mut self,
 		opcode: u8,
 		operand: Number,
 		instruction: &mut Instruction,
-	) {
+	) -> Result<(), Box<AssemblyError>> {
 		self.append(opcode, instruction.label.clone(), instruction.span);
 		match operand.try_resolve() {
-			Number::Literal(value) => self.append_8_bits(value, None, instruction.span),
+			Number::Literal(value) => self.append_8_bits(value, None, instruction.span)?,
 			value => self.append_8_bits_unresolved(value, 0, None, instruction.span),
 		}
 
@@ -659,12 +691,16 @@ impl AssembledData {
 		{
 			instruction.assembled_size = Some(2);
 		}
+		Ok(())
 	}
 
 	/// Appends an instruction with two 8-bit operands.
 	/// Note that the second machine operand is given first, as most *assembly code* mnemonics have the second *machine
 	/// code* operand first. There are exceptions, like BBS and BBC, but standard MOV/ADD/... have target, source while
 	/// their machine code has source, target.
+	/// # Errors
+	/// If the given value is too large for the memory address and the related warning is promoted to an error via
+	/// command-line arguments, this error will be returned.
 	#[inline]
 	pub fn append_instruction_with_two_8_bit_operands(
 		&mut self,
@@ -672,12 +708,12 @@ impl AssembledData {
 		second_machine_operand: Number,
 		first_machine_operand: Number,
 		instruction: &mut Instruction,
-	) {
+	) -> Result<(), Box<AssemblyError>> {
 		// The operands are flipped in machine code from what the assembly does. It's not target, source; it's source,
 		// target.
 		self.append_instruction_with_8_bit_operand(opcode, first_machine_operand, instruction);
 		match second_machine_operand.try_resolve() {
-			Number::Literal(value) => self.append_8_bits(value, None, instruction.span),
+			Number::Literal(value) => self.append_8_bits(value, None, instruction.span)?,
 			value => self.append_8_bits_unresolved(value, 0, None, instruction.span),
 		}
 
@@ -685,33 +721,39 @@ impl AssembledData {
 		{
 			instruction.assembled_size = Some(3);
 		}
+		Ok(())
 	}
 
 	/// Appends an instruction with an 16-bit operand.
+	/// # Errors
+	/// If the given value is too large for the memory address and the related warning is promoted to an error via
+	/// command-line arguments, this error will be returned.
 	#[inline]
 	pub fn append_instruction_with_16_bit_operand(
 		&mut self,
 		opcode: u8,
 		operand: Number,
 		instruction: &mut Instruction,
-	) {
+	) -> Result<(), Box<AssemblyError>> {
 		self.append(opcode, instruction.label.clone(), instruction.span);
 		match operand.try_resolve() {
-			Number::Literal(value) => self.append_16_bits(value, None, instruction.span),
-			value => {
-				// low byte first because little endian
-				self.append_16_bits_unresolved(value, None, instruction.span);
-			},
+			Number::Literal(value) => self.append_16_bits(value, None, instruction.span)?,
+			value => self.append_16_bits_unresolved(value, None, instruction.span),
 		}
 
 		#[cfg(test)]
 		{
 			instruction.assembled_size = Some(3);
 		}
+
+		Ok(())
 	}
 
 	/// Appends an instruction with a 16-bit operand. The upper three bits of it are replaced by the bit index, either
 	/// now (if the operand is a resolved number) or later (if the operand is a label).
+	/// # Errors
+	/// If the given value is too large for the memory address and the related warning is promoted to an error via
+	/// command-line arguments, this error will be returned.
 	#[inline]
 	pub fn append_instruction_with_16_bit_operand_and_bit_index(
 		&mut self,
@@ -719,12 +761,12 @@ impl AssembledData {
 		operand: Number,
 		bit_index: u8,
 		instruction: &mut Instruction,
-	) {
+	) -> Result<(), Box<AssemblyError>> {
 		self.append(opcode, instruction.label.clone(), instruction.span);
 
 		match operand.try_resolve() {
 			Number::Literal(value) =>
-				self.append_16_bits(value | (MemoryAddress::from(bit_index) << 13), None, instruction.span),
+				self.append_16_bits(value | (MemoryAddress::from(bit_index) << 13), None, instruction.span)?,
 			value => {
 				self.append_8_bits_unresolved(value.clone(), 0, None, instruction.span);
 				self.append_unresolved_with_bit_index(value, bit_index, instruction.span);
@@ -735,18 +777,22 @@ impl AssembledData {
 		{
 			instruction.assembled_size = Some(3);
 		}
+		Ok(())
 	}
 
 	/// Appends an instruction with an 8-bit operand. If this is a label, it's stored as a relative unresolved label.
+	/// # Errors
+	/// If the given value is too large for the memory address and the related warning is promoted to an error via
+	/// command-line arguments, this error will be returned.
 	pub fn append_instruction_with_relative_label(
 		&mut self,
 		opcode: u8,
 		operand: Number,
 		instruction: &mut Instruction,
-	) {
+	) -> Result<(), Box<AssemblyError>> {
 		self.append(opcode, instruction.label.clone(), instruction.span);
 		match operand.try_resolve() {
-			Number::Literal(value) => self.append_8_bits(value, None, instruction.span),
+			Number::Literal(value) => self.append_8_bits(value, None, instruction.span)?,
 			value => self.append_relative_unresolved(value, instruction.span),
 		}
 
@@ -754,6 +800,7 @@ impl AssembledData {
 		{
 			instruction.assembled_size = Some(2);
 		}
+		Ok(())
 	}
 
 	/// Executes a label resolution pass. This means the following:

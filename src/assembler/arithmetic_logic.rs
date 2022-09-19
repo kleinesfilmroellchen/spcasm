@@ -9,7 +9,7 @@ pub(super) fn assemble_arithmetic_instruction(
 	target: AddressingMode,
 	source: AddressingMode,
 	instruction: &mut Instruction,
-) -> Result<(), AssemblyError> {
+) -> Result<(), Box<AssemblyError>> {
 	match target {
 		AddressingMode::Register(Register::A) => match source {
 			AddressingMode::Immediate(value) => data.append_instruction_with_8_bit_operand(
@@ -24,7 +24,7 @@ pub(super) fn assemble_arithmetic_instruction(
 				},
 				value,
 				instruction,
-			),
+			)?,
 			AddressingMode::IndirectX => data.append_instruction(
 				match mnemonic {
 					Mnemonic::Adc => 0x86,
@@ -49,7 +49,7 @@ pub(super) fn assemble_arithmetic_instruction(
 				},
 				page_address,
 				instruction,
-			),
+			)?,
 			AddressingMode::DirectPageXIndexed(page_address) => data.append_instruction_with_8_bit_operand(
 				match mnemonic {
 					Mnemonic::Adc => 0x94,
@@ -62,7 +62,7 @@ pub(super) fn assemble_arithmetic_instruction(
 				},
 				page_address,
 				instruction,
-			),
+			)?,
 			AddressingMode::Address(address) => data.append_instruction_with_16_bit_operand(
 				match mnemonic {
 					Mnemonic::Adc => 0x85,
@@ -75,7 +75,7 @@ pub(super) fn assemble_arithmetic_instruction(
 				},
 				address,
 				instruction,
-			),
+			)?,
 			AddressingMode::XIndexed(address) => data.append_instruction_with_16_bit_operand(
 				match mnemonic {
 					Mnemonic::Adc => 0x95,
@@ -88,7 +88,7 @@ pub(super) fn assemble_arithmetic_instruction(
 				},
 				address,
 				instruction,
-			),
+			)?,
 			AddressingMode::YIndexed(address) => data.append_instruction_with_16_bit_operand(
 				match mnemonic {
 					Mnemonic::Adc => 0x96,
@@ -101,7 +101,7 @@ pub(super) fn assemble_arithmetic_instruction(
 				},
 				address,
 				instruction,
-			),
+			)?,
 			AddressingMode::DirectPageXIndexedIndirect(page_address) => data.append_instruction_with_8_bit_operand(
 				match mnemonic {
 					Mnemonic::Adc => 0x87,
@@ -114,7 +114,7 @@ pub(super) fn assemble_arithmetic_instruction(
 				},
 				page_address,
 				instruction,
-			),
+			)?,
 			AddressingMode::DirectPageIndirectYIndexed(page_address) => data.append_instruction_with_8_bit_operand(
 				match mnemonic {
 					Mnemonic::Adc => 0x97,
@@ -127,7 +127,7 @@ pub(super) fn assemble_arithmetic_instruction(
 				},
 				page_address,
 				instruction,
-			),
+			)?,
 			_ =>
 				return Err(AssemblyError::InvalidAddressingMode {
 					mnemonic,
@@ -137,7 +137,8 @@ pub(super) fn assemble_arithmetic_instruction(
 					mode: source.to_string(),
 					location: instruction.span,
 					src: data.source_code.clone(),
-				}),
+				}
+				.into()),
 		},
 		AddressingMode::IndirectX =>
 			if source == AddressingMode::IndirectY {
@@ -162,7 +163,8 @@ pub(super) fn assemble_arithmetic_instruction(
 					location: instruction.span,
 					// TODO
 					legal_modes: vec![],
-				});
+				}
+				.into());
 			},
 		AddressingMode::DirectPage(page_address) => data.append_instruction_with_two_8_bit_operands(
 			// TODO: different operands for two different direct page sources
@@ -194,7 +196,8 @@ pub(super) fn assemble_arithmetic_instruction(
 						location: instruction.span,
 						// TODO
 						legal_modes: vec![],
-					}),
+					}
+					.into()),
 			},
 			page_address,
 			match source {
@@ -208,10 +211,11 @@ pub(super) fn assemble_arithmetic_instruction(
 						location: instruction.span,
 						// TODO
 						legal_modes: vec![],
-					}),
+					}
+					.into()),
 			},
 			instruction,
-		),
+		)?,
 		AddressingMode::Register(register @ (Register::X | Register::Y)) => match source {
 			AddressingMode::Immediate(value) => data.append_instruction_with_8_bit_operand(
 				match register {
@@ -221,7 +225,7 @@ pub(super) fn assemble_arithmetic_instruction(
 				},
 				value,
 				instruction,
-			),
+			)?,
 			AddressingMode::DirectPage(page_address) => data.append_instruction_with_8_bit_operand(
 				match register {
 					Register::X => 0x3E,
@@ -230,7 +234,7 @@ pub(super) fn assemble_arithmetic_instruction(
 				},
 				page_address,
 				instruction,
-			),
+			)?,
 			AddressingMode::Address(address) => data.append_instruction_with_16_bit_operand(
 				match register {
 					Register::X => 0x1E,
@@ -239,7 +243,7 @@ pub(super) fn assemble_arithmetic_instruction(
 				},
 				address,
 				instruction,
-			),
+			)?,
 			_ =>
 				return Err(AssemblyError::InvalidAddressingMode {
 					is_first_operand: false,
@@ -249,7 +253,8 @@ pub(super) fn assemble_arithmetic_instruction(
 					location: instruction.span,
 					// TODO
 					legal_modes: vec![],
-				}),
+				}
+				.into()),
 		},
 		_ =>
 			return Err(AssemblyError::InvalidAddressingMode {
@@ -260,7 +265,8 @@ pub(super) fn assemble_arithmetic_instruction(
 				location: instruction.span,
 				// TODO
 				legal_modes: vec![],
-			}),
+			}
+			.into()),
 	}
 	Ok(())
 }
@@ -270,7 +276,7 @@ pub(super) fn assemble_inc_dec_instruction(
 	is_increment: bool,
 	target: AddressingMode,
 	instruction: &mut Instruction,
-) -> Result<(), AssemblyError> {
+) -> Result<(), Box<AssemblyError>> {
 	match target {
 		AddressingMode::Register(register @ (Register::A | Register::X | Register::Y)) => data.append_instruction(
 			match (is_increment, register) {
@@ -288,14 +294,14 @@ pub(super) fn assemble_inc_dec_instruction(
 			if is_increment { 0xAB } else { 0x8B },
 			page_address,
 			instruction,
-		),
+		)?,
 		AddressingMode::DirectPageXIndexed(page_address) => data.append_instruction_with_8_bit_operand(
 			if is_increment { 0xBB } else { 0x9B },
 			page_address,
 			instruction,
-		),
+		)?,
 		AddressingMode::Address(address) =>
-			data.append_instruction_with_16_bit_operand(if is_increment { 0xAC } else { 0x8C }, address, instruction),
+			data.append_instruction_with_16_bit_operand(if is_increment { 0xAC } else { 0x8C }, address, instruction)?,
 		_ =>
 			return Err(AssemblyError::InvalidAddressingMode {
 				is_first_operand: true,
@@ -311,7 +317,8 @@ pub(super) fn assemble_inc_dec_instruction(
 					AddressingMode::DirectPage(0.into()).to_string(),
 					AddressingMode::Address(0.into()).to_string(),
 				],
-			}),
+			}
+			.into()),
 	}
 	Ok(())
 }
@@ -321,7 +328,7 @@ pub(super) fn assemble_shift_rotation_instruction(
 	mnemonic: Mnemonic,
 	target: AddressingMode,
 	instruction: &mut Instruction,
-) -> Result<(), AssemblyError> {
+) -> Result<(), Box<AssemblyError>> {
 	let target_copy = target.clone();
 	let source_code_copy = data.source_code.clone();
 	let make_xcn_err = || {
@@ -332,7 +339,8 @@ pub(super) fn assemble_shift_rotation_instruction(
 			location: instruction.span,
 			legal_modes: vec![AddressingMode::Register(Register::A).to_string()],
 			src: source_code_copy,
-		})
+		}
+		.into())
 	};
 
 	match target {
@@ -358,7 +366,7 @@ pub(super) fn assemble_shift_rotation_instruction(
 			},
 			page_address,
 			instruction,
-		),
+		)?,
 		AddressingMode::DirectPageXIndexed(page_address) => data.append_instruction_with_8_bit_operand(
 			match mnemonic {
 				Mnemonic::Asl => 0x1B,
@@ -370,7 +378,7 @@ pub(super) fn assemble_shift_rotation_instruction(
 			},
 			page_address,
 			instruction,
-		),
+		)?,
 		AddressingMode::Address(address) => data.append_instruction_with_16_bit_operand(
 			match mnemonic {
 				Mnemonic::Asl => 0xCC,
@@ -382,7 +390,7 @@ pub(super) fn assemble_shift_rotation_instruction(
 			},
 			address,
 			instruction,
-		),
+		)?,
 		_ =>
 			return Err(AssemblyError::InvalidAddressingMode {
 				mode: target.to_string(),
@@ -396,7 +404,8 @@ pub(super) fn assemble_shift_rotation_instruction(
 					AddressingMode::DirectPageXIndexed(0.into()).to_string(),
 				],
 				src: data.source_code.clone(),
-			}),
+			}
+			.into()),
 	}
 	Ok(())
 }

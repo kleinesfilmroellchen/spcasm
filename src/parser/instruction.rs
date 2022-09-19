@@ -225,7 +225,7 @@ impl Number {
 		&self,
 		location: SourceSpan,
 		source_code: Arc<AssemblyCode>,
-	) -> Result<MemoryAddress, AssemblyError> {
+	) -> Result<MemoryAddress, Box<AssemblyError>> {
 		Ok(match self {
 			Self::Literal(value) => *value,
 			// necessary because matching through an Rc is not possible right now (would be super dope though).
@@ -236,13 +236,13 @@ impl Number {
 					label_location: local.borrow().span,
 					usage_location: location,
 					src: source_code
-				}),
+				}.into()),
 				Label::Global(global) => return Err(AssemblyError::UnresolvedLabel {
 					label: global.borrow().name.clone(),
 					label_location: global.borrow().span,
 					usage_location: location,
 					src: source_code
-				}),
+				}.into()),
 			},
 			Self::Negate(number) => -number.try_value(location, source_code)?,
 			Self::Add(lhs, rhs) => lhs.try_value(location, source_code.clone())? + rhs.try_value(location, source_code)?,

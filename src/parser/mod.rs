@@ -47,7 +47,7 @@ where
 	/// Parse this enum from the string representation.
 	/// # Errors
 	/// If the string doesn't correspond with any enum variant.
-	fn parse(value: &str, location: SourceSpan, src: Arc<AssemblyCode>) -> Result<Self, AssemblyError>;
+	fn parse(value: &str, location: SourceSpan, src: Arc<AssemblyCode>) -> Result<Self, Box<AssemblyError>>;
 
 	/// Returns whether this string corresponds with an enum variant; i.e. parsing would succeed.
 	fn is_valid(value: &str) -> bool;
@@ -85,7 +85,7 @@ impl Environment {
 	pub(crate) fn find_file_by_source(
 		&self,
 		source_code: &Arc<AssemblyCode>,
-	) -> Result<Option<Arc<RefCell<AssemblyFile>>>, AssemblyError> {
+	) -> Result<Option<Arc<RefCell<AssemblyFile>>>, Box<AssemblyError>> {
 		self.files
 			.get(&source_code.name)
 			// Keep around a tuple with the original Arc so we can return it at the end.
@@ -98,7 +98,7 @@ impl Environment {
 				cycle_trigger_file: source_code.file_name(),
 				src:                source_code.clone(),
 				include:            (0, 0).into(),
-			})
+			}.into())
 	}
 
 	/// Parse a program given a set of tokens straight from the lexer.
@@ -116,7 +116,7 @@ impl Environment {
 		this: &Arc<RefCell<Self>>,
 		tokens: Vec<Token>,
 		source_code: &Arc<AssemblyCode>,
-	) -> Result<Arc<RefCell<AssemblyFile>>, AssemblyError> {
+	) -> Result<Arc<RefCell<AssemblyFile>>, Box<AssemblyError>> {
 		if let Some(already_parsed_file) = this.borrow().find_file_by_source(source_code)? {
 			// If we're in a cycle, the already parsed file still has unresolved labels.
 			// I'm not sure whether this can happen in the first place given that find_file_by_source can't borrow such
@@ -128,7 +128,8 @@ impl Environment {
 					cycle_trigger_file: source_code.file_name(),
 					src:                source_code.clone(),
 					include:            (0, 0).into(),
-				})
+				}
+				.into())
 			};
 		}
 
@@ -197,7 +198,7 @@ impl AssemblyFile {
 	/// If a local label precedes any global labels.
 	/// # Panics
 	/// All panics are programming errors.
-	pub fn fill_in_label_references(&mut self) -> Result<(), AssemblyError> {
+	pub fn fill_in_label_references(&mut self) -> Result<(), Box<AssemblyError>> {
 		let mut current_global_label: Option<Arc<RefCell<GlobalLabel>>> = None;
 
 		for element in &mut self.content {
@@ -283,7 +284,7 @@ impl AssemblyFile {
 	///
 	/// # Errors
 	/// All errors from other files are propagated, as well as include cycles.
-	pub fn resolve_source_includes(&mut self) -> Result<(), AssemblyError> {
+	pub fn resolve_source_includes(&mut self) -> Result<(), Box<AssemblyError>> {
 		let mut index = 0;
 		while index < self.content.len() {
 			let mut element = self.content[index].clone();

@@ -413,7 +413,7 @@ impl LoopEndFlags {
 	#[must_use]
 	#[allow(clippy::missing_panics_doc)]
 	pub fn new(is_end: bool, is_loop: bool) -> Self {
-		Self::from_u8(if is_loop { 0b10 } else { 0 } | if is_end { 0b01 } else { 0 }).unwrap()
+		Self::from_u8(if is_loop { 0b10 } else { 0 } | u8::from(is_end)).unwrap()
 	}
 
 	const fn eq_(self, other: Self) -> bool {

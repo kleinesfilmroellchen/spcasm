@@ -9,7 +9,7 @@ pub(super) fn assemble_branching_instruction(
 	target: AddressingMode,
 	source: Option<AddressingMode>,
 	instruction: &mut Instruction,
-) -> Result<(), AssemblyError> {
+) -> Result<(), Box<AssemblyError>> {
 	let target_copy = target.clone();
 	let source_code_copy = data.source_code.clone();
 	let make_target_error = |legal_modes| {
@@ -20,7 +20,8 @@ pub(super) fn assemble_branching_instruction(
 			location: instruction.span,
 			legal_modes,
 			src: source_code_copy,
-		})
+		}
+		.into())
 	};
 
 	match &target {
@@ -28,16 +29,16 @@ pub(super) fn assemble_branching_instruction(
 		// instructions. For the other relative branches, it's in the source. JMP is absolute and uses full addresses.
 		AddressingMode::DirectPage(page_address_or_relative) | AddressingMode::Address(page_address_or_relative @ Number::Label(_)) if mnemonic != Mnemonic::Jmp =>
 			match mnemonic {
-				Mnemonic::Bra => data.append_instruction_with_relative_label(0x2F, page_address_or_relative.clone(), instruction),
-				Mnemonic::Beq => data.append_instruction_with_relative_label(0xF0, page_address_or_relative.clone(), instruction),
-				Mnemonic::Bne => data.append_instruction_with_relative_label(0xD0, page_address_or_relative.clone(), instruction),
-				Mnemonic::Bcs => data.append_instruction_with_relative_label(0xB0, page_address_or_relative.clone(), instruction),
-				Mnemonic::Bcc => data.append_instruction_with_relative_label(0x90, page_address_or_relative.clone(), instruction),
-				Mnemonic::Bvs => data.append_instruction_with_relative_label(0x70, page_address_or_relative.clone(), instruction),
-				Mnemonic::Bvc => data.append_instruction_with_relative_label(0x50, page_address_or_relative.clone(), instruction),
-				Mnemonic::Bmi => data.append_instruction_with_relative_label(0x30, page_address_or_relative.clone(), instruction),
-				Mnemonic::Bpl => data.append_instruction_with_relative_label(0x10, page_address_or_relative.clone(), instruction),
-				Mnemonic::Pcall => data.append_instruction_with_8_bit_operand(0x4F, page_address_or_relative.clone(), instruction),
+				Mnemonic::Bra => data.append_instruction_with_relative_label(0x2F, page_address_or_relative.clone(), instruction)?,
+				Mnemonic::Beq => data.append_instruction_with_relative_label(0xF0, page_address_or_relative.clone(), instruction)?,
+				Mnemonic::Bne => data.append_instruction_with_relative_label(0xD0, page_address_or_relative.clone(), instruction)?,
+				Mnemonic::Bcs => data.append_instruction_with_relative_label(0xB0, page_address_or_relative.clone(), instruction)?,
+				Mnemonic::Bcc => data.append_instruction_with_relative_label(0x90, page_address_or_relative.clone(), instruction)?,
+				Mnemonic::Bvs => data.append_instruction_with_relative_label(0x70, page_address_or_relative.clone(), instruction)?,
+				Mnemonic::Bvc => data.append_instruction_with_relative_label(0x50, page_address_or_relative.clone(), instruction)?,
+				Mnemonic::Bmi => data.append_instruction_with_relative_label(0x30, page_address_or_relative.clone(), instruction)?,
+				Mnemonic::Bpl => data.append_instruction_with_relative_label(0x10, page_address_or_relative.clone(), instruction)?,
+				Mnemonic::Pcall => data.append_instruction_with_8_bit_operand(0x4F, page_address_or_relative.clone(), instruction)?,
 				Mnemonic::Tcall => data.append_instruction(0x01 | match page_address_or_relative {
 						Number::Literal(value) => (value & 0x0F) as u8,
 						_ => return Err(AssemblyError::InvalidAddressingMode {
@@ -46,7 +47,7 @@ pub(super) fn assemble_branching_instruction(
 							mnemonic, legal_modes: vec![AddressingMode::Address(0.into()).to_string()],
 							src: data.source_code.clone(),
 							location: instruction.span
-						}),
+						}.into()),
 					} << 4,
 				instruction),
 				// CBNE and DBNZ have the relative jump target in the source operand, and the target is the direct page
@@ -69,13 +70,13 @@ pub(super) fn assemble_branching_instruction(
 
 						// First argument is the checked direct page address
 						match page_address_or_relative {
-							Number::Literal(page_address) => data.append_8_bits(*page_address, None, instruction.span),
+							Number::Literal(page_address) => data.append_8_bits(*page_address, None, instruction.span)?,
 							value => data.append_8_bits_unresolved(value.clone(), 0, None, instruction.span),
 						}
 						// Second argument is the relative jump target.
 						// The relative unresolved label needs a negative offset of 2, because we're the second operand.
 						match relative_source {
-							Number::Literal(relative_offset) => data.append_8_bits(relative_offset, None, instruction.span),
+							Number::Literal(relative_offset) => data.append_8_bits(relative_offset, None, instruction.span)?,
 							value => data.append_relative_unresolved(value, instruction.span),
 						}
 					} else {
@@ -84,7 +85,7 @@ pub(super) fn assemble_branching_instruction(
 							first_mode: target.to_string(),
 							src: data.source_code.clone(),
 							location: instruction.span,mnemonic
-						})} else {
+						}.into())} else {
 							make_target_error(vec![])
 						};
 					},
@@ -95,13 +96,13 @@ pub(super) fn assemble_branching_instruction(
 				data.append_instruction(0xDE, instruction);
 				// First argument is the checked direct page address
 				match page_address {
-					Number::Literal(page_address) => data.append_8_bits(*page_address, None, instruction.span),
+					Number::Literal(page_address) => data.append_8_bits(*page_address, None, instruction.span)?,
 					value => data.append_8_bits_unresolved(value.clone(), 0, None, instruction.span),
 				}
 				// Second argument is the relative jump target.
 				// The relative unresolved label needs a negative offset of 2, because we're the second operand.
 				match relative_source {
-					Number::Literal(relative_offset) => data.append_8_bits(relative_offset, None, instruction.span),
+					Number::Literal(relative_offset) => data.append_8_bits(relative_offset, None, instruction.span)?,
 					value => data.append_relative_unresolved(value, instruction.span),
 				}
 			} else {
@@ -138,7 +139,7 @@ pub(super) fn assemble_branching_instruction(
 					legal_modes: vec![AddressingMode::DirectPage(0.into()).to_string()],
 					location: instruction.span,
 					src: data.source_code.clone(),
-				})
+				}.into())
 			};
 			// CAUTION! BBS and BBC have their operands in the SAME order in machine code and assembly, which is NOT THE DEFAULT! 
 			data.append_instruction_with_two_8_bit_operands(

@@ -20,9 +20,7 @@ jobs:
       uses: actions-rs/toolchain@v1
       with:
           toolchain: nightly
-          components: clippy, rustfmt, cargo-fmt
-          override: true
-          default: true
+          components: clippy, rustfmt
     - name: Build
       run: cargo build --verbose --no-default-features
     - name: Run tests

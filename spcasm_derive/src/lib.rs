@@ -73,7 +73,6 @@ pub fn error_codes_derive(input: TokenStream) -> TokenStream {
 				.iter()
 				.map(|(_, _, fields)| {
 					fields.iter().map(|field| {
-						// println!("{} -> {}", var.clone(), field.clone().ident.unwrap().to_string());
 						field.clone().ident.expect("Unnamed fields, e.g. with tuple elements, are not allowed!")
 					})
 				})

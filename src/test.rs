@@ -91,7 +91,6 @@ fn assemble_expected_binary(instructions: Vec<ProgramElement>) -> Vec<Option<u8>
 	filtered_instructions
 		.into_iter()
 		.flat_map(|instruction| {
-			println!("< {:?}", instruction);
 			instruction.expected_value.clone().map_or(
 				vec![
 					None;

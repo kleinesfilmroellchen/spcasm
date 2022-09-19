@@ -26,3 +26,7 @@ jobs:
       run: cargo build --verbose --no-default-features
     - name: Run tests
       run: cargo test --verbose --no-default-features
+    - name: Check style
+      run: cargo clippy --verbose --no-default-features
+    - name: Check code format
+      run: cargo fmt --check --verbose

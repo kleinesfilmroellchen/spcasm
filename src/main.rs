@@ -51,7 +51,8 @@ fn main() -> miette::Result<()> {
 		)
 	}))?;
 
-	let args = cli::SpcasmCli::parse();
+	let mut args = cli::SpcasmCli::parse();
+	args.warning_flags.expand_all();
 	let file_name = args.input;
 
 	// TODO: respect flags

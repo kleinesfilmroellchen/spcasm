@@ -76,6 +76,11 @@ pub trait ErrorCodes {
 #[derive(Error, Debug, Diagnostic, ErrorCodes)]
 #[allow(clippy::module_name_repetitions, missing_docs)]
 pub enum AssemblyError {
+	/// Marker error for allowing the user to pass --ignore all or --error all on the CLI.
+	#[error("FIXME: This should never appear.")]
+	#[diagnostic(code(all), severity(Error))]
+	AllMarker {},
+
 	//#region Semantic errors: detected while parsing or assembling
 	#[error("File \"{file_name}\" was not found")]
 	#[diagnostic(code(spcasm::file_not_found), severity(Error))]

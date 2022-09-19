@@ -19,6 +19,21 @@ pub struct ErrorOptions {
 	pub(crate) error:  Vec<ErrorCodeSpec>,
 }
 
+#[cfg(feature = "clap")]
+impl ErrorOptions {
+	/// Expands a marker "all" warning in the error or ignore list into all possible errors. This is so that the user
+	/// can specify --error all or --ignore all and get this behavior, but we don't need special casing for it in the
+	/// backend, which only works via matching discriminants.
+	pub fn expand_all(&mut self) {
+		let all_warnings_and_errors = AssemblyError::all_codes();
+		for list in [&mut self.ignore, &mut self.error] {
+			if list.contains(&std::mem::discriminant(&AssemblyError::AllMarker {}).into()) {
+				list.append(&mut all_warnings_and_errors.clone().into_keys().map(ErrorCodeSpec).collect());
+			}
+		}
+	}
+}
+
 /// Non-clap builds get this fake ErrorOptions struct which is a ZST and does nothing.
 #[cfg(not(feature = "clap"))]
 #[derive(Default, Debug, Clone, Copy, Eq, PartialEq)]

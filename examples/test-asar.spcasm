@@ -1,4 +1,4 @@
-arch spc700
+arch spc700-raw
 org 0
 start:        ; @ 0
    MOV A,#$10    ;= E8 10
@@ -208,7 +208,7 @@ reltarget:    ; @ 01 62
    dbnz $2F,$30  ;= 6E 2F 30
    dbnz Y,$31    ;= FE 31
    jmp $2122     ;= 5F 22 21
-   jmp $2324+X     ;= 1F 24 23
+   jmp ($2324+X)     ;= 1F 24 23
 
    jmp .subtarget  ;= 5F 63 01
    jmp reltarget   ;= 5F 62 01
@@ -247,28 +247,28 @@ global_selftarget:
    tcall $F   ;= F1
    BRK        ;= 0F
    ret        ;= 6F
-   ret1       ;= 7F
+   reti       ;= 7F
 
    push A    ;= 2D
    push X    ;= 4D
    push Y    ;= 6D
-   push PSW  ;= 0D
+   push P  ;= 0D
 
    pop A    ;= AE
    pop X    ;= CE
    pop Y    ;= EE
-   pop PSW  ;= 8E
+   pop P  ;= 8E
 
    set1 $50.5  ;= A2 50
    clr1 $51.7  ;= F2 51
 
-   tset1 $5060 ;= 0E 60 50
-   tclr1 $1011 ;= 4E 11 10
+   tset $5060,a ;= 0E 60 50
+   tclr $1011,a ;= 4E 11 10
 
    and1 C,$1010.0  ;= 4A 10 10 
-   and1 C,/$1020.3 ;= 6A 20 70
+   and1 C,!$1020.3 ;= 6A 20 70
    or1 C,$1030.7   ;= 0A 30 F0
-   or1 C,/$1040.6  ;= 2A 40 D0
+   or1 C,!$1040.6  ;= 2A 40 D0
    eor1 C,$1070.2  ;= 8A 70 50
    not1 $1080.5    ;= EA 80 B0
    mov1 C,$1090.4  ;= AA 90 90

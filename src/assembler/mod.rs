@@ -33,6 +33,7 @@ pub const MAX_PASSES: usize = 10;
 /// Assembles the instructions into a byte sequence.
 /// # Errors
 /// Unencodeable instructions will cause errors.
+#[allow(clippy::trivially_copy_pass_by_ref)]
 pub(crate) fn assemble(
 	main_file: &Arc<RefCell<AssemblyFile>>,
 	options: &ErrorOptions,

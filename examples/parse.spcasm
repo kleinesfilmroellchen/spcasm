@@ -36,6 +36,12 @@ incbin "binary.bin":2-(3-1)
 incbin "binary.bin",2
 incbin "binary.bin",2,1
 
+pushpc
+org $100
+db $AA
+pullpc
+db $BB
+
 end
 ; This should not be in the final assembly.
 adc a,#7 ;= FF FF

@@ -117,6 +117,16 @@ Macro: Macro = {
 		span: <>,
 		label: None,
 	},
+	"pushpc" => Macro {
+		value: MacroValue::PushSection,
+		span: <>,
+		label: None,
+	},
+	"pullpc" => Macro {
+		value: MacroValue::PopSection,
+		span: <>,
+		label: None,
+	},
 	LabelAssignment,
 };
 
@@ -272,6 +282,8 @@ extern {
 		"include" => Token::Macro(MacroSymbol::Include, <SourceSpan>),
 		"end" => Token::Macro(MacroSymbol::End, <SourceSpan>),
 		"brr" => Token::Macro(MacroSymbol::Brr, <SourceSpan>),
+		"pushpc" => Token::Macro(MacroSymbol::Pushpc, <SourceSpan>),
+		"pullpc" => Token::Macro(MacroSymbol::Pullpc, <SourceSpan>),
 		"number" => Token::Number(<i64>, <SourceSpan>),
 		"string" => Token::String(<Vec<u8>>, <SourceSpan>),
 		"#" => Token::Hash(<SourceOffset>),

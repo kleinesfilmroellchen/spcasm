@@ -147,7 +147,7 @@ pub enum AssemblyError {
 	},
 
 	#[error("Section at {section_start:04x} starts after the end of the previous one, which is {section_end:04x}")]
-	#[diagnostic(code(spcasm::syntax::expected_token), severity(Error))]
+	#[diagnostic(code(spcasm::section_mismatch), severity(Error))]
 	SectionMismatch {
 		section_start: MemoryAddress,
 		section_end:   MemoryAddress,
@@ -155,6 +155,32 @@ pub enum AssemblyError {
 		location:      SourceSpan,
 		#[source_code]
 		src:           Arc<AssemblyCode>,
+	},
+
+	#[error("There is no active segment here")]
+	#[diagnostic(
+		code(spcasm::missing_segment),
+		severity(Error),
+		help("Start a new segment with `org <memory address>`")
+	)]
+	MissingSegment {
+		#[label("This requires that there be a segment")]
+		location: SourceSpan,
+		#[source_code]
+		src:      Arc<AssemblyCode>,
+	},
+
+	#[error("There is no segment on the stack")]
+	#[diagnostic(
+		code(spcasm::empty_segment_stack),
+		severity(Error),
+		help("Macros like `pullpc` require that you push a segment to the stack beforehand with `pushpc`.")
+	)]
+	NoSegmentOnStack {
+		#[label("Segment stack access here")]
+		location: SourceSpan,
+		#[source_code]
+		src:      Arc<AssemblyCode>,
 	},
 
 	#[error("Label '{label}' can not be resolved to a value")]

@@ -232,8 +232,8 @@ fn assemble_macro(data: &mut AssembledData, mcro: &mut Macro) -> Result<(), Box<
 			let mut label = mcro.label.clone();
 			for value in values {
 				match entry_size {
-					1 => data.append_8_bits_unresolved(value.clone(), 0, label, mcro.span),
-					2 => data.append_16_bits_unresolved(value.clone(), label, mcro.span),
+					1 => data.append_8_bits_unresolved(value.clone(), 0, label, mcro.span)?,
+					2 => data.append_16_bits_unresolved(value.clone(), label, mcro.span)?,
 					3 | 4 => unimplemented!(),
 					_ => unreachable!(),
 				}
@@ -306,6 +306,12 @@ fn assemble_macro(data: &mut AssembledData, mcro: &mut Macro) -> Result<(), Box<
 		MacroValue::End => {
 			data.should_stop = true;
 		},
+		MacroValue::PopSection => data
+			.pop_segment()
+			.map_err(|_| AssemblyError::NoSegmentOnStack { location: mcro.span, src: data.source_code.clone() })?,
+		MacroValue::PushSection => data
+			.push_segment()
+			.map_err(|_| AssemblyError::MissingSegment { location: mcro.span, src: data.source_code.clone() })?,
 	}
 	Ok(())
 }
@@ -466,6 +472,8 @@ pub struct AssembledData {
 	pub segments:              BTreeMap<MemoryAddress, Vec<LabeledMemoryValue>>,
 	/// The starting address of the current segment. This is the key to the segments map.
 	pub current_segment_start: Option<MemoryAddress>,
+	/// The stack of saved segments, manipulated with pushpc/pullpc.
+	pub segment_stack:         Vec<MemoryAddress>,
 	/// The source code behind this assembled data
 	pub source_code:           Arc<AssemblyCode>,
 	/// Assembler subroutines use this as a flag to signal an end of assembly as soon as possible.
@@ -516,6 +524,7 @@ impl AssembledData {
 			source_code,
 			should_stop: false,
 			options: ErrorOptions::default(),
+			segment_stack: Vec::new(),
 		}
 	}
 
@@ -543,6 +552,30 @@ impl AssembledData {
 		}
 	}
 
+	/// Push the current segment onto the segment stack, leaving the current segment vacant.
+	///
+	/// # Errors
+	/// If there is no current segment.
+	#[allow(clippy::result_unit_err)]
+	pub fn push_segment(&mut self) -> Result<(), ()> {
+		self.segment_stack.push(self.current_segment_start.ok_or(())?);
+		self.current_segment_start = None;
+		Ok(())
+	}
+
+	/// Pop the current segment off the stack, re-enabling it.
+	///
+	/// # Errors
+	/// If there is no segment on the stack.
+	#[allow(clippy::result_unit_err)]
+	pub fn pop_segment(&mut self) -> Result<(), ()> {
+		if self.segment_stack.is_empty() {
+			return Err(());
+		}
+		self.current_segment_start = self.segment_stack.pop();
+		Ok(())
+	}
+
 	/// Starts a new segment at the given memory address and set it as the current segment.
 	/// <strong>Warning: This replaces any segment that currently starts at this memory address!</strong>
 	#[inline]
@@ -553,28 +586,31 @@ impl AssembledData {
 	}
 
 	/// Returns an immutable reference to the data of the current segment.
-	#[must_use]
+	/// # Errors
+	/// If this assembly data doesn't have a started segment yet.
 	#[inline]
-	pub fn current_segment(&self) -> &Vec<LabeledMemoryValue> {
-		&self.segments[&self.current_segment_start.expect("didn't start a segment yet")]
+	#[allow(clippy::result_unit_err)]
+	pub fn current_segment(&self) -> Result<&Vec<LabeledMemoryValue>, ()> {
+		Ok(&self.segments[&self.current_segment_start.ok_or(())?])
 	}
 
 	/// Returns the current memory location where data is written to.
-	/// # Panics
+	/// # Errors
 	/// If this assembly data doesn't have a started segment yet.
-	#[must_use]
 	#[inline]
-	pub fn current_location(&self) -> MemoryAddress {
-		self.segments[&self.current_segment_start.expect("didn't start a segment yet")].len() as MemoryAddress
-			+ self.current_segment_start.unwrap()
+	#[allow(clippy::result_unit_err, clippy::missing_panics_doc)]
+	pub fn current_location(&self) -> Result<MemoryAddress, ()> {
+		Ok(self.segments[&self.current_segment_start.ok_or(())?].len() as MemoryAddress
+			+ self.current_segment_start.unwrap())
 	}
 
 	/// Returns a mutable reference to the data of the current segment.
-	#[allow(clippy::missing_panics_doc)]
-	#[must_use]
+	/// # Errors
+	/// If this assembly data doesn't have a started segment yet.
 	#[inline]
-	pub fn current_segment_mut(&mut self) -> &mut Vec<LabeledMemoryValue> {
-		self.segments.get_mut(&self.current_segment_start.expect("didn't start a segment yet")).unwrap()
+	#[allow(clippy::result_unit_err, clippy::missing_panics_doc)]
+	pub fn current_segment_mut(&mut self) -> Result<&mut Vec<LabeledMemoryValue>, ()> {
+		Ok(self.segments.get_mut(&self.current_segment_start.ok_or(())?).unwrap())
 	}
 
 	/// Appends a little endian (LSB first) 16-bit value to the current segment. The given number is truncated to 16
@@ -639,56 +675,98 @@ impl AssembledData {
 
 	/// Appends an 8-bit value to the current segment.
 	#[inline]
-	fn append(&mut self, value: u8, label: Option<Label>, span: SourceSpan) {
-		self.current_segment_mut().push(LabeledMemoryValue {
-			value: MemoryValue::Resolved(value),
-			label,
-			instruction_location: span,
-		});
+	fn append(&mut self, value: u8, label: Option<Label>, span: SourceSpan) -> Result<(), Box<AssemblyError>> {
+		let src = self.source_code.clone();
+		self.current_segment_mut()
+			.map_err(|_| AssemblyError::MissingSegment { location: span, src })?
+			.push(LabeledMemoryValue { value: MemoryValue::Resolved(value), label, instruction_location: span });
+		Ok(())
 	}
 
-	fn append_bytes(&mut self, values: Vec<u8>, label: &Option<Label>, span: SourceSpan) {
+	fn append_bytes(
+		&mut self,
+		values: Vec<u8>,
+		label: &Option<Label>,
+		span: SourceSpan,
+	) -> Result<(), Box<AssemblyError>> {
 		let mut is_first = true;
 		for value in values {
-			self.append(value, if is_first { label.clone() } else { None }, span);
+			self.append(value, if is_first { label.clone() } else { None }, span)?;
 			is_first = false;
 		}
+		Ok(())
 	}
 
 	/// Appends an unresolved value to the current segment. The `byte` parameter decides
 	/// which byte will be used in this memory address when the label is resolved.
-	pub fn append_8_bits_unresolved(&mut self, value: Number, byte: u8, label: Option<Label>, span: SourceSpan) {
-		self.current_segment_mut().push(LabeledMemoryValue {
-			value: MemoryValue::Number(value, byte),
-			label,
-			instruction_location: span,
-		});
+	///
+	/// # Errors
+	/// If there is no segment currently.
+	pub fn append_8_bits_unresolved(
+		&mut self,
+		value: Number,
+		byte: u8,
+		label: Option<Label>,
+		span: SourceSpan,
+	) -> Result<(), Box<AssemblyError>> {
+		let src = self.source_code.clone();
+		self.current_segment_mut()
+			.map_err(|_| AssemblyError::MissingSegment { location: span, src })?
+			.push(LabeledMemoryValue { value: MemoryValue::Number(value, byte), label, instruction_location: span });
+		Ok(())
 	}
 
 	/// Appends an unresolved value that occupies 16 bits (LSB first) to the current segment.
-	pub fn append_16_bits_unresolved(&mut self, value: Number, label: Option<Label>, span: SourceSpan) {
-		self.append_8_bits_unresolved(value.clone(), 0, label, span);
-		self.append_8_bits_unresolved(value, 1, None, span);
+	///
+	/// # Errors
+	/// If there is no segment currently.
+	pub fn append_16_bits_unresolved(
+		&mut self,
+		value: Number,
+		label: Option<Label>,
+		span: SourceSpan,
+	) -> Result<(), Box<AssemblyError>> {
+		self.append_8_bits_unresolved(value.clone(), 0, label, span)?;
+		self.append_8_bits_unresolved(value, 1, None, span)
 	}
 
 	/// Appends an unresolved value to the current segment. The label will be resolved to a
 	/// relative offset, like various branch instructions need it.
-	pub fn append_relative_unresolved(&mut self, value: Number, span: SourceSpan) {
-		self.current_segment_mut().push(LabeledMemoryValue {
-			value:                MemoryValue::NumberRelative(value),
-			label:                None,
-			instruction_location: span,
-		});
+	///
+	/// # Errors
+	/// If there is no segment currently.
+	pub fn append_relative_unresolved(&mut self, value: Number, span: SourceSpan) -> Result<(), Box<AssemblyError>> {
+		let src = self.source_code.clone();
+		self.current_segment_mut().map_err(|_| AssemblyError::MissingSegment { location: span, src })?.push(
+			LabeledMemoryValue {
+				label:                None,
+				value:                MemoryValue::NumberRelative(value),
+				instruction_location: span,
+			},
+		);
+		Ok(())
 	}
 
 	/// Appends an unresolved value with a bit index that will be placed into the upper three bits after label
 	/// resolution.
-	pub fn append_unresolved_with_bit_index(&mut self, value: Number, bit_index: u8, span: SourceSpan) {
-		self.current_segment_mut().push(LabeledMemoryValue {
-			value:                MemoryValue::NumberHighByteWithContainedBitIndex(value, bit_index),
-			label:                None,
-			instruction_location: span,
-		});
+	///
+	/// # Errors
+	/// If there is no segment currently.
+	pub fn append_unresolved_with_bit_index(
+		&mut self,
+		value: Number,
+		bit_index: u8,
+		span: SourceSpan,
+	) -> Result<(), Box<AssemblyError>> {
+		let src = self.source_code.clone();
+		self.current_segment_mut().map_err(|_| AssemblyError::MissingSegment { location: span, src })?.push(
+			LabeledMemoryValue {
+				value:                MemoryValue::NumberHighByteWithContainedBitIndex(value, bit_index),
+				label:                None,
+				instruction_location: span,
+			},
+		);
+		Ok(())
 	}
 
 	/// Appends an instruction with an 8-bit operand.
@@ -705,7 +783,7 @@ impl AssembledData {
 		self.append(opcode, instruction.label.clone(), instruction.span);
 		match operand.try_resolve() {
 			Number::Literal(value) => self.append_8_bits(value, None, instruction.span)?,
-			value => self.append_8_bits_unresolved(value, 0, None, instruction.span),
+			value => self.append_8_bits_unresolved(value, 0, None, instruction.span)?,
 		}
 
 		#[cfg(test)]
@@ -735,7 +813,7 @@ impl AssembledData {
 		self.append_instruction_with_8_bit_operand(opcode, first_machine_operand, instruction);
 		match second_machine_operand.try_resolve() {
 			Number::Literal(value) => self.append_8_bits(value, None, instruction.span)?,
-			value => self.append_8_bits_unresolved(value, 0, None, instruction.span),
+			value => self.append_8_bits_unresolved(value, 0, None, instruction.span)?,
 		}
 
 		#[cfg(test)]
@@ -759,7 +837,7 @@ impl AssembledData {
 		self.append(opcode, instruction.label.clone(), instruction.span);
 		match operand.try_resolve() {
 			Number::Literal(value) => self.append_16_bits(value, None, instruction.span)?,
-			value => self.append_16_bits_unresolved(value, None, instruction.span),
+			value => self.append_16_bits_unresolved(value, None, instruction.span)?,
 		}
 
 		#[cfg(test)]
@@ -814,7 +892,7 @@ impl AssembledData {
 		self.append(opcode, instruction.label.clone(), instruction.span);
 		match operand.try_resolve() {
 			Number::Literal(value) => self.append_8_bits(value, None, instruction.span)?,
-			value => self.append_relative_unresolved(value, instruction.span),
+			value => self.append_relative_unresolved(value, instruction.span)?,
 		}
 
 		#[cfg(test)]

@@ -71,13 +71,13 @@ pub(super) fn assemble_branching_instruction(
 						// First argument is the checked direct page address
 						match page_address_or_relative {
 							Number::Literal(page_address) => data.append_8_bits(*page_address, None, instruction.span)?,
-							value => data.append_8_bits_unresolved(value.clone(), 0, None, instruction.span),
+							value => data.append_8_bits_unresolved(value.clone(), 0, None, instruction.span)?,
 						}
 						// Second argument is the relative jump target.
 						// The relative unresolved label needs a negative offset of 2, because we're the second operand.
 						match relative_source {
 							Number::Literal(relative_offset) => data.append_8_bits(relative_offset, None, instruction.span)?,
-							value => data.append_relative_unresolved(value, instruction.span),
+							value => data.append_relative_unresolved(value, instruction.span)?,
 						}
 					} else {
 						return if let Some(source) = source { Err(AssemblyError::InvalidAddressingModeCombination {
@@ -97,13 +97,13 @@ pub(super) fn assemble_branching_instruction(
 				// First argument is the checked direct page address
 				match page_address {
 					Number::Literal(page_address) => data.append_8_bits(*page_address, None, instruction.span)?,
-					value => data.append_8_bits_unresolved(value.clone(), 0, None, instruction.span),
+					value => data.append_8_bits_unresolved(value.clone(), 0, None, instruction.span)?,
 				}
 				// Second argument is the relative jump target.
 				// The relative unresolved label needs a negative offset of 2, because we're the second operand.
 				match relative_source {
 					Number::Literal(relative_offset) => data.append_8_bits(relative_offset, None, instruction.span)?,
-					value => data.append_relative_unresolved(value, instruction.span),
+					value => data.append_relative_unresolved(value, instruction.span)?,
 				}
 			} else {
 				return make_target_error(vec![]);

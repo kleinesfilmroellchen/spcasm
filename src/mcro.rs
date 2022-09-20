@@ -36,6 +36,8 @@ pub enum MacroSymbol {
 	Incbin,
 	Include,
 	End,
+	Pushpc,
+	Pullpc,
 }
 
 impl Display for MacroSymbol {
@@ -52,6 +54,8 @@ impl Display for MacroSymbol {
 			Self::Incbin => "incbin",
 			Self::Include => "include",
 			Self::End => "end",
+			Self::Pushpc => "pushpc",
+			Self::Pullpc => "pullpc",
 		})
 	}
 }
@@ -79,4 +83,8 @@ pub enum MacroValue {
 	Include { file: String, range: Option<SourceSpan> },
 	/// end
 	End,
+	/// pushpc
+	PushSection,
+	/// pullpc
+	PopSection,
 }

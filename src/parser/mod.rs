@@ -82,6 +82,11 @@ impl Environment {
 		Arc::new(RefCell::new(Self { labels: Vec::new(), files: HashMap::new(), options: ErrorOptions::default() }))
 	}
 
+	/// Sets the user-provided error options.
+	pub fn set_error_options(&mut self, options: ErrorOptions) {
+		self.options = options;
+	}
+
 	/// Report or throw an error depending on what command-line options this assembly data object knows about. If error
 	/// options are not available (on non-clap builds, e.g. tests), this always reports the error.
 	/// # Errors

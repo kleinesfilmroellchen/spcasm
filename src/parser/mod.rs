@@ -87,6 +87,7 @@ impl Environment {
 	/// # Errors
 	/// The provided error is re-thrown if the error options specify to do so. On non-clap builds, this function never
 	/// errors.
+	#[allow(clippy::unnecessary_wraps, clippy::unused_self)]
 	pub(crate) fn report_or_throw(&self, error: AssemblyError) -> Result<(), Box<AssemblyError>> {
 		#[cfg(feature = "clap")]
 		{

@@ -13,6 +13,7 @@ use self::instruction::{AddressingMode, Instruction, Number, Opcode};
 use self::label::{GlobalLabel, Label};
 use self::lexer::lex;
 use crate::assembler::resolve_file;
+use crate::cli::ErrorOptions;
 use crate::error::{AssemblyCode, AssemblyError};
 use crate::mcro::MacroValue;
 use crate::{lalrpop_adaptor, Macro};
@@ -57,9 +58,11 @@ where
 #[derive(Debug)]
 pub struct Environment {
 	/// The list of labels.
-	pub labels:       Vec<Arc<RefCell<GlobalLabel>>>,
+	pub labels:         Vec<Arc<RefCell<GlobalLabel>>>,
 	/// The files included in this "tree" created by include statements.
-	pub(crate) files: HashMap<PathBuf, Arc<RefCell<AssemblyFile>>>,
+	pub(crate) files:   HashMap<PathBuf, Arc<RefCell<AssemblyFile>>>,
+	/// Error and warning options passed on the command line.
+	pub(crate) options: ErrorOptions,
 }
 
 #[derive(Debug)]
@@ -76,7 +79,24 @@ impl Environment {
 	/// Creates an empty environment.
 	#[must_use]
 	pub fn new() -> Arc<RefCell<Self>> {
-		Arc::new(RefCell::new(Self { labels: Vec::new(), files: HashMap::new() }))
+		Arc::new(RefCell::new(Self { labels: Vec::new(), files: HashMap::new(), options: ErrorOptions::default() }))
+	}
+
+	/// Report or throw an error depending on what command-line options this assembly data object knows about. If error
+	/// options are not available (on non-clap builds, e.g. tests), this always reports the error.
+	/// # Errors
+	/// The provided error is re-thrown if the error options specify to do so. On non-clap builds, this function never
+	/// errors.
+	pub(crate) fn report_or_throw(&self, error: AssemblyError) -> Result<(), Box<AssemblyError>> {
+		#[cfg(feature = "clap")]
+		{
+			error.report_or_throw(&self.options)
+		}
+		#[cfg(not(feature = "clap"))]
+		{
+			println!("{:?}", miette::Report::new(error));
+			Ok(())
+		}
 	}
 
 	/// Searches for an existing parsed file in this environment given that file's source code.

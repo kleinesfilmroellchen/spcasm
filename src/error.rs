@@ -81,6 +81,40 @@ pub enum AssemblyError {
 	#[diagnostic(code(all), severity(Error))]
 	AllMarker {},
 
+	#[error("Legal architecture macro ignored")]
+	#[diagnostic(
+		code(spcasm::valid_arch_macro),
+		severity(Advice),
+		help(
+			"spcasm supports `arch` macros for compatibility with the Asar multi-architecture assembler. This arch \
+			 directive points to the spc700 architecture and is therefore safely ignored."
+		)
+	)]
+	ArchitectureMacroIgnored {
+		#[source_code]
+		src:      Arc<AssemblyCode>,
+		#[label("`arch` macro")]
+		location: SourceSpan,
+	},
+
+	#[error("Unknown architecture `{arch}` specified")]
+	#[diagnostic(
+		code(spcasm::invalid_arch_macro),
+		severity(Error),
+		help(
+			"spcasm supports `arch` macros for compatibility with the Asar multi-architecture assembler. This macro \
+			 specifies that the architecture of the assembly source is not (completely) SPC700, therefore spcasm \
+			 cannot assemble this file."
+		)
+	)]
+	InvalidArchitectureMacro {
+		arch:     String,
+		#[source_code]
+		src:      Arc<AssemblyCode>,
+		#[label("`arch` macro")]
+		location: SourceSpan,
+	},
+
 	//#region Semantic errors: detected while parsing or assembling
 	#[error("File \"{file_name}\" was not found")]
 	#[diagnostic(code(spcasm::file_not_found), severity(Error))]

@@ -135,6 +135,7 @@ Macro: Macro = {
 		span: <>,
 		label: None,
 	},
+	ArchMacro,
 	LabelAssignment,
 };
 
@@ -145,6 +146,22 @@ TableMacro: (MacroSymbol, SourceSpan) = {
 	"word" => (MacroSymbol::Dw, <>),
 	"dl" => (MacroSymbol::Dl, <>),
 	"dd" => (MacroSymbol::Dd, <>),
+};
+
+ArchMacro: Macro = <mcro:"arch"> <arch:"identifier"> =>? {
+	let architecture = arch.0;
+	if &architecture == "spc700" {
+		environment.borrow().report_or_throw(AssemblyError::ArchitectureMacroIgnored {
+			src:      source_code.clone(),
+			location: source_range(mcro.into(), arch.1.into()),
+		}).map_err(|error| ParseError::User { error: *error }).map(|_| Macro::default())
+	} else {
+		Err(AssemblyError::InvalidArchitectureMacro {
+			arch:     architecture,
+			src:      source_code.clone(),
+			location: source_range(mcro.into(), arch.1.into()),
+		}).map_err(|error| ParseError::User { error })
+	}
 };
 
 NumberList = Comma<Number>;
@@ -292,6 +309,7 @@ extern {
 		"brr" => Token::Macro(MacroSymbol::Brr, <SourceSpan>),
 		"pushpc" => Token::Macro(MacroSymbol::Pushpc, <SourceSpan>),
 		"pullpc" => Token::Macro(MacroSymbol::Pullpc, <SourceSpan>),
+		"arch" => Token::Macro(MacroSymbol::Arch, <SourceSpan>),
 		"number" => Token::Number(<i64>, <SourceSpan>),
 		"string" => Token::String(<Vec<u8>>, <SourceSpan>),
 		"#" => Token::Hash(<SourceOffset>),

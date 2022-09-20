@@ -20,6 +20,13 @@ pub struct Macro {
 	pub label:       Option<Label>,
 }
 
+impl Default for Macro {
+	fn default() -> Self {
+		// We use the table macro with no entries as default as that will do nothing.
+		Self { value: MacroValue::Table { values: Vec::new(), entry_size: 1 }, label: None, span: (0, 0).into() }
+	}
+}
+
 /// Macro symbols, used in lexing.
 #[derive(Debug, Clone, Copy, Parse, Eq, PartialEq)]
 pub enum MacroSymbol {
@@ -38,6 +45,7 @@ pub enum MacroSymbol {
 	End,
 	Pushpc,
 	Pullpc,
+	Arch,
 }
 
 impl Display for MacroSymbol {
@@ -56,6 +64,7 @@ impl Display for MacroSymbol {
 			Self::End => "end",
 			Self::Pushpc => "pushpc",
 			Self::Pullpc => "pullpc",
+			Self::Arch => "arch",
 		})
 	}
 }

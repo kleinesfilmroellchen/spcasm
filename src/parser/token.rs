@@ -53,6 +53,8 @@ pub enum Token {
 	Colon(SourceOffset),
 	/// '.'
 	Period(SourceOffset),
+	/// '.b'
+	ExplicitDirectPage(SourceSpan),
 	/// '='
 	Equals(SourceOffset),
 	/// ASCII newline (\n).
@@ -86,6 +88,7 @@ impl PartialEq for Token {
 			| (Self::Slash(..), Self::Slash(..))
 			| (Self::Star(..), Self::Star(..))
 			| (Self::Newline(..), Self::Newline(..))
+			| (Self::ExplicitDirectPage(..), Self::ExplicitDirectPage(..))
 			| (Self::Comma(..), Self::Comma(..))
 			| (Self::Period(..), Self::Period(..)) => true,
 			#[cfg(test)]
@@ -168,6 +171,7 @@ impl Token {
 			| Self::Slash(location)
 			| Self::Plus(location) => (*location, SourceOffset::from(1)).into(),
 			Self::Identifier(_, location)
+			| Self::ExplicitDirectPage(location)
 			| Self::Number(_, location)
 			| Self::Register(_, location)
 			| Self::String(_, location)
@@ -195,6 +199,7 @@ impl Display for Token {
 			Self::Hash(..) => "hash",
 			Self::Comma(..) => "comma",
 			Self::Period(..) => "'.'",
+			Self::ExplicitDirectPage(..) => "'.b'",
 			Self::Plus(..) => "'+'",
 			Self::Minus(..) | Self::RangeMinus(..) => "'-'",
 			Self::Star(..) => "'*'",

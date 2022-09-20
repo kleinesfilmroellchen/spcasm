@@ -258,12 +258,17 @@ impl AssemblyFile {
 	pub fn coerce_to_direct_page_addressing(&mut self) {
 		for element in &mut self.content {
 			if let ProgramElement::Instruction(Instruction {
-				opcode: Opcode { first_operand, second_operand, .. },
+				opcode: Opcode { first_operand, second_operand, force_direct_page, .. },
 				..
 			}) = element
 			{
-				*first_operand = first_operand.clone().map(AddressingMode::coerce_to_direct_page_addressing);
-				*second_operand = second_operand.clone().map(AddressingMode::coerce_to_direct_page_addressing);
+				let coercion_function = if *force_direct_page {
+					AddressingMode::force_to_direct_page_addressing
+				} else {
+					AddressingMode::coerce_to_direct_page_addressing
+				};
+				*first_operand = first_operand.clone().map(coercion_function);
+				*second_operand = second_operand.clone().map(coercion_function);
 			}
 		}
 	}

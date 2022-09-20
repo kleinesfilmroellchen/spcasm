@@ -16,6 +16,9 @@ mov A, 80/ (10+5) ;= E4 05
 mov A, +(80/10)+X ;= F4 08
 mov A,bytelabel
 
+mov a,$abcd    ;= E5 CD AB
+mov.b a,$abcd  ;= E4 CD
+
 dw 40, 30, 20,10
 word $f707
 db zero_label, zero_label+$FF

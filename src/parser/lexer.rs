@@ -15,7 +15,7 @@ use crate::mcro::MacroSymbol;
 /// Lex the given assembly into a list of tokens.
 /// # Errors
 /// Errors are returned for any syntactical error at the token level, e.g. invalid number literals.
-#[allow(clippy::missing_panics_doc)]
+#[allow(clippy::missing_panics_doc, clippy::too_many_lines)]
 pub fn lex(source_code: Arc<AssemblyCode>) -> Result<Vec<Token>, Box<AssemblyError>> {
 	let mut chars = source_code.text.chars().peekable();
 	let mut index = 0usize;
@@ -68,7 +68,15 @@ pub fn lex(source_code: Arc<AssemblyCode>) -> Result<Vec<Token>, Box<AssemblyErr
 				let (number, size) = next_number(&mut chars, Some(chr), 10, |chr| chr.is_ascii_digit(), index, source_code.clone())?;
 				tokens.push(Token::Number(number, (index, size).into()));
 				index += size;
-			}
+			},
+			'.' => if chars.peek().contains(&&'b') {
+				chars.next();
+				index += 2;
+				tokens.push(Token::ExplicitDirectPage((index - 2, 2).into()));
+			} else {
+				tokens.push(parse_single_char_tokens(chr, index.into()));
+				index += 1;
+			},
 			'#' | ',' | '+' | '-' | '*' | '(' | ')' | ':' | '.' | '/' | '=' => {
 				tokens.push(parse_single_char_tokens(chr, index.into()));
 				index += 1;

@@ -49,24 +49,32 @@ InstructionWithTestComment: Instruction = <mut instruction:Instruction> <expecte
 };
 
 Instruction: Instruction = {
-	<mnemonic:"mnemonic"> <first_operand:AddressingMode> <second_operand:( "," <AddressingMode> )?> => Instruction {
+	<mnemonic:Mnemonic> <first_operand:AddressingMode> <second_operand:( "," <AddressingMode> )?> => Instruction {
 		opcode: Opcode {
 			mnemonic: mnemonic.0,
 			first_operand: Some(first_operand),
-			second_operand, 
+			second_operand,
+			force_direct_page: mnemonic.1,
 		},
-		span: mnemonic.1,
+		span: mnemonic.2,
 		..Instruction::default()
 	},
-	<mnemonic:"mnemonic"> => Instruction {
+	<mnemonic:Mnemonic> => Instruction {
 		opcode: Opcode {
 			mnemonic: mnemonic.0,
 			first_operand: None,
 			second_operand: None, 
+			force_direct_page: mnemonic.1,
 		},
-		span: mnemonic.1,
+		span: mnemonic.2,
 		..Instruction::default()
 	},
+};
+
+// The boolean specifies whether this instruction is forced to direct page addressing.
+Mnemonic: (Mnemonic, bool, SourceSpan) = {
+	<mnemonic:"mnemonic"> => (mnemonic.0, false, mnemonic.1),
+	<mnemonic:"mnemonic"> <b:".b"> => (mnemonic.0, true, source_range(mnemonic.1.into(), b.into())),
 };
 
 Macro: Macro = {	
@@ -299,6 +307,7 @@ extern {
 		"]" => Token::CloseIndexingParenthesis(<SourceOffset>),
 		":" => Token::Colon(<SourceOffset>),
 		"." => Token::Period(<SourceOffset>),
+		".b" => Token::ExplicitDirectPage(<SourceSpan>),
 		"=" => Token::Equals(<SourceOffset>),
 		"\n" => Token::Newline(<SourceOffset>),
 		// Do this once/if LALRPOP supports it

@@ -40,9 +40,10 @@ impl Default for Instruction {
 		Self {
 			label:                       None,
 			opcode:                      Opcode {
-				mnemonic:       Mnemonic::Nop,
-				first_operand:  None,
-				second_operand: None,
+				mnemonic:          Mnemonic::Nop,
+				first_operand:     None,
+				second_operand:    None,
+				force_direct_page: false,
 			},
 			span:                        (0, 0).into(),
 			#[cfg(test)]
@@ -57,31 +58,13 @@ impl Default for Instruction {
 #[derive(Clone, Debug, PartialEq)]
 pub struct Opcode {
 	/// Instruction mnemonic.
-	pub mnemonic:       Mnemonic,
+	pub mnemonic:          Mnemonic,
 	/// First operand, usually instruction target.
-	pub first_operand:  Option<AddressingMode>,
+	pub first_operand:     Option<AddressingMode>,
 	/// Second operand, usually instruction source. This is unused on many instructions.
-	pub second_operand: Option<AddressingMode>,
-}
-
-impl Opcode {
-	/// Create an instruction with two operands. It might not actually be valid with some combinations of addressing
-	/// modes.
-	#[must_use]
-	pub const fn make_two_operand_instruction(
-		mnemonic: Mnemonic,
-		destination: AddressingMode,
-		source: AddressingMode,
-	) -> Self {
-		Self { mnemonic, first_operand: Some(destination), second_operand: Some(source) }
-	}
-
-	/// Create an instruction with one operand. It might not actually be valid with some combinations of addressing
-	/// modes.
-	#[must_use]
-	pub const fn make_single_operand_instruction(mnemonic: Mnemonic, destination: AddressingMode) -> Self {
-		Self { mnemonic, first_operand: Some(destination), second_operand: None }
-	}
+	pub second_operand:    Option<AddressingMode>,
+	/// Whether this opcode is forced to use direct page addressing.
+	pub force_direct_page: bool,
 }
 
 /// Instruction mnemonics of the SPC700.
@@ -438,6 +421,19 @@ impl AddressingMode {
 			}
 		} else {
 			self
+		}
+	}
+
+	/// Force this addressing mode into direct page addressing regardless of the internal number.
+	#[must_use]
+	#[allow(clippy::missing_const_for_fn)] // false positive
+	pub fn force_to_direct_page_addressing(self) -> Self {
+		match self {
+			Self::Address(number) => Self::DirectPage(number),
+			Self::XIndexed(number) => Self::DirectPageXIndexed(number),
+			Self::YIndexed(number) => Self::DirectPageYIndexed(number),
+			Self::AddressBit(number, bit) => Self::DirectPageBit(number, bit),
+			_ => self,
 		}
 	}
 }

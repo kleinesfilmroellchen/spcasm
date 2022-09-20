@@ -66,18 +66,20 @@ pub(crate) fn assemble(
 #[allow(clippy::too_many_lines)] // ¯\_(ツ)_/¯
 fn assemble_instruction(data: &mut AssembledData, instruction: &mut Instruction) -> Result<(), Box<AssemblyError>> {
 	match instruction.opcode.clone() {
-		Opcode { mnemonic: Mnemonic::Mov, first_operand: Some(target), second_operand: Some(source) } =>
+		Opcode { mnemonic: Mnemonic::Mov, first_operand: Some(target), second_operand: Some(source), .. } =>
 			mov::assemble_mov(data, &target, source, instruction)?,
 		Opcode {
 			mnemonic:
 				mnemonic @ (Mnemonic::Adc | Mnemonic::Sbc | Mnemonic::And | Mnemonic::Or | Mnemonic::Eor | Mnemonic::Cmp),
 			first_operand: Some(target),
 			second_operand: Some(source),
+			..
 		} => arithmetic_logic::assemble_arithmetic_instruction(data, mnemonic, target, source, instruction)?,
 		Opcode {
 			mnemonic: mnemonic @ (Mnemonic::Inc | Mnemonic::Dec),
 			first_operand: Some(target),
 			second_operand: None,
+			..
 		} => {
 			let is_increment = mnemonic == Mnemonic::Inc;
 			arithmetic_logic::assemble_inc_dec_instruction(data, is_increment, target, instruction)?;
@@ -86,11 +88,13 @@ fn assemble_instruction(data: &mut AssembledData, instruction: &mut Instruction)
 			mnemonic: mnemonic @ (Mnemonic::Asl | Mnemonic::Lsr | Mnemonic::Rol | Mnemonic::Ror | Mnemonic::Xcn),
 			first_operand: Some(target),
 			second_operand: None,
+			..
 		} => arithmetic_logic::assemble_shift_rotation_instruction(data, mnemonic, target, instruction)?,
 		Opcode {
 			mnemonic: mnemonic @ (Mnemonic::Incw | Mnemonic::Decw),
 			first_operand: Some(AddressingMode::DirectPage(target)),
 			second_operand: None,
+			..
 		} => {
 			let is_increment = mnemonic == Mnemonic::Incw;
 			r16bit::assemble_incw_decw_instruction(data, is_increment, target, instruction);
@@ -99,11 +103,13 @@ fn assemble_instruction(data: &mut AssembledData, instruction: &mut Instruction)
 			mnemonic: mnemonic @ (Mnemonic::Addw | Mnemonic::Subw | Mnemonic::Cmpw),
 			first_operand: Some(AddressingMode::Register(Register::YA)),
 			second_operand: Some(AddressingMode::DirectPage(target)),
+			..
 		} => r16bit::assemble_add_sub_cmp_wide_instruction(data, mnemonic, target, instruction),
 		Opcode {
 			mnemonic: Mnemonic::Movw,
 			first_operand: Some(target @ (AddressingMode::DirectPage(_) | AddressingMode::Register(Register::YA))),
 			second_operand: Some(source @ (AddressingMode::DirectPage(_) | AddressingMode::Register(Register::YA))),
+			..
 		} => {
 			let make_movw_error = || {
 				Err(AssemblyError::InvalidAddressingModeCombination {
@@ -132,16 +138,19 @@ fn assemble_instruction(data: &mut AssembledData, instruction: &mut Instruction)
 			mnemonic: Mnemonic::Mul,
 			first_operand: Some(AddressingMode::Register(Register::YA)),
 			second_operand: None,
+			..
 		} => data.append_instruction(0xCF, instruction),
 		Opcode {
 			mnemonic: Mnemonic::Div,
 			first_operand: Some(AddressingMode::Register(Register::YA)),
 			second_operand: Some(AddressingMode::Register(Register::X)),
+			..
 		} => data.append_instruction(0x9E, instruction),
 		Opcode {
 			mnemonic: mnemonic @ (Mnemonic::Daa | Mnemonic::Das),
 			first_operand: Some(AddressingMode::Register(Register::A)),
 			second_operand: None,
+			..
 		} => data.append_instruction(if mnemonic == Mnemonic::Daa { 0xDF } else { 0xBE }, instruction),
 		Opcode {
 			mnemonic:
@@ -164,6 +173,7 @@ fn assemble_instruction(data: &mut AssembledData, instruction: &mut Instruction)
 				| Mnemonic::Jmp),
 			first_operand: Some(target),
 			second_operand: source,
+			..
 		} => branching::assemble_branching_instruction(data, mnemonic, target, source, instruction)?,
 		Opcode {
 			mnemonic:
@@ -183,11 +193,13 @@ fn assemble_instruction(data: &mut AssembledData, instruction: &mut Instruction)
 				| Mnemonic::Stop),
 			first_operand: None,
 			second_operand: None,
+			..
 		} => assemble_operandless_instruction(data, mnemonic, instruction),
 		Opcode {
 			mnemonic: mnemonic @ (Mnemonic::Push | Mnemonic::Pop),
 			first_operand: Some(AddressingMode::Register(target)),
 			second_operand: None,
+			..
 		} => mov::assemble_push_pop(data, mnemonic == Mnemonic::Push, target, instruction)?,
 		Opcode {
 			mnemonic:
@@ -202,8 +214,9 @@ fn assemble_instruction(data: &mut AssembledData, instruction: &mut Instruction)
 				| Mnemonic::Mov1),
 			first_operand: Some(target),
 			second_operand: source,
+			..
 		} => bit::assemble_bit_instructions(data, mnemonic, target, &source, instruction)?,
-		Opcode { mnemonic, first_operand: Some(_), second_operand: Some(_) } =>
+		Opcode { mnemonic, first_operand: Some(_), second_operand: Some(_), .. } =>
 			return Err(AssemblyError::TwoOperandsNotAllowed {
 				mnemonic,
 				src: data.source_code.clone(),

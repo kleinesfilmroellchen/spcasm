@@ -276,7 +276,7 @@ pub enum AssemblyError {
 		location: SourceSpan,
 	},
 
-	#[error("Invalid use of labels in an argument for `{r#macro}`")]
+	#[error("Invalid use of labels in an argument for `{mcro}`")]
 	#[diagnostic(
 		code(spcasm::labels_in_macro_argument),
 		help(
@@ -285,13 +285,14 @@ pub enum AssemblyError {
 		)
 	)]
 	LabelsInMacroArgument {
-		r#macro:           MacroSymbol,
+		mcro:           MacroSymbol,
 		#[source_code]
 		src:               Arc<AssemblyCode>,
 		#[label("This macro")]
 		location:          SourceSpan,
-		#[label("This macro argument")]
-		argument_location: SourceSpan,
+		// TODO: reintroduce when numbers have source locations
+		// #[label("This macro argument")]
+		// argument_location: SourceSpan,
 	},
 
 	#[error("There is no global label defined before the local label '{local_label}'")]

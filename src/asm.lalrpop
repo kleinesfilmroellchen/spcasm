@@ -93,7 +93,15 @@ Macro: Macro = {
 		label: None,
 	},
 	<mcro:"org"> <address:Number> =>? Ok(Macro {
-		value: MacroValue::Org(address.try_value(mcro, source_code.clone()).map_err(|err| ParseError::User { error: err.into() })?),
+		value: MacroValue::Org(address.try_value(mcro, source_code.clone()).map_err(|err| ParseError::User {
+			error: AssemblyError::LabelsInMacroArgument {
+				mcro: MacroSymbol::Org,
+				src: source_code.clone(),
+				location: mcro,
+				// TODO: reintroduce when numbers have source locations
+				// argument_location: address.source_span(),
+			},
+		})?),
 		span: mcro,
 		label: None,
 	}),

@@ -1,1 +1,1 @@
-MOV X,(X)+
+MOV SP,A

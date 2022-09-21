@@ -347,13 +347,15 @@ impl AssemblyFile {
 }
 
 /// Creates the direct page addressing mode if the number is a legal direct page address.
-/// # Panics
-/// To-do: Handle errors properly in the given functions!
-pub fn try_make_direct_page_addressing_mode<T>(
+///
+/// This function is both generic over the value being passed (it must be convertible into a number) and the return type
+/// of the handler functions. Typically, you want to use Result types with fallible handlers and the ``AddressingMode`` type
+/// with non-fallible handlers, but the function is agnostic to that.
+pub fn try_make_direct_page_addressing_mode<T, ReturnType>(
 	value: T,
-	dp_mode: impl FnOnce(T) -> AddressingMode,
-	non_dp_mode: impl FnOnce(T) -> AddressingMode,
-) -> AddressingMode
+	dp_mode: impl FnOnce(T) -> ReturnType,
+	non_dp_mode: impl FnOnce(T) -> ReturnType,
+) -> ReturnType
 where
 	T: Into<Number> + Clone,
 {

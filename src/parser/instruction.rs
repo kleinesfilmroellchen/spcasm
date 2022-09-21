@@ -361,6 +361,18 @@ pub enum AddressingMode {
 }
 
 impl AddressingMode {
+	/// Checks the given bit index for validity and possibly errors out.
+	/// # Errors
+	/// If the bit index is not valid.
+	#[allow(clippy::result_large_err)]
+	pub fn check_bit(bit_index: u8, location: SourceSpan, src: &Arc<AssemblyCode>) -> Result<u8, AssemblyError> {
+		if bit_index <= 7 {
+			Ok(bit_index)
+		} else {
+			Err(AssemblyError::InvalidBitIndex { index: bit_index, location, src: src.clone() })
+		}
+	}
+
 	/// Set this global label as the parent for all the unresolved local labels.
 	pub fn set_global_label(&mut self, label: &Arc<RefCell<GlobalLabel>>) {
 		if let Some(number) = self.number_mut() {

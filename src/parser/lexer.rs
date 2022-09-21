@@ -65,7 +65,7 @@ pub fn lex(source_code: Arc<AssemblyCode>) -> Result<Vec<Token>, Box<AssemblyErr
 								.or::<AssemblyError>(Ok(Token::Identifier(identifier, identifier_span)))?);
 			},
 			'0'..='9' => {
-				let (number, size) = next_number(&mut chars, Some(chr), 10, |chr| chr.is_ascii_digit(), index, source_code.clone())?;
+				let (number, size) = next_number(&mut chars, Some(chr), 10, index, source_code.clone())?;
 				tokens.push(Token::Number(number, (index, size).into()));
 				index += size;
 			},
@@ -82,12 +82,12 @@ pub fn lex(source_code: Arc<AssemblyCode>) -> Result<Vec<Token>, Box<AssemblyErr
 				index += 1;
 			},
 			'$' => {
-				let (number, size) = next_number(&mut chars, None, 16, |chr| chr.is_ascii_hexdigit(), index, source_code.clone())?;
+				let (number, size) = next_number(&mut chars, None, 16, index, source_code.clone())?;
 				tokens.push(Token::Number(number, (index, size).into()));
 				index += size+1;
 			},
 			'%' => {
-				let (number, size) = next_number(&mut chars, None, 2, |chr| ['0', '1'].contains(&chr), index, source_code.clone())?;
+				let (number, size) = next_number(&mut chars, None, 2, index, source_code.clone())?;
 				tokens.push(Token::Number(number, (index, size).into()));
 				index += size+1;
 			},
@@ -144,12 +144,11 @@ fn next_number(
 	chars: &mut Peekable<std::str::Chars>,
 	first_char: Option<char>,
 	radix: u8,
-	checker: fn(char) -> bool,
 	start_index: usize,
 	source_code: Arc<AssemblyCode>,
 ) -> Result<(i64, usize), Box<AssemblyError>> {
 	let mut number_chars = first_char.map_or_else(String::default, String::from);
-	while let Some(chr) = chars.peek() && checker(*chr) {
+	while let Some(chr) = chars.peek() && chr.is_alphanumeric() {
 		number_chars.push(chars.next().unwrap());
 	}
 	i64::from_str_radix(&number_chars, radix.into())

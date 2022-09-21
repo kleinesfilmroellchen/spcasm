@@ -10,3 +10,5 @@
 /target
 
 index.html
+**/*.sfc
+**/*.elf

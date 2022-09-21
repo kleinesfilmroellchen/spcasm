@@ -27,7 +27,7 @@ clap = ["dep:clap"]
 expensive_tests = []
 
 [dependencies]
-object = { version = "0.28.3", features = ["write_core"] }
+object = { version = "0.29.0", features = ["write_core"] }
 serde_variant = "0.1.1"
 thiserror = "1.0.30"
 lalrpop-util = "0.19"

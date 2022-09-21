@@ -133,14 +133,14 @@ pub enum AssemblyError {
 		code(spcasm::include_cycle),
 		severity(Error),
 		help(
-			"This file was included:\n{}", src.include_path.iter().map(|path| format!("from {}", path.to_string_lossy())).intersperse("\n".to_string()).collect::<String>()
+			"The file {cycle_trigger_file} was included:\n{}", src.include_path.iter().map(|path| format!("from {}", path.to_string_lossy())).intersperse("\n".to_string()).collect::<String>()
 		)
 	)]
 	IncludeCycle {
 		cycle_trigger_file: String,
 		#[source_code]
 		src:                Arc<AssemblyCode>,
-		#[label("While trying to include this file")]
+		#[label("This file's inclusion causes an include cycle")]
 		include:            SourceSpan,
 	},
 
@@ -180,11 +180,11 @@ pub enum AssemblyError {
 		location:         SourceSpan,
 	},
 
-	#[error("Section at {section_start:04x} starts after the end of the previous one, which is {section_end:04x}")]
-	#[diagnostic(code(spcasm::section_mismatch), severity(Error))]
-	SectionMismatch {
-		section_start: MemoryAddress,
-		section_end:   MemoryAddress,
+	#[error("Segment at {segment_start:04x} starts before the end of the previous one, which is {segment_end:04x}")]
+	#[diagnostic(code(spcasm::segment_mismatch), severity(Error))]
+	SegmentMismatch {
+		segment_start: MemoryAddress,
+		segment_end:   MemoryAddress,
 		#[label("Unexpected")]
 		location:      SourceSpan,
 		#[source_code]
@@ -234,7 +234,7 @@ pub enum AssemblyError {
 	},
 
 	#[error("Invalid addressing mode combination: `{first_mode}` with `{second_mode}` for `{mnemonic}`")]
-	#[diagnostic(code(spcasm::invalid_addressing_mode), severity(Error))]
+	#[diagnostic(code(spcasm::invalid_addressing_mode_combination), severity(Error))]
 	InvalidAddressingModeCombination {
 		first_mode:  String,
 		second_mode: String,
@@ -285,11 +285,11 @@ pub enum AssemblyError {
 		)
 	)]
 	LabelsInMacroArgument {
-		mcro:           MacroSymbol,
+		mcro:     MacroSymbol,
 		#[source_code]
-		src:               Arc<AssemblyCode>,
+		src:      Arc<AssemblyCode>,
 		#[label("This macro")]
-		location:          SourceSpan,
+		location: SourceSpan,
 		// TODO: reintroduce when numbers have source locations
 		// #[label("This macro argument")]
 		// argument_location: SourceSpan,
@@ -323,8 +323,9 @@ pub enum AssemblyError {
 		#[label("In this range")]
 		location: SourceSpan,
 	},
+
 	#[error("The range {start}-{end} is out of bounds for the input file \"{file}\"")]
-	#[diagnostic(code(spcasm::invalid_range), help("The input's length is {file_len}"), severity(Error))]
+	#[diagnostic(code(spcasm::range_out_of_bounds), help("The input's length is {file_len}"), severity(Error))]
 	RangeOutOfBounds {
 		start:    usize,
 		end:      usize,
@@ -336,22 +337,10 @@ pub enum AssemblyError {
 		location: SourceSpan,
 	},
 
-	#[cfg(test)]
-	#[error("Test assembly doesn't have an expected output comment")]
-	#[diagnostic(code(spcasm::missing_test_result), severity(Error))]
-	MissingTestResult {
-		#[label("Must have a ';=' comment")]
-		location: SourceSpan,
-		#[source_code]
-		src:      Arc<AssemblyCode>,
-	},
-
-	//#endregion
-	//#region Syntax errors: detected in the lexer and mainly the parser
 	#[error("Expected {expected}")]
 	#[diagnostic(code(spcasm::syntax::expected_token), severity(Error))]
 	ExpectedToken {
-		expected: Token,
+		expected: TokenOrString,
 		actual:   Token,
 		#[label("This {actual} is invalid here")]
 		location: SourceSpan,
@@ -371,7 +360,7 @@ pub enum AssemblyError {
 	},
 
 	#[error("Invalid number: {error}")]
-	#[diagnostic(code(spcasm::syntax::expected_token), severity(Error))]
+	#[diagnostic(code(spcasm::syntax::invalid_number), severity(Error))]
 	InvalidNumber {
 		error:    ParseIntError,
 		#[label("{error}")]
@@ -381,7 +370,7 @@ pub enum AssemblyError {
 	},
 
 	#[error("Expected any of {}", expected.iter().map(std::string::ToString::to_string).collect::<Vec<_>>().join(", "))]
-	#[diagnostic(code(spcasm::syntax::expected_token), severity(Error))]
+	#[diagnostic(code(spcasm::syntax::missing_token), severity(Error))]
 	UnexpectedEndOfTokens {
 		expected: Vec<TokenOrString>,
 		#[label("There should be a token here")]
@@ -391,7 +380,7 @@ pub enum AssemblyError {
 	},
 
 	#[error("Unexpected character {chr}")]
-	#[diagnostic(code(spcasm::syntax::expected_token), severity(Error))]
+	#[diagnostic(code(spcasm::syntax::unexpected_character), severity(Error))]
 	UnexpectedCharacter {
 		chr:      char,
 		#[label("Unexpected")]
@@ -400,38 +389,24 @@ pub enum AssemblyError {
 		src:      Arc<AssemblyCode>,
 	},
 
-	#[error("Single '#' is not a valid addressing mode")]
-	#[diagnostic(
-		code(spcasm::syntax::single_hash_invalid),
-		help("Add a number to make this an immediate operand"),
-		severity(Error)
-	)]
-	SingleHashInvalid {
-		#[label("This is not an addressing mode")]
-		location: SourceSpan,
-		#[source_code]
-		src:      Arc<AssemblyCode>,
-	},
-
-	#[error("Invalid token `{token}` for indexing")]
-	#[diagnostic(code(spcasm::syntax::invalid_indexing_token), help("Use `X` or `Y` for indexing"), severity(Error))]
-	InvalidIndexingToken {
-		token:    Token,
-		#[label("This token is not valid for indexing")]
-		location: SourceSpan,
-		#[source_code]
-		src:      Arc<AssemblyCode>,
-	},
-
 	#[error("Invalid bit index `{index}`")]
 	#[diagnostic(
-		code(spcasm::syntax::invalid_indexing_token),
+		code(spcasm::syntax::invalid_bit_index),
 		help("Use a bit index between 0 and 7 inclusive"),
 		severity(Error)
 	)]
 	InvalidBitIndex {
 		index:    u8,
 		#[label("Bit index is invalid")]
+		location: SourceSpan,
+		#[source_code]
+		src:      Arc<AssemblyCode>,
+	},
+
+	#[error("There's dangling tokens after this")]
+	#[diagnostic(code(spcasm::syntax::dangling_tokens), help("Remove these tokens"), severity(Error))]
+	DanglingTokens {
+		#[label("Dangling tokens here")]
 		location: SourceSpan,
 		#[source_code]
 		src:      Arc<AssemblyCode>,
@@ -454,8 +429,7 @@ pub enum AssemblyError {
 		src:      Arc<AssemblyCode>,
 		basis:    Option<ParseIntError>,
 	},
-	//#endregion
-	//#region Warnings and advice
+
 	#[error(
 		"The value {value:02X} is being used as a {size}-bit operand here, but it is larger than this. The extra \
 		 upper bits are truncated."
@@ -473,13 +447,8 @@ pub enum AssemblyError {
 	#[error("This label \"{name}\" has an 8-bit value, did you want to use it in direct page addressing?")]
 	#[diagnostic(
 		code(spcasm::non_direct_page_label),
-		help(
-			"Due to machine code positioning complexities, explicit labels are always resolved to a full address if \
-			 applicable. In the future, there will be a way of explicitly specifying labels as being in the direct \
-			 page, so that they resolve to a direct page addressing mode."
-		),
-		severity(Advice),
-		url("https://github.com/kleinesfilmroellchen/spcasm/issues/1")
+		help("Use a forced direct page addressing mnemonic by suffixing `.b`"),
+		severity(Advice)
 	)]
 	NonDirectPageLabel {
 		name:             String,
@@ -491,16 +460,6 @@ pub enum AssemblyError {
 		#[source_code]
 		src:              Arc<AssemblyCode>,
 	},
-
-	#[error("There's dangling tokens after this, spcasm ignores these for now")]
-	#[diagnostic(code(spcasm::dangling_tokens), help("Remove these tokens"), severity(Warning))]
-	DanglingTokens {
-		#[label("Dangling tokens here")]
-		location: SourceSpan,
-		#[source_code]
-		src:      Arc<AssemblyCode>,
-	},
-	//#endregion
 }
 
 impl AssemblyError {
@@ -516,12 +475,21 @@ impl AssemblyError {
 				location: (location, 1).into(),
 				src,
 			},
-			ParseError::UnrecognizedToken { token: (start, token, end), expected } => Self::ExpectedTokens {
-				expected: expected.into_iter().map(TokenOrString::String).collect(),
-				actual: token,
-				location: (start, end - start).into(),
-				src,
-			},
+			ParseError::UnrecognizedToken { token: (start, token, end), expected } if expected.len() > 1 =>
+				Self::ExpectedTokens {
+					expected: expected.into_iter().map(TokenOrString::String).collect(),
+					actual: token,
+					location: (start, end - start).into(),
+					src,
+				},
+			ParseError::UnrecognizedToken { token: (start, token, end), expected } if expected.len() == 1 =>
+				Self::ExpectedToken {
+					expected: expected[0].clone().into(),
+					actual: token,
+					location: (start, end - start).into(),
+					src,
+				},
+			ParseError::UnrecognizedToken { token: (start, token, end), expected } => unreachable!(),
 			ParseError::ExtraToken { token: (start, _, end) } =>
 				Self::DanglingTokens { location: (start, end - start).into(), src },
 			ParseError::User { error } => error,

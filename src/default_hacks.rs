@@ -9,6 +9,7 @@
 use std::num::ParseIntError;
 use std::sync::Arc;
 
+use crate::error::TokenOrString;
 use crate::mcro::MacroSymbol;
 use crate::parser::instruction::Mnemonic;
 use crate::parser::Token;
@@ -76,5 +77,11 @@ impl FakeDefaultForIgnoredValues for MacroSymbol {
 impl FakeDefaultForIgnoredValues for Mnemonic {
 	fn default() -> Self {
 		Self::Adc
+	}
+}
+
+impl FakeDefaultForIgnoredValues for TokenOrString {
+	fn default() -> Self {
+		Self::String(String::new())
 	}
 }

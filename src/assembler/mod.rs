@@ -505,16 +505,16 @@ impl AssembledData {
 		// The iteration is sorted
 		for (starting_address, segment_data) in &self.segments {
 			if *starting_address < all_data.len() as i64 {
-				return Err(AssemblyError::SectionMismatch {
+				return Err(AssemblyError::SegmentMismatch {
 					src:           Arc::new(AssemblyCode {
 						text:         pretty_hex(&all_data),
 						name:         self.source_code.name.clone(),
 						include_path: Vec::new(),
 					}),
-					// TODO: This location is wrong.
-					location:      (*starting_address as usize, 1).into(),
-					section_start: *starting_address,
-					section_end:   all_data.len() as MemoryAddress,
+					// TODO: This location is wrong, it ignores newlines.
+					location:      (*starting_address as usize * 3 + 1, 2).into(),
+					segment_start: *starting_address,
+					segment_end:   all_data.len() as MemoryAddress,
 				}
 				.into());
 			}

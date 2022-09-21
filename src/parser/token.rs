@@ -109,7 +109,7 @@ impl Token {
 			Ok(self)
 		} else {
 			Err(AssemblyError::ExpectedToken {
-				expected: self.clone(),
+				expected: self.clone().into(),
 				actual: type_.clone(),
 				location: self.source_span(),
 				src,

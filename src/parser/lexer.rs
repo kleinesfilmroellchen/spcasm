@@ -94,6 +94,7 @@ pub fn lex(source_code: Arc<AssemblyCode>) -> Result<Vec<Token>, Box<AssemblyErr
 			';' =>
 				if cfg!(test) && let Some(chr) = chars.peek() && chr == &'=' {
 					chars.next();
+					let start_index = index;
 					index += 2;
 					let mut comment_contents = String::new();
 					// Either stop at a newline or another regular comment.
@@ -111,8 +112,8 @@ pub fn lex(source_code: Arc<AssemblyCode>) -> Result<Vec<Token>, Box<AssemblyErr
 						.map_err(|parse_error| AssemblyError::InvalidTestComment {
 							basis: Some(parse_error),
 							src: source_code.clone(),
-							location: (index, comment_contents.len()).into()
-						})?, (index, comment_contents.len()).into()));
+							location: (start_index, comment_contents.len()).into()
+						})?, (start_index, comment_contents.len()).into()));
 				} else {
 					index += 1;
 					while let Some(chr) = chars.peek() && chr != &'\n' {

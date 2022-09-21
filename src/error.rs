@@ -146,7 +146,7 @@ pub enum AssemblyError {
 
 	#[error("{error_text}")]
 	#[diagnostic(
-		code(scpasm::audio_processing_error),
+		code(spcasm::audio_processing_error),
 		severity(Error),
 		help(
 			"This error is caused by the malformed input audio file \"{file_name}\". If your audio player understands \

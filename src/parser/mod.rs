@@ -349,8 +349,8 @@ impl AssemblyFile {
 /// Creates the direct page addressing mode if the number is a legal direct page address.
 ///
 /// This function is both generic over the value being passed (it must be convertible into a number) and the return type
-/// of the handler functions. Typically, you want to use Result types with fallible handlers and the ``AddressingMode`` type
-/// with non-fallible handlers, but the function is agnostic to that.
+/// of the handler functions. Typically, you want to use Result types with fallible handlers and the ``AddressingMode``
+/// type with non-fallible handlers, but the function is agnostic to that.
 pub fn try_make_direct_page_addressing_mode<T, ReturnType>(
 	value: T,
 	dp_mode: impl FnOnce(T) -> ReturnType,

@@ -53,6 +53,7 @@ pub fn run_assembler(file_name: &str, options: &ErrorOptions) -> AssemblyResult 
 		location: (0, file_name.len()).into(),
 	})?;
 	let mut env = crate::Environment::new();
+	#[allow(clippy::clone_on_copy)]
 	env.borrow_mut().set_error_options(options.clone());
 	let tokens = crate::parser::lexer::lex(source_code.clone()).map_err(AssemblyError::from)?;
 	let program = crate::Environment::parse(&env, tokens, &source_code).map_err(AssemblyError::from)?;

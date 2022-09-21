@@ -300,7 +300,7 @@ fn assemble_macro(data: &mut AssembledData, mcro: &mut Macro) -> Result<(), Box<
 				location: mcro.span,
 			})?;
 			if let Some(range) = range {
-				let max_number_of_bytes = binary_data.len() - range.offset();
+				let max_number_of_bytes = binary_data.len().saturating_sub(range.offset());
 				binary_data = binary_data
 					.get(range.offset() .. range.offset().saturating_add(range.len()).min(max_number_of_bytes))
 					.ok_or(AssemblyError::RangeOutOfBounds {

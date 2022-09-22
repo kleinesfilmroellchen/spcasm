@@ -2,6 +2,7 @@
 #![deny(clippy::all, clippy::pedantic, clippy::nursery)]
 
 use std::cmp::min;
+use std::sync::Arc;
 
 pub use super::error::{AssemblyCode, AssemblyError};
 pub use super::mcro::Macro;
@@ -52,11 +53,19 @@ pub fn run_assembler(file_name: &str, options: &ErrorOptions) -> AssemblyResult 
 		}),
 		location: (0, file_name.len()).into(),
 	})?;
+	run_assembler_on_source(&source_code, options)
+}
+
+/// Run the assembler on given source code. This method is intended to be used directly when the source code is not a
+/// file on disk.
+/// # Errors
+/// Any assembler errors are propagated to the caller.
+pub fn run_assembler_on_source(source_code: &Arc<AssemblyCode>, options: &ErrorOptions) -> AssemblyResult {
 	let mut env = crate::Environment::new();
 	#[allow(clippy::clone_on_copy)]
 	env.borrow_mut().set_error_options(options.clone());
 	let tokens = crate::parser::lexer::lex(source_code.clone()).map_err(AssemblyError::from)?;
-	let program = crate::Environment::parse(&env, tokens, &source_code).map_err(AssemblyError::from)?;
+	let program = crate::Environment::parse(&env, tokens, source_code).map_err(AssemblyError::from)?;
 	let assembled = crate::assembler::assemble(&program, options).map_err(AssemblyError::from)?;
 	Ok((env, assembled))
 }

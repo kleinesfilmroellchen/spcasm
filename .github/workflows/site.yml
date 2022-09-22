@@ -1,0 +1,86 @@
+name: Deploy website to GitHub Pages
+
+on:
+  push:
+    branches: ["main"]
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  create-page:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Install latest nightly
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: nightly
+      - name: Cargo cache
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+
+      - name: Install wasm-pack
+        run: cargo install --verbose wasm-pack
+      - name: Compile wasm module
+        run: cd spcasm-web && wasm-pack --verbose build --verbose --features wee_alloc --no-default-features
+      - name: Install node
+        uses: actions/setup-node@v1.4.1
+        with:
+          node-version: "17.0"
+      - name: Get npm cache directory
+        id: npm-cache-dir
+        run: |
+          echo "::set-output name=dir::$(npm config get cache)"
+      - name: NPM cache
+        uses: actions/cache@v3
+        id: npm-cache
+        with:
+          path: ${{ steps.npm-cache-dir.outputs.dir }}
+          key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-node-
+      - name: Install NPM modules
+        run: cd spcasm-web/www && npm install --verbose
+      - name: Build frontend
+        run: cd spcasm-web/www && npm run build --verbose
+      - name: Make site directory
+        run: mkdir site
+      - name: Copy frontend
+        run: cp spcasm-web/www/dist site
+
+      - name: Install mdbook
+        run: cargo install --verbose mdbook
+      - name: Move README to doc folder
+        run: chmod +x doc/copy-readme-for-gh-pages.sh && doc/copy-readme-for-gh-pages.sh
+      - name: Build documentation
+        run: cd doc && mdbook build
+      - name: Copy documentation
+        run: cp doc/book site/doc
+
+      - name: Upload page artifact
+        uses: actions/upload-pages-artifact@v1.0.4
+        with:
+          path: site
+
+  deploy:
+    runs-on: ubuntu-latest
+    needs: create-page
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v1

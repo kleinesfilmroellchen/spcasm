@@ -9,6 +9,6 @@
 
 /target
 
-index.html
+/index.html
 **/*.sfc
 **/*.elf

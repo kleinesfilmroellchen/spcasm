@@ -44,7 +44,7 @@ jobs:
       - name: Make site directory
         run: mkdir site
       - name: Copy frontend
-        run: cp -r spcasm-web/www/dist site
+        run: cp -rT spcasm-web/www/dist site
 
       - name: Install mdbook
         run: cargo install --verbose mdbook
@@ -53,7 +53,7 @@ jobs:
       - name: Build documentation
         run: cd doc && mdbook build
       - name: Copy documentation
-        run: cp -r doc/book site/doc
+        run: cp -rT doc/book site/doc
 
       - name: Upload page artifact
         uses: actions/upload-pages-artifact@v1.0.4

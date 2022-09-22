@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>Interactive SPC700 assembler</title>
+    <link rel="stylesheet" href="normalize.css" />
+    <link rel="stylesheet" href="skeleton.css" />
+    <link rel="stylesheet" href="main.css" />
+  </head>
+  <body>
+    <div class="container">
+      <header>
+        <noscript
+          >This page does not work without JavaScript and WebAssembly, please
+          enable both in your browser.</noscript
+        >
+        <script src="./bootstrap.js"></script>
+        <h2>Interactive SPC700 assembler</h2>
+        <p>
+          This page allows you to interactively compile SPC700 assembly all
+          within your browser (WebAssembly!). The page is powered by
+          <a href="https://github.com/kleinesfilmroellchen/spcasm">spcasm</a>.
+        </p>
+      </header>
+
+      <main class="row">
+        <section id="assembly-source-container" class="one-half column">
+          <pre
+            class="assembly-source"
+          ><code contenteditable="true" class="assembly-source"><div>; Input your code here:</div><div>loop:</div><div>  nop</div><div>  nop</div><div>  jmp loop</div></code></pre>
+        </section>
+        <section id="output-column" class="one-half column">
+          <p id="status"></p>
+          <div id="output-container">
+            <div id="output"></div>
+          </div>
+        </section>
+      </main>
+    </div>
+  </body>
+</html>

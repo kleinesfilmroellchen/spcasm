@@ -1,8 +1,10 @@
+#![deny(clippy::all, clippy::pedantic, clippy::nursery)]
+#![allow(missing_docs, clippy::missing_panics_doc)]
+
 extern crate proc_macro;
 
 use proc_macro::TokenStream;
 use quote::{quote, ToTokens};
-use syn;
 
 #[proc_macro_derive(Parse)]
 pub fn parse_macro_derive(input: TokenStream) -> TokenStream {

@@ -10,6 +10,7 @@ spcasm is structured into a few related components:
 	- The crate can also be built as a library; this is mainly used for tests.
 	- `brri` is an experimental interactive BRR encoder.
 - The `spcasm-derive` crate contains derive macros, as Rust requires those to be in a separate crate.
+- The `spcasm-web` crate contains WebAssembly APIs and a browser frontend allowing the assembler to run in the browser.
 - The `doc` folder contains [mdbook](https://rust-lang.github.io/mdBook/)-based documentation. You can read this documentation directly on GitHub, or build a statically servable website from it with mdbook.
 
 ## Toolchain and workflow
@@ -18,7 +19,7 @@ spcasm is written in Rust (2021 edition). Due to the use of many (really cool!) 
 
 Because of `rust-toolchain.toml`, the nightly toolchain should automatically be selected if you run any rustup-based command (like `cargo` or `rustc`).
 
-The standard binary is the assembler `spcasm` itself. There is an additional binary target `brri`, an interactive BRR functionality explorer. This requires the `clap` feature. 
+The standard binary is the assembler `spcasm` itself. There is an additional binary target `brri`, an interactive BRR functionality explorer. Both require the `clap` feature. 
 
 Tests work through the normal rustc test harness, so they can be run with `cargo test` and `cargo bench`.
 
@@ -26,6 +27,15 @@ The crate has the following features:
 - `test_bootrom`: Enable the S-SMP boot ROM assembler test. This is currently broken due to the test system itself being incapable of dealing with sections.
 - `expensive_tests`: Enable long-running tests. This is enabled by default, but disabled on CI as it wastes time there.
 - `clap`: Enable the `clap` crate and the two binaries `spcasm` and `brri`. If you want to run tests or use spcasm as a library, this is not necessary, therefore although it is a default feature, it can be disabled.
+
+If you want to create a release build, please compile with the `spcasm-release` profile; the standard `release` profile needs to be reserved for `wasm-pack` as it is too inflexible at the moment.
+
+### `spcasm-web`
+
+Working with the WebAssembly bindings and webpage requires a little more effort. You need to have `wasm-pack` and `npm`/node.js. In the `spcasm-web` directory:
+- Use `wasm-pack build --features wee_alloc,console_error_panic_hook --no-default-features` to generate the Wasm module and bindings. The two extra features are optional; `wee_alloc` reduces code size and `console_error_panic_hook` helps debugging by printing panics to the console.
+- In the `www` directory: Use `npm install` to deal with the necessary evil of several hundred JavaScript modules. (This unfortunately is the best way of making things "just work", plus you get a development server for free.)
+- Use `npm run start` for a development server, or `npm run build` to build files for a static web server into the `dist` directory.
 
 ## Architectural Overview
 

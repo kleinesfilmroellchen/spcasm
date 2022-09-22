@@ -1,3 +1,6 @@
+[workspace]
+members = [".", "spcasm_derive", "spcasm-web"]
+
 [package]
 edition = "2021"
 license = "BSD 2-clause"
@@ -57,3 +60,19 @@ features = ["derive"]
 
 [dependencies.spcasm_derive]
 path = "spcasm_derive"
+
+[profile.release]
+opt-level = "s"
+lto = true
+debug-assertions = false
+
+[profile.bench]
+opt-level = 3
+debug = 2
+lto = "thin"
+debug-assertions = true
+
+# This is the actual release profile; wasm-pack can't use custom profiles so we reserve "release" for it.
+[profile.spasm-release]
+inherits = "release"
+opt-level = 3

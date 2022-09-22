@@ -2,6 +2,16 @@
 
 This section details information useful for anyone working on or tinkering with spcasm.
 
+## Components
+
+spcasm is structured into a few related components:
+- The `spcasm` crate contains the assembler's core code. It further contains three targets:
+	- `spcasm` is the main assembler binary.
+	- The crate can also be built as a library; this is mainly used for tests.
+	- `brri` is an experimental interactive BRR encoder.
+- The `spcasm-derive` crate contains derive macros, as Rust requires those to be in a separate crate.
+- The `doc` folder contains [mdbook](https://rust-lang.github.io/mdBook/)-based documentation. You can read this documentation directly on GitHub, or build a statically servable website from it with mdbook.
+
 ## Toolchain and workflow
 
 spcasm is written in Rust (2021 edition). Due to the use of many (really cool!) unstable features, it can only be compiled with a Rust nightly compiler. The latest tested compiler version is nightly 1.65 on both Linux (gnu) and Windows (msvc).

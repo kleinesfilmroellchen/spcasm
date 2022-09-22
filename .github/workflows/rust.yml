@@ -1,34 +1,59 @@
-name: spcasm Tests
+name: Check and test spcasm
 
 on:
   push:
-    branches: [ "main" ]
+    branches: ["main"]
   pull_request:
-    branches: [ "main" ]
+    branches: ["main"]
 
 env:
   CARGO_TERM_COLOR: always
 
 jobs:
   build:
-
     runs-on: ubuntu-latest
-
     steps:
-    - uses: actions/checkout@v3
-    - name: Install latest nightly
-      uses: actions-rs/toolchain@v1
-      with:
+      - uses: actions/checkout@v3
+      - name: Install latest nightly
+        uses: actions-rs/toolchain@v1
+        with:
           toolchain: nightly
-          components: clippy, rustfmt
-    - name: Build
-      run: cargo build --verbose --no-default-features
-    - name: Run tests
-      run: cargo test --verbose --no-default-features
-    - name: Check style
-      uses: actions-rs/clippy-check@v1.0.7
-      with:
-        token: ${{ secrets.GITHUB_TOKEN }}
-        args: --verbose --no-default-features
-    - name: Check code format
-      run: cargo fmt --check --verbose
+      - uses: actions/cache@v3
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+      - name: Build
+        run: cargo build --verbose --no-default-features
+      - name: Run tests
+        run: cargo test --verbose --no-default-features
+
+  clippy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Install latest nightly
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: nightly
+          components: clippy
+      - name: Check style
+        uses: actions-rs/clippy-check@v1.0.7
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          args: --verbose --no-default-features
+  fmt:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Install latest nightly
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: nightly
+          components: rustfmt
+      - name: Check code format
+        run: cargo fmt --check --verbose

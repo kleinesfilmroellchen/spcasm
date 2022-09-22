@@ -28,7 +28,10 @@ jobs:
           key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}-nodefault
 
       - name: Install wasm-pack
-        run: cargo install --verbose wasm-pack
+        uses: extractions/setup-crate@v1
+        with:
+          owner: rustwasm
+          name: wasm-pack
       - name: Compile wasm module
         run: cd spcasm-web && wasm-pack --verbose build --verbose --features wee_alloc --no-default-features
       - name: Install node
@@ -47,7 +50,10 @@ jobs:
         run: cp -rT spcasm-web/www/dist site
 
       - name: Install mdbook
-        run: cargo install --verbose mdbook
+        uses: extractions/setup-crate@v1
+        with:
+          owner: rust-lang
+          name: mdBook
       - name: Move README to doc folder
         run: chmod +x doc/copy-readme-for-gh-pages.sh && doc/copy-readme-for-gh-pages.sh
       - name: Build documentation

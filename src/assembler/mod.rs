@@ -230,7 +230,13 @@ fn assemble_instruction(data: &mut AssembledData, instruction: &mut Instruction)
 				location: instruction.span,
 			}
 			.into()),
-		_ => unreachable!(),
+		Opcode { mnemonic, .. } =>
+			return Err(AssemblyError::MissingOperand {
+				mnemonic,
+				src: data.source_code.clone(),
+				location: instruction.span,
+			}
+			.into()),
 	}
 	Ok(())
 }

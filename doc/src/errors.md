@@ -262,6 +262,24 @@ Therefore, for now, spcasm disallows the use of labels in these cases entirely.
 
 Local labels always have a scope defined as the range between their "parent" global label and the next global label after them. The parent specifically is the global label directly before the local label. Therefore, any local label must be preceded by a global label that is its parent; a local label as the first label of a file is not allowed. An easy solution is to define a dummy label at the beginning of the file that is never used but provides an initial scope for local labels.
 
+### spcasm::missing_operand
+
+```
+  × `MOV` takes at least one operand
+   ╭─[<<input>>:2:1]
+ 2 │ loop:
+ 3 │   nop
+ 4 │   nop
+ 5 │   mov
+   ·   ─┬
+   ·    ╰── Takes at least one operand
+ 6 │   jmp loop
+   ╰────
+  help: Add an operand to this instruction
+```
+
+Similar to [operand_not_allowed](#spcasmoperandnotallowed). Some instructions instead require at least one operand.
+
 ### spcasm::missing_segment
 
 ```

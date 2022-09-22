@@ -265,6 +265,16 @@ pub enum AssemblyError {
 		src:      Arc<AssemblyCode>,
 	},
 
+	#[error("`{mnemonic}` takes at least one operand")]
+	#[diagnostic(code(spcasm::missing_operand), help("Add an operand to this instruction"), severity(Error))]
+	MissingOperand {
+		mnemonic: Mnemonic,
+		#[label("Takes at least one operand")]
+		location: SourceSpan,
+		#[source_code]
+		src:      Arc<AssemblyCode>,
+	},
+
 	#[error("`{constant}` is not valid for {typename}")]
 	#[diagnostic(code(spcasm::invalid_constant), help("Remove the operands of this instruction"), severity(Error))]
 	InvalidConstant {

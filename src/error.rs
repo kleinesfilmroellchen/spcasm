@@ -40,6 +40,12 @@ impl AssemblyCode {
 		Ok(Arc::new(Self { name: path, text: contents, include_path: Vec::new() }))
 	}
 
+	/// Create a new source code struct from source code text and a (possibly fake) name.
+	#[must_use]
+	pub fn new(text: String, name: String) -> Self {
+		Self { text, name: PathBuf::from(name), include_path: Vec::new() }
+	}
+
 	/// Returns a copy of the file name of this source code.
 	#[must_use]
 	pub fn file_name(&self) -> String {

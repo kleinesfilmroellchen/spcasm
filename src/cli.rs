@@ -3,13 +3,14 @@
 use std::mem::Discriminant;
 use std::str::FromStr;
 
-#[cfg(feature = "clap")] use clap::Args;
+#[cfg(feature = "binaries")]
+use clap::Args;
 
 use crate::error::{AssemblyError, ErrorCodes};
 
 /// Specification of which errors to include and which to not include.
 #[derive(Debug, Clone, Eq, PartialEq, Default, Args)]
-#[cfg(feature = "clap")]
+#[cfg(feature = "binaries")]
 pub struct ErrorOptions {
 	/// Warnings to silence.
 	#[clap(value_parser, multiple_occurrences = true, long, short = 'w')]
@@ -19,7 +20,7 @@ pub struct ErrorOptions {
 	pub(crate) error:  Vec<ErrorCodeSpec>,
 }
 
-#[cfg(feature = "clap")]
+#[cfg(feature = "binaries")]
 impl ErrorOptions {
 	/// Expands a marker "all" warning in the error or ignore list into all possible errors. This is so that the user
 	/// can specify --error all or --ignore all and get this behavior, but we don't need special casing for it in the
@@ -35,7 +36,7 @@ impl ErrorOptions {
 }
 
 /// Non-clap builds get this fake ErrorOptions struct which is a ZST and does nothing.
-#[cfg(not(feature = "clap"))]
+#[cfg(not(feature = "binaries"))]
 #[derive(Default, Debug, Clone, Copy, Eq, PartialEq)]
 pub struct ErrorOptions {}
 
@@ -70,7 +71,7 @@ impl FromStr for ErrorCodeSpec {
 	}
 }
 
-#[cfg(feature = "clap")]
+#[cfg(feature = "binaries")]
 mod clap_dependent {
 	use std::path::PathBuf;
 
@@ -110,5 +111,5 @@ mod clap_dependent {
 	}
 }
 
-#[cfg(feature = "clap")]
+#[cfg(feature = "binaries")]
 pub use clap_dependent::*;

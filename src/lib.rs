@@ -32,6 +32,7 @@ pub mod brr;
 mod cli;
 mod common;
 mod default_hacks;
+#[cfg(feature = "binaries")]
 pub mod elf;
 mod error;
 mod lalrpop_adaptor;

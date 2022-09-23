@@ -229,8 +229,15 @@ impl Block {
 		filter_coefficients: FilterCoefficients,
 	) -> (DecodedBlockSamples, WarmUpSamples) {
 		let mut decoded_samples: DecodedBlockSamples = [0; 16];
+		let shift_function = |encoded: i16| {
+			if self.header.real_shift > 0 {
+				encoded.checked_shl(self.header.real_shift.unsigned_abs().into()).unwrap_or(0)
+			} else {
+				encoded.checked_shr(self.header.real_shift.unsigned_abs().into()).unwrap_or(0)
+			}
+		};
 		let shifted_encoded =
-			self.encoded_samples.map(|encoded| i16::from(((encoded as i8) << 4) >> 4) << self.header.real_shift);
+			self.encoded_samples.map(|encoded| shift_function(i16::from(((encoded as i8) << 4) >> 4)));
 		for (decoded, encoded) in decoded_samples.iter_mut().zip(shifted_encoded) {
 			// TODO: Check whether overflowing (i.e. wrap-around) arithmetic is correct here.
 			// The convoluted cast ensures we retain the nybble sign bit.

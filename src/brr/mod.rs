@@ -492,3 +492,19 @@ impl LoopEndFlags {
 		self.eq_(Self::Loop)
 	}
 }
+
+impl std::fmt::Display for LoopEndFlags {
+	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+		if self.is_raw_loop() {
+			f.write_str("loop")?;
+		}
+		// end & loop: print separator
+		if self.will_loop_afterwards() {
+			f.write_str(", ")?;
+		}
+		if self.is_end() {
+			f.write_str("end")?;
+		}
+		Ok(())
+	}
+}

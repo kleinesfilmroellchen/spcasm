@@ -90,6 +90,51 @@ pub fn encode_to_brr(samples: &Vec<DecodedSample>, is_loop: bool) -> Vec<u8> {
 	result
 }
 
+/// Decode samples from a stream of BRR blocks. Note that this discards loop data and any potential end point is
+/// disregarded; this function always decodes all the input data.
+///
+/// # Errors
+/// All possible header bytes are valid on some level, so no errors are thrown because of this. If the encoded data does
+/// not line up with a BRR block however, an error is returned.
+#[allow(clippy::module_name_repetitions)]
+pub fn decode_from_brr(encoded: &[u8]) -> Result<Vec<DecodedSample>, String> {
+	let (blocks, remainder) = encoded.as_chunks();
+	if !remainder.is_empty() {
+		return Err(format!("Cut off BRR block (size {}) at the end of the stream", remainder.len()));
+	}
+
+	let mut decoded_samples = Vec::with_capacity(blocks.len() * 16);
+	let mut previous_samples: [DecodedSample; 2] = [0, 0];
+
+	#[cfg(debug_assertions)]
+	let mut filter_type_counts: [usize; 4] = [0, 0, 0, 0];
+
+	for raw_block in blocks {
+		let block = Block::from(*raw_block);
+		let (samples, new_previous_samples) = block.decode(previous_samples);
+
+		#[cfg(debug_assertions)]
+		{
+			filter_type_counts[block.header.filter as u8 as usize] += 1;
+		}
+
+		decoded_samples.extend_from_slice(&samples);
+		previous_samples = new_previous_samples;
+	}
+
+	#[cfg(debug_assertions)]
+	println!(
+		"Decoded {} blocks (0: {}, 1: {}, 2: {}, 3: {})",
+		filter_type_counts.iter().sum::<usize>(),
+		filter_type_counts[0],
+		filter_type_counts[1],
+		filter_type_counts[2],
+		filter_type_counts[3]
+	);
+
+	Ok(decoded_samples)
+}
+
 fn fill_slice_to_16(slice: &[i16]) -> DecodedBlockSamples {
 	let mut result_chunk = [0; 16];
 	for (i, entry) in result_chunk.iter_mut().enumerate() {

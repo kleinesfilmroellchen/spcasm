@@ -20,9 +20,11 @@ test = false
 bench = false
 
 [[bin]]
-name = "brri"
-path = "src/brr/interactive.rs"
+name = "brr"
+path = "src/brr/cli.rs"
 required-features = ["binaries"]
+test = false
+bench = false
 
 [features]
 default = ["expensive_tests", "binaries"]
@@ -74,6 +76,6 @@ lto = "thin"
 debug-assertions = true
 
 # This is the actual release profile; wasm-pack can't use custom profiles so we reserve "release" for it.
-[profile.spasm-release]
+[profile.spcasm-release]
 inherits = "release"
 opt-level = 3

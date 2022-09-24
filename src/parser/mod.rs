@@ -159,7 +159,7 @@ impl Environment {
 			};
 		}
 
-		let lexed = lalrpop_adaptor::disambiguate_indexing_parenthesis(tokens);
+		let lexed = lalrpop_adaptor::preprocess_token_stream(tokens);
 		let lexed = lalrpop_adaptor::LalrpopAdaptor::from(lexed);
 		let mut program = crate::asm::ProgramParser::new()
 			.parse(this, source_code, lexed)

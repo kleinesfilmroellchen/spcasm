@@ -31,7 +31,7 @@ impl Iterator for LalrpopAdaptor {
 /// - disambiguate parenthesis used for expressions and for addressing
 /// - combine '+X' and '+Y' into one token
 /// - transform simple '-' into a "range dash" for range specifications
-pub fn disambiguate_indexing_parenthesis(tokens: Vec<Token>) -> Vec<Token> {
+pub fn preprocess_token_stream(tokens: Vec<Token>) -> Vec<Token> {
 	let mut tokens = tokens.into_iter();
 	let mut result = Vec::new();
 	// Only set when we are immediately expecting an addressing mode. This is either after a mnemonic or a comma on an
@@ -127,7 +127,11 @@ pub fn disambiguate_indexing_parenthesis(tokens: Vec<Token>) -> Vec<Token> {
 			tokens.push(Token::PlusRegister(*register,
 				source_range(plus.source_span().into(), token.source_span().into())));
 		} else {
-			tokens.push(token.clone());
+			tokens.push(match token {
+				Token::Register(register, location) => Token::Register(register.coerce_alternate_registers(), *location),
+				Token::Mnemonic(mnemonic, location) => Token::Mnemonic(mnemonic.coerce_alternate_mnemonics(), *location),
+				others => others.clone(),
+			});
 		}
 		tokens
 	})

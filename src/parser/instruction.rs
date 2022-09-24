@@ -115,12 +115,15 @@ pub enum Mnemonic {
 	Brk,
 	Ret,
 	Ret1,
+	Reti,
 	Push,
 	Pop,
 	Set1,
 	Clr1,
 	Tset1,
+	Tset,
 	Tclr1,
+	Tclr,
 	And1,
 	Or1,
 	Eor1,
@@ -137,6 +140,19 @@ pub enum Mnemonic {
 	Nop,
 	Sleep,
 	Stop,
+}
+
+impl Mnemonic {
+	/// Coerce alternative mnemonics into the canonical version the assembler uses internally.
+	#[must_use]
+	pub const fn coerce_alternate_mnemonics(self) -> Self {
+		match self {
+			Self::Reti => Self::Ret1,
+			Self::Tset => Self::Tset1,
+			Self::Tclr => Self::Tclr1,
+			_ => self,
+		}
+	}
 }
 
 impl Display for Mnemonic {

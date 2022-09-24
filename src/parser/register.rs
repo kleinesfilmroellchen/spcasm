@@ -21,10 +21,23 @@ pub enum Register {
 	SP,
 	/// Program status word (instruction pointer).
 	PSW,
+	/// Alternate form of PSW.
+	P,
 	/// Combined 16-bit register from Y and A.
 	YA,
 	/// Carry flag, a pseudo-register.
 	C,
+}
+
+impl Register {
+	/// Coerces alternative register names into their canonical form that the assembler uses internally.
+	#[must_use]
+	pub const fn coerce_alternate_registers(self) -> Self {
+		match self {
+			Self::P => Self::PSW,
+			_ => self,
+		}
+	}
 }
 
 impl Display for Register {

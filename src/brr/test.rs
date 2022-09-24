@@ -11,37 +11,31 @@ use super::*;
 
 const zero_warmup: WarmUpSamples = [0, 0];
 
+macro_rules! filter_test {
+	($expected_shift:expr, $($samples:expr),*) => {
+		#[allow(clippy::neg_multiply)]
+		const data: DecodedBlockSamples = [ $( $samples * 2 ),* ];
+		let block = Block::encode_with_filter_best([0, 0], data, LPCFilter::Zero, LoopEndFlags::Nothing);
+		let shift = block.header.real_shift;
+		assert!($expected_shift.contains(&shift));
+		let (decoded, _) = block.internal_decode_lpc(zero_warmup, LPCFilter::Zero.coefficient());
+		assert_eq!(data, decoded);
+	};
+}
+
 #[test]
 fn no_shift_filter_0_roundtrip() {
-	const data: DecodedBlockSamples = [1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2];
-	let (encoded, shift) = Block::internal_encode_lpc([0, 0], data, LPCFilter::Zero.coefficient());
-	assert_eq!(shift, 0);
-	let block =
-		Block::new(Header { real_shift: shift, filter: LPCFilter::Zero, flags: LoopEndFlags::Nothing }, encoded);
-	let (decoded, _) = block.internal_decode_lpc(zero_warmup, LPCFilter::Zero.coefficient());
-	assert_eq!(data, decoded);
+	filter_test!([-1, 0], 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2);
 }
 
 #[test]
 fn shift_filter_0_roundtrip() {
-	const data: DecodedBlockSamples = [64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64];
-	let (encoded, shift) = Block::internal_encode_lpc([0, 0], data, LPCFilter::Zero.coefficient());
-	assert_eq!(shift, 4);
-	let block =
-		Block::new(Header { real_shift: shift, filter: LPCFilter::Zero, flags: LoopEndFlags::Nothing }, encoded);
-	let (decoded, _) = block.internal_decode_lpc(zero_warmup, LPCFilter::Zero.coefficient());
-	assert_eq!(data, decoded);
+	filter_test!([4, 3], 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64);
 }
 
 #[test]
 fn negative_1_filter_0_roundtrip() {
-	const data: DecodedBlockSamples = [1, -1, 1, -1, 1, -1, 1, -1, 1, -1, 1, -1, 1, -1, 1, -1];
-	let (encoded, shift) = Block::internal_encode_lpc([0, 0], data, LPCFilter::Zero.coefficient());
-	assert_eq!(shift, 0);
-	let block =
-		Block::new(Header { real_shift: shift, filter: LPCFilter::Zero, flags: LoopEndFlags::Nothing }, encoded);
-	let (decoded, _) = block.internal_decode_lpc(zero_warmup, LPCFilter::Zero.coefficient());
-	assert_eq!(data, decoded);
+	filter_test!([0, -1], 1, -1, 1, -1, 1, -1, 1, -1, 1, -1, 1, -1, 1, -1, 1, -1);
 }
 
 #[test]
@@ -65,6 +59,7 @@ fn header_decode() {
 	assert_eq!(Header::from(ignored).flags, LoopEndFlags::Ignored);
 }
 
+// https://youtu.be/bgh5_gxT2eg?t=1230
 const data_block_1: [u8; 9] = [0x90, 0x00, 0x01, 0x64, 0xae, 0x76, 0x46, 0x42, 0x3e];
 const data_block_2: [u8; 9] = [0x8c, 0xa0, 0x07, 0x77, 0x55, 0xf9, 0xb8, 0x75, 0x64];
 const decoded_block_1: [i16; 16] =
@@ -76,17 +71,16 @@ const decoded_block_2: [i16; 16] = [
 
 #[bench]
 fn full_decode(bencher: &mut Bencher) {
-	// https://youtu.be/bgh5_gxT2eg?t=1230
 	bencher.iter(|| {
 		let block_1 = Block::from(data_block_1);
 		assert_eq!(block_1.header.real_shift, 8);
 		assert_eq!(block_1.header.filter, LPCFilter::Zero);
 		let (actual_block_1_decoded, warm_up) = block_1.decode([0, 0]);
-		assert_eq!(actual_block_1_decoded, decoded_block_1);
+		assert_eq!(actual_block_1_decoded.map(|s| s / 2), decoded_block_1);
 		let block_2 = Block::from(data_block_2);
 		assert_eq!(block_2.header.real_shift, 7);
 		assert_eq!(block_2.header.filter, LPCFilter::Three);
-		assert_eq!(block_2.decode(warm_up).0, decoded_block_2);
+		assert_eq!(block_2.decode(warm_up).0.map(|s| s / 2), decoded_block_2);
 	});
 }
 
@@ -99,9 +93,9 @@ fn multiple_roundtrips() {
 	let mut previous_decode = block_2_decoded_once;
 	for _ in 0 .. 15 {
 		let next_block =
-			Block::encode_with_filter(warm_up, previous_decode, block_2.header.filter, block_2.header.flags);
+			Block::encode_with_filter_best(warm_up, previous_decode, block_2.header.filter, block_2.header.flags);
 		(previous_decode, _) = next_block.decode(warm_up);
-		assert_eq!(previous_decode, decoded_block_2);
+		assert_eq!(previous_decode.map(|s| s / 2), decoded_block_2);
 	}
 }
 
@@ -114,11 +108,10 @@ fn packing(bencher: &mut Bencher) {
 #[test]
 fn encode_block_best() {
 	let block_1 = Block::from(data_block_1);
-	let (_, warm_up) = block_1.decode([0, 0]);
-	let block_2 = Block::from(data_block_2);
-	let next_block = Block::encode(warm_up, decoded_block_2, block_2.header.flags);
-	let (redecoded, _) = next_block.decode(warm_up);
-	assert_eq!(redecoded, decoded_block_2);
+	let (first, warm_up) = block_1.decode([0, 0]);
+	let next_block = Block::encode(warm_up, decoded_block_2.map(|s| s * 2), LoopEndFlags::Nothing);
+	let decoded_optimal_block_2 = next_block.decode(warm_up).0;
+	assert_eq!(decoded_optimal_block_2.map(|s| s / 2), decoded_block_2);
 }
 
 #[bench]

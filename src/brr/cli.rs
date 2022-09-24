@@ -133,7 +133,7 @@ fn main() {
 
 	match arguments.command {
 		Command::EncodeBlock { samples, warm_up } => {
-			let warm_up = warm_up.unwrap_or_else(|| vec![0, 0]).try_into().unwrap_or_else(|_| {
+			let warm_up: [i16; 2] = warm_up.unwrap_or_else(|| vec![0, 0]).try_into().unwrap_or_else(|_| {
 				eprintln!("error: you must provide exactly 2 warm-up samples");
 				std::process::exit(1);
 			});
@@ -141,20 +141,29 @@ fn main() {
 				eprintln!("error: you must provide exactly 16 unencoded samples");
 				std::process::exit(1);
 			});
-			println!("Encoding {:?} as BRR block.", samples);
+			println!("Encoding {:?} as BRR block. Warm-up: {:?}", samples, warm_up);
 			for filter in LPCFilter::all_filters() {
-				let block = Block::encode_with_filter(warm_up, samples, filter, LoopEndFlags::Nothing);
+				println!("filter {}:", filter);
+				for shift in -1 ..= 11 {
+					let block = Block::encode_exact(warm_up, samples, filter, LoopEndFlags::Nothing, shift);
+					println!(
+						"  shift {:2}:\n    encode to: {:?}\n    decoded: {:?}\n    error: {:10}",
+						block.header.real_shift,
+						block.encoded_samples,
+						block.decode(warm_up).0,
+						block.total_encode_error(warm_up, &samples)
+					);
+				}
 				println!(
-					"{}: encode to: {:?}\n\tshift: {:2}\n\tdecoded: {:?}\n\terror: {:10}",
-					filter,
-					block.encoded_samples,
-					block.header.real_shift,
-					block.decode(warm_up).0,
-					block.total_encode_error(warm_up, &samples)
+					"  optimal shift for this filter: {:2}",
+					Block::encode_with_filter_best(warm_up, samples, filter, LoopEndFlags::Nothing).header.real_shift
 				);
 			}
 			let actual_encoded = Block::encode(warm_up, samples, LoopEndFlags::Nothing);
-			println!("optimal encoding: filter {}", actual_encoded.header.filter);
+			println!(
+				"optimal encoding: filter {} shift {}",
+				actual_encoded.header.filter, actual_encoded.header.real_shift
+			);
 		},
 		Command::DecodeBlock { block, warm_up } => {
 			let warm_up = warm_up.unwrap_or_else(|| vec![0, 0]).try_into().unwrap_or_else(|_| {

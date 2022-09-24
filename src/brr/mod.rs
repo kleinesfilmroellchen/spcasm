@@ -62,7 +62,7 @@ pub fn encode_to_brr(samples: &mut Vec<DecodedSample>, is_loop: bool) -> Vec<u8>
 	let mut result = Vec::with_capacity(samples.len() / 2 + sample_chunks.len() + 9);
 
 	// The first chunk must be encoded with filter 0 to prevent glitches.
-	let first_block_data = Block::encode_with_filter(
+	let first_block_data = Block::encode_with_filter_best(
 		[0, 0],
 		first_chunk,
 		LPCFilter::Zero,
@@ -158,7 +158,6 @@ impl Block {
 	#[must_use]
 	#[allow(clippy::missing_panics_doc)]
 	pub fn encode(warm_up_samples: WarmUpSamples, samples: DecodedBlockSamples, flags: LoopEndFlags) -> Self {
-		// FIXME: This might be too slow. We try all four filters and return the most accurate encode.
 		[
 			Self::encode_with_filter(warm_up_samples, samples, LPCFilter::Zero, flags),
 			Self::encode_with_filter(warm_up_samples, samples, LPCFilter::One, flags),
@@ -166,6 +165,7 @@ impl Block {
 			Self::encode_with_filter(warm_up_samples, samples, LPCFilter::Three, flags),
 		]
 		.into_iter()
+		.flatten()
 		.min_by_key(|encoded| encoded.total_encode_error(warm_up_samples, &samples))
 		.unwrap()
 	}
@@ -175,45 +175,83 @@ impl Block {
 	#[must_use]
 	pub fn total_encode_error(&self, warm_up_samples: WarmUpSamples, real_samples: &DecodedBlockSamples) -> u128 {
 		let (decoded, _) = self.decode(warm_up_samples);
-		decoded.iter().zip(real_samples.iter()).map(|(actual, expected)| u128::from(actual.abs_diff(*expected))).sum()
+		decoded
+			.iter()
+			.zip(real_samples.iter())
+			.map(|(actual, expected)| i128::from(*actual).abs_diff(i128::from(*expected)))
+			.sum()
 	}
 
-	/// Encode the given sample block using the given filter.
-	#[must_use]
+	/// Encode the given sample block using the given filter. This returns all shift amounts.
 	pub fn encode_with_filter(
 		warm_up_samples: WarmUpSamples,
 		samples: DecodedBlockSamples,
 		filter: LPCFilter,
 		flags: LoopEndFlags,
+	) -> impl Iterator<Item = Self> {
+		(-1 ..= 11).map(move |real_shift| {
+			let encoded = Self::internal_encode_lpc(warm_up_samples, samples, filter.coefficient(), real_shift);
+			Self { header: Header { real_shift, filter, flags }, encoded_samples: encoded }
+		})
+	}
+
+	/// Encode a block of samples exactly as specified; this is in contrast to most encoding functions which try to use
+	/// the best encoding parameters.
+	#[must_use]
+	pub fn encode_exact(
+		warm_up_samples: WarmUpSamples,
+		samples: DecodedBlockSamples,
+		filter: LPCFilter,
+		flags: LoopEndFlags,
+		real_shift: i8,
 	) -> Self {
-		let (encoded, real_shift) = Self::internal_encode_lpc(warm_up_samples, samples, filter.coefficient());
+		let encoded = Self::internal_encode_lpc(warm_up_samples, samples, filter.coefficient(), real_shift);
 		Self { header: Header { real_shift, filter, flags }, encoded_samples: encoded }
+	}
+
+	/// Encode the given sample block using the given filter. This brute forces all shift amounts and returns the best.
+	#[must_use]
+	#[allow(clippy::missing_panics_doc)]
+	pub fn encode_with_filter_best(
+		warm_up_samples: WarmUpSamples,
+		samples: DecodedBlockSamples,
+		filter: LPCFilter,
+		flags: LoopEndFlags,
+	) -> Self {
+		Self::encode_with_filter(warm_up_samples, samples, filter, flags)
+			.min_by_key(|encoded| encoded.total_encode_error(warm_up_samples, &samples))
+			.unwrap()
 	}
 
 	fn internal_encode_lpc(
 		mut warm_up_samples: WarmUpSamples,
 		samples: DecodedBlockSamples,
 		filter_coefficients: FilterCoefficients,
-	) -> (EncodedBlockSamples, i8) {
+		shift: i8,
+	) -> EncodedBlockSamples {
 		// Let's first encode without concerning ourselves with the shift amount. That can be dealt with later.
 		let mut unshifted_encoded_samples = [0; 16];
 		for (unshifted_encoded, sample) in unshifted_encoded_samples.iter_mut().zip(samples.iter()) {
-			*unshifted_encoded = fixed(*sample)
-				.wrapping_sub(filter_coefficients[0].wrapping_mul(fixed(warm_up_samples[0])))
-				.ceil()
-				.wrapping_sub(filter_coefficients[1].wrapping_mul(fixed(warm_up_samples[1])))
-				.ceil()
+			// Dividing the sample by 2 reduces it to 15 bit, which is the actual bit depth of the decoder. Therefore,
+			// in order for our encoding to be accurate, we have to reduce the bit depth here.
+			*unshifted_encoded = (fixed(*sample) / fixed(2))
+				// It is now known whether wrapping addition (or subtraction for encoding) is correct here.
+				// The multiplication seems to saturate indeed, as it is implemented with a series of shifts.
+				.wrapping_sub(filter_coefficients[0].saturating_mul(fixed(warm_up_samples[0])))
+				.saturating_ceil()
+				.wrapping_sub(filter_coefficients[1].saturating_mul(fixed(warm_up_samples[1])))
+				.saturating_ceil()
 				.to_num();
 			warm_up_samples[1] = warm_up_samples[0];
-			warm_up_samples[0] = *sample;
+			warm_up_samples[0] = *sample / 2;
 		}
-		let necessary_shift = Self::necessary_shift_for(&unshifted_encoded_samples);
 		let mut encoded = [0; 16];
 		for (encoded, sample) in encoded.iter_mut().zip(unshifted_encoded_samples.iter()) {
-			*encoded = sample.checked_shr(necessary_shift).unwrap_or(0) as u8;
+			// The shift needs to be inverted, as we're encoding here and the shift function is intended for decoding.
+			*encoded = Self::perform_shift_with(-shift, *sample) as u8;
 		}
 
-		(encoded, necessary_shift as i8)
+		encoded
 	}
 
 	/// Computes the necessary shift in order to get all of the given samples in range for 4-bit signed integers.
@@ -225,6 +263,11 @@ impl Block {
 	/// need to deal with bit counts above 4, we can subtract 4 from that and clamp at 0? However, the output must be
 	/// 4-bit signed, so the highest bit in the nybble is still a sign bit! Therefore, the shift must be one more
 	/// than previously expected to retain the sign bit, and we only want to subtract 3.
+	///
+	/// This function is not used anymore in the current encoder implementation. While theoretically correct, abusing
+	/// wrapping behavior of the DSP decoder and allowing the use of the -1 shift can sometimes lead to better shifts in
+	/// combination with specific filters. This function is only ideal if we assume no wrapping happens, which of course
+	/// isn't the case.
 	fn necessary_shift_for(samples: &DecodedBlockSamples) -> u32 {
 		samples
 			.iter()
@@ -250,6 +293,28 @@ impl Block {
 		self.header.flags.will_loop_afterwards()
 	}
 
+	/// Executes the shift in this header on the given sample, taking care to shift right by 1 if the shift amount is
+	/// -1.
+	#[inline]
+	#[must_use]
+	pub const fn perform_shift(&self, sample: DecodedSample) -> DecodedSample {
+		Self::perform_shift_with(self.header.real_shift, sample)
+	}
+
+	/// Executes the given shift on the given sample, taking care to shift right by 1 if the shift amount is -1.
+	#[inline]
+	#[must_use]
+	pub const fn perform_shift_with(shift: i8, sample: DecodedSample) -> DecodedSample {
+		if shift == 0 {
+			Some(sample)
+		} else if shift > 0 {
+			sample.checked_shl(shift.unsigned_abs() as u32)
+		} else {
+			sample.checked_shr(shift.unsigned_abs() as u32)
+		}
+		.unwrap_or(if sample > 0 { DecodedSample::MAX } else { DecodedSample::MIN })
+	}
+
 	/// Decodes this block and returns the decoded samples as well as the last two internal fixed-point samples used for
 	/// filters. These two should be fed into the next decode call as the warm-up samples.
 	#[must_use]
@@ -263,34 +328,47 @@ impl Block {
 		filter_coefficients: FilterCoefficients,
 	) -> (DecodedBlockSamples, WarmUpSamples) {
 		let mut decoded_samples: DecodedBlockSamples = [0; 16];
-		let shift_function = |encoded: i16| {
-			if self.header.real_shift > 0 {
-				encoded.checked_shl(self.header.real_shift.unsigned_abs().into()).unwrap_or(0)
-			} else {
-				encoded.checked_shr(self.header.real_shift.unsigned_abs().into()).unwrap_or(0)
-			}
-		};
+
 		let shifted_encoded =
-			self.encoded_samples.map(|encoded| shift_function(i16::from(((encoded as i8) << 4) >> 4)));
+			self.encoded_samples.map(|encoded| self.perform_shift(i16::from(((encoded as i8) << 4) >> 4)));
 		for (decoded, encoded) in decoded_samples.iter_mut().zip(shifted_encoded) {
-			// TODO: Check whether overflowing (i.e. wrap-around) arithmetic is correct here.
-			// The convoluted cast ensures we retain the nybble sign bit.
 			let decimal_decoded = fixed(encoded)
-				.wrapping_add(filter_coefficients[0].wrapping_mul(fixed(warm_up_samples[0])))
-				.floor()
-				.wrapping_add(filter_coefficients[1].wrapping_mul(fixed(warm_up_samples[1])))
-				.floor();
-			*decoded = decimal_decoded.to_num();
+				.wrapping_add(filter_coefficients[0].saturating_mul(fixed(warm_up_samples[0])))
+				.saturating_floor()
+				.wrapping_add(filter_coefficients[1].saturating_mul(fixed(warm_up_samples[1])))
+				.saturating_floor();
+			*decoded = simulate_hardware_glitches(decimal_decoded.to_num());
 			// Shift last samples through the buffer
 			warm_up_samples[1] = warm_up_samples[0];
 			warm_up_samples[0] = *decoded;
+
+			// After doing its special kind of restricting to 15 bits (hardware stuff), we need to extend the sample
+			// back to 16 bits.
+			*decoded = decoded.wrapping_mul(2);
 		}
 		(decoded_samples, warm_up_samples)
 	}
 }
 
+/// Decoded BRR samples must be within the range -0x3ffa to 0x3ff8, otherwise hardware glitches occur.
+/// The exact hardware glitch behavior can be seen in the implementation of this function, but additionally the Gaussian
+/// interpolation that runs for pitch-shifting can cause overflows when the values is outside the above range but not
+/// modified by this function. Also, the initial decode steps will clamp around the signed 16-bit boundaries.
+fn simulate_hardware_glitches(n: i16) -> i16 {
+	// Remap 0x4000 - 0x7fff to -0x4000 - -0x0001
+	if (0x4000 ..= 0x7fff).contains(&n) {
+		// We can't subtract 0x4000*2 as that overflows 16 bits!
+		n - 0x4000 - 0x4000
+	// Remap -0x8000 - -0x4001 to 0x0 - -0x3FFF
+	} else if (-0x8000 ..= -0x4001).contains(&n) {
+		n + 0x4000 + 0x4000
+	} else {
+		n
+	}
+}
+
 fn fixed(int: i16) -> FilterCoefficient {
-	FilterCoefficient::from(int)
+	FilterCoefficient::from_num(int)
 }
 
 impl From<[u8; 9]> for Block {

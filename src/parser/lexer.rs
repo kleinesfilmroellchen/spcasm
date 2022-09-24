@@ -55,7 +55,7 @@ pub fn lex(source_code: Arc<AssemblyCode>) -> Result<Vec<Token>, Box<AssemblyErr
 				let start_index = index;
 				let identifier = next_identifier(&mut chars, chr);
 				index += identifier.len();
-				let identifier_span =  (start_index, identifier.len()).into();
+				let identifier_span =  (start_index, identifier.len() + 1).into();
 				tokens.push(Register::parse(&identifier.to_lowercase(), identifier_span, source_code.clone())
 								.map(|value| Token::Register(value, identifier_span))
 								.or_else(|_| MacroSymbol::parse(&identifier.to_lowercase(), identifier_span, source_code.clone())

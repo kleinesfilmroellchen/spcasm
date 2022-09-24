@@ -10,6 +10,8 @@ use once_cell::sync::Lazy;
 use regex::{Captures, Regex};
 use spcasm::{pretty_hex, run_assembler_on_source, AssemblyCode, AssemblyError};
 use wasm_bindgen::prelude::*;
+use wasm_bindgen::JsCast;
+use web_sys::HtmlElement;
 
 #[allow(unused)]
 macro_rules! log {
@@ -22,8 +24,7 @@ macro_rules! log {
 #[global_allocator]
 static ALLOC: wee_alloc::WeeAlloc = wee_alloc::WeeAlloc::INIT;
 
-static DIV: Lazy<Regex> = Lazy::new(|| Regex::new(r"<div.*?>").unwrap());
-static NEWLINE_EQUIVALENT: Lazy<Regex> = Lazy::new(|| Regex::new(r"(</div>)|(<br(/)?>)").unwrap());
+static NEWLINE_EQUIVALENT: Lazy<Regex> = Lazy::new(|| Regex::new(r"<br(/)?>").unwrap());
 static ANSI_CSI_ESCAPE: Lazy<Regex> = Lazy::new(|| Regex::new(r"\[(.+?)m").unwrap());
 
 static REPORT_HANDLER: Lazy<GraphicalReportHandler> = Lazy::new(|| {
@@ -103,9 +104,8 @@ pub fn on_assembly_change() {
 	let report_handler = REPORT_HANDLER.clone().with_width(output_width);
 
 	// Replace the divs that the browser inserts with newlines
-	let code_text = code_input.inner_html();
+	let code_text = code_input.unchecked_into::<HtmlElement>().inner_text();
 	let code_text = NEWLINE_EQUIVALENT.replace_all(&code_text, "\n");
-	let code_text = DIV.replace_all(&code_text, "");
 	// Decode other entities
 	let code_text = decode_html_entities(&code_text);
 

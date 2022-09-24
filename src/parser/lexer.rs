@@ -135,7 +135,7 @@ pub fn lex(source_code: Arc<AssemblyCode>) -> Result<Vec<Token>, Box<AssemblyErr
 fn next_identifier(chars: &mut Peekable<std::str::Chars>, start: char) -> String {
 	let mut identifier = String::default();
 	identifier.push(start);
-	while let Some(chr) = chars.peek() && (chr.is_alphanumeric() || chr.is_ascii_digit() || chr == &'_' || chr == &'@') {
+	while let Some(chr) = chars.peek() && (chr.is_alphanumeric() || chr.is_ascii_digit() || ['_', '-', '@' ].contains(chr)) {
 		identifier.push(chars.next().unwrap());
 	}
 	identifier

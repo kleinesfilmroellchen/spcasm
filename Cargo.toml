@@ -53,7 +53,7 @@ version = "5.3"
 
 [dependencies.serde]
 features = ["derive"]
-version = "1.0.136"
+version = "1.0.145"
 
 # Only compile clap for the CLIs.
 [dependencies.clap]

@@ -158,7 +158,7 @@ TableMacro: (MacroSymbol, SourceSpan) = {
 
 ArchMacro: Macro = <mcro:"arch"> <arch:"identifier"> =>? {
 	let architecture = arch.0;
-	if &architecture == "spc700" {
+	if ["spc700", "spc700-raw"].contains(&&*architecture) {
 		environment.borrow().report_or_throw(AssemblyError::ArchitectureMacroIgnored {
 			src:      source_code.clone(),
 			location: source_range(mcro.into(), arch.1.into()),

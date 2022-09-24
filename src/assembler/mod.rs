@@ -268,14 +268,14 @@ fn assemble_macro(data: &mut AssembledData, mcro: &mut Macro) -> Result<(), Box<
 				src: data.source_code.clone(),
 				location: mcro.span,
 			})?;
-			let sample_data =
+			let mut sample_data =
 				wav::read_wav_for_brr(file).map_err(|error_text| AssemblyError::AudioProcessingError {
 					error_text,
 					file_name: file_name.clone(),
 					src: data.source_code.clone(),
 					location: mcro.span,
 				})?;
-			let encoded = brr::encode_to_brr(&sample_data, false);
+			let encoded = brr::encode_to_brr(&mut sample_data, false);
 
 			data.append_bytes(encoded, &mcro.label, mcro.span);
 		},

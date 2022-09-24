@@ -38,31 +38,25 @@ type WarmUpSamples = [DecodedSample; 2];
 /// TODO: We don't know about the loop point, so we can't set that block to use filter 0.
 #[must_use]
 #[allow(clippy::module_name_repetitions)]
-pub fn encode_to_brr(samples: &Vec<DecodedSample>, is_loop: bool) -> Vec<u8> {
+pub fn encode_to_brr(samples: &mut Vec<DecodedSample>, is_loop: bool) -> Vec<u8> {
 	if samples.is_empty() {
 		return Vec::new();
 	}
-	let (sample_chunks, maybe_last_chunk) = samples.as_chunks::<16>();
 
-	if sample_chunks.is_empty() {
-		// Just process the remainder chunk as the first and last chunk.
-		let single_chunk = fill_slice_to_16(maybe_last_chunk);
-		let encoded = <[u8; 9]>::from(Block::encode_with_filter(
-			[0, 0],
-			single_chunk,
-			LPCFilter::Zero,
-			LoopEndFlags::new(true, is_loop),
-		));
-		return encoded.to_vec();
+	if samples.len() % 16 != 0 {
+		let needed_elements = 16 - (samples.len() % 16);
+		samples.splice(0 .. 0, [0].repeat(needed_elements));
 	}
+
+	let (sample_chunks, maybe_last_chunk) = samples.as_chunks::<16>();
+	debug_assert!(maybe_last_chunk.is_empty());
+	debug_assert!(!sample_chunks.is_empty());
+
 	let mut sample_chunks = sample_chunks.to_vec();
 	let first_chunk = sample_chunks.remove(0);
 
-	let last_chunk =
-		if maybe_last_chunk.is_empty() { sample_chunks.pop() } else { Some(fill_slice_to_16(maybe_last_chunk)) };
-
 	// Determine whether the first chunk is also the last; i.e. there are exactly 16 samples.
-	let first_block_is_end = last_chunk.is_none();
+	let first_block_is_end = sample_chunks.len() == 1;
 
 	// This should allocate enough so the vector never needs to reallocate.
 	let mut result = Vec::with_capacity(samples.len() / 2 + sample_chunks.len() + 9);
@@ -80,11 +74,6 @@ pub fn encode_to_brr(samples: &Vec<DecodedSample>, is_loop: bool) -> Vec<u8> {
 		let block_data = Block::encode(warm_up, chunk, LoopEndFlags::Nothing);
 		result.extend_from_slice(&<[u8; 9]>::from(block_data));
 		warm_up = [chunk[chunk.len() - 1], chunk[chunk.len() - 2]];
-	}
-
-	if let Some(last_chunk) = last_chunk {
-		let last_block_data = Block::encode(warm_up, last_chunk, LoopEndFlags::new(true, is_loop));
-		result.extend_from_slice(&<[u8; 9]>::from(last_block_data));
 	}
 
 	result

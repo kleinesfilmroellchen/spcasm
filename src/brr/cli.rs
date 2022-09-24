@@ -166,7 +166,7 @@ fn main() {
 		},
 		Command::Encode { input, output } => {
 			let output = output.unwrap_or_else(|| input.with_extension("brr"));
-			let samples = File::open(input)
+			let mut samples = File::open(input)
 				.map_err(|err| err.to_string())
 				.and_then(wav::read_wav_for_brr)
 				.unwrap_or_else(|error| {
@@ -175,7 +175,7 @@ fn main() {
 				});
 
 			let start = std::time::Instant::now();
-			let encoded = encode_to_brr(&samples, false);
+			let encoded = encode_to_brr(&mut samples, false);
 			let duration = start.elapsed();
 			if arguments.verbose {
 				println!(

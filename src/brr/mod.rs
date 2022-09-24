@@ -482,7 +482,7 @@ pub enum LPCFilter {
 }
 
 impl LPCFilter {
-	/// Return the coefficients used by this filter. The first coefficent is for the last sample, while the second
+	/// Return the coefficients used by this filter. The first coefficient is for the last sample, while the second
 	/// coefficient is for the second-to-last sample.
 	#[must_use]
 	pub fn coefficient(self) -> FilterCoefficients {

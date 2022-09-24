@@ -8,10 +8,10 @@ and addresses 0100 - 01ff are called page 1.
 In regard to the data in this region, when direct page designation
 is carried out by direct page flag (P) within the program status
 word, it is possible to carry out data processing in wide-ranging
-addresing modes with a small number of cycles.
+addressing modes with a small number of cycles.
 
 Within the CPU there are the universal registers A,X and Y, program
-status word (PSW) of the varius flags, program counter (PC), and
+status word (PSW) of the various flags, program counter (PC), and
 stack pointer (SP).
 
 The A register is operable by the greatest number of commands,
@@ -31,12 +31,12 @@ within the direct page as source address and destination addresses.
 
 In regard to bit processing diversified by control purpose. Boolean
 bit operation commands are applicable to the 8K byte range of
-data of addresses 0000 - 1fff. Morever, in regard to the bits
+data of addresses 0000 - 1fff. Moreover, in regard to the bits
 within the total space of the 64K bytes, commands of multiple bit
 test and set, test and reset are provided for. For the purpose of
 data which must be systematized or in order to carry out data
 processing rapidly. It is possible to operate 16-bit data with a
-single command. Addition, subtraction, comparison and transferrance
+single command. Addition, subtraction, comparison and transference
 are possible between two byte of continuous 16-bit data within the
 direct page and the paired Y register and A register. In addition
 increment and decrement of continuous 16-bit data within the
@@ -48,7 +48,7 @@ forms. Multiplication is 8-bit x 8-bit with no sign and is
 carried out with the multiplicand stored in the Y register and
 the multiplier stored in the A register; the result is entered
 into the Y, A 16-bit accumulator. Division is 16bits/8bits with
-no sign and carried out with the divident stored in the Y, A 16
+no sign and carried out with the dividend stored in the Y, A 16
 bit accumulator and the divisor stored in the X register : the
 resulting quotient is entered into the A register and the
 remainder is entered intro the Y register.
@@ -60,8 +60,8 @@ In regard to branched commands, there are relative branched
 commands according to the conditions of the various status
 flags, branched commands according to the conditions of set
 or reset of random bits with the direct page, etc. In addition,
-in regard to looped branched commands, there are comparision
-branched commands and subraction branched commands, and for
+in regard to looped branched commands, there are comparison
+branched commands and subtraction branched commands, and for
 these there are two types of addressing modes.
 
 In regard to subroutine call commands, there are subroutine
@@ -69,7 +69,7 @@ address direct designation three-byte call commands within
 the 64K bytes. two-byte call commands for calling subroutines
 of specific areas, and 16 portion one-byte call commands using
 call table: it is possible to improve byte efficiency through
-proper useage in response to the frequency of subroutine use.
+proper usage in response to the frequency of subroutine use.
 
 
 
@@ -81,7 +81,7 @@ the various commands. These are an A register (note : functions
 as an 8-bit accumulator). X register, Y register (8-bit universal
 register which can also be used as index register). PSW ( program
 status word). SP (stack pointer), etc. These are all 8-bit 
-registersm but the PC (program counter) is made up of 16 bits.
+registers but the PC (program counter) is made up of 16 bits.
 
 
 ------------------------------
@@ -91,7 +91,7 @@ registersm but the PC (program counter) is made up of 16 bits.
              |        A       |   A Register           (8  bits)
               ----------------
 ------------------------------
-      Y      |        A       |   (Y,A Paired 16-bit Acumulator)
+      Y      |        A       |   (Y,A Paired 16-bit Accumulator)
 ------------------------------                         (16 bits)
               ----------------
              |        X       |   X Register           (8  bits)
@@ -126,7 +126,7 @@ At times of 16-bit operation commands. it becomes a register for
 retaining low byte data in the 16-bit accumulator made up of this
 paired with the Y register. When operation commands are issued, it
 becomes the multiplier register and low byte data of the product is
-entered. When divison commands are issued, paired with the Y register
+entered. When division commands are issued, paired with the Y register
 it formulates the dividend and the resulting quotient is entered.
 
 (2) X REGISTER
@@ -135,12 +135,12 @@ In addition to its role as a universal data register, it also
 functions as an index register when index addressing is being
 carried out. In addition, it is also used as a two-address command
 destination address register and X register indirect address register.
-In division commands, it vecomes the divisor register.
+In division commands, it becomes the divisor register.
 
 
 (3) Y REGISTER
 
-In additon to its role as a universal data register, it also functions
+In addition to its role as a universal data register, it also functions
 as an index register when index addressing is being carried out, In
 addition, it is also used as a two-address command source address
 register.
@@ -160,7 +160,7 @@ level 8 bits are referred to as PCL-
 Normally, it would have the address to be executed next and would
 be incremented only the number of bytes necessary fo the command
 fetched.
-When there is a branching command in the oidst of the program the address
+When there is a branching command in the midst of the program the address
 of the branch destination would be stored in the program counter. When
 there is a reset (negative POR) input, reset vector which are in
 addresses FFFF and FFFE enter respectively PCH and PCL and branching
@@ -186,7 +186,7 @@ the stack pointer is within page 1 (addresses 0100-01ff)
 When sending data to RAM, the stack pointer decreases by one
 after sending data (post decrement) and increases by one prior
 to restoring data (pre-increment).
-The diversified activites of the stack pointer are summarized below:
+The diversified activities of the stack pointer are summarized below:
 
 SUB-ROUTINE CALLS
 
@@ -250,7 +250,7 @@ In addition, the carry flag inverts at the NOTC commands.
 Zero Flag (Z)
 
 Alter operation execution, this flag is set when the result is
-zero and is reset whens the result is not zero. Even with 16-bity
+zero and is reset whens the result is not zero. Even with 16-bit
 operation commands, zero detection is carried out. It is possible
 to carry out tests with conditional branching commands.
 
@@ -283,7 +283,7 @@ Negative Flag (N)
 
 After operation execution, this flag is set when the values of
 the result of MSD is 1 and reset when that values is 0. It is
-possible to carry out tests with conditinal branching commands.
+possible to carry out tests with conditional branching commands.
 
 7.2. MEMORY SPACE.
 
@@ -292,17 +292,17 @@ Memory space is divide up according to purpose. From address
 0000, 512 bytes are divided into two pages of 256-bytes units,
 called zero page and page one. It is possible to access data
 within these regions by means of numerous address modes, such
-as direct page addresing, etc.
+as direct page addressing, etc.
 Page one is taken up by the stack.
 
 
 7.2.1. Direct Pages (Zero Page, Page One)
 
 By means of setting or resetting the direct page (P) flag
-within the program status word. it is possible to disignate 
+within the program status word. it is possible to designate 
 whether zero page or page one is to be made the direct page.
 it is set up such that the data within this page can be treated
-with fewer bytes, at highter speed and with more numerous types
+with fewer bytes, at higher speed and with more numerous types
 of commands and addressing modes.
 
    Stack Area
@@ -319,7 +319,7 @@ Internal ROM Region
 
 A mask ROM is installed within the Sound-CPU from FFC0H- FFFF. There
 is a program in it which transmits data from the ROM cassette to the
-256K bit RAM throuh the SCPU. This region is used by means of reset.
+256K bit RAM through the SCPU. This region is used by means of reset.
 
 7.2.3. Area of Applicable Bit Operation Commands.
 
@@ -361,7 +361,7 @@ is a program in it which transmits data from the ROM cassette to the
      |                                           |             |
 7FFF |                                            -------------
      |                                           |             |
-     |                                           |  Unusuable  |
+     |                                           |  Unusable   |
 FFBF |                                           |             |
 FFC0 |                                            -------------
      |                                           |             |
@@ -377,7 +377,7 @@ Since all of the addressing modes indicated in Table 7.2.4 are
 applicable to the data of the direct page (P=0: addresses 
 0000-00FF P=1: address 0000 - 01FF) designated by the direct page
 (P) flag. it is possible to manipulate the data in various ways.
-In additon byte efficiency also improves due to the fact that
+In addition byte efficiency also improves due to the fact that
 direct address designation is possible by one-byte data within
 the command words. Moreover, since effective command cycles also
 decrease data can be accessed more rapidly.
@@ -387,7 +387,7 @@ decrease data can be accessed more rapidly.
 
 --------------------------------------------------------------------
                                         #of   Effective Addr. Region
-Simbol  |    Addressing    
+Symbol  |    Addressing    
                                         Bytes  0000-01FF  1FFF >1FFF
 --------------------------------------------------------------------
   dp       Direct Page                    2        X        X
@@ -404,7 +404,7 @@ Simbol  |    Addressing
 
   (X),(Y)  Indirect Page to I.P.          1        X        X
 
-  dp Inm   Inmediate Data to D.P.         3        X        X
+  dp Inm   Immediate Data to D.P.         3        X        X
 
   dp, bit  Direct Page Bit                2        X        X
 
@@ -431,7 +431,7 @@ standby and sleep modes can not be used.
 
 The command set operand notation and explanation of command activity
 are indicated in the table below. The upper portion of the table are
-symbols necesary to operand description. These are symbols necessary
+symbols necessary to operand description. These are symbols necessary
 assembler description. In the lower portion of the table, the values
 of the various operand are expressed as symbols. Assembler 
 descriptions are given as numerical values or labels.
@@ -450,14 +450,14 @@ Symbol
 
  ( )      Indirect expression
 ( )+      Indirect auto-increment expression
-  #       Inmediate data
+  #       Immediate data
   |       Absolute address
   /       Bit reversal
   .       Bit position indicator
  ( )      Indexed Indirect expression
-  H       Hexadecial notation
+  H       Hexadecimal notation
 ------------------------------------------------
- inm      8-bit inmediate data
+ inm      8-bit immediate data
  dp       Offset address within direct page
  abs      16-bit absolute address
  rel      Relative offset complement value of 2
@@ -484,8 +484,8 @@ upage     Offset within U page
   n       Vector call number.
 
 
-In giving an explanation of opertaions, in addition to the notations
-and simbols above, the following symbols are also used.
+In giving an explanation of operations, in addition to the notations
+and symbols above, the following symbols are also used.
 
 Table 9.2. Symbols and Meaning of Operation Explanation
 
@@ -511,18 +511,18 @@ Symbol      Meaning
   /        Division
 
   Q        Division quotient
-  R        Division remainer
+  R        Division remainder
  (d)       Destination
  (S)       Source
- ---       Direction of data transmision
+ ---       Direction of data transmission
  - -       Data decrement
  + +       Data increment
  < <       1 bit shift left
  > >       1 bit shift right
 ------------------------------
 Note : The number of cycles of conditional branching commands are
-appreorite to cases when there is no branching to the left side 
-and when theree is branching tothe right side.
+appropriate to cases when there is no branching to the left side 
+and when there is branching to the right side.
 
 Table 9.3.  Explanation of Symbols in the Status Flag Column
 
@@ -583,7 +583,7 @@ Mnemonic  Operand  Code Bytes Cycles Operation                    Flag
   MOV    labs,Y     CC    3     5     X -> (abs)                ........
 ------------------------------------------------------------------------
 
-3. 8-BIT DATA TRANSMISSIN COMMANDS, GROUP 3.
+3. 8-BIT DATA TRANSMISSION COMMANDS, GROUP 3.
 
 ------------------------------------------------------------------------
 Mnemonic  Operand   Code Bytes Cycles Operation                    Flag
@@ -742,7 +742,7 @@ Mnemonic  Operand   Code Bytes Cycles Operation                  Flag
   XCN      A         9F    1     5      A(7-1) <-> A(3-0)     N......Z.
 -----------------------------------------------------------------------
   
-  8. 16-BIT TRANSMISION COMMANDS
+  8. 16-BIT TRANSMISSION COMMANDS
 
 ------------------------------------------------------------------------
 Mnemonic  Operand   Code Bytes Cycles Operation                  Flag
@@ -763,7 +763,7 @@ Mnemonic  Operand   Code Bytes Cycles Operation                  Flag
   CMPW    YA,dp      5A    2     4     YA - (dp+1)(dp)        N......Z.
 -----------------------------------------------------------------------
 
-10. MULTIPLICATION & DIVISON COMMANDS.
+10. MULTIPLICATION & DIVISION COMMANDS.
 
 -----------------------------------------------------------------------
 Mnemonic  Operand   Code Bytes Cycles Operation                  Flag
@@ -866,9 +866,9 @@ Mnemonic  Operand   Code Bytes Cycles Operation                NVPBHIZC
   NOTC               ED    1     3   complement carry flag     .......C 
   CLRV               E0    1     2   clear V and H             .0..0... 
   CLRP               20    1     2   clear direct page flag    ..0..... 
-  SETP               40    1     2   set dorect page flag      ..1..0..
-  EI                 A0    1     3  set interrup enable flag   .....1.. 
-  DI                 C0    1     3  clear interrup enable flag .....0..
+  SETP               40    1     2   set direct page flag      ..1..0..
+  EI                 A0    1     3  set interrupt enable flag  .....1.. 
+  DI                 C0    1     3 clear interrupt enable flag .....0..
 -----------------------------------------------------------------------
   
 17. OTHER COMMANDS.

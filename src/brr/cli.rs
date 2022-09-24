@@ -8,6 +8,7 @@ use std::path::PathBuf;
 
 use ::wav::WAV_FORMAT_PCM;
 use clap::{Parser, Subcommand};
+use num_traits::cast::FromPrimitive;
 #[allow(clippy::wildcard_imports)]
 use spcasm::brr::*;
 
@@ -79,14 +80,23 @@ enum Command {
 			             is not converted, so in order for audio to not be pitch-shifted, the input has to be at \
 			             32kHz, matching the SNES DSP sample rate."
 		)]
-		input:  PathBuf,
+		input:       PathBuf,
 		#[clap(
 			value_parser,
 			help = "Output BRR file to write",
 			long_help = "Output BRR file to write. By default, a file with the same name but a `.brr` extension is \
 			             used as output."
 		)]
-		output: Option<PathBuf>,
+		output:      Option<PathBuf>,
+		#[clap(
+			value_parser = |string: &str| string.parse().map_err(|err: std::num::ParseIntError| err.to_string()).and_then(|int| CompressionLevel::from_u8(int).ok_or("compression level out of range".to_string())),
+			default_value = "2",
+			long,
+			short,
+			help = "Compression level to use",
+			long_help = "Compression level to use; higher levels mean better audio fidelity. 0: Only use filter 0, 1: Use all filters with non-wrapping optimal shift, 2: Use all filters with optimal shift."
+		)]
+		compression: CompressionLevel,
 	},
 
 	#[clap(about = "Decode a BRR file into a WAV.")]
@@ -195,7 +205,7 @@ fn main() {
 			let (decoded, _) = block.decode(warm_up);
 			println!("Decoded samples: {:?}", decoded);
 		},
-		Command::Encode { input, output } => {
+		Command::Encode { input, output, compression } => {
 			let output = output.unwrap_or_else(|| input.with_extension("brr"));
 			let mut samples = File::open(input)
 				.map_err(|err| err.to_string())
@@ -206,7 +216,7 @@ fn main() {
 				});
 
 			let start = std::time::Instant::now();
-			let encoded = encode_to_brr(&mut samples, false);
+			let encoded = encode_to_brr(&mut samples, false, compression);
 			let duration = start.elapsed();
 			if arguments.verbose {
 				println!(

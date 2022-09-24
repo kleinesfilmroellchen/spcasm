@@ -32,16 +32,51 @@ pub type EncodedBlockSamples = [EncodedSample; 16];
 type FilterCoefficients = [FilterCoefficient; 2];
 type WarmUpSamples = [DecodedSample; 2];
 
+/// The compression level the encoder should use.
+#[derive(Debug, Clone, Copy, FromPrimitive)]
+#[repr(u8)]
+pub enum CompressionLevel {
+	/// Use filter 0 with non-wrapping optimal shift for all blocks.
+	OnlyFilterZero = 0,
+	/// Use the optimal filter, but use the non-wrapping optimal shift.
+	EstimateShift = 1,
+	/// Brute-force all filters and shifts.
+	Max = 2,
+}
+
+impl CompressionLevel {
+	pub(super) const fn estimates_shift(self) -> bool {
+		match self {
+			Self::EstimateShift | Self::OnlyFilterZero => true,
+			Self::Max => false,
+		}
+	}
+}
+
 /// Encode the given 16-bit samples as BRR samples. The data may be padded via repetition to fit a multiple of 16; if
 /// you don't want this to happen, provide a multiple of 16 samples.
 ///
 /// TODO: We don't know about the loop point, so we can't set that block to use filter 0.
 #[must_use]
 #[allow(clippy::module_name_repetitions)]
-pub fn encode_to_brr(samples: &mut Vec<DecodedSample>, is_loop: bool) -> Vec<u8> {
+pub fn encode_to_brr(samples: &mut Vec<DecodedSample>, is_loop: bool, compression: CompressionLevel) -> Vec<u8> {
 	if samples.is_empty() {
 		return Vec::new();
 	}
+
+	let first_block_encoder = if compression.estimates_shift() {
+		Block::encode_with_filter_good_shift
+	} else {
+		Block::encode_with_filter_best
+	};
+	let main_block_encoder = match compression {
+		CompressionLevel::OnlyFilterZero => Block::encode_with_filter_0_good_shift,
+		CompressionLevel::EstimateShift => Block::encode_with_good_shift,
+		CompressionLevel::Max => Block::encode,
+	};
+
+	#[cfg(debug_assertions)]
+	let mut filter_type_counts: [usize; 4] = [1, 0, 0, 0];
 
 	if samples.len() % 16 != 0 {
 		let needed_elements = 16 - (samples.len() % 16);
@@ -62,7 +97,7 @@ pub fn encode_to_brr(samples: &mut Vec<DecodedSample>, is_loop: bool) -> Vec<u8>
 	let mut result = Vec::with_capacity(samples.len() / 2 + sample_chunks.len() + 9);
 
 	// The first chunk must be encoded with filter 0 to prevent glitches.
-	let first_block_data = Block::encode_with_filter_best(
+	let first_block_data = first_block_encoder(
 		[0, 0],
 		first_chunk,
 		LPCFilter::Zero,
@@ -71,10 +106,26 @@ pub fn encode_to_brr(samples: &mut Vec<DecodedSample>, is_loop: bool) -> Vec<u8>
 	result.extend_from_slice(&<[u8; 9]>::from(first_block_data));
 	let mut warm_up: WarmUpSamples = [first_chunk[first_chunk.len() - 1], first_chunk[first_chunk.len() - 2]];
 	for chunk in sample_chunks {
-		let block_data = Block::encode(warm_up, chunk, LoopEndFlags::Nothing);
+		let block_data = main_block_encoder(warm_up, chunk, LoopEndFlags::Nothing);
+
+		#[cfg(debug_assertions)]
+		{
+			filter_type_counts[block_data.header.filter as u8 as usize] += 1;
+		}
+
 		result.extend_from_slice(&<[u8; 9]>::from(block_data));
 		warm_up = [chunk[chunk.len() - 1], chunk[chunk.len() - 2]];
 	}
+
+	#[cfg(debug_assertions)]
+	println!(
+		"Encoded {} blocks (0: {}, 1: {}, 2: {}, 3: {})",
+		filter_type_counts.iter().sum::<usize>(),
+		filter_type_counts[0],
+		filter_type_counts[1],
+		filter_type_counts[2],
+		filter_type_counts[3]
+	);
 
 	result
 }
@@ -190,7 +241,8 @@ impl Block {
 		flags: LoopEndFlags,
 	) -> impl Iterator<Item = Self> {
 		(-1 ..= 11).map(move |real_shift| {
-			let encoded = Self::internal_encode_lpc(warm_up_samples, samples, filter.coefficient(), real_shift);
+			let (_, encoded) =
+				Self::internal_encode_lpc(warm_up_samples, samples, filter.coefficient(), |_| real_shift);
 			Self { header: Header { real_shift, filter, flags }, encoded_samples: encoded }
 		})
 	}
@@ -205,8 +257,53 @@ impl Block {
 		flags: LoopEndFlags,
 		real_shift: i8,
 	) -> Self {
-		let encoded = Self::internal_encode_lpc(warm_up_samples, samples, filter.coefficient(), real_shift);
+		let (_, encoded) = Self::internal_encode_lpc(warm_up_samples, samples, filter.coefficient(), |_| real_shift);
 		Self { header: Header { real_shift, filter, flags }, encoded_samples: encoded }
+	}
+
+	/// Encode the given sample block using the most accurate filter possible. Instead of brute-forcing all shift
+	/// amounts, estimate a good shift amount that doesn't account for the -1 shift or overflow "exploits".
+	#[must_use]
+	#[allow(clippy::missing_panics_doc)]
+	pub fn encode_with_good_shift(
+		warm_up_samples: WarmUpSamples,
+		samples: DecodedBlockSamples,
+		flags: LoopEndFlags,
+	) -> Self {
+		[
+			Self::encode_with_filter_good_shift(warm_up_samples, samples, LPCFilter::Zero, flags),
+			Self::encode_with_filter_good_shift(warm_up_samples, samples, LPCFilter::One, flags),
+			Self::encode_with_filter_good_shift(warm_up_samples, samples, LPCFilter::Two, flags),
+			Self::encode_with_filter_good_shift(warm_up_samples, samples, LPCFilter::Three, flags),
+		]
+		.into_iter()
+		.min_by_key(|encoded| encoded.total_encode_error(warm_up_samples, &samples))
+		.unwrap()
+	}
+
+	/// Encode a block of samples with the specified filter, but instead of brute-forcing all shift amounts, estimate a
+	/// good shift amount that doesn't account for the -1 shift or overflow "exploits".
+	#[must_use]
+	pub fn encode_with_filter_good_shift(
+		warm_up_samples: WarmUpSamples,
+		samples: DecodedBlockSamples,
+		filter: LPCFilter,
+		flags: LoopEndFlags,
+	) -> Self {
+		let (real_shift, encoded) =
+			Self::internal_encode_lpc(warm_up_samples, samples, filter.coefficient(), Self::necessary_shift_for);
+		Self { header: Header { real_shift, filter, flags }, encoded_samples: encoded }
+	}
+
+	/// Encode a block of samples with filter 0 and estimated good shift amount.
+	#[must_use]
+	#[inline]
+	pub fn encode_with_filter_0_good_shift(
+		warm_up_samples: WarmUpSamples,
+		samples: DecodedBlockSamples,
+		flags: LoopEndFlags,
+	) -> Self {
+		Self::encode_with_filter_good_shift(warm_up_samples, samples, LPCFilter::Zero, flags)
 	}
 
 	/// Encode the given sample block using the given filter. This brute forces all shift amounts and returns the best.
@@ -227,8 +324,8 @@ impl Block {
 		mut warm_up_samples: WarmUpSamples,
 		samples: DecodedBlockSamples,
 		filter_coefficients: FilterCoefficients,
-		shift: i8,
-	) -> EncodedBlockSamples {
+		shift_function: impl Fn(&DecodedBlockSamples) -> i8,
+	) -> (i8, EncodedBlockSamples) {
 		// Let's first encode without concerning ourselves with the shift amount. That can be dealt with later.
 		let mut unshifted_encoded_samples = [0; 16];
 		for (unshifted_encoded, sample) in unshifted_encoded_samples.iter_mut().zip(samples.iter()) {
@@ -246,12 +343,13 @@ impl Block {
 			warm_up_samples[0] = *sample / 2;
 		}
 		let mut encoded = [0; 16];
+		let shift = shift_function(&unshifted_encoded_samples);
 		for (encoded, sample) in encoded.iter_mut().zip(unshifted_encoded_samples.iter()) {
 			// The shift needs to be inverted, as we're encoding here and the shift function is intended for decoding.
 			*encoded = Self::perform_shift_with(-shift, *sample) as u8;
 		}
 
-		encoded
+		(shift, encoded)
 	}
 
 	/// Computes the necessary shift in order to get all of the given samples in range for 4-bit signed integers.
@@ -268,7 +366,7 @@ impl Block {
 	/// wrapping behavior of the DSP decoder and allowing the use of the -1 shift can sometimes lead to better shifts in
 	/// combination with specific filters. This function is only ideal if we assume no wrapping happens, which of course
 	/// isn't the case.
-	fn necessary_shift_for(samples: &DecodedBlockSamples) -> u32 {
+	fn necessary_shift_for(samples: &DecodedBlockSamples) -> i8 {
 		samples
 			.iter()
 			.map(|x| match x {
@@ -278,7 +376,7 @@ impl Block {
 			})
 			.max()
 			.unwrap_or(0)
-			.saturating_sub(3)
+			.saturating_sub(3) as i8
 	}
 
 	/// Returns whether playback will end or loop after this block.

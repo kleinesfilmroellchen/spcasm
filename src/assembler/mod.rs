@@ -275,7 +275,7 @@ fn assemble_macro(data: &mut AssembledData, mcro: &mut Macro) -> Result<(), Box<
 					src: data.source_code.clone(),
 					location: mcro.span,
 				})?;
-			let encoded = brr::encode_to_brr(&mut sample_data, false);
+			let encoded = brr::encode_to_brr(&mut sample_data, false, brr::CompressionLevel::Max);
 
 			data.append_bytes(encoded, &mcro.label, mcro.span);
 		},

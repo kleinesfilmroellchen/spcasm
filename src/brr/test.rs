@@ -155,7 +155,7 @@ fn short_sample_encode(bencher: &mut Bencher) {
 
 	let (_, mut data) = wav_read(&mut std::fs::File::open("examples/yoshi.wav").unwrap()).unwrap();
 	let mut data = data.try_into_sixteen().expect("must be signed 16-bit WAV");
-	bencher.iter(|| encode_to_brr(&mut data, false));
+	bencher.iter(|| encode_to_brr(&mut data, false, CompressionLevel::Max));
 }
 
 #[cfg(feature = "expensive_tests")]
@@ -167,7 +167,7 @@ fn extremely_long_encode(bencher: &mut Bencher) {
 	let (_, mut data) = wav_read(&mut std::fs::File::open("examples/song.wav").unwrap()).unwrap();
 	let mut data = data.try_into_sixteen().expect("must be signed 16-bit WAV");
 	let now = std::time::Instant::now();
-	bencher.iter(|| encode_to_brr(&mut data, false));
+	bencher.iter(|| encode_to_brr(&mut data, false, CompressionLevel::Max));
 	let diff = now.elapsed();
 	println!("took: {}ns ({} samples/s)", diff.as_nanos(), data.len() as f64 / diff.as_secs_f64());
 }

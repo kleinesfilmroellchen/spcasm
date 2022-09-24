@@ -53,15 +53,13 @@ fn average_channels(multichannel_data: &[i16], channels: u16) -> Result<Vec<Deco
 	let mut result = Vec::with_capacity(multichannel_data.len() / channels as usize);
 	let mut multichannel_data_iterator = multichannel_data.iter();
 	while !multichannel_data_iterator.is_empty() {
-		let mut next_sample = 0;
+		let mut next_sample: i64 = 0;
 		for i in 0 .. channels {
-			next_sample += multichannel_data_iterator.next().ok_or(format!(
-				"{}-channel audio, but last frame only contains {} samples",
-				channels,
-				i - 1
-			))?;
+			next_sample += i64::from(*multichannel_data_iterator.next().ok_or_else(|| {
+				format!("{}-channel audio, but last frame only contains {} samples", channels, i - 1)
+			})?);
 		}
-		result.push(next_sample / channels as i16);
+		result.push((next_sample / i64::from(channels)) as i16);
 	}
 	Ok(result)
 }

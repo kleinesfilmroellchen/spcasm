@@ -30,12 +30,13 @@ enum Command {
 	)]
 	EncodeBlock {
 		#[clap(
-			value_parser,
+			value_parser = from_lenient_i16,
 			help = "The samples to encode.",
 			long_help = "The samples to encode, 16-bit signed integers. There must be exactly 16 samples to encode."
 		)]
 		samples: Vec<DecodedSample>,
 		#[clap(
+			value_parser = from_lenient_i16,
 			short,
 			long,
 			help = "Override the previous samples to use for encoding",
@@ -61,6 +62,7 @@ enum Command {
 		#[clap(
 			short,
 			long,
+			value_parser = from_lenient_i16,
 			help = "Set the previous two decoded samples",
 			long_help = "Set the previous two decoded samples, 16-bit signed integers. There must be exactly two of \
 			             these, otherwise the previous samples are assumed to be zero."
@@ -103,6 +105,26 @@ enum Command {
 		)]
 		output: Option<PathBuf>,
 	},
+}
+
+/// Parse an i16 while intentionally allowing wrapping and hex numbers.
+#[allow(clippy::cast_possible_truncation, clippy::cast_possible_wrap)] // this is very intentional!
+fn from_lenient_i16(string: &str) -> Result<i16, String> {
+	string
+		.parse::<i32>()
+		.map(|int| int as i16)
+		.or_else(|err| {
+			string.strip_prefix("0x").map_or_else(
+				|| {
+					string.strip_prefix("-0x").map_or_else(
+						|| Err(err),
+						|hex_string| u16::from_str_radix(hex_string, 16).map(|int| -(int as i16)),
+					)
+				},
+				|hex_string| u16::from_str_radix(hex_string, 16).map(|int| int as i16),
+			)
+		})
+		.map_err(|err| err.to_string())
 }
 
 #[allow(clippy::too_many_lines)]

@@ -55,4 +55,4 @@ There may also be hints and warnings (identifiable by the pointing finger or exc
 
 ## brr
 
-You can use the `brr` binary (`cargo r --spcasm-release --bin=brr --`) for using and testing the BRR encoder and decoder directly. This binary is undocumented here as its features change frequently. Use `brr --help` for help.
+You can use the `brr` binary (`cargo r --profile=spcasm-release --bin=brr --`) for using and testing the BRR encoder and decoder directly. This binary is undocumented here as its features change frequently. Use `brr --help` for help.

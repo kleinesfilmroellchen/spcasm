@@ -682,35 +682,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d29ab0c6d3fc0ee92fe66e2d99f700eab17a8d57d1c1d3b748380fb20baa78cd"
 
 [[package]]
-name = "serde"
-version = "1.0.144"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0f747710de3dcd43b88c9168773254e809d8ddbdf9653b84e2554ab219f17860"
-dependencies = [
- "serde_derive",
-]
-
-[[package]]
-name = "serde_derive"
-version = "1.0.144"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "94ed3a816fb1d101812f83e789f888322c34e291f894f19590dc310963e87a00"
-dependencies = [
- "proc-macro2",
- "quote",
- "syn",
-]
-
-[[package]]
-name = "serde_variant"
-version = "0.1.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5f988d71f968b960b45cf71e3210662f0b23906256c87820077e4f101225c494"
-dependencies = [
- "serde",
-]
-
-[[package]]
 name = "siphasher"
 version = "0.3.10"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -733,7 +704,6 @@ name = "spcasm"
 version = "0.1.0"
 dependencies = [
  "arrcat",
- "az",
  "clap",
  "fixed",
  "lalrpop",
@@ -742,8 +712,6 @@ dependencies = [
  "num-derive",
  "num-traits",
  "object",
- "serde",
- "serde_variant",
  "spcasm_derive",
  "thiserror",
  "wav",

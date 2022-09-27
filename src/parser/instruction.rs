@@ -8,13 +8,12 @@ use std::result::Result;
 use std::sync::Arc;
 
 use miette::SourceSpan;
-use serde::Serialize;
-use serde_variant::to_variant_name;
-use spcasm_derive::Parse;
+use spcasm_derive::{Parse, VariantName};
 
 use super::label::{self, GlobalLabel, Label};
 use super::register::Register;
 use crate::error::{AssemblyCode, AssemblyError};
+use crate::VariantName;
 
 /// Types for representing data and memory addresses (this is overkill).
 pub type MemoryAddress = i64;
@@ -69,7 +68,7 @@ pub struct Opcode {
 
 /// Instruction mnemonics of the SPC700.
 #[allow(missing_docs, clippy::use_self)]
-#[derive(Clone, Debug, Copy, Eq, PartialEq, Parse, Serialize)]
+#[derive(Clone, Debug, Copy, Eq, PartialEq, Parse, VariantName)]
 pub enum Mnemonic {
 	Mov,
 	Adc,
@@ -157,7 +156,7 @@ impl Mnemonic {
 
 impl Display for Mnemonic {
 	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> Result<(), std::fmt::Error> {
-		write!(f, "{}", to_variant_name(self).unwrap().to_uppercase())
+		write!(f, "{}", self.variant_name().to_uppercase())
 	}
 }
 

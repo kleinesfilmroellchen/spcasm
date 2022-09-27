@@ -4,12 +4,12 @@
 
 use std::fmt::Display;
 
-use serde::Serialize;
-use serde_variant::to_variant_name;
-use spcasm_derive::Parse;
+use spcasm_derive::{Parse, VariantName};
+
+use crate::VariantName;
 
 /// Registers.
-#[derive(Clone, Copy, Debug, Eq, PartialEq, Parse, Serialize)]
+#[derive(Clone, Copy, Debug, Eq, PartialEq, Parse, VariantName)]
 pub enum Register {
 	/// Accumulator.
 	A,
@@ -42,6 +42,6 @@ impl Register {
 
 impl Display for Register {
 	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> Result<(), std::fmt::Error> {
-		write!(f, "{}", to_variant_name(self).unwrap())
+		write!(f, "{}", self.variant_name())
 	}
 }

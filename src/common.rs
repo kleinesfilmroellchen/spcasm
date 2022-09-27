@@ -69,3 +69,9 @@ pub fn run_assembler_on_source(source_code: &Arc<AssemblyCode>, options: &ErrorO
 	let assembled = crate::assembler::assemble(&program, options).map_err(AssemblyError::from)?;
 	Ok((env, assembled))
 }
+
+/// Provides a name for enum variants.
+pub trait VariantName {
+	/// Returns the name of this variant.
+	fn variant_name(&self) -> &'static str;
+}

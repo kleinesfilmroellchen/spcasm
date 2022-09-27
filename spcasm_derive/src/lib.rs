@@ -5,6 +5,7 @@ extern crate proc_macro;
 
 use proc_macro::TokenStream;
 use quote::{quote, ToTokens};
+use syn::{parse_macro_input, Data, DeriveInput, Fields};
 
 #[proc_macro_derive(Parse)]
 pub fn parse_macro_derive(input: TokenStream) -> TokenStream {
@@ -97,4 +98,39 @@ pub fn error_codes_derive(input: TokenStream) -> TokenStream {
 		},
 		_ => panic!("ErrorCodes cannot be derived for non-enum types."),
 	}
+}
+
+#[proc_macro_derive(VariantName)]
+pub fn enum_name_derive(input: TokenStream) -> TokenStream {
+	let input = parse_macro_input!(input as DeriveInput);
+
+	let identifier = input.ident;
+	let (impl_generics, ty_generics, where_clause) = input.generics.split_for_impl();
+	let variants = match input.data {
+		Data::Enum(data) => data.variants.into_iter().map(|variant| {
+			let identifier = variant.ident;
+			let identifier_string = identifier.to_string();
+			let fields = match variant.fields {
+				Fields::Named(_) => quote!({ .. }),
+				Fields::Unnamed(_) => quote!((..)),
+				Fields::Unit => quote!(),
+			};
+
+			quote! {
+				Self::#identifier #fields => #identifier_string
+			}
+		}),
+		_ => panic!("not an enum"),
+	};
+
+	(quote! {
+		impl #impl_generics crate::VariantName for #identifier #ty_generics #where_clause {
+			fn variant_name(&self) -> &'static str {
+				match self {
+					#(#variants),*
+				}
+			}
+		}
+	})
+	.into()
 }

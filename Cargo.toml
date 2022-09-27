@@ -39,7 +39,6 @@ lalrpop-util = "0.19"
 wav = "1.0.0"
 num-traits = "0.2"
 num-derive = "0.3"
-fixed = "1"
 arrcat = "0.1"
 
 [build-dependencies]

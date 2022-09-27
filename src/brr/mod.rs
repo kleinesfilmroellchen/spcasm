@@ -11,7 +11,7 @@
 use std::convert::TryInto;
 
 use num_derive::FromPrimitive;
-use num_traits::{CheckedShr, FromPrimitive};
+use num_traits::FromPrimitive;
 
 #[cfg(test)] mod test;
 
@@ -21,15 +21,16 @@ pub mod wav;
 pub type EncodedSample = u8;
 /// The DAC internally uses 16-bit signed samples.
 pub type DecodedSample = i16;
-/// This matches the fixed-point arithmetic (16.16) used in the SNES DAC.
-type FilterCoefficient = fixed::FixedI32<fixed::types::extra::U16>;
 
 /// A block's samples, decoded.
 pub type DecodedBlockSamples = [DecodedSample; 16];
 /// A block's samples, encoded.
 pub type EncodedBlockSamples = [EncodedSample; 16];
 
-type FilterCoefficients = [FilterCoefficient; 2];
+/// In the DSP hardware, decimal multiplication is simulated with addition and shifting. We therefore use functions that
+/// provide the hardware calculation simulating the multiplication. See ``LPCFilter`` for the implementations of the
+/// various shift functions.
+type FilterCoefficients = [fn(i16) -> i16; 2];
 type WarmUpSamples = [DecodedSample; 2];
 
 /// The compression level the encoder should use.
@@ -331,14 +332,11 @@ impl Block {
 		for (unshifted_encoded, sample) in unshifted_encoded_samples.iter_mut().zip(samples.iter()) {
 			// Dividing the sample by 2 reduces it to 15 bit, which is the actual bit depth of the decoder. Therefore,
 			// in order for our encoding to be accurate, we have to reduce the bit depth here.
-			*unshifted_encoded = (fixed(*sample) / fixed(2))
+			*unshifted_encoded = (*sample / 2)
 				// It is now known whether wrapping addition (or subtraction for encoding) is correct here.
 				// The multiplication seems to saturate indeed, as it is implemented with a series of shifts.
-				.wrapping_sub(filter_coefficients[0].saturating_mul(fixed(warm_up_samples[0])))
-				.saturating_ceil()
-				.wrapping_sub(filter_coefficients[1].saturating_mul(fixed(warm_up_samples[1])))
-				.saturating_ceil()
-				.to_num();
+				.wrapping_sub(filter_coefficients[0](warm_up_samples[0]))
+				.wrapping_sub(filter_coefficients[1](warm_up_samples[1]));
 			warm_up_samples[1] = warm_up_samples[0];
 			warm_up_samples[0] = *sample / 2;
 		}
@@ -430,12 +428,10 @@ impl Block {
 		let shifted_encoded =
 			self.encoded_samples.map(|encoded| self.perform_shift(i16::from(((encoded as i8) << 4) >> 4)));
 		for (decoded, encoded) in decoded_samples.iter_mut().zip(shifted_encoded) {
-			let decimal_decoded = fixed(encoded)
-				.wrapping_add(filter_coefficients[0].saturating_mul(fixed(warm_up_samples[0])))
-				.saturating_floor()
-				.wrapping_add(filter_coefficients[1].saturating_mul(fixed(warm_up_samples[1])))
-				.saturating_floor();
-			*decoded = simulate_hardware_glitches(decimal_decoded.to_num());
+			let decimal_decoded = encoded
+				.wrapping_add(filter_coefficients[0](warm_up_samples[0]))
+				.wrapping_add(filter_coefficients[1](warm_up_samples[1]));
+			*decoded = simulate_hardware_glitches(decimal_decoded);
 			// Shift last samples through the buffer
 			warm_up_samples[1] = warm_up_samples[0];
 			warm_up_samples[0] = *decoded;
@@ -463,10 +459,6 @@ fn simulate_hardware_glitches(n: i16) -> i16 {
 	} else {
 		n
 	}
-}
-
-fn fixed(int: i16) -> FilterCoefficient {
-	FilterCoefficient::from_num(int)
 }
 
 impl From<[u8; 9]> for Block {
@@ -585,10 +577,10 @@ impl LPCFilter {
 	#[must_use]
 	pub fn coefficient(self) -> FilterCoefficients {
 		match self {
-			Self::Zero => [0i16.into(), 0i16.into()],
-			Self::One => [FilterCoefficient::from_num(15) / 16, 0i16.into()],
-			Self::Two => [FilterCoefficient::from_num(61) / 32, -FilterCoefficient::from_num(15) / 16],
-			Self::Three => [FilterCoefficient::from_num(115) / 64, -FilterCoefficient::from_num(13) / 16],
+			Self::Zero => [Self::coefficient_0, Self::coefficient_0],
+			Self::One => [Self::coefficient_15_16, Self::coefficient_0],
+			Self::Two => [Self::coefficient_61_32, Self::coefficient_negative_15_16],
+			Self::Three => [Self::coefficient_115_64, Self::coefficient_negative_13_16],
 		}
 	}
 
@@ -596,6 +588,54 @@ impl LPCFilter {
 	#[must_use]
 	pub const fn all_filters() -> [Self; 4] {
 		[Self::Zero, Self::One, Self::Two, Self::Three]
+	}
+
+	// Coefficient functions (https://problemkaputt.de/fullsnes.htm#snesapudspbrrsamples)
+
+	/// * 0
+	#[inline]
+	#[must_use]
+	pub const fn coefficient_0(_: i16) -> i16 {
+		0
+	}
+
+	/// * 15/16
+	#[inline]
+	#[must_use]
+	pub const fn coefficient_15_16(i: i16) -> i16 {
+		let i = i as i32;
+		(i + ((-i) >> 4)) as i16
+	}
+
+	/// * -15/16
+	#[inline]
+	#[must_use]
+	pub const fn coefficient_negative_15_16(i: i16) -> i16 {
+		-Self::coefficient_15_16(i)
+	}
+
+	/// * 61/32
+	#[inline]
+	#[must_use]
+	pub const fn coefficient_61_32(i: i16) -> i16 {
+		let i = i as i32;
+		(i * 2 + ((-i * 3) >> 5)) as i16
+	}
+
+	/// * 115/64
+	#[inline]
+	#[must_use]
+	pub const fn coefficient_115_64(i: i16) -> i16 {
+		let i = i as i32;
+		(i * 2 + ((-i * 13) >> 6)) as i16
+	}
+
+	/// * -13/16
+	#[inline]
+	#[must_use]
+	pub const fn coefficient_negative_13_16(i: i16) -> i16 {
+		let i = i as i32;
+		(-i + ((i * 3) >> 4)) as i16
 	}
 }
 

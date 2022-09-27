@@ -4,7 +4,7 @@ spcasm is a modern assembler for the SPC700 processor architecture, famously use
 
 [This project is just for fun](https://justforfunnoreally.dev/). Still, there's many reasons to use spcasm:
 
-- **spcasm is fast. Best-in-class fast.** spcasm assembles about 365.714 KB/s on a modern computer, which is five times the entire address space. The assembler is between 1.3 (Windows) and 3.2 (Linux) times as fast as Asar. The BRR encoder runs at 1.3 MB/s on best compression, which is two times as fast as BRRTools.
+- **spcasm is fast. Best-in-class fast.** spcasm assembles about 365.714 KB/s on a modern computer, which is five times the entire address space. The assembler is between 1.3 (Windows) and 3.2 (Linux) times as fast as Asar. The BRR encoder runs at 1.6 MB/s on best compression, which is two times as fast as BRRTools.
 - **spcasm runs in your browser.** (No, really, no server.) This is achieved with the power of WebAssembly, allowing spcasm to run so fast that a compile button would be overkill. See <https://kleinesfilmroellchen.github.io/spcasm> for a live demo based on the master branch.
 - **BRR support and integration:** spcasm includes the `brr` binary which is intended to be a replacement for the functionality that BRRTools provides. However, including S-SMP samples ("BRR" samples) in your binary (useful if all your samples fit in ARAM at once) is as simple as
 

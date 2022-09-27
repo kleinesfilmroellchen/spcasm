@@ -29,7 +29,7 @@ once_cell = { version = "1.15.0", default-features = false, features = [
 	"alloc",
 ] }
 
-spcasm = { path = "../" }
+spcasm = { path = "../", default-features = false }
 
 # The `console_error_panic_hook` crate provides better debugging of panics by
 # logging them with `console.error`. This is great for development, but requires
@@ -43,4 +43,4 @@ console_error_panic_hook = { version = "0.1.6", optional = true }
 wee_alloc = { version = "0.4.5", optional = true }
 html-escape = { version = "0.2.11", default-features = false }
 js-sys = "0.3.60"
-miette = { version = "5.3.0", features = ["fancy"] }
+miette = { version = "5.3.0", features = ["fancy-no-backtrace"] }

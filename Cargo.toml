@@ -62,6 +62,7 @@ path = "spcasm_derive"
 opt-level = "s"
 lto = true
 debug-assertions = false
+debug = false
 
 [profile.bench]
 opt-level = 3
@@ -72,4 +73,6 @@ debug-assertions = true
 # This is the actual release profile; wasm-pack can't use custom profiles so we reserve "release" for it.
 [profile.spcasm-release]
 inherits = "release"
+# If you need ~0.5MiB less binary size, change this to "fat" LTO.
+lto = "thin"
 opt-level = 3

@@ -34,7 +34,7 @@ expensive_tests = []
 
 [dependencies]
 object = { version = "0.29.0", features = ["write_core"], optional = true }
-thiserror = "1.0.30"
+thiserror = "1.0.37"
 lalrpop-util = "0.19"
 wav = "1.0.0"
 num-traits = "0.2"

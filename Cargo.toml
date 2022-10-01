@@ -50,7 +50,7 @@ version = "5.3"
 
 # Only compile clap for the CLIs.
 [dependencies.clap]
-version = "3"
+version = "4"
 optional = true
 features = ["derive"]
 

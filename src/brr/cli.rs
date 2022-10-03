@@ -13,7 +13,7 @@ use num_traits::cast::FromPrimitive;
 use spcasm::brr::*;
 
 #[derive(Parser)]
-#[clap(about = "Bit Rate Reduced (BRR) / SNES ADPCM tools", long_about=None)]
+#[clap(about = "Bit Rate Reduced (BRR) / SNES ADPCM tools", long_about=None, version, name="brr")]
 struct Arguments {
 	#[clap(subcommand)]
 	command: Command,
@@ -71,7 +71,7 @@ enum Command {
 		warm_up: Option<Vec<DecodedSample>>,
 	},
 
-	#[clap(about = "Encode a WAV file into BRR.")]
+	#[clap(about = "Encode a WAV file into a BRR file")]
 	Encode {
 		#[clap(
 			value_parser,
@@ -99,7 +99,7 @@ enum Command {
 		compression: CompressionLevel,
 	},
 
-	#[clap(about = "Decode a BRR file into a WAV.")]
+	#[clap(about = "Decode a BRR file into a WAV file")]
 	Decode {
 		#[clap(
 			value_parser,

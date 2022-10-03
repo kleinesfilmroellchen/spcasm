@@ -81,7 +81,7 @@ mod clap_dependent {
 
 	/// SPC700 assembler.
 	#[derive(Parser)]
-	#[clap(author, version, about, long_about=None)]
+	#[clap(version, about, long_about=None)]
 	pub struct SpcasmCli {
 		/// Assembly file to assemble.
 		#[clap(value_parser)]

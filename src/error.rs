@@ -520,7 +520,7 @@ impl AssemblyError {
 		if self.severity().is_some_and(|s| s == &miette::Severity::Error) {
 			return Err(self.into());
 		}
-		#[cfg(feature = "clap")]
+		#[cfg(feature = "binaries")]
 		{
 			let discriminant = std::mem::discriminant(&self);
 			if options.error.contains(&discriminant.into()) {
@@ -530,7 +530,7 @@ impl AssemblyError {
 			}
 			Ok(())
 		}
-		#[cfg(not(feature = "clap"))]
+		#[cfg(not(feature = "binaries"))]
 		{
 			println!("{:?}", miette::Report::new(self));
 			Ok(())

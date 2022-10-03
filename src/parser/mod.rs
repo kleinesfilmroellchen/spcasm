@@ -94,11 +94,11 @@ impl Environment {
 	/// errors.
 	#[allow(clippy::unnecessary_wraps, clippy::unused_self)]
 	pub(crate) fn report_or_throw(&self, error: AssemblyError) -> Result<(), Box<AssemblyError>> {
-		#[cfg(feature = "clap")]
+		#[cfg(feature = "binaries")]
 		{
 			error.report_or_throw(&self.options)
 		}
-		#[cfg(not(feature = "clap"))]
+		#[cfg(not(feature = "binaries"))]
 		{
 			println!("{:?}", miette::Report::new(error));
 			Ok(())

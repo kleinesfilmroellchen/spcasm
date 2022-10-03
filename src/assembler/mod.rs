@@ -40,7 +40,7 @@ pub(crate) fn assemble(
 ) -> Result<Vec<u8>, Box<AssemblyError>> {
 	let mut main_file = main_file.borrow_mut();
 	let mut data = AssembledData::new(main_file.source_code.clone());
-	#[cfg(feature = "clap")]
+	#[cfg(feature = "binaries")]
 	data.set_error_options(options.clone());
 
 	data.new_segment(0);
@@ -548,7 +548,7 @@ impl AssembledData {
 	}
 
 	/// Change the error options for assembler warning and error reporting.
-	#[cfg(feature = "clap")]
+	#[cfg(feature = "binaries")]
 	pub fn set_error_options(&mut self, options: ErrorOptions) -> &mut Self {
 		self.options = options;
 		self
@@ -560,11 +560,11 @@ impl AssembledData {
 	/// The provided error is re-thrown if the error options specify to do so. On non-clap builds, this function never
 	/// errors.
 	pub fn report_or_throw(&self, error: AssemblyError) -> Result<(), Box<AssemblyError>> {
-		#[cfg(feature = "clap")]
+		#[cfg(feature = "binaries")]
 		{
 			error.report_or_throw(&self.options)
 		}
-		#[cfg(not(feature = "clap"))]
+		#[cfg(not(feature = "binaries"))]
 		{
 			println!("{:?}", miette::Report::new(error));
 			Ok(())

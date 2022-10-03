@@ -62,7 +62,7 @@ impl FromStr for ErrorCodeSpec {
 			.find(|(_, value)| {
 				(value == &string_code)
 				// If the user provided an error code not starting with spcasm:: (very reasonable), just ignore the prefix.
-					|| (!string_code.starts_with(error_prefix) && value[error_prefix.len() ..] == *string_code)
+					|| (!string_code.starts_with(error_prefix) && value.get(error_prefix.len()..).is_some_and(|latter_part| *latter_part == string_code))
 			})
 			.map(|(key, _)| *key)
 			.ok_or_else(|| "invalid error code".to_string())?;

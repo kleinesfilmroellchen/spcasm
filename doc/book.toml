@@ -6,4 +6,5 @@ src = "src"
 title = "spcasm Manual"
 
 [output.html]
-# [output.pdf]
+[output.pdf]
+optional = true

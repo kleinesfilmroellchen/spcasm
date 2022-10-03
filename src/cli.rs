@@ -13,10 +13,10 @@ use crate::error::{AssemblyError, ErrorCodes};
 #[cfg(feature = "binaries")]
 pub struct ErrorOptions {
 	/// Warnings to silence.
-	#[arg(num_args = 0.., long, short = 'w')]
+	#[arg(num_args = 1, action = clap::ArgAction::Append, long, short = 'w')]
 	pub(crate) ignore: Vec<ErrorCodeSpec>,
 	/// Warnings to turn into a hard error.
-	#[arg(num_args = 0.., long, short = 'W')]
+	#[arg(num_args = 1, action = clap::ArgAction::Append, long, short = 'W')]
 	pub(crate) error:  Vec<ErrorCodeSpec>,
 }
 

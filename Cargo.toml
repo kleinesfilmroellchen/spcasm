@@ -42,10 +42,10 @@ binaries = ["dep:clap", "dep:object"]
 expensive_tests = []
 
 [dependencies]
-object = { version = "0.29.0", features = ["write_core"], optional = true }
-thiserror = "1.0.30"
+object = { version = "0.29", features = ["write_core"], optional = true }
+thiserror = "1"
 lalrpop-util = "0.19"
-wav = "1.0.0"
+wav = "1"
 num-traits = "0.2"
 num-derive = "0.3"
 arrcat = "0.1"
@@ -55,14 +55,13 @@ lalrpop = { version = "0.19", default-features = false }
 
 [dependencies.miette]
 features = ["fancy-no-backtrace"]
-version = "5.3"
+version = "5"
 
 # Only compile clap for the CLIs.
 [dependencies.clap]
 version = "4"
 optional = true
-default-features = false
-features = ["derive", "std", "wrap_help", "help", "usage"]
+features = ["derive", "wrap_help"]
 
 [dependencies.spcasm_derive]
 path = "spcasm_derive"

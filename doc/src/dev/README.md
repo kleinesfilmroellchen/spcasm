@@ -9,7 +9,7 @@ spcasm is structured into a few related components:
 - The `spcasm` crate contains the assembler's core code. It further contains three targets:
   - `spcasm` is the main assembler binary.
   - The crate can also be built as a library; this is mainly used for tests.
-  - `brri` is an experimental interactive BRR encoder.
+  - `brr` is a BRR command-line utility that intends to replace BRRTools.
 - The `spcasm-derive` crate contains derive macros, as Rust requires those to be in a separate crate.
 - The `spcasm-web` crate contains WebAssembly APIs and a browser frontend allowing the assembler to run in the browser.
 - The `doc` folder contains [mdbook](https://rust-lang.github.io/mdBook/)-based documentation. You can read this documentation directly on GitHub, or build a statically servable website from it with mdbook.

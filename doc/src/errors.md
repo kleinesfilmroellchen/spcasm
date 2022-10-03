@@ -29,7 +29,7 @@ In the following, each error is listed with an example and a detailed explanatio
   help: Use a forced direct page addressing mnemonic by suffixing `.b`
 ```
 
-Many SPC700 instructions can save space and clock cycles by using direct page addressing when accessing either the zeroth or first page of memory (see [the reference](reference/README.md)). However, because direct page addresses depend on which of the two direct pages are selected and how large instructions actually are, spcasm can't currently automatically use direct page addressing if labels appear in an operand that _might_ be a direct page address mode. Therefore, spcasm warns you that it found out this address is within a direct page, but it couldn't actually assemble the instruction to use direct-page addressing. The mnemonic suffix `.b` is available to force any instruction to use direct page addressing if possible.
+Many SPC700 instructions can save space and clock cycles by using direct page addressing when accessing either the zeroth or first page of memory (see [the reference](reference/)). However, because direct page addresses depend on which of the two direct pages are selected and how large instructions actually are, spcasm can't currently automatically use direct page addressing if labels appear in an operand that _might_ be a direct page address mode. Therefore, spcasm warns you that it found out this address is within a direct page, but it couldn't actually assemble the instruction to use direct-page addressing. The mnemonic suffix `.b` is available to force any instruction to use direct page addressing if possible.
 
 ### spcasm::valid_arch_macro
 

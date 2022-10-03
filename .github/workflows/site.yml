@@ -59,7 +59,7 @@ jobs:
       - name: Build documentation
         run: cd doc && mdbook build
       - name: Copy documentation
-        run: cp -rT doc/book site/doc
+        run: cp -rT doc/book/html site/doc
 
       - name: Upload page artifact
         uses: actions/upload-pages-artifact@v1.0.4

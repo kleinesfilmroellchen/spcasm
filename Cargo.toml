@@ -2,11 +2,20 @@
 members = [".", "spcasm_derive", "spcasm-web"]
 
 [package]
-edition = "2021"
-license = "BSD 2-clause"
 name = "spcasm"
+description = "A modern, user-friendly SPC700 assembler."
+homepage = "https://kleinesfilmroellchen.github.io/spcasm/"
+repository = "https://github.com/kleinesfilmroellchen/spcasm"
+keywords = ["spc-700", "s-smp", "snes"]
+categories = ["compilers", "command-line-utilities", "development-tools", "multimedia::audio"]
+authors = ["kleines Filmröllchen <filmroellchen@serenityos.org>"]
 version = "0.1.0"
+license-file = "LICENSE"
+
+edition = "2021"
+rust-version = "1.56"
 build = "build.rs"
+
 default-run = "spcasm"
 
 [lib]

@@ -13,33 +13,36 @@ use num_traits::cast::FromPrimitive;
 use spcasm::brr::*;
 
 #[derive(Parser)]
-#[clap(about = "Bit Rate Reduced (BRR) / SNES ADPCM tools", long_about=None, version, name="brr")]
+#[command(about = "Bit Rate Reduced (BRR) / SNES ADPCM tools", long_about = None, version, name = "brr")]
 struct Arguments {
-	#[clap(subcommand)]
+	#[command(subcommand)]
 	command: Command,
-	#[clap(long, short, help = "Print detailed information even for non-interactive commands")]
+	#[arg(long, short, help = "Print detailed information even for non-interactive commands")]
 	verbose: bool,
 }
 
 #[derive(Subcommand)]
 enum Command {
-	#[clap(
+	#[command(
 		about = "Encode a single block of samples",
 		long_about = "Encode a single block of samples. Displays various information about the encoding process, \
 		              including how accurately the data compresses under various filter modes. This command is \
 		              intended for interactive experimenting with BRR encoding."
 	)]
 	EncodeBlock {
-		#[clap(
+		#[arg(
 			value_parser = from_lenient_i16,
+			num_args = 16,
 			help = "The samples to encode.",
 			long_help = "The samples to encode, 16-bit signed integers. There must be exactly 16 samples to encode."
 		)]
 		samples: Vec<DecodedSample>,
-		#[clap(
-			value_parser = from_lenient_i16,
+		#[arg(
 			short,
 			long,
+			required = false,
+			num_args = 2,
+			value_parser = from_lenient_i16,
 			help = "Override the previous samples to use for encoding",
 			long_help = "Override the previous samples to use for encoding. There must be exactly two of these, \
 			             otherwise the previous samples are assumed to be zero."
@@ -47,22 +50,24 @@ enum Command {
 		warm_up: Option<Vec<DecodedSample>>,
 	},
 
-	#[clap(
+	#[command(
 		about = "Decode a single block of samples",
 		long_about = "Decode a single block of samples. Displays various information about the decoding process. This \
 		              command is intended for interactive experimenting with BRR decoding."
 	)]
 	DecodeBlock {
-		#[clap(
-			value_parser,
+		#[arg(
+			num_args = 9,
 			help = "The BRR-encoded block to decode",
 			long_help = "The BRR-encoded block to decode, given in its individual bytes. There must be exactly nine \
 			             bytes."
 		)]
 		block:   Vec<u8>,
-		#[clap(
+		#[arg(
 			short,
 			long,
+			required = false,
+			num_args = 2,
 			value_parser = from_lenient_i16,
 			help = "Set the previous two decoded samples",
 			long_help = "Set the previous two decoded samples, 16-bit signed integers. There must be exactly two of \
@@ -71,24 +76,22 @@ enum Command {
 		warm_up: Option<Vec<DecodedSample>>,
 	},
 
-	#[clap(about = "Encode a WAV file into a BRR file")]
+	#[command(about = "Encode a WAV file into a BRR file")]
 	Encode {
-		#[clap(
-			value_parser,
+		#[arg(
 			help = "The WAV file to encode",
 			long_help = "The WAV file to encode. Only uncompressed WAV (integer or float) is supported. Sample rate \
 			             is not converted, so in order for audio to not be pitch-shifted, the input has to be at \
 			             32kHz, matching the SNES DSP sample rate."
 		)]
 		input:       PathBuf,
-		#[clap(
-			value_parser,
+		#[arg(
 			help = "Output BRR file to write",
 			long_help = "Output BRR file to write. By default, a file with the same name but a `.brr` extension is \
 			             used as output."
 		)]
 		output:      Option<PathBuf>,
-		#[clap(
+		#[arg(
 			value_parser = |string: &str| string.parse().map_err(|err: std::num::ParseIntError| err.to_string()).and_then(|int| CompressionLevel::from_u8(int).ok_or("compression level out of range".to_string())),
 			default_value = "2",
 			long,
@@ -99,16 +102,14 @@ enum Command {
 		compression: CompressionLevel,
 	},
 
-	#[clap(about = "Decode a BRR file into a WAV file")]
+	#[command(about = "Decode a BRR file into a WAV file")]
 	Decode {
-		#[clap(
-			value_parser,
+		#[arg(
 			help = "The BRR file to decode",
 			long_help = "The BRR file to decode. Only raw BRR files are supported right now."
 		)]
 		input:  PathBuf,
-		#[clap(
-			value_parser,
+		#[arg(
 			help = "Output WAV file to write",
 			long_help = "Output WAV file to write. The format is always mono 16-bit signed integer with a sample rate \
 			             of 32kHz, matching the SNES DSP."

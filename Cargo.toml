@@ -59,9 +59,10 @@ version = "5.3"
 
 # Only compile clap for the CLIs.
 [dependencies.clap]
-version = "3"
+version = "4"
 optional = true
-features = ["derive"]
+default-features = false
+features = ["derive", "std", "wrap_help", "help", "usage"]
 
 [dependencies.spcasm_derive]
 path = "spcasm_derive"

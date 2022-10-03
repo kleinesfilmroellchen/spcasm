@@ -13,10 +13,10 @@ use crate::error::{AssemblyError, ErrorCodes};
 #[cfg(feature = "binaries")]
 pub struct ErrorOptions {
 	/// Warnings to silence.
-	#[clap(value_parser, multiple_occurrences = true, long, short = 'w')]
+	#[arg(num_args = 0.., long, short = 'w')]
 	pub(crate) ignore: Vec<ErrorCodeSpec>,
 	/// Warnings to turn into a hard error.
-	#[clap(value_parser, multiple_occurrences = true, long, short = 'W')]
+	#[arg(num_args = 0.., long, short = 'W')]
 	pub(crate) error:  Vec<ErrorCodeSpec>,
 }
 
@@ -81,15 +81,15 @@ mod clap_dependent {
 
 	/// SPC700 assembler.
 	#[derive(Parser)]
-	#[clap(version, about, long_about=None)]
+	#[command(version, about, long_about=None)]
 	pub struct SpcasmCli {
 		/// Assembly file to assemble.
-		#[clap(value_parser)]
+		#[arg()]
 		pub input:         PathBuf,
 		/// Binary output file.
-		#[clap(value_parser)]
+		#[arg()]
 		pub output:        Option<PathBuf>,
-		#[clap(flatten)]
+		#[command(flatten)]
 		pub warning_flags: ErrorOptions,
 		/// Format to output to.
 		///
@@ -98,7 +98,7 @@ mod clap_dependent {
 		/// - plain: Output just the binary data.
 		///
 		/// - hexdump: Dump hexadecimal representation in a pretty format like in a hex editor.
-		#[clap(value_parser, default_value = "elf", long, short = 'f')]
+		#[arg(default_value = "elf", long, short = 'f')]
 		pub output_format: OutputFormat,
 	}
 

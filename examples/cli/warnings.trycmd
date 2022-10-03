@@ -1,4 +1,4 @@
-```
+```trycmd
 $ spcasm examples/test.spcasm
 spcasm::valid_arch_macro
 
@@ -58,12 +58,12 @@ spcasm::non_direct_page_label
 
 ```
 
-```
+```trycmd
 $ spcasm -w all examples/test.spcasm
 
 ```
 
-```
+```trycmd
 $ spcasm -W all examples/test.spcasm
 ? failed
 Error: spcasm::valid_arch_macro
@@ -85,7 +85,7 @@ Error: spcasm::valid_arch_macro
 
 ```
 
-```
+```trycmd
 $ spcasm -w file_not_found examples/test.spcasm
 spcasm::valid_arch_macro
 
@@ -145,7 +145,7 @@ spcasm::non_direct_page_label
 
 ```
 
-```
+```trycmd
 $ spcasm -w spcasm::file_not_found examples/test.spcasm
 spcasm::valid_arch_macro
 
@@ -205,7 +205,7 @@ spcasm::non_direct_page_label
 
 ```
 
-```
+```trycmd
 $ spcasm -w definitely_does_not_exist examples/test.spcasm
 ? failed
 error: Invalid value "definitely_does_not_exist" for '--ignore <IGNORE>': invalid error code

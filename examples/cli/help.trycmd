@@ -1,4 +1,4 @@
-```
+```trycmd
 $ spcasm --help
 A modern, user-friendly SPC700 assembler.
 
@@ -38,7 +38,7 @@ Options:
 
 ```
 
-```
+```trycmd
 $ spcasm -h
 A modern, user-friendly SPC700 assembler.
 

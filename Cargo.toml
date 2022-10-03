@@ -7,7 +7,12 @@ description = "A modern, user-friendly SPC700 assembler."
 homepage = "https://kleinesfilmroellchen.github.io/spcasm/"
 repository = "https://github.com/kleinesfilmroellchen/spcasm"
 keywords = ["spc-700", "s-smp", "snes"]
-categories = ["compilers", "command-line-utilities", "development-tools", "multimedia::audio"]
+categories = [
+	"compilers",
+	"command-line-utilities",
+	"development-tools",
+	"multimedia::audio",
+]
 authors = ["kleines Filmröllchen <filmroellchen@serenityos.org>"]
 version = "0.1.0"
 license-file = "LICENSE"
@@ -49,6 +54,11 @@ wav = "1"
 num-traits = "0.2"
 num-derive = "0.3"
 arrcat = "0.1"
+
+[dev-dependencies]
+trycmd = { version = "0.13", default-features = false, features = [
+	"filesystem",
+] }
 
 [build-dependencies]
 lalrpop = { version = "0.19", default-features = false }

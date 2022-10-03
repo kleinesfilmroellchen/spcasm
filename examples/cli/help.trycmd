@@ -1,0 +1,63 @@
+```
+$ spcasm --help
+A modern, user-friendly SPC700 assembler.
+
+Usage: spcasm[EXE] [OPTIONS] <INPUT> [OUTPUT]
+
+Arguments:
+  <INPUT>
+          Assembly file to assemble
+
+  [OUTPUT]
+          Binary output file
+
+Options:
+  -w, --ignore <IGNORE>
+          Warnings to silence
+
+  -W, --error <ERROR>
+          Warnings to turn into a hard error
+
+  -f, --output-format <OUTPUT_FORMAT>
+          Format to output to.
+          
+          - elf: Output the binary data within a .data section of an ELF file.
+          
+          - plain: Output just the binary data.
+          
+          - hexdump: Dump hexadecimal representation in a pretty format like in a hex editor.
+          
+          [default: elf]
+          [possible values: elf, plain, hex-dump]
+
+  -h, --help
+          Print help information (use `-h` for a summary)
+
+  -V, --version
+          Print version information
+
+```
+
+```
+$ spcasm -h
+A modern, user-friendly SPC700 assembler.
+
+Usage: spcasm[EXE] [OPTIONS] <INPUT> [OUTPUT]
+
+Arguments:
+  <INPUT>   Assembly file to assemble
+  [OUTPUT]  Binary output file
+
+Options:
+  -w, --ignore <IGNORE>
+          Warnings to silence
+  -W, --error <ERROR>
+          Warnings to turn into a hard error
+  -f, --output-format <OUTPUT_FORMAT>
+          Format to output to [default: elf] [possible values: elf, plain, hex-dump]
+  -h, --help
+          Print help information (use `--help` for more detail)
+  -V, --version
+          Print version information
+
+```

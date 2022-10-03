@@ -57,6 +57,11 @@ fn brr_integration(bencher: &mut Bencher) {
 	bencher.iter(|| test_file("examples/brr.spcasm"));
 }
 
+#[test]
+fn cli() {
+	trycmd::TestCases::new().case("examples/cli/*.trycmd");
+}
+
 fn test_file(file: &str) {
 	let (parsed, assembled) = super::run_assembler_with_default_options(file).unwrap();
 	let expected_binary = assemble_expected_binary(

@@ -6,6 +6,6 @@
 	- [Error reference](errors.md)
 	- [Troubleshooting](troubleshooting.md)
 - [Assembler reference](reference/README.md)
-	- [Instructions]()
+	- [Instructions](reference/instructions.md)
 	- [Macros]()
 - [Development](dev/README.md)

@@ -3,42 +3,41 @@
 _To run spcasm from source, use `cargo r --` and provide your arguments after the two dashes._
 
 ```
-SPC700 assembler
+A modern, user-friendly SPC700 assembler.
 
-USAGE:
-    spcasm.exe [OPTIONS] <INPUT> [OUTPUT]
+Usage: spcasm.exe [OPTIONS] <INPUT> [OUTPUT]
 
-ARGS:
-    <INPUT>
-            Assembly file to assemble
+Arguments:
+  <INPUT>
+          Assembly file to assemble
 
-    <OUTPUT>
-            Binary output file
+  [OUTPUT]
+          Binary output file
 
-OPTIONS:
-    -f, --output-format <OUTPUT_FORMAT>
-            Format to output to.
+Options:
+  -w, --ignore <IGNORE>
+          Warnings to silence
 
-            - elf: Output the binary data within a .data section of an ELF file.
+  -W, --error <ERROR>
+          Warnings to turn into a hard error
 
-            - plain: Output just the binary data.
+  -f, --output-format <OUTPUT_FORMAT>
+          Format to output to.
 
-            - hexdump: Dump hexadecimal representation in a pretty format like in a hex editor.
+          - elf: Output the binary data within a .data section of an ELF file.
 
-            [default: elf]
-            [possible values: elf, plain, hex-dump]
+          - plain: Output just the binary data.
 
-    -h, --help
-            Print help information
+          - hexdump: Dump hexadecimal representation in a pretty format like in a hex editor.
 
-    -V, --version
-            Print version information
+          [default: elf]
+          [possible values: elf, plain, hex-dump]
 
-    -w, --ignore <IGNORE>
-            Warnings to silence
+  -h, --help
+          Print help information (use `-h` for a summary)
 
-    -W, --error <ERROR>
-            Warnings to turn into a hard error
+  -V, --version
+          Print version information
 ```
 
 spcasm will read the assembly file INPUT and assemble it into a contiguous binary. This binary represents the SPC700's memory space.
@@ -49,7 +48,7 @@ If an error occurs during any step of the assembly process, spcasm will provide 
 
 ![spcasm error demonstration](https://user-images.githubusercontent.com/28656157/164973851-d66c5fa3-8bed-43b6-b7c2-e66cc53592c6.png)
 
-There may also be hints and warnings (identifiable by the pointing finger or exclamation mark that replace the red x) which inform you of possible problems with the assembly code that aren't fatal. These warnings can be turned off with `-w` or turned into hard errors with `-W`. Use `all` as a  shorthand for all warnings. Note that spcasm will print error "codes" with the prefix `spcasm::` but you do not have to include this prefix when referencing a warning on the command line, meaning that `-w label_shenanigans` and `-w spcasm::label_shenanigans` mean the same thing.
+There may also be hints and warnings (identifiable by the pointing finger or exclamation mark that replace the red x) which inform you of possible problems with the assembly code that aren't fatal. These warnings can be turned off with `-w` or turned into hard errors with `-W`. Use `all` as a shorthand for all warnings. Note that spcasm will print error "codes" with the prefix `spcasm::` but you do not have to include this prefix when referencing a warning on the command line, meaning that `-w label_shenanigans` and `-w spcasm::label_shenanigans` mean the same thing.
 
 [All errors, warning and advice messages are documented here in detail.](errors.md)
 
@@ -57,4 +56,101 @@ There may also be hints and warnings (identifiable by the pointing finger or exc
 
 You can use the `brr` binary (`cargo r --profile=spcasm-release --bin=brr --`) for using and testing the BRR encoder and decoder directly.
 
-**BRR documentation is currently missing.**
+```
+Bit Rate Reduced (BRR) / SNES ADPCM tools
+
+Usage: brr.exe [OPTIONS] <COMMAND>
+
+Commands:
+  encode-block  Encode a single block of samples
+  decode-block  Decode a single block of samples
+  encode        Encode a WAV file into a BRR file
+  decode        Decode a BRR file into a WAV file
+  help          Print this message or the help of the given subcommand(s)
+
+Options:
+  -v, --verbose  Print detailed information even for non-interactive commands
+  -h, --help     Print help information
+  -V, --version  Print version information
+```
+
+The `encode-block` subcommand:
+
+```
+Encode a single block of samples. Displays various information about the encoding process, including how accurately the data compresses under various filter modes. This command is intended for interactive experimenting with BRR encoding.
+
+Usage: brr.exe encode-block [OPTIONS] [SAMPLES] [SAMPLES] [SAMPLES] [SAMPLES] [SAMPLES] [SAMPLES] [SAMPLES] [SAMPLES] [SAMPLES] [SAMPLES] [SAMPLES] [SAMPLES] [SAMPLES] [SAMPLES] [SAMPLES] [SAMPLES]...
+
+Arguments:
+  [SAMPLES] [SAMPLES] [SAMPLES] [SAMPLES] [SAMPLES] [SAMPLES] [SAMPLES] [SAMPLES] [SAMPLES] [SAMPLES] [SAMPLES] [SAMPLES] [SAMPLES] [SAMPLES] [SAMPLES] [SAMPLES]...
+          The samples to encode, 16-bit signed integers. There must be exactly 16 samples to encode.
+
+Options:
+  -w, --warm-up <WARM_UP> <WARM_UP>
+          Override the previous samples to use for encoding. There must be exactly two of these, otherwise the previous samples are assumed to be zero.
+
+  -h, --help
+          Print help information (use `-h` for a summary)
+```
+
+The `decode-block` subcommand:
+
+```
+Decode a single block of samples. Displays various information about the decoding process. This command is intended for interactive experimenting with BRR decoding.
+
+Usage: brr.exe decode-block [OPTIONS] [BLOCK] [BLOCK] [BLOCK] [BLOCK] [BLOCK] [BLOCK] [BLOCK] [BLOCK] [BLOCK]...
+
+Arguments:
+  [BLOCK] [BLOCK] [BLOCK] [BLOCK] [BLOCK] [BLOCK] [BLOCK] [BLOCK] [BLOCK]...
+          The BRR-encoded block to decode, given in its individual bytes. There must be exactly nine bytes.
+
+Options:
+  -w, --warm-up <WARM_UP> <WARM_UP>
+          Set the previous two decoded samples, 16-bit signed integers. There must be exactly two of these, otherwise the previous samples are assumed to be zero.
+
+  -h, --help
+          Print help information (use `-h` for a summary)
+```
+
+The `decode` subcommand:
+
+```
+Decode a BRR file into a WAV file
+
+Usage: brr.exe decode <INPUT> [OUTPUT]
+
+Arguments:
+  <INPUT>
+          The BRR file to decode. Only raw BRR files are supported right now.
+
+  [OUTPUT]
+          Output WAV file to write. The format is always mono 16-bit signed integer with a sample rate of 32kHz, matching the SNES DSP.
+
+Options:
+  -h, --help
+          Print help information (use `-h` for a summary)
+```
+
+The `encode` subcommand:
+
+```
+Encode a WAV file into a BRR file
+
+Usage: brr.exe encode [OPTIONS] <INPUT> [OUTPUT]
+
+Arguments:
+  <INPUT>
+          The WAV file to encode. Only uncompressed WAV (integer or float) is supported. Sample rate is not converted, so in order for audio to not be pitch-shifted, the          input has to be at 32kHz, matching the SNES DSP sample rate.
+
+  [OUTPUT]
+          Output BRR file to write. By default, a file with the same name but a `.brr` extension is used as output.
+
+Options:
+  -c, --compression <COMPRESSION>
+          Compression level to use; higher levels mean better audio fidelity. 0: Only use filter 0, 1: Use all filters with non-wrapping optimal shift, 2: Use all filters with optimal shift.
+
+          [default: 2]
+
+  -h, --help
+          Print help information (use `-h` for a summary)
+```

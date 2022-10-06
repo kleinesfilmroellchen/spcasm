@@ -35,12 +35,14 @@ pub enum Label {
 	/// A macro argument that is resolved at a later point.
 	MacroArgument {
 		/// The name of the argument.
-		name:  String,
+		name:         String,
 		/// The resolved value of the argument. Note that this is always None for the macro definition.
-		value: Option<MemoryAddress>,
+		value:        Option<MemoryAddress>,
 		/// The location where this macro argument usage is defined. Note that because macro arguments are not coerced,
 		/// this always points to the usage of the argument, never the definition in the macro argument list.
-		span:  SourceSpan,
+		span:         SourceSpan,
+		/// The parent structure that this macro belongs to, used for resolving values.
+		macro_parent: Arc<RefCell<MacroParent>>,
 	},
 }
 
@@ -59,6 +61,33 @@ impl Label {
 			Self::Local(local) => local.borrow_mut().location = Some(Box::new(location)),
 			// noop on macro arguments
 			Self::MacroArgument { .. } => {},
+		}
+	}
+}
+
+impl MacroParentReplacable for Label {
+	fn replace_macro_parent(
+		&mut self,
+		replacement_parent: Arc<RefCell<MacroParent>>,
+		source_code: &Arc<AssemblyCode>,
+	) -> Result<(), Box<AssemblyError>> {
+		match self {
+			Self::Global(global) => global.borrow_mut().replace_macro_parent(replacement_parent, source_code),
+			Self::Local(local) => local.borrow_mut().replace_macro_parent(replacement_parent, source_code),
+			Self::MacroArgument { macro_parent, name, span, .. } => {
+				*macro_parent = replacement_parent;
+				if macro_parent.borrow().has_argument_named(name) {
+					Ok(())
+				} else {
+					Err(AssemblyError::UnknownMacroArgument {
+						name:            (*name).to_string(),
+						available_names: macro_parent.borrow().argument_names(),
+						location:        *span,
+						src:             source_code.clone(),
+					}
+					.into())
+				}
+			},
 		}
 	}
 }
@@ -109,7 +138,7 @@ impl Resolvable for Label {
 		match self {
 			Self::Global(label) => label.borrow_mut().resolve_to(location, usage_span, source_code),
 			Self::Local(label) => label.borrow_mut().resolve_to(location, usage_span, source_code),
-			Self::MacroArgument { name, value, span } => {
+			Self::MacroArgument { name, value, span, .. } => {
 				*value = Some(location);
 				Ok(())
 			},
@@ -131,6 +160,20 @@ pub struct GlobalLabel {
 	pub used_as_address: bool,
 	/// Local labels belonging to this global label.
 	pub locals:          HashMap<String, Arc<RefCell<LocalLabel>>>,
+}
+
+impl MacroParentReplacable for GlobalLabel {
+	fn replace_macro_parent(
+		&mut self,
+		replacement_parent: Arc<RefCell<MacroParent>>,
+		source_code: &Arc<AssemblyCode>,
+	) -> Result<(), Box<AssemblyError>> {
+		self.location
+			.as_mut()
+			.map(|location| location.replace_macro_parent(replacement_parent, source_code))
+			.transpose()
+			.map(|_| ())
+	}
 }
 
 impl PartialEq for GlobalLabel {
@@ -191,6 +234,20 @@ impl LocalLabel {
 	}
 }
 
+impl MacroParentReplacable for LocalLabel {
+	fn replace_macro_parent(
+		&mut self,
+		replacement_parent: Arc<RefCell<MacroParent>>,
+		source_code: &Arc<AssemblyCode>,
+	) -> Result<(), Box<AssemblyError>> {
+		self.location
+			.as_mut()
+			.map(|location| location.replace_macro_parent(replacement_parent, source_code))
+			.transpose()
+			.map(|_| ())
+	}
+}
+
 impl Resolvable for LocalLabel {
 	fn is_resolved(&self) -> bool {
 		self.location.is_some()
@@ -216,6 +273,45 @@ impl Resolvable for LocalLabel {
 			Ok(())
 		}
 	}
+}
+
+/// The structure holding all of the data for the macro arguments.
+#[derive(Debug, Clone)]
+pub enum MacroParent {
+	Formal(Vec<(String, SourceSpan)>),
+	Actual(HashMap<String, Number>),
+}
+
+impl MacroParent {
+	/// Returns whether the macro parent has any argument with this name. This function will usually be faster than
+	/// searching through the result of `argument_names`.
+	pub fn has_argument_named(&self, name: &str) -> bool {
+		match self {
+			Self::Formal(list) => list.iter().any(|(formal_name, _)| formal_name == name),
+			Self::Actual(list) => list.contains_key(name),
+		}
+	}
+
+	/// Returns all argument names that this macro parent has.
+	pub fn argument_names(&self) -> Vec<String> {
+		match self {
+			Self::Formal(list) => list.clone().into_iter().map(|(name, _)| name).collect(),
+			Self::Actual(list) => list.keys().map(String::clone).collect(),
+		}
+	}
+}
+
+pub trait MacroParentReplacable {
+	/// Replace any macro argument's parent with the given macro parent. The macro parent stores the current macro's
+	/// argument list.
+	///
+	/// # Errors
+	/// If a macro argument is missing from the parent, it means that it is misnamed and an error is returned.
+	fn replace_macro_parent(
+		&mut self,
+		replacement_parent: Arc<RefCell<MacroParent>>,
+		source_code: &Arc<AssemblyCode>,
+	) -> Result<(), Box<AssemblyError>>;
 }
 
 /// Ensures that the local label is referencing the parent, and that the parent is referencing the local. The local

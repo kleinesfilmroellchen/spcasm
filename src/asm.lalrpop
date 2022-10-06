@@ -13,7 +13,7 @@ use crate::parser::{
 	LabelUsageKind, 
 	Token,
 	Register,
-	label::{Label, LocalLabel},
+	label::{Label, LocalLabel, MacroParent},
 	try_make_direct_page_addressing_mode,
 	source_range,
 	program::ProgramElement,
@@ -184,7 +184,7 @@ ArchMacro: Macro = <mcro:"arch"> <arch:"identifier"> =>? {
 UserDefinedMacro: Macro = <start:"macro"> <name:"identifier"> <arguments:UserDefinedMacroArguments> "\n" <body:Program> <end:"endmacro"> => Macro {
 	value: MacroValue::UserDefinedMacro {
 		name: name.0,
-		arguments,
+		arguments: Arc::new(RefCell::new(MacroParent::Formal(arguments))),
 		body,
 	},
 	span: source_range(start.into(), end.into()),
@@ -251,6 +251,7 @@ Label: Label = {
 	<start:"<"> <identifier:"identifier"> <end:">"> => Label::MacroArgument {
 		name: identifier.0,
 		span: source_range(start.into(), end.into()),
+		macro_parent: Arc::new(RefCell::new(MacroParent::Formal(Vec::new()))),
 		value: None,
 	}
 };

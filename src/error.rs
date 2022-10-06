@@ -149,6 +149,39 @@ pub enum AssemblyError {
 		location: SourceSpan,
 	},
 
+	#[error("User macro '{name}' is defined inside another user macro")]
+	#[diagnostic(
+		code(spcasm::recursive_macro_definition),
+		severity(Error),
+		help(
+			"User-defined macros can only be defined at the top level of a file, as inner definition does not make \
+			 sense. If you want to avoid name collisions, use a more distinctive name."
+		)
+	)]
+	RecursiveMacroDefinition {
+		name:     String,
+		#[source_code]
+		src:      Arc<AssemblyCode>,
+		#[label("Defined here")]
+		location: SourceSpan,
+	},
+
+	#[error("Macro argument '{name}' has not been defined in this macro")]
+	#[diagnostic(
+		code(spcasm::undefined_macro_argument),
+		severity(Error),
+		help("The available arguments are: {}. Did you misspell the macro argument's name?",
+			available_names.iter().map(|name| format!("'{}'", name)).collect::<Vec<_>>().join(", "))
+	)]
+	UnknownMacroArgument {
+		name:            String,
+		available_names: Vec<String>,
+		#[source_code]
+		src:             Arc<AssemblyCode>,
+		#[label("Macro argument used here")]
+		location:        SourceSpan,
+	},
+
 	//#region Semantic errors: detected while parsing or assembling
 	#[error("File \"{file_name}\" was not found")]
 	#[diagnostic(code(spcasm::file_not_found), severity(Error))]

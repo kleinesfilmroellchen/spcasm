@@ -2,14 +2,17 @@
 #![deny(clippy::all, clippy::pedantic, clippy::nursery)]
 #![allow(clippy::module_name_repetitions)]
 
+use std::cell::RefCell;
 use std::fmt::Display;
+use std::sync::Arc;
 
 use miette::SourceSpan;
 use spcasm_derive::Parse;
 
-use crate::parser::ProgramElement;
 use crate::parser::instruction::{MemoryAddress, Number};
-use crate::parser::label::Label;
+use crate::parser::label::{Label, MacroParent, MacroParentReplacable};
+use crate::parser::{source_range, ProgramElement};
+use crate::{AssemblyCode, AssemblyError};
 
 /// An assembly macro.
 #[derive(Clone, Debug)]
@@ -25,6 +28,16 @@ impl Default for Macro {
 	fn default() -> Self {
 		// We use the table macro with no entries as default as that will do nothing.
 		Self { value: MacroValue::Table { values: Vec::new(), entry_size: 1 }, label: None, span: (0, 0).into() }
+	}
+}
+
+impl MacroParentReplacable for Macro {
+	fn replace_macro_parent(
+		&mut self,
+		replacement_parent: Arc<RefCell<MacroParent>>,
+		source_code: &Arc<AssemblyCode>,
+	) -> Result<(), Box<crate::AssemblyError>> {
+		self.value.replace_macro_parent(replacement_parent, source_code)
 	}
 }
 
@@ -102,9 +115,39 @@ pub enum MacroValue {
 	/// pullpc
 	PopSection,
 	/// macro
-	UserDefinedMacro {
-		name: String,
-		arguments: Vec<(String, SourceSpan)>,
-		body: Vec<ProgramElement>,
+	UserDefinedMacro { name: String, arguments: Arc<RefCell<MacroParent>>, body: Vec<ProgramElement> },
+}
+
+impl MacroParentReplacable for MacroValue {
+	fn replace_macro_parent(
+		&mut self,
+		replacement_parent: Arc<RefCell<MacroParent>>,
+		source_code: &Arc<AssemblyCode>,
+	) -> Result<(), Box<crate::AssemblyError>> {
+		match self {
+			Self::Table { values, entry_size } => {
+				for value in values {
+					value.replace_macro_parent(replacement_parent.clone(), source_code)?;
+				}
+				Ok(())
+			},
+			Self::String { text, has_null_terminator } => Ok(()),
+			Self::AssignLabel { label, value } => value.replace_macro_parent(replacement_parent, source_code),
+			Self::Include { file, range } => Ok(()),
+			Self::End
+			| Self::PushSection
+			| Self::Brr(_)
+			| Self::PopSection
+			| Self::Org(_) => Ok(()),
+			Self::UserDefinedMacro { name, arguments, body } => Err(AssemblyError::RecursiveMacroDefinition {
+				name:     (*name).to_string(),
+				location: source_range(
+					body.first().map_or_else(|| (0, 0).into(), |p| *p.span()).into(),
+					body.last().map_or_else(|| (0, 0).into(), |p| *p.span()).into(),
+				),
+				src:      source_code.clone(),
+			}
+			.into()),
+		}
 	}
 }

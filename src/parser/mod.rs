@@ -10,7 +10,7 @@ use std::sync::{Arc, Weak};
 use miette::{SourceOffset, SourceSpan};
 
 use self::instruction::{AddressingMode, Instruction, Number, Opcode};
-use self::label::{GlobalLabel, Label};
+use self::label::{GlobalLabel, Label, MacroParentReplacable};
 use self::lexer::lex;
 use crate::assembler::resolve_file;
 use crate::cli::ErrorOptions;
@@ -173,6 +173,7 @@ impl Environment {
 		let mut file = rc_file.borrow_mut();
 
 		file.fill_in_label_references()?;
+		file.resolve_user_macro_arguments()?;
 		file.coerce_to_direct_page_addressing();
 
 		drop(file);
@@ -220,6 +221,8 @@ impl Environment {
 impl AssemblyFile {
 	/// Fills in the global label references for all local labels. Existing ones are overwritten, so the labels are
 	/// always consistent.
+	///
+	/// Additionally, this fills in references to macro argument lists for macro argument occurrences.
 	/// # Errors
 	/// If a local label precedes any global labels.
 	/// # Panics
@@ -273,19 +276,19 @@ impl AssemblyFile {
 				| ProgramElement::Macro(Macro { label: None, .. }) => (),
 
 				ProgramElement::Instruction(Instruction {
-					label: Some(ref mal @ Label::MacroArgument { ref name, ref value, ref span }),
+					label: Some(ref mal @ Label::MacroArgument { ref name, ref value, ref span, .. }),
 					..
 				})
 				| ProgramElement::IncludeSource {
-					label: Some(ref mal @ Label::MacroArgument { ref name, ref value, ref span }),
+					label: Some(ref mal @ Label::MacroArgument { ref name, ref value, ref span, .. }),
 					..
 				}
 				| ProgramElement::UserDefinedMacroCall {
-					label: Some(ref mal @ Label::MacroArgument { ref name, ref value, ref span }),
+					label: Some(ref mal @ Label::MacroArgument { ref name, ref value, ref span, .. }),
 					..
 				}
 				| ProgramElement::Macro(Macro {
-					label: Some(ref mal @ Label::MacroArgument { ref name, ref value, ref span }),
+					label: Some(ref mal @ Label::MacroArgument { ref name, ref value, ref span, .. }),
 					..
 				}) =>
 					return Err(AssemblyError::UsingMacroArgumentOutsideMacro {
@@ -302,6 +305,21 @@ impl AssemblyFile {
 			{
 				if let Some(mode) = first_operand.as_mut() { mode.set_global_label(actual_global_label) }
 				if let Some(mode) = second_operand.as_mut() { mode.set_global_label(actual_global_label) }
+			}
+		}
+		Ok(())
+	}
+
+	pub fn resolve_user_macro_arguments(&mut self) -> Result<(), Box<AssemblyError>> {
+		for element in &mut self.content {
+			if let ProgramElement::Macro(Macro {
+				value: MacroValue::UserDefinedMacro { ref arguments, body, name },
+				..
+			}) = element
+			{
+				for child_element in body {
+					child_element.replace_macro_parent(arguments.clone(), &self.source_code)?;
+				}
 			}
 		}
 		Ok(())

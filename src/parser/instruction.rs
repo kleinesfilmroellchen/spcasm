@@ -10,7 +10,7 @@ use std::sync::Arc;
 use miette::SourceSpan;
 use spcasm_derive::{Parse, VariantName};
 
-use super::label::{self, GlobalLabel, Label};
+use super::label::{self, GlobalLabel, Label, MacroParentReplacable};
 use super::register::Register;
 use crate::error::{AssemblyCode, AssemblyError};
 use crate::VariantName;
@@ -53,6 +53,16 @@ impl Default for Instruction {
 	}
 }
 
+impl MacroParentReplacable for Instruction {
+	fn replace_macro_parent(
+		&mut self,
+		replacement_parent: Arc<RefCell<label::MacroParent>>,
+		source_code: &Arc<AssemblyCode>,
+	) -> Result<(), Box<AssemblyError>> {
+		self.opcode.replace_macro_parent(replacement_parent, source_code)
+	}
+}
+
 /// An instruction's core data that's used to generate machine code.
 #[derive(Clone, Debug, PartialEq)]
 pub struct Opcode {
@@ -64,6 +74,19 @@ pub struct Opcode {
 	pub second_operand:    Option<AddressingMode>,
 	/// Whether this opcode is forced to use direct page addressing.
 	pub force_direct_page: bool,
+}
+
+impl MacroParentReplacable for Opcode {
+	fn replace_macro_parent(
+		&mut self,
+		replacement_parent: Arc<RefCell<label::MacroParent>>,
+		source_code: &Arc<AssemblyCode>,
+	) -> Result<(), Box<AssemblyError>> {
+		for operand in self.first_operand.iter_mut().chain(self.second_operand.iter_mut()) {
+			operand.replace_macro_parent(replacement_parent.clone(), source_code)?;
+		}
+		Ok(())
+	}
 }
 
 /// Instruction mnemonics of the SPC700.
@@ -290,6 +313,24 @@ impl Number {
 	}
 }
 
+impl MacroParentReplacable for Number {
+	fn replace_macro_parent(
+		&mut self,
+		replacement_parent: Arc<RefCell<label::MacroParent>>,
+		source_code: &Arc<AssemblyCode>,
+	) -> Result<(), Box<AssemblyError>> {
+		match self {
+			Number::Literal(_) => Ok(()),
+			Number::Label(label) => label.replace_macro_parent(replacement_parent, source_code),
+			Number::Negate(number) => number.replace_macro_parent(replacement_parent, source_code),
+			Number::Add(lhs, rhs) | Number::Subtract(lhs, rhs) | Number::Multiply(lhs, rhs) | Number::Divide(lhs, rhs) => {
+				lhs.replace_macro_parent(replacement_parent.clone(), source_code)?;
+				rhs.replace_macro_parent(replacement_parent, source_code)
+			},
+		}
+	}
+}
+
 impl From<MemoryAddress> for Number {
 	fn from(address: MemoryAddress) -> Self {
 		Self::Literal(address)
@@ -473,6 +514,34 @@ impl AddressingMode {
 			Self::YIndexed(number) => Self::DirectPageYIndexed(number),
 			Self::AddressBit(number, bit) => Self::DirectPageBit(number, bit),
 			_ => self,
+		}
+	}
+}
+
+impl MacroParentReplacable for AddressingMode {
+	fn replace_macro_parent(
+		&mut self,
+		replacement_parent: Arc<RefCell<label::MacroParent>>,
+		source_code: &Arc<AssemblyCode>,
+	) -> Result<(), Box<AssemblyError>> {
+		match self {
+			AddressingMode::Immediate(number)
+			| AddressingMode::DirectPage(number)
+			| AddressingMode::DirectPageXIndexed(number)
+			| AddressingMode::DirectPageYIndexed(number)
+			| AddressingMode::Address(number)
+			| AddressingMode::XIndexed(number)
+			| AddressingMode::YIndexed(number)
+			| AddressingMode::DirectPageXIndexedIndirect(number)
+			| AddressingMode::DirectPageIndirectYIndexed(number)
+			| AddressingMode::DirectPageBit(number, _)
+			| AddressingMode::AddressBit(number, _)
+			| AddressingMode::NegatedAddressBit(number, _) => number.replace_macro_parent(replacement_parent, source_code),
+			AddressingMode::IndirectX
+			| AddressingMode::IndirectY
+			| AddressingMode::IndirectXAutoIncrement
+			| AddressingMode::CarryFlag
+			| AddressingMode::Register(_) => Ok(()),
 		}
 	}
 }

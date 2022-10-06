@@ -1,11 +1,15 @@
 //! AST of the entire assembly program.
 #![allow(clippy::module_name_repetitions, clippy::large_enum_variant)]
+use std::cell::RefCell;
+use std::sync::Arc;
+
 use miette::SourceSpan;
 
 use super::instruction::{Instruction, Number};
-use super::label::Label;
+use super::label::{Label, MacroParent, MacroParentReplacable};
 use super::Macro;
 use crate::parser::source_range;
+use crate::{AssemblyCode, AssemblyError};
 
 /// A program element of an assenbled program. A list of program elements makes an assembled program itself.
 #[derive(Clone, Debug)]
@@ -77,6 +81,26 @@ impl ProgramElement {
 				Self::IncludeSource { file, span, label: original_label.or(label) },
 			Self::UserDefinedMacroCall { span, arguments, macro_name, label: original_label } =>
 				Self::UserDefinedMacroCall { span, arguments, macro_name, label: original_label.or(label) },
+		}
+	}
+}
+
+impl MacroParentReplacable for ProgramElement {
+	fn replace_macro_parent(
+		&mut self,
+		replacement_parent: Arc<RefCell<MacroParent>>,
+		source_code: &Arc<AssemblyCode>,
+	) -> Result<(), Box<AssemblyError>> {
+		match self {
+			Self::Macro(r#macro) => r#macro.replace_macro_parent(replacement_parent, source_code),
+			Self::Instruction(instruction) => instruction.replace_macro_parent(replacement_parent, source_code),
+			Self::UserDefinedMacroCall { arguments, .. } => {
+				for argument in arguments {
+					argument.replace_macro_parent(replacement_parent.clone(), source_code)?;
+				}
+				Ok(())
+			},
+			Self::IncludeSource { file, span, label } => Ok(()),
 		}
 	}
 }

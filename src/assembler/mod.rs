@@ -425,7 +425,7 @@ impl LabeledMemoryValue {
 	/// If the memory value is not resolved, a nice "unresolved label" error is returned.
 	#[inline]
 	pub fn try_as_resolved(&self, src: &Arc<AssemblyCode>) -> Result<u8, Box<AssemblyError>> {
-		self.value.try_resolved().map_err(|number| {
+		self.value.try_resolved(self.instruction_location, src).map_err(|number| {
 			{
 				let first_label =
 					number.first_label().expect("Number resolution failure was not caused by label; this is a bug!");
@@ -484,12 +484,12 @@ impl MemoryValue {
 		}
 	}
 
-	fn try_resolved(&self) -> Result<u8, Number> {
+	fn try_resolved(&self, location: SourceSpan, source_code: &Arc<AssemblyCode>) -> Result<u8, Number> {
 		match self {
 			Self::Resolved(value) => Ok(*value),
-			Self::Number(label, ..)
-			| Self::NumberHighByteWithContainedBitIndex(label, ..)
-			| Self::NumberRelative(label) => Err(label.clone()),
+			Self::Number(number, ..)
+			| Self::NumberHighByteWithContainedBitIndex(number, ..)
+			| Self::NumberRelative(number) => Err(number.clone()),
 		}
 	}
 }
@@ -969,6 +969,7 @@ impl AssembledData {
 								datum.instruction_location,
 								self.source_code.clone(),
 							),
+							Label::MacroArgument { value: Some(_), .. } => Ok(()),
 							Label::MacroArgument { value: None, span, .. } => Err(AssemblyError::UnresolvedLabel {
 								label:          resolved_label.to_string(),
 								label_location: span,
@@ -976,7 +977,6 @@ impl AssembledData {
 								src:            self.source_code.clone(),
 							}
 							.into()),
-							Label::MacroArgument { value: Some(_), .. } => Ok(()),
 						}
 						.err()
 					})

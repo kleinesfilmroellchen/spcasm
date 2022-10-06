@@ -134,11 +134,7 @@ impl MacroParentReplacable for MacroValue {
 			Self::String { text, has_null_terminator } => Ok(()),
 			Self::AssignLabel { label, value } => value.replace_macro_parent(replacement_parent, source_code),
 			Self::Include { file, range } => Ok(()),
-			Self::End
-			| Self::PushSection
-			| Self::Brr(_)
-			| Self::PopSection
-			| Self::Org(_) => Ok(()),
+			Self::End | Self::PushSection | Self::Brr(_) | Self::PopSection | Self::Org(_) => Ok(()),
 			Self::UserDefinedMacro { name, arguments, body } => Err(AssemblyError::RecursiveMacroDefinition {
 				name:     (*name).to_string(),
 				location: source_range(

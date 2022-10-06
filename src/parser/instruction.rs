@@ -271,7 +271,7 @@ impl Number {
 					usage_location: *span,
 					src: source_code
 				}.into()),
-				Label::MacroArgument{value: Some(value), span, ..} => *value,
+				Label::MacroArgument{value: Some(value), span, ..} => value.try_value(location, source_code)?,
 			},
 			Self::Negate(number) => -number.try_value(location, source_code)?,
 			Self::Add(lhs, rhs) => lhs.try_value(location, source_code.clone())? + rhs.try_value(location, source_code)?,
@@ -288,6 +288,7 @@ impl Number {
 		match self {
 			Self::Label(Label::Global(global)) if let Some(memory_location) = global.clone().borrow().location.clone() => memory_location.try_resolve(),
 			Self::Label(Label::Local(local)) if let Some(memory_location) = local.clone().borrow().location.clone() => memory_location.try_resolve(),
+			Self::Label(Label::MacroArgument { value: Some(memory_location) , .. }) => memory_location.try_resolve(),
 			Number::Negate(number) => match number.try_resolve() {
 				Number::Literal(value) => Number::Literal(-value),
 				resolved => Number::Negate(Box::new(resolved)),
@@ -308,7 +309,7 @@ impl Number {
 				(Number::Literal(lhs_value), Number::Literal(rhs_value)) => Number::Literal(lhs_value / rhs_value),
 				(lhs, rhs) => Number::Divide(Box::new(lhs), Box::new(rhs)),
 			},
-			_ => self,
+			Number::Literal(..) | Self::Label(Label::Local(..) | Label::Global(..) | Label::MacroArgument { value: None, .. }) => self,
 		}
 	}
 }
@@ -323,7 +324,10 @@ impl MacroParentReplacable for Number {
 			Number::Literal(_) => Ok(()),
 			Number::Label(label) => label.replace_macro_parent(replacement_parent, source_code),
 			Number::Negate(number) => number.replace_macro_parent(replacement_parent, source_code),
-			Number::Add(lhs, rhs) | Number::Subtract(lhs, rhs) | Number::Multiply(lhs, rhs) | Number::Divide(lhs, rhs) => {
+			Number::Add(lhs, rhs)
+			| Number::Subtract(lhs, rhs)
+			| Number::Multiply(lhs, rhs)
+			| Number::Divide(lhs, rhs) => {
 				lhs.replace_macro_parent(replacement_parent.clone(), source_code)?;
 				rhs.replace_macro_parent(replacement_parent, source_code)
 			},
@@ -373,7 +377,7 @@ impl UpperHex for Number {
 				}
 			},
 			Self::Label(Label::MacroArgument { value, name, .. }) => match value {
-				Some(numeric_address) => f.pad(&format!("{:0X}", *numeric_address)),
+				Some(numeric_address) => f.pad(&format!("{:0X}", **numeric_address)),
 				None => write!(f, "{}", name),
 			},
 			Self::Literal(numeric_address) => {

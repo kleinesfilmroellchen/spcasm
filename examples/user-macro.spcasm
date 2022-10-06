@@ -1,6 +1,11 @@
 
+macro do_nothing
+  nop
+endmacro
+
 macro do_stuff(first, second)
   mov a,<first>
+  %do_nothing()
   mov x,<second>
 endmacro
 
@@ -8,3 +13,4 @@ loop:
   nop
   %do_stuff($500, $501)
   jmp loop
+  %do_nothing()

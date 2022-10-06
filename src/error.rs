@@ -182,6 +182,38 @@ pub enum AssemblyError {
 		location:        SourceSpan,
 	},
 
+	#[error("Macro '{name}' is not defined")]
+	#[diagnostic(
+		code(spcasm::undefined_macro),
+		severity(Error),
+		help("The available macros are: {}.",
+			available_macros.iter().map(|name| format!("'{}'", name)).collect::<Vec<_>>().join(", "))
+	)]
+	UndefinedUserMacro {
+		name:             String,
+		available_macros: Vec<String>,
+		#[source_code]
+		src:              Arc<AssemblyCode>,
+		#[label("Macro used here")]
+		location:         SourceSpan,
+	},
+
+	#[error("Macro '{name}' takes {expected_number} arguments, but {actual_number} were supplied")]
+	#[diagnostic(
+		code(spcasm::incorrect_number_of_arguments),
+		severity(Error),
+		help("{} arguments", if expected_number < actual_number { "Add" } else { "Remove" })
+	)]
+	IncorrectNumberOfMacroArguments {
+		name:            String,
+		expected_number: usize,
+		actual_number:   usize,
+		#[source_code]
+		src:             Arc<AssemblyCode>,
+		#[label("In this macro call")]
+		location:        SourceSpan,
+	},
+
 	//#region Semantic errors: detected while parsing or assembling
 	#[error("File \"{file_name}\" was not found")]
 	#[diagnostic(code(spcasm::file_not_found), severity(Error))]

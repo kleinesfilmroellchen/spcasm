@@ -37,7 +37,7 @@ pub enum Label {
 		/// The name of the argument.
 		name:         String,
 		/// The resolved value of the argument. Note that this is always None for the macro definition.
-		value:        Option<MemoryAddress>,
+		value:        Option<Box<Number>>,
 		/// The location where this macro argument usage is defined. Note that because macro arguments are not coerced,
 		/// this always points to the usage of the argument, never the definition in the macro argument list.
 		span:         SourceSpan,
@@ -74,19 +74,28 @@ impl MacroParentReplacable for Label {
 		match self {
 			Self::Global(global) => global.borrow_mut().replace_macro_parent(replacement_parent, source_code),
 			Self::Local(local) => local.borrow_mut().replace_macro_parent(replacement_parent, source_code),
-			Self::MacroArgument { macro_parent, name, span, .. } => {
+			Self::MacroArgument { macro_parent, name, span, value } => {
 				*macro_parent = replacement_parent;
-				if macro_parent.borrow().has_argument_named(name) {
-					Ok(())
-				} else {
-					Err(AssemblyError::UnknownMacroArgument {
-						name:            (*name).to_string(),
-						available_names: macro_parent.borrow().argument_names(),
-						location:        *span,
-						src:             source_code.clone(),
-					}
-					.into())
-				}
+				macro_parent.borrow().get_value_of(name).map_or_else(
+					|| {
+						if macro_parent.borrow().has_argument_named(name) {
+							// The parent is formal arguments, so we are a valid argument but there is no value yet.
+							Ok(())
+						} else {
+							Err(AssemblyError::UnknownMacroArgument {
+								name:            (*name).to_string(),
+								available_names: macro_parent.borrow().argument_names(),
+								location:        *span,
+								src:             source_code.clone(),
+							}
+							.into())
+						}
+					},
+					|argument_value| {
+						*value = Some(Box::new(argument_value));
+						Ok(())
+					},
+				)
 			},
 		}
 	}
@@ -139,7 +148,7 @@ impl Resolvable for Label {
 			Self::Global(label) => label.borrow_mut().resolve_to(location, usage_span, source_code),
 			Self::Local(label) => label.borrow_mut().resolve_to(location, usage_span, source_code),
 			Self::MacroArgument { name, value, span, .. } => {
-				*value = Some(location);
+				*value = Some(Box::new(Number::Literal(location)));
 				Ok(())
 			},
 		}
@@ -297,6 +306,13 @@ impl MacroParent {
 		match self {
 			Self::Formal(list) => list.clone().into_iter().map(|(name, _)| name).collect(),
 			Self::Actual(list) => list.keys().map(String::clone).collect(),
+		}
+	}
+
+	pub fn get_value_of(&self, name: &str) -> Option<Number> {
+		match self {
+			Self::Formal(..) => None,
+			Self::Actual(list) => list.get(name).cloned(),
 		}
 	}
 }

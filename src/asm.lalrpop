@@ -40,9 +40,9 @@ InstructionOrMacro: ProgramElement = {
 	MacroCall => <>,
 };
 
-MacroCall: ProgramElement = <start:"%"> <macro_name:"identifier"> "(" <arguments:Comma<Number>> <end:")"> => ProgramElement::UserDefinedMacroCall {
+MacroCall: ProgramElement = <start:"%"> <macro_name:"identifier"> "(" <arguments:Comma<Number>?> <end:")"> => ProgramElement::UserDefinedMacroCall {
 	macro_name: macro_name.0,
-	arguments,
+	arguments: arguments.unwrap_or(Vec::new()),
 	span: source_range(start.into(), end.into()),
 	label: None
 };
@@ -181,10 +181,10 @@ ArchMacro: Macro = <mcro:"arch"> <arch:"identifier"> =>? {
 	}
 };
 
-UserDefinedMacro: Macro = <start:"macro"> <name:"identifier"> <arguments:UserDefinedMacroArguments> "\n" <body:Program> <end:"endmacro"> => Macro {
+UserDefinedMacro: Macro = <start:"macro"> <name:"identifier"> <arguments:UserDefinedMacroArguments?> "\n" <body:Program> <end:"endmacro"> => Macro {
 	value: MacroValue::UserDefinedMacro {
 		name: name.0,
-		arguments: Arc::new(RefCell::new(MacroParent::Formal(arguments))),
+		arguments: Arc::new(RefCell::new(MacroParent::Formal(arguments.unwrap_or(Vec::new())))),
 		body,
 	},
 	span: source_range(start.into(), end.into()),

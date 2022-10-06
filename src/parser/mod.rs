@@ -10,7 +10,7 @@ use std::sync::{Arc, Weak};
 use miette::{SourceOffset, SourceSpan};
 
 use self::instruction::{AddressingMode, Instruction, Number, Opcode};
-use self::label::{GlobalLabel, Label, MacroParentReplacable};
+use self::label::{GlobalLabel, Label, MacroParent, MacroParentReplacable};
 use self::lexer::lex;
 use crate::assembler::resolve_file;
 use crate::cli::ErrorOptions;
@@ -181,7 +181,12 @@ impl Environment {
 		this.borrow_mut().files.insert(source_code.name.clone(), rc_file.clone());
 
 		// ...once we start including source files here.
-		rc_file.borrow_mut().resolve_source_includes()?;
+		let mut file = rc_file.borrow_mut();
+		file.resolve_source_includes()?;
+
+		file.expand_user_macros()?;
+
+		drop(file);
 
 		Ok(rc_file)
 	}
@@ -388,6 +393,75 @@ impl AssemblyFile {
 			}
 			index += 1;
 		}
+		Ok(())
+	}
+
+	/// Expands calls to user-defined macros.
+	pub fn expand_user_macros(&mut self) -> Result<(), Box<AssemblyError>> {
+		let user_macros = self
+			.content
+			.iter()
+			.filter_map(|el| match el {
+				ProgramElement::Macro(Macro {
+					span, value: value @ MacroValue::UserDefinedMacro { name, .. }, ..
+				}) => Some((name.clone(), (*span, value.clone()))),
+				_ => None,
+			})
+			.collect::<HashMap<_, _>>();
+
+		let mut index = 0;
+		while index < self.content.len() {
+			let mut element = &mut self.content[index];
+
+			if let ProgramElement::UserDefinedMacroCall { macro_name, arguments: actual_arguments, span, label } =
+				element
+			{
+				let called_macro = user_macros.get(macro_name);
+				if let Some((span, MacroValue::UserDefinedMacro { name, arguments, body })) = called_macro {
+					let arguments = arguments.borrow();
+					let formal_arguments = match &*arguments {
+						MacroParent::Formal(formal_arguments) => formal_arguments,
+						MacroParent::Actual(_) => unreachable!(),
+					};
+					if formal_arguments.len() != actual_arguments.len() {
+						return Err(AssemblyError::IncorrectNumberOfMacroArguments {
+							name:            macro_name.clone(),
+							expected_number: formal_arguments.len(),
+							actual_number:   actual_arguments.len(),
+							location:        *span,
+							src:             self.source_code.clone(),
+						}
+						.into());
+					}
+					let actual_argument_parent = Arc::new(RefCell::new(MacroParent::Actual(
+						formal_arguments
+							.iter()
+							.zip(actual_arguments.iter())
+							.map(|((formal_argument, _), actual_argument)| {
+								(formal_argument.clone(), actual_argument.clone())
+							})
+							.collect(),
+					)));
+					// FIXME: Doesn't handle macro-internal labels correctly; also no support for the \@ special label.
+					let mut inserted_body = body.clone();
+					for mut macro_element in &mut inserted_body {
+						macro_element.replace_macro_parent(actual_argument_parent.clone(), &self.source_code)?;
+					}
+
+					self.content.splice(index ..= index, inserted_body);
+					continue;
+				}
+				return Err(AssemblyError::UndefinedUserMacro {
+					name:             macro_name.clone(),
+					available_macros: user_macros.keys().map(String::clone).collect(),
+					location:         *span,
+					src:              self.source_code.clone(),
+				}
+				.into());
+			}
+			index += 1;
+		}
+
 		Ok(())
 	}
 }

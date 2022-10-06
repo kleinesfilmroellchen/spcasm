@@ -7,6 +7,7 @@ use std::fmt::Display;
 use miette::SourceSpan;
 use spcasm_derive::Parse;
 
+use crate::parser::ProgramElement;
 use crate::parser::instruction::{MemoryAddress, Number};
 use crate::parser::label::Label;
 
@@ -46,6 +47,8 @@ pub enum MacroSymbol {
 	Pushpc,
 	Pullpc,
 	Arch,
+	Macro,
+	EndMacro,
 }
 
 impl Display for MacroSymbol {
@@ -65,6 +68,8 @@ impl Display for MacroSymbol {
 			Self::Pushpc => "pushpc",
 			Self::Pullpc => "pullpc",
 			Self::Arch => "arch",
+			Self::Macro => "macro",
+			Self::EndMacro => "endmacro",
 		})
 	}
 }
@@ -96,4 +101,10 @@ pub enum MacroValue {
 	PushSection,
 	/// pullpc
 	PopSection,
+	/// macro
+	UserDefinedMacro {
+		name: String,
+		arguments: Vec<(String, SourceSpan)>,
+		body: Vec<ProgramElement>,
+	}
 }

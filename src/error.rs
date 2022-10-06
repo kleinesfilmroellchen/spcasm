@@ -121,6 +121,34 @@ pub enum AssemblyError {
 		location: SourceSpan,
 	},
 
+	#[error("Assigning a value to the user defined macro argument '<{name}>' is not possible")]
+	#[diagnostic(
+		code(spcasm::assign_to_macro_argument),
+		severity(Error),
+		help(
+			"Arguments of user-defined macros are given a value when the macro is called. Therefore, it does not make \
+			 sense to assign them a value. If you need a label with a specific value inside a macro, use a local \
+			 label under the macro's special `\\@` label instead"
+		)
+	)]
+	AssigningToMacroArgument {
+		name:     String,
+		#[source_code]
+		src:      Arc<AssemblyCode>,
+		#[label("Assignment happens here")]
+		location: SourceSpan,
+	},
+
+	#[error("Using the user defined macro argument '<{name}>' outside a macro is not possible")]
+	#[diagnostic(code(spcasm::macro_argument_outside_macro), severity(Error))]
+	UsingMacroArgumentOutsideMacro {
+		name:     String,
+		#[source_code]
+		src:      Arc<AssemblyCode>,
+		#[label("Used here")]
+		location: SourceSpan,
+	},
+
 	//#region Semantic errors: detected while parsing or assembling
 	#[error("File \"{file_name}\" was not found")]
 	#[diagnostic(code(spcasm::file_not_found), severity(Error))]
@@ -139,7 +167,7 @@ pub enum AssemblyError {
 		code(spcasm::include_cycle),
 		severity(Error),
 		help(
-			"The file {cycle_trigger_file} was included:\n{}", src.include_path.iter().map(|path| format!("from {}", path.to_string_lossy())).intersperse("\n".to_string()).collect::<String>()
+			"The file \"{cycle_trigger_file}\" was included:\n{}", src.include_path.iter().map(|path| format!("from {}", path.to_string_lossy())).intersperse("\n".to_string()).collect::<String>()
 		)
 	)]
 	IncludeCycle {

@@ -51,6 +51,8 @@ pub(crate) fn assemble(
 			ProgramElement::Macro(r#macro) => assemble_macro(&mut data, r#macro)?,
 			ProgramElement::IncludeSource { .. } =>
 				unreachable!("there should not be any remaining unincluded source code at assembly time"),
+			ProgramElement::UserDefinedMacroCall { .. } =>
+				unreachable!("there should not be unexpanded user macros at assembly time"),
 		}
 		if data.should_stop {
 			break;
@@ -296,6 +298,13 @@ fn assemble_macro(data: &mut AssembledData, mcro: &mut Macro) -> Result<(), Box<
 			Label::Global(ref mut global) => {
 				global.borrow_mut().location = Some(value.clone().try_resolve());
 			},
+			Label::MacroArgument { span, name, .. } =>
+				return Err(AssemblyError::AssigningToMacroArgument {
+					name:     (*name).to_string(),
+					src:      data.source_code.clone(),
+					location: *span,
+				}
+				.into()),
 		},
 		MacroValue::Include { ref file, range } => {
 			let binary_file = resolve_file(&data.source_code, mcro.span, file)?;
@@ -331,6 +340,7 @@ fn assemble_macro(data: &mut AssembledData, mcro: &mut Macro) -> Result<(), Box<
 		MacroValue::PushSection => data
 			.push_segment()
 			.map_err(|_| AssemblyError::MissingSegment { location: mcro.span, src: data.source_code.clone() })?,
+		MacroValue::UserDefinedMacro { .. } => {},
 	}
 	Ok(())
 }
@@ -959,6 +969,14 @@ impl AssembledData {
 								datum.instruction_location,
 								self.source_code.clone(),
 							),
+							Label::MacroArgument { value: None, span, .. } => Err(AssemblyError::UnresolvedLabel {
+								label:          resolved_label.to_string(),
+								label_location: span,
+								usage_location: span,
+								src:            self.source_code.clone(),
+							}
+							.into()),
+							Label::MacroArgument { value: Some(_), .. } => Ok(()),
 						}
 						.err()
 					})

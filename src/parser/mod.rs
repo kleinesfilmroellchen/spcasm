@@ -251,21 +251,49 @@ impl AssemblyFile {
 						)?;
 					}
 				},
+
 				ProgramElement::Instruction(Instruction { label: Some(Label::Global(ref global)), .. })
+				| ProgramElement::UserDefinedMacroCall { label: Some(Label::Global(ref global)), .. }
 				| ProgramElement::IncludeSource { label: Some(Label::Global(ref global)), .. } =>
 					current_global_label = Some(global.clone()),
+
 				ProgramElement::Macro(Macro {
 					value: MacroValue::AssignLabel { label: Label::Local(ref mut local), .. },
 					..
 				})
 				| ProgramElement::Instruction(Instruction { label: Some(Label::Local(ref mut local)), .. })
+				| ProgramElement::UserDefinedMacroCall { label: Some(Label::Local(ref mut local)), .. }
 				| ProgramElement::IncludeSource { label: Some(Label::Local(ref mut local)), .. } =>
 					*local =
 						label::merge_local_into_parent(local.clone(), current_global_label.clone(), &self.source_code)?,
 
 				ProgramElement::Instruction(Instruction { label: None, .. })
 				| ProgramElement::IncludeSource { label: None, .. }
+				| ProgramElement::UserDefinedMacroCall { label: None, .. }
 				| ProgramElement::Macro(Macro { label: None, .. }) => (),
+
+				ProgramElement::Instruction(Instruction {
+					label: Some(ref mal @ Label::MacroArgument { ref name, ref value, ref span }),
+					..
+				})
+				| ProgramElement::IncludeSource {
+					label: Some(ref mal @ Label::MacroArgument { ref name, ref value, ref span }),
+					..
+				}
+				| ProgramElement::UserDefinedMacroCall {
+					label: Some(ref mal @ Label::MacroArgument { ref name, ref value, ref span }),
+					..
+				}
+				| ProgramElement::Macro(Macro {
+					label: Some(ref mal @ Label::MacroArgument { ref name, ref value, ref span }),
+					..
+				}) =>
+					return Err(AssemblyError::UsingMacroArgumentOutsideMacro {
+						name:     mal.to_string(),
+						src:      self.source_code.clone(),
+						location: *span,
+					}
+					.into()),
 			}
 			if let ProgramElement::Instruction(Instruction {
 				opcode: Opcode { first_operand, second_operand, .. },

@@ -53,6 +53,12 @@ pub enum Token {
 	Colon(SourceOffset),
 	/// '.'
 	Period(SourceOffset),
+	/// '<'
+	OpenAngleBracket(SourceOffset),
+	/// '>'
+	CloseAngleBracket(SourceOffset),
+	/// '%'
+	Percent(SourceOffset),
 	/// '.b'
 	ExplicitDirectPage(SourceSpan),
 	/// '='
@@ -141,6 +147,9 @@ impl Token {
 			| (Self::Slash(..), Self::Slash(..))
 			| (Self::Newline(..), Self::Newline(..))
 			| (Self::Comma(..), Self::Comma(..))
+			| (Self::OpenAngleBracket(..), Self::OpenAngleBracket(..))
+			| (Self::CloseAngleBracket(..), Self::CloseAngleBracket(..))
+			| (Self::Percent(..), Self::Percent(..))
 			| (Self::Period(..), Self::Period(..)) => true,
 			(Self::Register(first, ..), Self::Register(second, ..)) => first == second,
 			(Self::PlusRegister(first, ..), Self::PlusRegister(second, ..)) => first == second,
@@ -168,6 +177,9 @@ impl Token {
 			| Self::OpenParenthesis(location)
 			| Self::OpenIndexingParenthesis(location)
 			| Self::Period(location)
+			| Self::OpenAngleBracket(location)
+			| Self::CloseAngleBracket(location)
+			| Self::Percent(location)
 			| Self::Slash(location)
 			| Self::Plus(location) => (*location, SourceOffset::from(1)).into(),
 			Self::Identifier(_, location)
@@ -203,6 +215,9 @@ impl Display for Token {
 			Self::Plus(..) => "'+'",
 			Self::Minus(..) | Self::RangeMinus(..) => "'-'",
 			Self::Star(..) => "'*'",
+			Self::OpenAngleBracket(..) => "'<'",
+			Self::CloseAngleBracket(..) => "'>'",
+			Self::Percent(..) => "'%'",
 			Self::Equals(..) => "'='",
 			Self::CloseParenthesis(..) | Self::CloseIndexingParenthesis(..) => "')'",
 			Self::OpenIndexingParenthesis(..) | Self::OpenParenthesis(..) => "'('",

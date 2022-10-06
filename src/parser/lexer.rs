@@ -77,7 +77,7 @@ pub fn lex(source_code: Arc<AssemblyCode>) -> Result<Vec<Token>, Box<AssemblyErr
 				tokens.push(parse_single_char_tokens(chr, index.into()));
 				index += 1;
 			},
-			'#' | ',' | '+' | '-' | '*' | '(' | ')' | '[' | ']' | ':' | '.' | '/' | '!' | '=' => {
+			'#' | ',' | '+' | '-' | '*' | '(' | ')' | '[' | ']' | ':' | '.' | '/' | '!' | '=' | '<' | '>' => {
 				tokens.push(parse_single_char_tokens(chr, index.into()));
 				index += 1;
 			},
@@ -87,9 +87,11 @@ pub fn lex(source_code: Arc<AssemblyCode>) -> Result<Vec<Token>, Box<AssemblyErr
 				index += size+1;
 			},
 			'%' => {
-				let (number, size) = next_number(&mut chars, None, 2, index, source_code.clone())?;
-				tokens.push(Token::Number(number, (index, size).into()));
-				index += size+1;
+				let (token, increment) = next_number(&mut chars, None, 2, index, source_code.clone()).map_or_else(
+					|_| (Token::Percent(index.into()), 1),
+					|(number, size)| (Token::Number(number, (index, size).into()), size + 1));
+				tokens.push(token);
+				index += increment;
 			},
 			';' =>
 				if cfg!(test) && let Some(chr) = chars.peek() && chr == &'=' {
@@ -263,6 +265,9 @@ fn parse_single_char_tokens(chr: char, location: SourceOffset) -> Token {
 		')' => Token::CloseParenthesis(location),
 		'[' => Token::OpenIndexingParenthesis(location),
 		']' => Token::CloseIndexingParenthesis(location),
+		'<' => Token::OpenAngleBracket(location),
+		'>' => Token::CloseAngleBracket(location),
+		'%' => Token::Percent(location),
 		':' => Token::Colon(location),
 		'/' | '!' => Token::Slash(location),
 		'.' => Token::Period(location),

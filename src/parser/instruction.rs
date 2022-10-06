@@ -204,7 +204,7 @@ impl Number {
 				lhs.set_global_label(label);
 				rhs.set_global_label(label);
 			},
-			Self::Literal(..) | Self::Label(Label::Global(..)) => (),
+			Self::Literal(..) | Self::Label(Label::Global(..) | Label::MacroArgument { .. }) => (),
 		}
 	}
 
@@ -231,17 +231,24 @@ impl Number {
 				Label::Global(global_label) if let Some(ref value) = global_label.borrow().location => value.value(),
 				Label::Local(local) if let Some(ref value) = local.borrow().location => value.value(),
 				Label::Local(local) => return Err(AssemblyError::UnresolvedLabel {
-					label: local.borrow().name.clone(),
+					label: label.to_string(),
 					label_location: local.borrow().span,
 					usage_location: location,
 					src: source_code
 				}.into()),
 				Label::Global(global) => return Err(AssemblyError::UnresolvedLabel {
-					label: global.borrow().name.clone(),
+					label: label.to_string(),
 					label_location: global.borrow().span,
 					usage_location: location,
 					src: source_code
 				}.into()),
+				Label::MacroArgument{value: None, span, ..} => return Err(AssemblyError::UnresolvedLabel {
+					label: label.to_string(),
+					label_location: *span,
+					usage_location: *span,
+					src: source_code
+				}.into()),
+				Label::MacroArgument{value: Some(value), span, ..} => *value,
 			},
 			Self::Negate(number) => -number.try_value(location, source_code)?,
 			Self::Add(lhs, rhs) => lhs.try_value(location, source_code.clone())? + rhs.try_value(location, source_code)?,
@@ -323,6 +330,10 @@ impl UpperHex for Number {
 					Some(numeric_address) => f.pad(&format!("{:0X}", **numeric_address)),
 					None => write!(f, "{}", local.name),
 				}
+			},
+			Self::Label(Label::MacroArgument { value, name, .. }) => match value {
+				Some(numeric_address) => f.pad(&format!("{:0X}", *numeric_address)),
+				None => write!(f, "{}", name),
 			},
 			Self::Literal(numeric_address) => {
 				f.write_char('$')?;

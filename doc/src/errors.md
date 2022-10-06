@@ -72,6 +72,13 @@ In most places, numbers have a limited size, often 8 or 16 bits. However, user-s
 
 ## Errors
 
+### spcasm::assign_to_macro_argument
+
+```
+```
+
+Arguments to user-defined macros are specified with angle bracket syntax, like `<argument>`. When the macro is called, the arguments are replaced with the value given in the macro call. Therefore, it does not make sense to manually assign a specific value to the argument, like you can do with other kinds of labels. Instead, you can for example use local labels under the macro's special `\@` label.
+
 ### spcasm::audio_processing_error
 
 ```
@@ -246,6 +253,13 @@ org custom_code_bank
 ```
 
 Therefore, for now, spcasm disallows the use of labels in these cases entirely.
+
+### spcasm::macro_argument_outside_macro
+
+```
+```
+
+Macro arguments are specific to user-defined macros and cannot be used in any way outside of them.
 
 ### spcasm::missing_global
 

@@ -2,7 +2,7 @@
 #![allow(clippy::module_name_repetitions, clippy::large_enum_variant)]
 use miette::SourceSpan;
 
-use super::instruction::Instruction;
+use super::instruction::{Instruction, Number};
 use super::label::Label;
 use super::Macro;
 use crate::parser::source_range;
@@ -23,6 +23,17 @@ pub enum ProgramElement {
 		/// Label before the include directive. This label will be used for the first instruction in the included file.
 		label: Option<Label>,
 	},
+	/// Calling a user-defined macro, e.g. `%my_macro(3, 4, 5)`
+	UserDefinedMacroCall {
+		/// Name of the macro that is being called.
+		macro_name: String,
+		/// The arguments to the macro; currently only numbers are supported.
+		arguments:  Vec<Number>,
+		/// Location in source code of the macro call.
+		span:       SourceSpan,
+		/// Label before the macro call. This label will be used for the first instruction in the macro.
+		label:      Option<Label>,
+	},
 }
 
 impl ProgramElement {
@@ -32,6 +43,7 @@ impl ProgramElement {
 		match self {
 			Self::Macro(Macro { span, .. })
 			| Self::Instruction(Instruction { span, .. })
+			| Self::UserDefinedMacroCall { span, .. }
 			| Self::IncludeSource { span, .. } => span,
 		}
 	}
@@ -42,6 +54,7 @@ impl ProgramElement {
 		match &mut self {
 			Self::Macro(Macro { span, .. })
 			| Self::Instruction(Instruction { span, .. })
+			| Self::UserDefinedMacroCall { span, .. }
 			| Self::IncludeSource { span, .. } => *span = source_range((*span).into(), end.into()),
 		}
 		self
@@ -62,6 +75,8 @@ impl ProgramElement {
 			},
 			Self::IncludeSource { file, span, label: original_label } =>
 				Self::IncludeSource { file, span, label: original_label.or(label) },
+			Self::UserDefinedMacroCall { span, arguments, macro_name, label: original_label } =>
+				Self::UserDefinedMacroCall { span, arguments, macro_name, label: original_label.or(label) },
 		}
 	}
 }

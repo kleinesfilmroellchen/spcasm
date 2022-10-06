@@ -32,6 +32,16 @@ pub enum Label {
 	Global(Arc<RefCell<GlobalLabel>>),
 	/// A label only valid within a global label. It may be reused with a different value later on.
 	Local(Arc<RefCell<LocalLabel>>),
+	/// A macro argument that is resolved at a later point.
+	MacroArgument {
+		/// The name of the argument.
+		name:  String,
+		/// The resolved value of the argument. Note that this is always None for the macro definition.
+		value: Option<MemoryAddress>,
+		/// The location where this macro argument usage is defined. Note that because macro arguments are not coerced,
+		/// this always points to the usage of the argument, never the definition in the macro argument list.
+		span:  SourceSpan,
+	},
 }
 
 impl Label {
@@ -39,6 +49,7 @@ impl Label {
 		match self {
 			Self::Global(global) => global.borrow().span,
 			Self::Local(label) => label.borrow().span,
+			Self::MacroArgument { span, .. } => *span,
 		}
 	}
 
@@ -46,6 +57,8 @@ impl Label {
 		match self {
 			Self::Global(global) => global.borrow_mut().location = Some(location),
 			Self::Local(local) => local.borrow_mut().location = Some(Box::new(location)),
+			// noop on macro arguments
+			Self::MacroArgument { .. } => {},
 		}
 	}
 }
@@ -55,6 +68,7 @@ impl Display for Label {
 		write!(f, "{}", match self {
 			Self::Global(global) => global.borrow().name.clone(),
 			Self::Local(local) => format!(".{}", local.borrow().name),
+			Self::MacroArgument { name, .. } => format!("<{}>", name),
 		})
 	}
 }
@@ -64,9 +78,13 @@ impl PartialEq for Label {
 		match self {
 			Self::Global(label) => match other {
 				Self::Global(other_label) => label.eq(other_label),
-				Self::Local(..) => false,
+				_ => false,
 			},
 			Self::Local(..) => false,
+			Self::MacroArgument { name, .. } => match other {
+				Self::MacroArgument { name: other_name, .. } => name.eq(other_name),
+				_ => false,
+			},
 		}
 	}
 }
@@ -77,6 +95,8 @@ impl Resolvable for Label {
 		match self {
 			Self::Global(label) => label.borrow().is_resolved(),
 			Self::Local(label) => label.borrow().is_resolved(),
+			Self::MacroArgument { value: Some(resolved), .. } => true,
+			Self::MacroArgument { .. } => false,
 		}
 	}
 
@@ -89,6 +109,10 @@ impl Resolvable for Label {
 		match self {
 			Self::Global(label) => label.borrow_mut().resolve_to(location, usage_span, source_code),
 			Self::Local(label) => label.borrow_mut().resolve_to(location, usage_span, source_code),
+			Self::MacroArgument { name, value, span } => {
+				*value = Some(location);
+				Ok(())
+			},
 		}
 	}
 }

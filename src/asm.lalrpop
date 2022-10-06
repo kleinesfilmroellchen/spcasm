@@ -37,6 +37,14 @@ InstructionOrMacro: ProgramElement = {
 		span: source_range(mcro.into(), file.1.into()),
 		label: None,
 	},
+	MacroCall => <>,
+};
+
+MacroCall: ProgramElement = <start:"%"> <macro_name:"identifier"> "(" <arguments:Comma<Number>> <end:")"> => ProgramElement::UserDefinedMacroCall {
+	macro_name: macro_name.0,
+	arguments,
+	span: source_range(start.into(), end.into()),
+	label: None
 };
 
 InstructionWithTestComment: Instruction = <mut instruction:Instruction> <expected:";="?> => {
@@ -145,6 +153,7 @@ Macro: Macro = {
 	},
 	ArchMacro,
 	LabelAssignment,
+	UserDefinedMacro,
 };
 
 TableMacro: (MacroSymbol, SourceSpan) = {
@@ -170,6 +179,21 @@ ArchMacro: Macro = <mcro:"arch"> <arch:"identifier"> =>? {
 			location: source_range(mcro.into(), arch.1.into()),
 		}).map_err(|error| ParseError::User { error })
 	}
+};
+
+UserDefinedMacro: Macro = <start:"macro"> <name:"identifier"> <arguments:UserDefinedMacroArguments> "\n" <body:Program> <end:"endmacro"> => Macro {
+	value: MacroValue::UserDefinedMacro {
+		name: name.0,
+		arguments,
+		body,
+	},
+	span: source_range(start.into(), end.into()),
+	label: None,
+};
+
+UserDefinedMacroArguments: Vec<(String, SourceSpan)> = {
+	"(" <Comma<"identifier">> ")" => <>,
+	"," <Comma<"identifier">> => <>,
 };
 
 NumberList = Comma<Number>;
@@ -224,6 +248,11 @@ Label: Label = {
 		parent: Weak::new(),
 	}))),
 	<identifier:"identifier"> => Label::Global(environment.borrow_mut().get_global_label(&identifier.0, identifier.1, LabelUsageKind::AsAddress)),
+	<start:"<"> <identifier:"identifier"> <end:">"> => Label::MacroArgument {
+		name: identifier.0,
+		span: source_range(start.into(), end.into()),
+		value: None,
+	}
 };
 
 LabelAssignment: Macro = <mut label:Label> <eq:"="> <value:Number> => {
@@ -320,6 +349,8 @@ extern {
 		"pushpc" => Token::Macro(MacroSymbol::Pushpc, <SourceSpan>),
 		"pullpc" => Token::Macro(MacroSymbol::Pullpc, <SourceSpan>),
 		"arch" => Token::Macro(MacroSymbol::Arch, <SourceSpan>),
+		"macro" => Token::Macro(MacroSymbol::Macro, <SourceSpan>),
+		"endmacro" => Token::Macro(MacroSymbol::EndMacro, <SourceSpan>),
 		"number" => Token::Number(<i64>, <SourceSpan>),
 		"string" => Token::String(<Vec<u8>>, <SourceSpan>),
 		"#" => Token::Hash(<SourceOffset>),
@@ -333,6 +364,9 @@ extern {
 		")" => Token::CloseParenthesis(<SourceOffset>),
 		"[" => Token::OpenIndexingParenthesis(<SourceOffset>),
 		"]" => Token::CloseIndexingParenthesis(<SourceOffset>),
+		"<" => Token::OpenAngleBracket(<SourceOffset>),
+		">" => Token::CloseAngleBracket(<SourceOffset>),
+		"%" => Token::Percent(<SourceOffset>),
 		":" => Token::Colon(<SourceOffset>),
 		"." => Token::Period(<SourceOffset>),
 		".b" => Token::ExplicitDirectPage(<SourceSpan>),

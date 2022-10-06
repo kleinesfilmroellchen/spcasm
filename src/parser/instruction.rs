@@ -229,6 +229,7 @@ impl Number {
 			// necessary because matching through an Rc is not possible right now (would be super dope though).
 			Self::Label(ref label) => match label {
 				Label::Global(global_label) if let Some(ref value) = global_label.borrow().location => value.value(),
+				Label::Local(local) if let Some(ref value) = local.borrow().location => value.value(),
 				Label::Local(local) => return Err(AssemblyError::UnresolvedLabel {
 					label: local.borrow().name.clone(),
 					label_location: local.borrow().span,

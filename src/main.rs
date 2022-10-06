@@ -4,7 +4,7 @@
 #![feature(
 	test,
 	result_flattening,
-	is_some_with,
+	is_some_and,
 	iterator_try_collect,
 	if_let_guard,
 	int_log,

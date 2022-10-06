@@ -545,7 +545,7 @@ impl AssemblyError {
 	#[allow(clippy::trivially_copy_pass_by_ref)]
 	pub(crate) fn report_or_throw(self, options: &ErrorOptions) -> Result<(), Box<Self>> {
 		// Always rethrow errors.
-		if self.severity().is_some_and(|s| s == &miette::Severity::Error) {
+		if self.severity().is_some_and(|s| s == miette::Severity::Error) {
 			return Err(self.into());
 		}
 		#[cfg(feature = "binaries")]

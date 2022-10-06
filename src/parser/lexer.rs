@@ -87,9 +87,13 @@ pub fn lex(source_code: Arc<AssemblyCode>) -> Result<Vec<Token>, Box<AssemblyErr
 				index += size+1;
 			},
 			'%' => {
-				let (token, increment) = next_number(&mut chars, None, 2, index, source_code.clone()).map_or_else(
-					|_| (Token::Percent(index.into()), 1),
-					|(number, size)| (Token::Number(number, (index, size).into()), size + 1));
+				let can_be_binary = chars.peek().map(|chr| ['0', '1'].contains(chr));
+				let (token, increment) = if can_be_binary.is_some_and(|v| v) {
+					next_number(&mut chars, None, 2, index, source_code.clone()).map(
+						|(number, size)| (Token::Number(number, (index, size).into()), size + 1))
+				} else {
+					Ok((Token::Percent(index.into()), 1))
+				}?;
 				tokens.push(token);
 				index += increment;
 			},

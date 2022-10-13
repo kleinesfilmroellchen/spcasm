@@ -104,7 +104,7 @@ impl PartialEq for Token {
 	}
 }
 
-#[allow(clippy::match_same_arms)]
+#[allow(clippy::match_same_arms, clippy::missing_const_for_fn)]
 impl Token {
 	/// Returns this token if it matches the given type. For all tokens that contain data, this data is ignored.
 	///

@@ -484,6 +484,7 @@ impl MemoryValue {
 		}
 	}
 
+	#[allow(clippy::missing_const_for_fn)]
 	fn try_resolved(&self, location: SourceSpan, source_code: &Arc<AssemblyCode>) -> Result<u8, Number> {
 		match self {
 			Self::Resolved(value) => Ok(*value),

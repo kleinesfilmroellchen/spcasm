@@ -66,7 +66,7 @@ fn ansi_to_html(text: &str) -> String {
 						let r = numbers.next().unwrap();
 						let g = numbers.next().unwrap();
 						let b = numbers.next().unwrap();
-						replacement_text.push_str(&format!(" style=\"color:rgb({},{},{})\"", r, g, b));
+						replacement_text.push_str(&format!(" style=\"color:rgb({r},{g},{b})\""));
 					},
 					code => unimplemented!("csi code {}", code),
 				}
@@ -132,5 +132,5 @@ pub fn on_assembly_change() {
 			"Couldn't compile assembly."
 		},
 	};
-	status_paragraph.set_inner_html(&htmlify(&format!("{} ({}ms)", status_text, elapsed_time.floor() as i64)));
+	status_paragraph.set_inner_html(&htmlify(&format!("{status_text} ({}ms)", elapsed_time.floor() as i64)));
 }

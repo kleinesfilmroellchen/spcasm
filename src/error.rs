@@ -42,6 +42,7 @@ impl AssemblyCode {
 
 	/// Create a new source code struct from source code text and a (possibly fake) name.
 	#[must_use]
+	#[allow(clippy::missing_const_for_fn)]
 	pub fn new(text: String, name: String) -> Self {
 		Self { text, name: PathBuf::from(name), include_path: Vec::new() }
 	}

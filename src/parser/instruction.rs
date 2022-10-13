@@ -436,7 +436,7 @@ impl AddressingMode {
 	/// Checks the given bit index for validity and possibly errors out.
 	/// # Errors
 	/// If the bit index is not valid.
-	#[allow(clippy::result_large_err)]
+	#[allow(clippy::result_large_err, clippy::missing_const_for_fn)]
 	pub fn check_bit(bit_index: u8, location: SourceSpan, src: &Arc<AssemblyCode>) -> Result<u8, AssemblyError> {
 		if bit_index <= 7 {
 			Ok(bit_index)
@@ -454,6 +454,7 @@ impl AddressingMode {
 
 	/// Return the number that this addressing mode references (mostly as an address), if any.
 	#[must_use]
+	#[allow(clippy::missing_const_for_fn)]
 	pub fn number(&self) -> Option<Number> {
 		match self {
 			Self::Immediate(number)

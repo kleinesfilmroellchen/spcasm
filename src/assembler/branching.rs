@@ -135,7 +135,7 @@ pub(super) fn assemble_branching_instruction(
 				return Err(AssemblyError::InvalidAddressingMode {
 					is_first_operand: false,
 					mnemonic,
-					mode: source.unwrap_or(AddressingMode::Register(Register::A)).to_string(),
+					mode: source.unwrap_or_else(|| AddressingMode::Register(Register::A)).to_string(),
 					legal_modes: vec![AddressingMode::DirectPage(0.into()).to_string()],
 					location: instruction.span,
 					src: data.source_code.clone(),

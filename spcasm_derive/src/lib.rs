@@ -14,7 +14,7 @@ pub fn parse_macro_derive(input: TokenStream) -> TokenStream {
 	match type_.data {
 		syn::Data::Enum(enum_) => {
 			let name = type_.ident;
-			let name_string = format!("{}", name).to_lowercase();
+			let name_string = format!("{name}").to_lowercase();
 			let variant_identifiers_and_strings = enum_
 				.variants
 				.iter()

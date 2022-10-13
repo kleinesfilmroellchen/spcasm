@@ -62,7 +62,7 @@ pub fn lex(source_code: Arc<AssemblyCode>) -> Result<Vec<Token>, Box<AssemblyErr
 									.map(|value| Token::Macro(value, identifier_span)))
 								.or_else(|_| Mnemonic::parse(&identifier.to_lowercase(), identifier_span, source_code.clone())
 									.map(|mnemonic| Token::Mnemonic(mnemonic, identifier_span)))
-								.or::<AssemblyError>(Ok(Token::Identifier(identifier, identifier_span)))?);
+								.or_else::<AssemblyError, _>(|_| Ok(Token::Identifier(identifier, identifier_span)))?);
 			},
 			'0'..='9' => {
 				let (number, size) = next_number(&mut chars, Some(chr), 10, index, source_code.clone())?;

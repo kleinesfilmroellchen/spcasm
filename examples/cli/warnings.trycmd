@@ -3,7 +3,7 @@ $ spcasm examples/test.spcasm
 spcasm::valid_arch_macro
 
   ☞ Legal architecture macro ignored
-   ╭─[//?/[CWD]/examples/test.spcasm:1:1]
+   ╭─[examples/test.spcasm:1:1]
  1 │ arch spc700-raw
    · ────────┬───────
    ·         ╰── `arch` macro
@@ -20,7 +20,7 @@ spcasm::non_direct_page_label
 
   ☞ This label "start" has an 8-bit value, did you want to use it in direct
   │ page addressing?
-   ╭─[//?/[CWD]/examples/test.spcasm:1:1]
+   ╭─[examples/test.spcasm:1:1]
  1 │ arch spc700-raw
  2 │ org 0
  3 │ start:        ; @ 0
@@ -39,7 +39,7 @@ spcasm::non_direct_page_label
 
   ☞ This label "data" has an 8-bit value, did you want to use it in direct
   │ page addressing?
-    ╭─[//?/[CWD]/examples/test.spcasm:10:1]
+    ╭─[examples/test.spcasm:10:1]
  10 │    MOV A,$3320+X ;= F5 20 33
  11 │    MOV A,$FF00+Y ;= F6 00 FF
  12 │    MOV A,($40+X) ;= E7 40
@@ -69,7 +69,7 @@ $ spcasm -W all examples/test.spcasm
 Error: spcasm::valid_arch_macro
 
   ☞ Legal architecture macro ignored
-   ╭─[//?/[CWD]/examples/test.spcasm:1:1]
+   ╭─[examples/test.spcasm:1:1]
  1 │ arch spc700-raw
    · ────────┬───────
    ·         ╰── `arch` macro
@@ -90,7 +90,7 @@ $ spcasm -w file_not_found examples/test.spcasm
 spcasm::valid_arch_macro
 
   ☞ Legal architecture macro ignored
-   ╭─[//?/[CWD]/examples/test.spcasm:1:1]
+   ╭─[examples/test.spcasm:1:1]
  1 │ arch spc700-raw
    · ────────┬───────
    ·         ╰── `arch` macro
@@ -107,7 +107,7 @@ spcasm::non_direct_page_label
 
   ☞ This label "start" has an 8-bit value, did you want to use it in direct
   │ page addressing?
-   ╭─[//?/[CWD]/examples/test.spcasm:1:1]
+   ╭─[examples/test.spcasm:1:1]
  1 │ arch spc700-raw
  2 │ org 0
  3 │ start:        ; @ 0
@@ -126,7 +126,7 @@ spcasm::non_direct_page_label
 
   ☞ This label "data" has an 8-bit value, did you want to use it in direct
   │ page addressing?
-    ╭─[//?/[CWD]/examples/test.spcasm:10:1]
+    ╭─[examples/test.spcasm:10:1]
  10 │    MOV A,$3320+X ;= F5 20 33
  11 │    MOV A,$FF00+Y ;= F6 00 FF
  12 │    MOV A,($40+X) ;= E7 40
@@ -150,7 +150,7 @@ $ spcasm -w spcasm::file_not_found examples/test.spcasm
 spcasm::valid_arch_macro
 
   ☞ Legal architecture macro ignored
-   ╭─[//?/[CWD]/examples/test.spcasm:1:1]
+   ╭─[examples/test.spcasm:1:1]
  1 │ arch spc700-raw
    · ────────┬───────
    ·         ╰── `arch` macro
@@ -167,7 +167,7 @@ spcasm::non_direct_page_label
 
   ☞ This label "start" has an 8-bit value, did you want to use it in direct
   │ page addressing?
-   ╭─[//?/[CWD]/examples/test.spcasm:1:1]
+   ╭─[examples/test.spcasm:1:1]
  1 │ arch spc700-raw
  2 │ org 0
  3 │ start:        ; @ 0
@@ -186,7 +186,7 @@ spcasm::non_direct_page_label
 
   ☞ This label "data" has an 8-bit value, did you want to use it in direct
   │ page addressing?
-    ╭─[//?/[CWD]/examples/test.spcasm:10:1]
+    ╭─[examples/test.spcasm:10:1]
  10 │    MOV A,$3320+X ;= F5 20 33
  11 │    MOV A,$FF00+Y ;= F6 00 FF
  12 │    MOV A,($40+X) ;= E7 40

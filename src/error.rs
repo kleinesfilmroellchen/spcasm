@@ -36,15 +36,15 @@ impl AssemblyCode {
 			path = std::env::current_dir()?.join(path);
 		}
 		path = uniform_canonicalize(&path)?;
-		let contents = std::fs::read_to_string(&path)?;
+		let contents = std::fs::read_to_string(&path)?.chars().filter(|c| c != &'\r').collect();
 		Ok(Arc::new(Self { name: path, text: contents, include_path: Vec::new() }))
 	}
 
 	/// Create a new source code struct from source code text and a (possibly fake) name.
 	#[must_use]
 	#[allow(clippy::missing_const_for_fn)]
-	pub fn new(text: String, name: String) -> Self {
-		Self { text, name: PathBuf::from(name), include_path: Vec::new() }
+	pub fn new(text: &str, name: String) -> Self {
+		Self { text: text.chars().filter(|c| c != &'\r').collect(), name: PathBuf::from(name), include_path: Vec::new() }
 	}
 
 	/// Returns a pretty-printed variant of the file name of this source code.

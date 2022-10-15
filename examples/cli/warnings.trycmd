@@ -27,8 +27,8 @@ spcasm::non_direct_page_label
    · ───┬──
    ·    ╰── Might point at a direct page address
  4 │    MOV A,#$10    ;= E8 10
-   ·    ───────────┬──────────
-   ·               ╰── Memory address 00
+   ·    ──────────┬──────────
+   ·              ╰── Memory address 00
  5 │    MOV A,(X)     ;= E6
  6 │    MOV A,(X+)    ;= BF
  7 │    MOV A,$32     ;= E4 32
@@ -47,8 +47,8 @@ spcasm::non_direct_page_label
     · ──┬──
     ·   ╰── Might point at a direct page address
  14 │    MOV A,(%00100000)+Y ;= F7 20
-    ·    ──────────────┬─────────────
-    ·                  ╰── Memory address 13
+    ·    ─────────────┬─────────────
+    ·                 ╰── Memory address 13
  15 │    MOV X,#$60    ;= CD 60
  16 │    MOV X,$9A     ;= F8 9A
  17 │    MOV X,$2E+Y   ;= F9 2E
@@ -114,8 +114,8 @@ spcasm::non_direct_page_label
    · ───┬──
    ·    ╰── Might point at a direct page address
  4 │    MOV A,#$10    ;= E8 10
-   ·    ───────────┬──────────
-   ·               ╰── Memory address 00
+   ·    ──────────┬──────────
+   ·              ╰── Memory address 00
  5 │    MOV A,(X)     ;= E6
  6 │    MOV A,(X+)    ;= BF
  7 │    MOV A,$32     ;= E4 32
@@ -134,8 +134,8 @@ spcasm::non_direct_page_label
     · ──┬──
     ·   ╰── Might point at a direct page address
  14 │    MOV A,(%00100000)+Y ;= F7 20
-    ·    ──────────────┬─────────────
-    ·                  ╰── Memory address 13
+    ·    ─────────────┬─────────────
+    ·                 ╰── Memory address 13
  15 │    MOV X,#$60    ;= CD 60
  16 │    MOV X,$9A     ;= F8 9A
  17 │    MOV X,$2E+Y   ;= F9 2E
@@ -174,8 +174,8 @@ spcasm::non_direct_page_label
    · ───┬──
    ·    ╰── Might point at a direct page address
  4 │    MOV A,#$10    ;= E8 10
-   ·    ───────────┬──────────
-   ·               ╰── Memory address 00
+   ·    ──────────┬──────────
+   ·              ╰── Memory address 00
  5 │    MOV A,(X)     ;= E6
  6 │    MOV A,(X+)    ;= BF
  7 │    MOV A,$32     ;= E4 32
@@ -194,8 +194,8 @@ spcasm::non_direct_page_label
     · ──┬──
     ·   ╰── Might point at a direct page address
  14 │    MOV A,(%00100000)+Y ;= F7 20
-    ·    ──────────────┬─────────────
-    ·                  ╰── Memory address 13
+    ·    ─────────────┬─────────────
+    ·                 ╰── Memory address 13
  15 │    MOV X,#$60    ;= CD 60
  16 │    MOV X,$9A     ;= F8 9A
  17 │    MOV X,$2E+Y   ;= F9 2E

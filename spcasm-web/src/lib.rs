@@ -109,7 +109,7 @@ pub fn on_assembly_change() {
 	// Decode other entities
 	let code_text = decode_html_entities(&code_text);
 
-	let source = Arc::new(AssemblyCode::new(code_text.to_string(), "<<input>>".to_owned()));
+	let source = Arc::new(AssemblyCode::new(&code_text, "<<input>>".to_owned()));
 
 	// TODO: Allow the user to specify error options?
 	let start_time = js_sys::Date::now();

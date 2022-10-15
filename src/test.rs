@@ -65,7 +65,14 @@ fn cli() {
 fn test_file(file: &str) {
 	let (parsed, assembled) = super::run_assembler_with_default_options(file).unwrap();
 	let expected_binary = assemble_expected_binary(
-		parsed.borrow().files.get(&crate::error::uniform_canonicalize(&PathBuf::from(file)).unwrap()).unwrap().borrow().content.clone(),
+		parsed
+			.borrow()
+			.files
+			.get(&crate::error::uniform_canonicalize(&PathBuf::from(file)).unwrap())
+			.unwrap()
+			.borrow()
+			.content
+			.clone(),
 	);
 	for (byte, (expected, actual)) in expected_binary.iter().zip(assembled.iter()).enumerate() {
 		if let Some(expected) = expected {

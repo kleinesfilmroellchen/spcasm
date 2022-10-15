@@ -47,10 +47,37 @@ impl AssemblyCode {
 		Self { text, name: PathBuf::from(name), include_path: Vec::new() }
 	}
 
-	/// Returns a copy of the file name of this source code.
+	/// Returns a pretty-printed variant of the file name of this source code.
+	///
+	/// The pretty-printing rules are as follows:
+	/// - If the file is relative to the working directory, print a relative file name without leading `./`.
+	/// - If the file is not relative, i.e. its canonical path does not contain the working directory, print an absolute
+	///   file name. On Windows, extended path length syntax (`\\?\`) is omitted.
+	///
+	/// # Panics
+	/// Programming bugs.
 	#[must_use]
 	pub fn file_name(&self) -> String {
-		self.name.as_os_str().to_string_lossy().to_string()
+		Self::file_name_for(&self.name)
+	}
+
+	/// Returns a pretty-printed variant of the given path.
+	///
+	/// The pretty-printing rules are as follows:
+	/// - If the file is relative to the working directory, print a relative file name without leading `./`.
+	/// - If the file is not relative, i.e. its canonical path does not contain the working directory, print an absolute
+	///   file name. On Windows, extended path length syntax (`\\?\`) is omitted.
+	///
+	/// # Panics
+	/// Programming bugs.
+	#[must_use]
+	pub fn file_name_for(path: &Path) -> String {
+		let cwd = uniform_canonicalize(&PathBuf::from(".")).unwrap();
+		if path.starts_with(&cwd) {
+			path.strip_prefix(cwd).unwrap().to_string_lossy().to_string()
+		} else {
+			path.as_os_str().to_string_lossy().to_string()
+		}
 	}
 }
 
@@ -252,7 +279,7 @@ pub enum AssemblyError {
 		code(spcasm::include_cycle),
 		severity(Error),
 		help(
-			"The file \"{cycle_trigger_file}\" was included:\n{}", src.include_path.iter().map(|path| format!("from {}", path.to_string_lossy())).intersperse("\n".to_string()).collect::<String>()
+			"The file \"{cycle_trigger_file}\" was included:\n{}", src.include_path.iter().map(|path| format!("from {}", AssemblyCode::file_name_for(path))).intersperse("\n".to_string()).collect::<String>()
 		)
 	)]
 	IncludeCycle {

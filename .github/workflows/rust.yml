@@ -27,10 +27,16 @@ jobs:
             ~/.cargo/git/db/
             target/
           key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+        # The binary build adds > 40 dependencies, so we would like to avoid it, but some integration tests depend on it.
+        # Therefore, we first run a faster build that will report almost all errors immediately and cancel the CI run.
       - name: Build
         run: cargo build --verbose --no-default-features
+        # After that, we build the remaining crates and binaries...
+      - name: Build binaries
+        run: cargo build --verbose --no-default-features --features binaries
+        # ... and run the tests.
       - name: Run tests
-        run: cargo test --verbose --no-default-features
+        run: cargo test --verbose --no-default-features --features binaries
 
   clippy:
     runs-on: ubuntu-latest

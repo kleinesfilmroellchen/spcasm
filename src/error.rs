@@ -44,7 +44,11 @@ impl AssemblyCode {
 	#[must_use]
 	#[allow(clippy::missing_const_for_fn)]
 	pub fn new(text: &str, name: String) -> Self {
-		Self { text: text.chars().filter(|c| c != &'\r').collect(), name: PathBuf::from(name), include_path: Vec::new() }
+		Self {
+			text:         text.chars().filter(|c| c != &'\r').collect(),
+			name:         PathBuf::from(name),
+			include_path: Vec::new(),
+		}
 	}
 
 	/// Returns a pretty-printed variant of the file name of this source code.

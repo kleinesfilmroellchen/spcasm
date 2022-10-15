@@ -4,7 +4,7 @@ use std::collections::HashMap;
 use std::fmt::Display;
 use std::mem::Discriminant;
 use std::num::ParseIntError;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
 use lalrpop_util::ParseError;
@@ -35,7 +35,7 @@ impl AssemblyCode {
 		if path.is_relative() {
 			path = std::env::current_dir()?.join(path);
 		}
-		path = path.canonicalize()?;
+		path = uniform_canonicalize(&path)?;
 		let contents = std::fs::read_to_string(&path)?;
 		Ok(Arc::new(Self { name: path, text: contents, include_path: Vec::new() }))
 	}
@@ -52,6 +52,25 @@ impl AssemblyCode {
 	pub fn file_name(&self) -> String {
 		self.name.as_os_str().to_string_lossy().to_string()
 	}
+}
+
+/// Implements a more uniform canonicalization. The main difference to ``std::fs::canonicalize`` is that it doesn't
+/// create the extended length path syntax on Windows. This is for better compatibility with file link-supporting
+/// terminals and the `trycmd` integration tests.
+#[cfg(windows)]
+#[inline]
+pub fn uniform_canonicalize(path: &Path) -> std::io::Result<PathBuf> {
+	// All extended length paths start with '\\?\' (length 4), see https://learn.microsoft.com/en-us/windows/win32/fileio/naming-a-file#maximum-path-length-limitation
+	Ok(PathBuf::from(path.canonicalize()?.into_os_string().to_string_lossy()[4 ..].to_owned()))
+}
+
+/// Implements a more uniform canonicalization. The main difference to ``std::fs::canonicalize`` is that it doesn't
+/// create the extended length syntax on Windows. This is for better compatibility with file link-supporting terminals
+/// and the `trycmd` integration tests.
+#[cfg(not(windows))]
+#[inline]
+pub fn uniform_canonicalize(path: &Path) -> std::io::Result<PathBuf> {
+	path.canonicalize()
 }
 
 impl SourceCode for AssemblyCode {

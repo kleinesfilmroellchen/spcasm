@@ -98,10 +98,16 @@ pub fn uniform_canonicalize(path: &Path) -> std::io::Result<PathBuf> {
 /// Implements a more uniform canonicalization. The main difference to ``std::fs::canonicalize`` is that it doesn't
 /// create the extended length syntax on Windows. This is for better compatibility with file link-supporting terminals
 /// and the `trycmd` integration tests.
-#[cfg(not(windows))]
+#[cfg(not(any(windows, target_family = "wasm")))]
 #[inline]
 pub fn uniform_canonicalize(path: &Path) -> std::io::Result<PathBuf> {
 	path.canonicalize()
+}
+
+#[cfg(target_family = "wasm")]
+#[inline]
+pub fn uniform_canonicalize(path: &Path) -> std::io::Result<PathBuf> {
+	Ok(path.to_owned())
 }
 
 impl SourceCode for AssemblyCode {

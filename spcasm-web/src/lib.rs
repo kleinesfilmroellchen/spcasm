@@ -113,7 +113,7 @@ pub fn on_assembly_change() {
 
 	// TODO: Allow the user to specify error options?
 	let start_time = js_sys::Date::now();
-	let assembler_result = run_assembler_on_source(&source, &Default::default());
+	let assembler_result = run_assembler_on_source(&source, spcasm::cli::default_backend_options());
 
 	let end_time = js_sys::Date::now();
 	let elapsed_time = end_time - start_time;

@@ -2,16 +2,40 @@
 
 use std::mem::Discriminant;
 use std::str::FromStr;
+use std::sync::Arc;
 
 #[cfg(feature = "binaries")]
 use clap::Args;
+use miette::Diagnostic;
 
 use crate::error::{AssemblyError, ErrorCodes};
 
-/// Specification of which errors to include and which to not include.
+/// Interface for retrieving backend-relevant assembler options. The implementations are specific to the particular
+/// frontend. Currently there are two frontend implementations in spcasm itself:
+/// - ``CliOptions``: Only available and used in binary builds, created by clap.
+/// - ``DummyOptions``: Always available (used e.g. in tests), returns defaults that are equivalent to not overriding
+///   anything on the command line.
+pub trait BackendOptions: std::fmt::Debug {
+	/// Expands a marker "all" warning in the error or ignore list into all possible errors. This is so that the user
+	/// can specify --error all or --ignore all and get this behavior, but we don't need special casing for it in the
+	/// backend, which only works via matching discriminants.
+	fn expand_all(&mut self);
+
+	/// Returns whether the given warning is ignored, i.e. the user must not be informed of it.
+	fn is_ignored(&self, warning: &AssemblyError) -> bool;
+	/// Returns whether the given warning was turned into an error, i.e. it stops the assembler.
+	fn is_error(&self, warning: &AssemblyError) -> bool;
+}
+
+/// Returns a ``BackendOptions`` implementation with default behavior.
+pub fn default_backend_options() -> Arc<dyn BackendOptions> {
+	Arc::new(DummyOptions {})
+}
+
+/// Backend options created by clap in binary builds.
 #[derive(Debug, Clone, Eq, PartialEq, Default, Args)]
 #[cfg(feature = "binaries")]
-pub struct ErrorOptions {
+pub struct CliOptions {
 	/// Warnings to silence.
 	#[arg(num_args = 1, action = clap::ArgAction::Append, long, short = 'w')]
 	pub(crate) ignore: Vec<ErrorCodeSpec>,
@@ -21,11 +45,8 @@ pub struct ErrorOptions {
 }
 
 #[cfg(feature = "binaries")]
-impl ErrorOptions {
-	/// Expands a marker "all" warning in the error or ignore list into all possible errors. This is so that the user
-	/// can specify --error all or --ignore all and get this behavior, but we don't need special casing for it in the
-	/// backend, which only works via matching discriminants.
-	pub fn expand_all(&mut self) {
+impl BackendOptions for CliOptions {
+	fn expand_all(&mut self) {
 		let all_warnings_and_errors = AssemblyError::all_codes();
 		for list in [&mut self.ignore, &mut self.error] {
 			if list.contains(&std::mem::discriminant(&AssemblyError::AllMarker {}).into()) {
@@ -33,16 +54,42 @@ impl ErrorOptions {
 			}
 		}
 	}
+
+	fn is_error(&self, warning: &AssemblyError) -> bool {
+		// Always rethrow errors.
+		warning.severity().is_some_and(|s| s == miette::Severity::Error) || {
+			let discriminant = std::mem::discriminant(warning);
+			self.error.contains(&discriminant.into())
+		}
+	}
+
+	fn is_ignored(&self, warning: &AssemblyError) -> bool {
+		let discriminant = std::mem::discriminant(warning);
+		self.ignore.contains(&discriminant.into())
+	}
 }
 
-/// Non-clap builds get this fake ErrorOptions struct which is a ZST and does nothing.
-#[cfg(not(feature = "binaries"))]
+/// Dummy backend options that mirror command-line defaults.
 #[derive(Default, Debug, Clone, Copy, Eq, PartialEq)]
-pub struct ErrorOptions {}
+pub struct DummyOptions {}
+
+impl BackendOptions for DummyOptions {
+	fn expand_all(&mut self) {
+		// noop
+	}
+
+	fn is_error(&self, warning: &AssemblyError) -> bool {
+		false
+	}
+
+	fn is_ignored(&self, warning: &AssemblyError) -> bool {
+		false
+	}
+}
 
 #[derive(Debug, Clone, Eq, PartialEq)]
 #[repr(transparent)]
-pub struct ErrorCodeSpec(Discriminant<AssemblyError>);
+pub(crate) struct ErrorCodeSpec(Discriminant<AssemblyError>);
 
 impl From<Discriminant<AssemblyError>> for ErrorCodeSpec {
 	fn from(d: Discriminant<AssemblyError>) -> Self {
@@ -77,12 +124,12 @@ mod clap_dependent {
 
 	use clap::{Parser, ValueEnum};
 
-	use super::ErrorOptions;
+	use super::CliOptions;
 
 	/// SPC700 assembler.
 	#[derive(Parser)]
 	#[command(version, about, long_about=None)]
-	pub struct SpcasmCli {
+	pub(crate) struct SpcasmCli {
 		/// Assembly file to assemble.
 		#[arg()]
 		pub input:         PathBuf,
@@ -90,7 +137,7 @@ mod clap_dependent {
 		#[arg()]
 		pub output:        Option<PathBuf>,
 		#[command(flatten)]
-		pub warning_flags: ErrorOptions,
+		pub warning_flags: CliOptions,
 		/// Format to output to.
 		///
 		/// - elf: Output the binary data within a .data section of an ELF file.
@@ -104,7 +151,7 @@ mod clap_dependent {
 
 	#[derive(Clone, Copy, Debug, Eq, PartialEq, ValueEnum)]
 	#[repr(u8)]
-	pub enum OutputFormat {
+	pub(crate) enum OutputFormat {
 		Elf,
 		Plain,
 		HexDump,

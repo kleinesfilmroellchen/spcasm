@@ -12,7 +12,7 @@ use miette::{Diagnostic, MietteError, MietteSpanContents, SourceCode, SourceSpan
 use spcasm_derive::ErrorCodes;
 use thiserror::Error;
 
-use crate::cli::ErrorOptions;
+use crate::cli::BackendOptions;
 use crate::mcro::MacroSymbol;
 use crate::parser::instruction::{MemoryAddress, Mnemonic};
 use crate::parser::Token;
@@ -674,26 +674,13 @@ impl AssemblyError {
 	/// Report or throw this warning (or error), depending on what the user specified on the command line. On non-clap
 	/// builds, this always reports the error.
 	#[allow(clippy::trivially_copy_pass_by_ref)]
-	pub(crate) fn report_or_throw(self, options: &ErrorOptions) -> Result<(), Box<Self>> {
-		// Always rethrow errors.
-		if self.severity().is_some_and(|s| s == miette::Severity::Error) {
+	pub(crate) fn report_or_throw(self, options: &dyn BackendOptions) -> Result<(), Box<Self>> {
+		if options.is_error(&self) {
 			return Err(self.into());
-		}
-		#[cfg(feature = "binaries")]
-		{
-			let discriminant = std::mem::discriminant(&self);
-			if options.error.contains(&discriminant.into()) {
-				return Err(self.into());
-			} else if !options.ignore.contains(&discriminant.into()) {
-				println!("{:?}", miette::Report::new(self));
-			}
-			Ok(())
-		}
-		#[cfg(not(feature = "binaries"))]
-		{
+		} else if !options.is_ignored(&self) {
 			println!("{:?}", miette::Report::new(self));
-			Ok(())
 		}
+		Ok(())
 	}
 }
 

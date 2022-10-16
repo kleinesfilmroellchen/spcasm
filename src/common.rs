@@ -7,7 +7,7 @@ use std::sync::Arc;
 pub use super::error::{AssemblyCode, AssemblyError};
 pub use super::mcro::Macro;
 pub use super::parser::Environment;
-use crate::cli::ErrorOptions;
+use crate::cli::{default_backend_options, BackendOptions};
 
 /// Assembler result type.
 pub type AssemblyResult = miette::Result<(std::sync::Arc<std::cell::RefCell<Environment>>, Vec<u8>)>;
@@ -36,13 +36,13 @@ pub fn pretty_hex(bytes: &[u8]) -> String {
 /// # Errors
 /// Any assembler errors are propagated to the caller.
 pub fn run_assembler_with_default_options(file_name: &str) -> AssemblyResult {
-	run_assembler(file_name, &ErrorOptions::default())
+	run_assembler(file_name, default_backend_options())
 }
 
 /// Run the assembler on a single file.
 /// # Errors
 /// Any assembler errors are propagated to the caller.
-pub fn run_assembler(file_name: &str, options: &ErrorOptions) -> AssemblyResult {
+pub fn run_assembler(file_name: &str, options: Arc<dyn BackendOptions>) -> AssemblyResult {
 	let source_code = AssemblyCode::from_file(file_name).map_err(|os_error| crate::AssemblyError::FileNotFound {
 		os_error,
 		file_name: file_name.to_string(),
@@ -60,9 +60,8 @@ pub fn run_assembler(file_name: &str, options: &ErrorOptions) -> AssemblyResult 
 /// file on disk.
 /// # Errors
 /// Any assembler errors are propagated to the caller.
-pub fn run_assembler_on_source(source_code: &Arc<AssemblyCode>, options: &ErrorOptions) -> AssemblyResult {
+pub fn run_assembler_on_source(source_code: &Arc<AssemblyCode>, options: Arc<dyn BackendOptions>) -> AssemblyResult {
 	let mut env = crate::Environment::new();
-	#[allow(clippy::clone_on_copy)]
 	env.borrow_mut().set_error_options(options.clone());
 	let tokens = crate::parser::lexer::lex(source_code.clone()).map_err(AssemblyError::from)?;
 	let program = crate::Environment::parse(&env, tokens, source_code).map_err(AssemblyError::from)?;

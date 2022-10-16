@@ -31,7 +31,7 @@ pub use common::*;
 
 pub mod assembler;
 pub mod brr;
-mod cli;
+pub mod cli;
 mod common;
 mod default_hacks;
 #[cfg(feature = "binaries")]

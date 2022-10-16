@@ -13,7 +13,7 @@ use miette::{Result, SourceSpan};
 use r16bit::MovDirection;
 
 use crate::brr::{self, wav};
-use crate::cli::ErrorOptions;
+use crate::cli::{default_backend_options, BackendOptions};
 use crate::error::{AssemblyCode, AssemblyError};
 use crate::mcro::MacroValue;
 use crate::parser::instruction::{AddressingMode, Instruction, MemoryAddress, Mnemonic, Number, Opcode};
@@ -36,12 +36,11 @@ pub const MAX_PASSES: usize = 10;
 #[allow(clippy::trivially_copy_pass_by_ref)]
 pub(crate) fn assemble(
 	main_file: &Arc<RefCell<AssemblyFile>>,
-	options: &ErrorOptions,
+	options: Arc<dyn BackendOptions>,
 ) -> Result<Vec<u8>, Box<AssemblyError>> {
 	let mut main_file = main_file.borrow_mut();
 	let mut data = AssembledData::new(main_file.source_code.clone());
-	#[cfg(feature = "binaries")]
-	data.set_error_options(options.clone());
+	data.set_error_options(options);
 
 	data.new_segment(0);
 
@@ -509,7 +508,7 @@ pub struct AssembledData {
 	/// Assembler subroutines use this as a flag to signal an end of assembly as soon as possible.
 	should_stop:               bool,
 	/// Options that command line received; used for determining what to do with warnings.
-	options:                   ErrorOptions,
+	options:                   Arc<dyn BackendOptions>,
 }
 
 impl AssembledData {
@@ -553,14 +552,14 @@ impl AssembledData {
 			current_segment_start: Option::default(),
 			source_code,
 			should_stop: false,
-			options: ErrorOptions::default(),
+			options: default_backend_options(),
 			segment_stack: Vec::new(),
 		}
 	}
 
 	/// Change the error options for assembler warning and error reporting.
 	#[cfg(feature = "binaries")]
-	pub fn set_error_options(&mut self, options: ErrorOptions) -> &mut Self {
+	pub fn set_error_options(&mut self, options: Arc<dyn BackendOptions>) -> &mut Self {
 		self.options = options;
 		self
 	}
@@ -571,15 +570,7 @@ impl AssembledData {
 	/// The provided error is re-thrown if the error options specify to do so. On non-clap builds, this function never
 	/// errors.
 	pub fn report_or_throw(&self, error: AssemblyError) -> Result<(), Box<AssemblyError>> {
-		#[cfg(feature = "binaries")]
-		{
-			error.report_or_throw(&self.options)
-		}
-		#[cfg(not(feature = "binaries"))]
-		{
-			println!("{:?}", miette::Report::new(error));
-			Ok(())
-		}
+		error.report_or_throw(&*self.options)
 	}
 
 	/// Push the current segment onto the segment stack, leaving the current segment vacant.
@@ -981,7 +972,7 @@ impl AssembledData {
 						}
 						.err()
 					})
-					.map_or_else(|| Ok(()), |err| err.report_or_throw(&self.options))?;
+					.map_or_else(|| Ok(()), |err| err.report_or_throw(&*self.options))?;
 				// Resolve a label used as a memory address, e.g. in an instruction operand like a jump target.
 				had_modifications |= datum.try_resolve(memory_address);
 			}

@@ -13,7 +13,7 @@ use self::instruction::{AddressingMode, Instruction, Number, Opcode};
 use self::label::{GlobalLabel, Label, MacroParent, MacroParentReplacable};
 use self::lexer::lex;
 use crate::assembler::resolve_file;
-use crate::cli::ErrorOptions;
+use crate::cli::{default_backend_options, BackendOptions};
 use crate::error::{AssemblyCode, AssemblyError};
 use crate::mcro::MacroValue;
 use crate::{lalrpop_adaptor, Macro};
@@ -65,7 +65,7 @@ pub struct Environment {
 	/// The files included in this "tree" created by include statements.
 	pub(crate) files:   HashMap<PathBuf, Arc<RefCell<AssemblyFile>>>,
 	/// Error and warning options passed on the command line.
-	pub(crate) options: ErrorOptions,
+	pub(crate) options: Arc<dyn BackendOptions>,
 }
 
 #[derive(Debug)]
@@ -82,11 +82,15 @@ impl Environment {
 	/// Creates an empty environment.
 	#[must_use]
 	pub fn new() -> Arc<RefCell<Self>> {
-		Arc::new(RefCell::new(Self { labels: Vec::new(), files: HashMap::new(), options: ErrorOptions::default() }))
+		Arc::new(RefCell::new(Self {
+			labels:  Vec::new(),
+			files:   HashMap::new(),
+			options: default_backend_options(),
+		}))
 	}
 
 	/// Sets the user-provided error options.
-	pub fn set_error_options(&mut self, options: ErrorOptions) {
+	pub fn set_error_options(&mut self, options: Arc<dyn BackendOptions>) {
 		self.options = options;
 	}
 
@@ -97,15 +101,7 @@ impl Environment {
 	/// errors.
 	#[allow(clippy::unnecessary_wraps, clippy::unused_self)]
 	pub(crate) fn report_or_throw(&self, error: AssemblyError) -> Result<(), Box<AssemblyError>> {
-		#[cfg(feature = "binaries")]
-		{
-			error.report_or_throw(&self.options)
-		}
-		#[cfg(not(feature = "binaries"))]
-		{
-			println!("{:?}", miette::Report::new(error));
-			Ok(())
-		}
+		error.report_or_throw(&*self.options)
 	}
 
 	/// Searches for an existing parsed file in this environment given that file's source code.

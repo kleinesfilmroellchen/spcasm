@@ -27,9 +27,6 @@ mod branching;
 mod mov;
 mod r16bit;
 
-/// Maximum number of resolution passes executed so that no endless resolution loops are hit.
-pub const MAX_PASSES: usize = 10;
-
 /// Assembles the instructions into a byte sequence.
 /// # Errors
 /// Unencodeable instructions will cause errors.
@@ -40,6 +37,7 @@ pub(crate) fn assemble(
 ) -> Result<Vec<u8>, Box<AssemblyError>> {
 	let mut main_file = main_file.borrow_mut();
 	let mut data = AssembledData::new(main_file.source_code.clone());
+	let maximum_label_resolution_passes = options.maximum_label_resolution_passes();
 	data.set_error_options(options);
 
 	data.new_segment(0);

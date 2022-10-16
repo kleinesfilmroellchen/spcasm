@@ -29,9 +29,6 @@ pub use program::ProgramElement;
 pub use register::Register;
 pub use token::Token;
 
-/// FIXME: Make this a command-line variable.
-const MAXIMUM_MACRO_EXPANSION_DEPTH: usize = 1000;
-
 /// How a looked-up label is used. See ``Environment::get_global_label``.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[repr(u8)]
@@ -397,6 +394,14 @@ impl AssemblyFile {
 
 	/// Expands calls to user-defined macros.
 	pub fn expand_user_macros(&mut self) -> Result<(), Box<AssemblyError>> {
+		let maximum_macro_expansion_depth = self
+			.parent
+			.upgrade()
+			.expect("environment destroyed before assembly file")
+			.borrow()
+			.options
+			.maximum_macro_expansion_depth();
+
 		let user_macros = self
 			.content
 			.iter()
@@ -419,9 +424,9 @@ impl AssemblyFile {
 			if let ProgramElement::UserDefinedMacroCall { macro_name, arguments: actual_arguments, span, label } =
 				element
 			{
-				if macro_end_stack.len() > MAXIMUM_MACRO_EXPANSION_DEPTH {
+				if macro_end_stack.len() > maximum_macro_expansion_depth {
 					return Err(AssemblyError::RecursiveMacroUse {
-						depth:    MAXIMUM_MACRO_EXPANSION_DEPTH,
+						depth:    maximum_macro_expansion_depth,
 						name:     macro_name.clone(),
 						location: *span,
 						src:      self.source_code.clone(),

@@ -25,6 +25,11 @@ pub trait BackendOptions: std::fmt::Debug {
 	fn is_ignored(&self, warning: &AssemblyError) -> bool;
 	/// Returns whether the given warning was turned into an error, i.e. it stops the assembler.
 	fn is_error(&self, warning: &AssemblyError) -> bool;
+
+	/// Returns the maximum macro expansion/recursion depth.
+	fn maximum_macro_expansion_depth(&self) -> usize;
+	/// Returns the maximum number of label resolution passes.
+	fn maximum_label_resolution_passes(&self) -> usize;
 }
 
 /// Returns a ``BackendOptions`` implementation with default behavior.
@@ -42,6 +47,20 @@ pub struct CliOptions {
 	/// Warnings to turn into a hard error.
 	#[arg(num_args = 1, action = clap::ArgAction::Append, long, short = 'W')]
 	pub(crate) error:  Vec<ErrorCodeSpec>,
+
+	/// Limit for the number of label resolution passes spcasm will perform.
+	///
+	/// Usually 2-3 passes are enough and very high pass numbers often indicate infinite loops. If this number of
+	/// passes is exceeded during label resolution, spcasm will report unresolved labels as normal.
+	#[arg(long, short = 'l', default_value = "10")]
+	pub(crate) label_pass_limit: usize,
+
+	/// Limit for the number of recursive macro calls allowed by spcasm.
+	///
+	/// Increase this limit carefully; very high recursion amounts are usually caused by infinitely recursive macros.
+	/// Any recursion exceeding this value will cause a specific error.
+	#[arg(long, short = 'r', default_value = "1000")]
+	pub(crate) macro_recursion_limit: usize,
 }
 
 #[cfg(feature = "binaries")]
@@ -67,6 +86,14 @@ impl BackendOptions for CliOptions {
 		let discriminant = std::mem::discriminant(warning);
 		self.ignore.contains(&discriminant.into())
 	}
+
+	fn maximum_label_resolution_passes(&self) -> usize {
+		self.label_pass_limit
+	}
+
+	fn maximum_macro_expansion_depth(&self) -> usize {
+		self.macro_recursion_limit
+	}
 }
 
 /// Dummy backend options that mirror command-line defaults.
@@ -84,6 +111,14 @@ impl BackendOptions for DummyOptions {
 
 	fn is_ignored(&self, warning: &AssemblyError) -> bool {
 		false
+	}
+
+	fn maximum_label_resolution_passes(&self) -> usize {
+		10
+	}
+
+	fn maximum_macro_expansion_depth(&self) -> usize {
+		1000
 	}
 }
 

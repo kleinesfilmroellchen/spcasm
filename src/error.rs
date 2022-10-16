@@ -227,7 +227,10 @@ pub enum AssemblyError {
 	#[diagnostic(
 		code(spcasm::recursive_macro_use),
 		severity(Error),
-		help("This is most likely caused by an infinitely recursive macro definition.")
+		help(
+			"This is most likely caused by an infinitely recursive macro definition. On the command line, use \
+			 `--macro-recursion-limit` to increase the limit."
+		)
 	)]
 	RecursiveMacroUse {
 		name:     String,
@@ -392,7 +395,11 @@ pub enum AssemblyError {
 	#[diagnostic(
 		code(spcasm::unresolved_label),
 		severity(Error),
-		help("Any symbolic label must be defined somewhere. Did you misspell the label's name?")
+		help(
+			"Any symbolic label must be defined somewhere. Did you misspell the label's name?\nThis error is \
+			 sometimes caused by too few label resolution passes. Use `--label-pass-limit` to increase the limit on \
+			 the number of passes."
+		)
 	)]
 	UnresolvedLabel {
 		label:          String,

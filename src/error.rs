@@ -217,6 +217,21 @@ pub enum AssemblyError {
 		location: SourceSpan,
 	},
 
+	#[error("Maximum recursion depth {depth} was exceeded while expanding user macro '{name}'")]
+	#[diagnostic(
+		code(spcasm::recursive_macro_use),
+		severity(Error),
+		help("This is most likely caused by an infinitely recursive macro definition.")
+	)]
+	RecursiveMacroUse {
+		name:     String,
+		depth:    usize,
+		#[source_code]
+		src:      Arc<AssemblyCode>,
+		#[label("While trying to expand this macro")]
+		location: SourceSpan,
+	},
+
 	#[error("Macro argument '{name}' has not been defined in this macro")]
 	#[diagnostic(
 		code(spcasm::undefined_macro_argument),

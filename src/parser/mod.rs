@@ -29,6 +29,9 @@ pub use program::ProgramElement;
 pub use register::Register;
 pub use token::Token;
 
+/// FIXME: Make this a command-line variable.
+const MAXIMUM_MACRO_EXPANSION_DEPTH: usize = 1000;
+
 /// How a looked-up label is used. See ``Environment::get_global_label``.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[repr(u8)]
@@ -410,12 +413,26 @@ impl AssemblyFile {
 			.collect::<HashMap<_, _>>();
 
 		let mut index = 0;
+		// A stack of end indices where code inserted by macros ends. Specifically, the indices point at the first
+		// program element after the macro. This is used to keep track of recursion depth.
+		let mut macro_end_stack = Vec::new();
+
 		while index < self.content.len() {
 			let mut element = &mut self.content[index];
 
 			if let ProgramElement::UserDefinedMacroCall { macro_name, arguments: actual_arguments, span, label } =
 				element
 			{
+				if macro_end_stack.len() > MAXIMUM_MACRO_EXPANSION_DEPTH {
+					return Err(AssemblyError::RecursiveMacroUse {
+						depth:    MAXIMUM_MACRO_EXPANSION_DEPTH,
+						name:     macro_name.clone(),
+						location: *span,
+						src:      self.source_code.clone(),
+					}
+					.into());
+				}
+
 				let called_macro = user_macros.get(macro_name);
 				if let Some((span, MacroValue::UserDefinedMacro { name, arguments, body })) = called_macro {
 					let arguments = arguments.borrow();
@@ -448,7 +465,15 @@ impl AssemblyFile {
 						macro_element.replace_macro_parent(actual_argument_parent.clone(), &self.source_code)?;
 					}
 
+					let body_length = inserted_body.len();
 					self.content.splice(index ..= index, inserted_body);
+
+					// Shift all later end indices backwards to account for the inserted instructions.
+					macro_end_stack = macro_end_stack
+						.into_iter()
+						.map(|end_index| if end_index >= index { end_index + body_length } else { end_index })
+						.collect();
+					macro_end_stack.push(index + body_length);
 					continue;
 				}
 				return Err(AssemblyError::UndefinedUserMacro {
@@ -460,6 +485,9 @@ impl AssemblyFile {
 				.into());
 			}
 			index += 1;
+			// Using drain_filter is the easiest way of filtering elements from a vector. We need to consume the
+			// returned iterator fully or else not all filtering will happen.
+			let _ = macro_end_stack.drain_filter(|end_index| *end_index < index).count();
 		}
 
 		Ok(())

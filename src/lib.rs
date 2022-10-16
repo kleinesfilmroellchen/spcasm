@@ -18,6 +18,7 @@
 	exact_size_is_empty,
 	maybe_uninit_uninit_array,
 	const_trait_impl,
+	drain_filter,
 	maybe_uninit_array_assume_init
 )]
 #![deny(missing_docs)]

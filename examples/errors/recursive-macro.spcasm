@@ -1,0 +1,8 @@
+
+macro recursive
+  mov a,#4
+  %recursive()
+endmacro
+
+recursion_start:
+  %recursive()

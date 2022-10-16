@@ -58,7 +58,7 @@ pub(crate) fn assemble(
 		}
 	}
 	let mut pass_count = 0;
-	while data.execute_label_resolution_pass()? && pass_count < MAX_PASSES {
+	while pass_count < maximum_label_resolution_passes && data.execute_label_resolution_pass()? {
 		pass_count += 1;
 	}
 	data.combine_segments()

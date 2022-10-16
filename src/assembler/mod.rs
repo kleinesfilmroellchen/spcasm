@@ -558,7 +558,6 @@ impl AssembledData {
 	}
 
 	/// Change the error options for assembler warning and error reporting.
-	#[cfg(feature = "binaries")]
 	pub fn set_error_options(&mut self, options: Arc<dyn BackendOptions>) -> &mut Self {
 		self.options = options;
 		self

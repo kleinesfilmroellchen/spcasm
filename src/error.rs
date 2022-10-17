@@ -3,7 +3,7 @@
 use std::collections::HashMap;
 use std::fmt::Display;
 use std::mem::Discriminant;
-use std::num::ParseIntError;
+use std::num::{ParseIntError, TryFromIntError};
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
@@ -694,6 +694,11 @@ impl AssemblyError {
 			println!("{:?}", miette::Report::new(self));
 		}
 		Ok(())
+	}
+
+	pub(crate) fn from_number_error(value: TryFromIntError, location: SourceSpan, src: Arc<AssemblyCode>) -> Self {
+		// HACK: Create an integer parsing error that looks somewhat like the error which integer conversion would give.
+		Self::InvalidNumber { error: format!("{}", usize::MAX as u128 + 1).parse::<usize>().unwrap_err(), location, src }
 	}
 }
 

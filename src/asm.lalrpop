@@ -203,15 +203,21 @@ NumberList = Comma<Number>;
 /// asar: `: start - end`
 InclusionRange: SourceSpan = {
 	<comma:","> <start:Number> <length:( "," <Number> )?> =>? {
-		// FIXME: dangerous conversions
-		let start = start.try_value(comma.into(), source_code.clone()).map_err(AssemblyError::from)? as usize;
-		let length = length.map(|length| length.try_value(comma.into(), source_code.clone())).transpose().map_err(AssemblyError::from)?.unwrap_or(i64::MAX) as usize;
+		let start = usize::try_from(start.try_value(comma.into(), source_code.clone()).map_err(AssemblyError::from)?)
+			.map_err(|err| AssemblyError::from_number_error(err, comma.into(), source_code.clone()))?;
+		let length = usize::try_from(length.map(|length| length.try_value(comma.into(), source_code.clone())).transpose()
+				.map_err(AssemblyError::from)?.unwrap_or(i64::MAX))
+			.map_err(|err| AssemblyError::from_number_error(err, comma.into(), source_code.clone()))?;
 		Ok((start, length).into())
 	},
 	<colon:":"> <start:Number> <dash:"-range-"> <end:Number> =>? {
 		let colon_dash_range = source_range(colon.into(), dash.into());
-		let start = start.try_value(colon_dash_range, source_code.clone()).map_err(AssemblyError::from)? as usize;
-		let end = end.try_value(colon_dash_range, source_code.clone()).map_err(AssemblyError::from)? as usize;
+		let start = usize::try_from(start.try_value(colon_dash_range, source_code.clone())
+				.map_err(AssemblyError::from)?)
+			.map_err(|err| AssemblyError::from_number_error(err, colon.into(), source_code.clone()))?;
+		let end = usize::try_from(end.try_value(colon_dash_range, source_code.clone())
+				.map_err(AssemblyError::from)?)
+			.map_err(|err| AssemblyError::from_number_error(err, colon.into(), source_code.clone()))?;
 		if start > end {
 			Err(ParseError::User { error: AssemblyError::StartAboveEnd {
 				start,

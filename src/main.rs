@@ -61,7 +61,6 @@ fn main() -> miette::Result<()> {
 	args.warning_flags.expand_all();
 	let file_name = args.input;
 
-	// TODO: respect flags
 	let (_, assembled) = run_assembler(&file_name.to_string_lossy(), std::sync::Arc::new(args.warning_flags))?;
 
 	if let Some(outfile) = args.output {

@@ -246,10 +246,10 @@ LabelForInstruction: Label = {
 };
 
 Label: Label = {
-	"." <identifier:"identifier"> => Label::Local(Arc::new(RefCell::new(LocalLabel {
+	<dot:"."> <identifier:"identifier"> => Label::Local(Arc::new(RefCell::new(LocalLabel {
 		name: identifier.0.clone(),
 		location: None,
-		span: identifier.1,
+		span: source_range(dot.into(), identifier.1.into()),
 		// Don't rely on forward-to-backward parsing order; we can't know the parent label here.
 		parent: Weak::new(),
 	}))),

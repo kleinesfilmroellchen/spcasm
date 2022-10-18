@@ -1,16 +1,29 @@
 
+; Basic macro
 macro do_nothing
   nop
 endmacro
 
+; Macro with argument and simple recursion
 macro do_stuff(first, second)
   mov a,<first>
   %do_nothing()
   mov x,<second>
 endmacro
 
+; Calling macros
 loop:
   nop
   %do_stuff($500, $501)
   jmp loop
   %do_nothing()
+
+; Local labels inside macros
+macro do_something
+  .loop:
+    nop
+    bra .loop
+endmacro
+start:
+  nop
+  %do_something()

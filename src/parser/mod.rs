@@ -181,7 +181,7 @@ impl Environment {
 		file.resolve_source_includes()?;
 
 		file.expand_user_macros()?;
-
+		file.fill_in_label_references()?;
 		drop(file);
 
 		Ok(rc_file)
@@ -223,7 +223,6 @@ impl AssemblyFile {
 	/// Fills in the global label references for all local labels. Existing ones are overwritten, so the labels are
 	/// always consistent.
 	///
-	/// Additionally, this fills in references to macro argument lists for macro argument occurrences.
 	/// # Errors
 	/// If a local label precedes any global labels.
 	/// # Panics
@@ -311,6 +310,10 @@ impl AssemblyFile {
 		Ok(())
 	}
 
+	/// Fills in references to macro argument lists for macro argument occurrences.
+	///
+	/// # Errors
+	/// If a macro argument with a wrong name was encountered.
 	pub fn resolve_user_macro_arguments(&mut self) -> Result<(), Box<AssemblyError>> {
 		for element in &mut self.content {
 			if let ProgramElement::Macro(Macro {

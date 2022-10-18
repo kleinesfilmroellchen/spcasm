@@ -25,7 +25,7 @@ pub fn lex(source_code: Arc<AssemblyCode>) -> Result<Vec<Token>, Box<AssemblyErr
 	while let Some(chr) = chars.next() {
 		// \r is treated as white space and ignored.
 		if chr == '\n' {
-			tokens.push(Token::Newline(index.min(code_length-1).into()));
+			tokens.push(Token::Newline(index.min(code_length - 1).into()));
 			index += 1;
 			continue;
 		} else if chr.is_whitespace() {

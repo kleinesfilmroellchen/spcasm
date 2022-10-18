@@ -698,7 +698,11 @@ impl AssemblyError {
 
 	pub(crate) fn from_number_error(value: TryFromIntError, location: SourceSpan, src: Arc<AssemblyCode>) -> Self {
 		// HACK: Create an integer parsing error that looks somewhat like the error which integer conversion would give.
-		Self::InvalidNumber { error: format!("{}", usize::MAX as u128 + 1).parse::<usize>().unwrap_err(), location, src }
+		Self::InvalidNumber {
+			error: format!("{}", usize::MAX as u128 + 1).parse::<usize>().unwrap_err(),
+			location,
+			src,
+		}
 	}
 }
 

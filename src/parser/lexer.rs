@@ -18,13 +18,14 @@ use crate::mcro::MacroSymbol;
 #[allow(clippy::missing_panics_doc, clippy::too_many_lines)]
 pub fn lex(source_code: Arc<AssemblyCode>) -> Result<Vec<Token>, Box<AssemblyError>> {
 	let mut chars = source_code.text.chars().peekable();
+	let code_length = source_code.text.len();
 	let mut index = 0usize;
 	let mut tokens = Vec::new();
 
 	while let Some(chr) = chars.next() {
 		// \r is treated as white space and ignored.
 		if chr == '\n' {
-			tokens.push(Token::Newline(index.saturating_sub(1).into()));
+			tokens.push(Token::Newline(index.min(code_length-1).into()));
 			index += 1;
 			continue;
 		} else if chr.is_whitespace() {
@@ -55,7 +56,7 @@ pub fn lex(source_code: Arc<AssemblyCode>) -> Result<Vec<Token>, Box<AssemblyErr
 				let start_index = index;
 				let identifier = next_identifier(&mut chars, chr);
 				index += identifier.len();
-				let identifier_span =  (start_index, identifier.len() + 1).into();
+				let identifier_span =  (start_index, identifier.len()).into();
 				tokens.push(Register::parse(&identifier.to_lowercase(), identifier_span, source_code.clone())
 								.map(|value| Token::Register(value, identifier_span))
 								.or_else(|_| MacroSymbol::parse(&identifier.to_lowercase(), identifier_span, source_code.clone())

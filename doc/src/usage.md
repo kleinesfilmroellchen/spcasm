@@ -60,7 +60,7 @@ The output file is optional; omit it in order to dry-run the assembler and check
 
 If an error occurs during any step of the assembly process, spcasm will provide you with a nice error of what went wrong and possibly how to solve it:
 
-![spcasm error demonstration](https://user-images.githubusercontent.com/28656157/164973851-d66c5fa3-8bed-43b6-b7c2-e66cc53592c6.png)
+![spcasm error demonstration](https://raw.githubusercontent.com/kleinesfilmroellchen/spcasm/main/doc/error-examples.gif)
 
 There may also be hints and warnings (identifiable by the pointing finger or exclamation mark that replace the red x) which inform you of possible problems with the assembly code that aren't fatal. These warnings can be turned off with `-w` or turned into hard errors with `-W`. Use `all` as a shorthand for all warnings. Note that spcasm will print error "codes" with the prefix `spcasm::` but you do not have to include this prefix when referencing a warning on the command line, meaning that `-w label_shenanigans` and `-w spcasm::label_shenanigans` mean the same thing.
 

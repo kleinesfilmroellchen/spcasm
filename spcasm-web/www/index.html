@@ -34,6 +34,60 @@
         </p>
       </header>
 
+      <section
+        id="options"
+        class="accordion"
+        role="tab"
+        aria-labelledby="options-label"
+      >
+        <input
+          type="checkbox"
+          checked
+          name="options-expander"
+          id="options-expander"
+          class="accordion-controller"
+        />
+        <label for="options-expander" id="options-label"
+          ><h6 class="label-body" role="presentation">
+            Assembler options (click to show/hide)
+          </h6></label
+        >
+        <div class="accordion-content">
+          <div>
+            <input
+              type="range"
+              name="max-label-resolution-passes"
+              id="max-label-resolution-passes"
+              max="3000"
+              min="0"
+              step="3"
+              value="12"
+            />
+            <label for="max-label-resolution-passes"
+              ><span class="label-body"
+                >Maximum number of label resolution passes</span
+              ></label
+            >
+          </div>
+          <div>
+            <input
+              type="range"
+              name="max-macro-expansion-depth"
+              id="max-macro-expansion-depth"
+              max="10000"
+              min="100"
+              step="100"
+              value="1000"
+            />
+            <label for="max-macro-expansion-depth"
+              ><span class="label-body"
+                >Maximum depth for expanding user-defined macros</span
+              ></label
+            >
+          </div>
+        </div>
+      </section>
+
       <main class="row">
         <section id="assembly-source-container" class="one-half column">
           <pre

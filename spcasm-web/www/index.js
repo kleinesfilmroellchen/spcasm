@@ -1,7 +1,33 @@
+"use strict";
+
 import * as spcasm from "spcasm-web-wasm";
 
-document
-  .querySelector("code.assembly-source")
-  .addEventListener("input", spcasm.on_assembly_change, false);
+// Creates an options object from the UI input.
+function createOptions() {
+  return {
+    silence_all: true,
+    silenced: [],
+    max_label_resolution_passes: Number(
+      document.querySelector("#max-label-resolution-passes").value
+    ),
+    max_macro_expansion_depth: Number(
+      document.querySelector("#max-macro-expansion-depth").value
+    ),
+  };
+}
 
-spcasm.on_assembly_change();
+const updatingObjects = [
+  document.querySelector("code.assembly-source"),
+  document.querySelector("#max-label-resolution-passes"),
+  document.querySelector("#max-macro-expansion-depth"),
+];
+
+for (const object of updatingObjects) {
+  object.addEventListener(
+    "input",
+    () => spcasm.on_assembly_change(createOptions()),
+    false
+  );
+}
+
+spcasm.on_assembly_change(createOptions());

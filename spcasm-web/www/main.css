@@ -76,9 +76,9 @@ header:first-child {
 }
 
 main,
-section,
-section > div,
-section > pre > code {
+main > section,
+main > section > div,
+main > section > pre > code {
   min-height: 50vh;
 }
 
@@ -127,4 +127,29 @@ div#output-container {
 }
 .ansi-underline {
   text-decoration: underline;
+}
+
+.accordion > input[name="options-expander"] {
+  display: none;
+}
+.accordion > .accordion-content {
+  overflow: hidden;
+  transition: height .5s;
+}
+.accordion > input[name="options-expander"]:not(:checked) ~ .accordion-content {
+  height: 0;
+}
+.accordion > input[name="options-expander"]:checked ~ .accordion-content {
+  height: 10rem;
+}
+#options-label {
+  cursor: pointer;
+}
+
+#options input[type="range"] {
+  width: calc(min(100%, 7cm));
+}
+
+#options label {
+  display: initial;
 }

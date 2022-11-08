@@ -7,11 +7,14 @@ use std::sync::Arc;
 use html_escape::{decode_html_entities, encode_safe};
 use miette::{GraphicalReportHandler, GraphicalTheme};
 use once_cell::sync::Lazy;
+use options::WebOptions;
 use regex::{Captures, Regex};
 use spcasm::{pretty_hex, run_assembler_on_source, AssemblyCode, AssemblyError};
 use wasm_bindgen::prelude::*;
 use wasm_bindgen::JsCast;
 use web_sys::HtmlElement;
+
+mod options;
 
 #[allow(unused)]
 macro_rules! log {
@@ -92,8 +95,10 @@ fn set_panic_hook() {
 /// Callback for when the user changes assembly code.
 #[allow(clippy::cast_sign_loss, clippy::cast_possible_truncation)]
 #[wasm_bindgen]
-pub fn on_assembly_change() {
+pub fn on_assembly_change(options: JsValue) {
 	set_panic_hook();
+
+	let options: WebOptions = serde_wasm_bindgen::from_value(options).unwrap();
 
 	let document = web_sys::window().unwrap().document().unwrap();
 	let code_input = document.query_selector("code.assembly-source").unwrap().unwrap();
@@ -111,9 +116,8 @@ pub fn on_assembly_change() {
 
 	let source = Arc::new(AssemblyCode::new(&code_text, "<<input>>".to_owned()));
 
-	// TODO: Allow the user to specify error options?
 	let start_time = js_sys::Date::now();
-	let assembler_result = run_assembler_on_source(&source, spcasm::cli::default_backend_options());
+	let assembler_result = run_assembler_on_source(&source, Arc::new(options));
 
 	let end_time = js_sys::Date::now();
 	let elapsed_time = end_time - start_time;

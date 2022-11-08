@@ -20,8 +20,8 @@
         enable both in your browser.</noscript
       >
       <script src="./bootstrap.js"></script>
-      <header>
-        <h1>spcasm</h1>
+      <header aria-labelledby="title">
+        <h1 id="title">spcasm</h1>
         <p>
           spcasm is a modern assembler for the old SPC700 architecture.
           <a href="doc">You can read more in the documentation</a>.
@@ -38,11 +38,12 @@
         <section id="assembly-source-container" class="one-half column">
           <pre
             class="assembly-source"
-          ><code contenteditable="true" class="assembly-source"><div>; Input your code here:</div><div>loop:</div><div>  nop</div><div>  nop</div><div>  jmp loop</div></code></pre>
+            role="none"
+          ><code contenteditable="true" class="assembly-source" role="textbox"><div>; Input your code here:</div><div>loop:</div><div>  nop</div><div>  nop</div><div>  jmp loop</div></code></pre>
         </section>
         <section id="output-column" class="one-half column">
           <p id="status"></p>
-          <div id="output-container">
+          <div id="output-container" role="log">
             <div id="output"></div>
           </div>
         </section>

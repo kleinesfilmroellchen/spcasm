@@ -6,7 +6,7 @@ use std::sync::Arc;
 use miette::SourceSpan;
 
 use super::instruction::{Instruction, Number};
-use super::label::{Label, MacroParent, MacroParentReplacable};
+use super::reference::{Reference, MacroParent, MacroParentReplacable};
 use super::Macro;
 use crate::parser::source_range;
 use crate::{AssemblyCode, AssemblyError};
@@ -25,7 +25,7 @@ pub enum ProgramElement {
 		/// Source code location of the include directive.
 		span:  SourceSpan,
 		/// Label before the include directive. This label will be used for the first instruction in the included file.
-		label: Option<Label>,
+		label: Option<Reference>,
 	},
 	/// Calling a user-defined macro, e.g. `%my_macro(3, 4, 5)`
 	UserDefinedMacroCall {
@@ -36,7 +36,7 @@ pub enum ProgramElement {
 		/// Location in source code of the macro call.
 		span:       SourceSpan,
 		/// Label before the macro call. This label will be used for the first instruction in the macro.
-		label:      Option<Label>,
+		label:      Option<Reference>,
 	},
 }
 
@@ -67,7 +67,7 @@ impl ProgramElement {
 	/// Set the label on this program element, returning itself.
 	#[allow(clippy::missing_const_for_fn)] // false positive
 	#[must_use]
-	pub fn set_label(self, label: Option<Label>) -> Self {
+	pub fn set_label(self, label: Option<Reference>) -> Self {
 		match self {
 			Self::Macro(mut r#macro) => {
 				r#macro.label = r#macro.label.or(label);

@@ -408,33 +408,31 @@ pub enum AssemblyError {
 		src:      Arc<AssemblyCode>,
 	},
 
-	#[error("Label '{label}' can not be resolved to a value")]
+	#[error("Reference '{reference}' can not be resolved to a value")]
 	#[diagnostic(
-		code(spcasm::unresolved_label),
+		code(spcasm::unresolved_reference),
 		severity(Error),
 		help(
-			"Any symbolic label must be defined somewhere. Did you misspell the label's name?\nThis error is \
-			 sometimes caused by too few label resolution passes. Use `--label-pass-limit` to increase the limit on \
+			"Any symbolic reference must be defined somewhere. Did you misspell the reference's name?\nThis error is \
+			 sometimes caused by too few reference resolution passes. Use `--reference-pass-limit` to increase the limit on \
 			 the number of passes."
 		)
 	)]
-	UnresolvedLabel {
-		label:          String,
-		#[label("'{label}' defined here")]
-		label_location: Option<SourceSpan>,
+	UnresolvedReference {
+		reference:          String,
+		#[label("'{reference}' defined here")]
+		reference_location: Option<SourceSpan>,
 		#[label("Used here")]
 		usage_location: SourceSpan,
 		#[source_code]
 		src:            Arc<AssemblyCode>,
 	},
 
-	#[error("Label '\\@' can not be resolved to a value")]
+	#[error("Reference '\\@' can not be resolved to a value")]
 	#[diagnostic(
-		code(spcasm::unresolved_label),
+		code(spcasm::unresolved_reference),
 		severity(Error),
-		help(
-			"The special macro global '\\@' is only usable inside user defined macros."
-		)
+		help("The special macro global '\\@' is only usable inside user defined macros.")
 	)]
 	UnresolvedMacroGlobal {
 		#[label("Used here")]
@@ -498,13 +496,13 @@ pub enum AssemblyError {
 
 	#[error("Invalid use of labels in an argument for `{mcro}`")]
 	#[diagnostic(
-		code(spcasm::labels_in_macro_argument),
+		code(spcasm::references_in_macro_argument),
 		help(
-			"Because the macro argument can determine a label's position, resolving the argument value is not \
-			 generally possible. For this reason, labels are not allowed to be used in a macro argument."
+			"Because the macro argument can determine a reference's position, resolving the argument value is not \
+			 generally possible. For this reason, references are not allowed to be used in a macro argument."
 		)
 	)]
-	LabelsInMacroArgument {
+	ReferencesInMacroArgument {
 		mcro:     MacroSymbol,
 		#[source_code]
 		src:      Arc<AssemblyCode>,
@@ -664,17 +662,17 @@ pub enum AssemblyError {
 		src:      Arc<AssemblyCode>,
 	},
 
-	#[error("This label \"{name}\" has an 8-bit value, did you want to use it in direct page addressing?")]
+	#[error("This reference \"{name}\" has an 8-bit value, did you want to use it in direct page addressing?")]
 	#[diagnostic(
-		code(spcasm::non_direct_page_label),
+		code(spcasm::non_direct_page_reference),
 		help("Use a forced direct page addressing mnemonic by suffixing `.b`"),
 		severity(Advice)
 	)]
-	NonDirectPageLabel {
+	NonDirectPageReference {
 		name:             String,
 		address:          MemoryAddress,
 		#[label("Might point at a direct page address")]
-		label_definition: SourceSpan,
+		reference_definition: SourceSpan,
 		#[label("Memory address {address:02X}")]
 		location:         SourceSpan,
 		#[source_code]

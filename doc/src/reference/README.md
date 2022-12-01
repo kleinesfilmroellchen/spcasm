@@ -69,5 +69,5 @@ The SPC700 supports various addressing modes, though not all addressing modes ar
 - [ ] Document all mnemonics spcasm recognizes and what they do.
 - [x] Document all addressing modes and what they do.
 - [ ] Document expression syntax.
-- [ ] Document the label system and its limitations.
+- [ ] Document the reference system and its limitations.
 - [ ] Document all macros and what they do.

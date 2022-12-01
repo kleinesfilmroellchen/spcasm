@@ -10,7 +10,7 @@ use std::sync::Arc;
 use miette::SourceSpan;
 use spcasm_derive::{Parse, VariantName};
 
-use super::label::{self, GlobalLabel, Label, MacroParentReplacable};
+use super::reference::{self, GlobalLabel, MacroParentReplacable, Reference};
 use super::register::Register;
 use crate::error::{AssemblyCode, AssemblyError};
 use crate::VariantName;
@@ -22,7 +22,7 @@ pub type MemoryAddress = i64;
 #[derive(Clone, Debug)]
 pub struct Instruction {
 	/// Label of this instruction, if any.
-	pub label:          Option<Label>,
+	pub label:          Option<Reference>,
 	/// Opcode of this instruction (slightly misnamed)
 	pub opcode:         Opcode,
 	pub(crate) span:    SourceSpan,
@@ -37,7 +37,7 @@ pub struct Instruction {
 impl Default for Instruction {
 	fn default() -> Self {
 		Self {
-			label:                       None,
+			label:                   None,
 			opcode:                      Opcode {
 				mnemonic:          Mnemonic::Nop,
 				first_operand:     None,
@@ -56,7 +56,7 @@ impl Default for Instruction {
 impl MacroParentReplacable for Instruction {
 	fn replace_macro_parent(
 		&mut self,
-		replacement_parent: Arc<RefCell<label::MacroParent>>,
+		replacement_parent: Arc<RefCell<reference::MacroParent>>,
 		source_code: &Arc<AssemblyCode>,
 	) -> Result<(), Box<AssemblyError>> {
 		self.opcode.replace_macro_parent(replacement_parent, source_code)
@@ -79,7 +79,7 @@ pub struct Opcode {
 impl MacroParentReplacable for Opcode {
 	fn replace_macro_parent(
 		&mut self,
-		replacement_parent: Arc<RefCell<label::MacroParent>>,
+		replacement_parent: Arc<RefCell<reference::MacroParent>>,
 		source_code: &Arc<AssemblyCode>,
 	) -> Result<(), Box<AssemblyError>> {
 		for operand in self.first_operand.iter_mut().chain(self.second_operand.iter_mut()) {
@@ -188,8 +188,8 @@ impl Display for Mnemonic {
 pub enum Number {
 	/// A literal number.
 	Literal(MemoryAddress),
-	/// A label that will resolve to a number later.
-	Label(Label),
+	/// A reference that will resolve to a number later.
+	Reference(Reference),
 	/// - expr; negating another number.
 	Negate(Box<Number>),
 	/// expr + expr
@@ -203,15 +203,15 @@ pub enum Number {
 }
 
 impl Number {
-	/// Return the first label that can be found in this expression.
+	/// Return the first reference that can be found in this expression.
 	#[must_use]
-	pub fn first_label(&self) -> Option<Label> {
+	pub fn first_reference(&self) -> Option<Reference> {
 		match self {
 			Self::Literal(..) => None,
-			Self::Label(label) => Some(label.clone()),
-			Self::Negate(number) => number.first_label(),
+			Self::Reference(reference) => Some(reference.clone()),
+			Self::Negate(number) => number.first_reference(),
 			Self::Add(lhs, rhs) | Self::Subtract(lhs, rhs) | Self::Multiply(lhs, rhs) | Self::Divide(lhs, rhs) =>
-				lhs.first_label().or_else(|| rhs.first_label()),
+				lhs.first_reference().or_else(|| rhs.first_reference()),
 		}
 	}
 
@@ -220,21 +220,24 @@ impl Number {
 	/// All panics are programming errors.
 	pub fn set_global_label(&mut self, label: &Arc<RefCell<GlobalLabel>>) {
 		match self {
-			Self::Label(Label::Local(local)) =>
-				*local = label::merge_local_into_parent(local.clone(), Some(label.clone()), &Arc::default()).unwrap(),
+			Self::Reference(Reference::Local(local)) =>
+				*local =
+					reference::merge_local_into_parent(local.clone(), Some(label.clone()), &Arc::default()).unwrap(),
 			Self::Negate(val) => val.set_global_label(label),
 			Self::Add(lhs, rhs) | Self::Subtract(lhs, rhs) | Self::Multiply(lhs, rhs) | Self::Divide(lhs, rhs) => {
 				lhs.set_global_label(label);
 				rhs.set_global_label(label);
 			},
 			Self::Literal(..)
-			| Self::Label(Label::Global(..) | Label::MacroArgument { .. } | Label::MacroGlobal { .. }) => (),
+			| Self::Reference(
+				Reference::Global(..) | Reference::MacroArgument { .. } | Reference::MacroGlobal { .. },
+			) => (),
 		}
 	}
 
 	/// Extracts the actual value of this number.
 	/// # Panics
-	/// If the label was not yet resolved, this function panics as it assumes that that has already happened.
+	/// If the reference was not yet resolved, this function panics as it assumes that that has already happened.
 	#[must_use]
 	pub fn value(&self) -> MemoryAddress {
 		self.try_value((0, 0).into(), Arc::default()).unwrap()
@@ -251,34 +254,34 @@ impl Number {
 		Ok(match self {
 			Self::Literal(value) => *value,
 			// necessary because matching through an Rc is not possible right now (would be super dope though).
-			Self::Label(ref label) => match label {
-				Label::Global(global_label) if let Some(ref value) = global_label.borrow().location => value.value(),
-				Label::Local(local) if let Some(ref value) = local.borrow().location => value.value(),
-				Label::Local(local) => return Err(AssemblyError::UnresolvedLabel {
-					label: label.to_string(),
-					label_location: Some(local.borrow().span),
+			Self::Reference(ref reference) => match reference {
+				Reference::Global(global_label) if let Some(ref value) = global_label.borrow().location => value.value(),
+				Reference::Local(local) if let Some(ref value) = local.borrow().location => value.value(),
+				Reference::Local(local) => return Err(AssemblyError::UnresolvedReference {
+					reference: reference.to_string(),
+					reference_location: Some(local.borrow().span),
 					usage_location: location,
 					src: source_code
 				}.into()),
-				Label::Global(global) => return Err(AssemblyError::UnresolvedLabel {
-					label: label.to_string(),
-					label_location: Some(global.borrow().span),
+				Reference::Global(global) => return Err(AssemblyError::UnresolvedReference {
+					reference: reference.to_string(),
+					reference_location: Some(global.borrow().span),
 					usage_location: location,
 					src: source_code
 				}.into()),
-				Label::MacroGlobal { span, .. } => return Err(AssemblyError::UnresolvedLabel {
-					label: label.to_string(),
-					label_location: None,
+				Reference::MacroGlobal { span, .. } => return Err(AssemblyError::UnresolvedReference {
+					reference: reference.to_string(),
+					reference_location: None,
 					usage_location: *span,
 					src: source_code
 				}.into()),
-				Label::MacroArgument{value: None, span, ..} => return Err(AssemblyError::UnresolvedLabel {
-					label: label.to_string(),
-					label_location: None,
+				Reference::MacroArgument{value: None, span, ..} => return Err(AssemblyError::UnresolvedReference {
+					reference: reference.to_string(),
+					reference_location: None,
 					usage_location: *span,
 					src: source_code
 				}.into()),
-				Label::MacroArgument{value: Some(value), span, ..} => value.try_value(location, source_code)?,
+				Reference::MacroArgument{value: Some(value), span, ..} => value.try_value(location, source_code)?,
 			},
 			Self::Negate(number) => -number.try_value(location, source_code)?,
 			Self::Add(lhs, rhs) => lhs.try_value(location, source_code.clone())? + rhs.try_value(location, source_code)?,
@@ -293,9 +296,9 @@ impl Number {
 	#[must_use]
 	pub fn try_resolve(self) -> Self {
 		match self {
-			Self::Label(Label::Global(global)) if let Some(memory_location) = global.clone().borrow().location.clone() => memory_location.try_resolve(),
-			Self::Label(Label::Local(local)) if let Some(memory_location) = local.clone().borrow().location.clone() => memory_location.try_resolve(),
-			Self::Label(Label::MacroArgument { value: Some(memory_location) , .. }) => memory_location.try_resolve(),
+			Self::Reference(Reference::Global(global)) if let Some(memory_location) = global.clone().borrow().location.clone() => memory_location.try_resolve(),
+			Self::Reference(Reference::Local(local)) if let Some(memory_location) = local.clone().borrow().location.clone() => memory_location.try_resolve(),
+			Self::Reference(Reference::MacroArgument { value: Some(memory_location) , .. }) => memory_location.try_resolve(),
 			Self::Negate(number) => match number.try_resolve() {
 				Self::Literal(value) => Self::Literal(-value),
 				resolved => Self::Negate(Box::new(resolved)),
@@ -316,7 +319,7 @@ impl Number {
 				(Self::Literal(lhs_value), Self::Literal(rhs_value)) => Self::Literal(lhs_value / rhs_value),
 				(lhs, rhs) => Self::Divide(Box::new(lhs), Box::new(rhs)),
 			},
-			Self::Literal(..) | Self::Label(Label::Local(..) | Label::Global(..) | Label::MacroArgument { value: None, .. } | Label::MacroGlobal { .. }) => self,
+			Self::Literal(..) | Self::Reference(Reference::Local(..) | Reference::Global(..) | Reference::MacroArgument { value: None, .. } | Reference::MacroGlobal { .. }) => self,
 		}
 	}
 }
@@ -324,17 +327,17 @@ impl Number {
 impl MacroParentReplacable for Number {
 	fn replace_macro_parent(
 		&mut self,
-		replacement_parent: Arc<RefCell<label::MacroParent>>,
+		replacement_parent: Arc<RefCell<reference::MacroParent>>,
 		source_code: &Arc<AssemblyCode>,
 	) -> Result<(), Box<AssemblyError>> {
 		match self {
 			Self::Literal(_) => Ok(()),
-			Self::Label(label @ Label::MacroGlobal { .. }) => {
+			Self::Reference(reference @ Reference::MacroGlobal { .. }) => {
 				let new_global = replacement_parent.borrow().global_label();
-				*label = Label::Global(new_global);
+				*reference = Reference::Global(new_global);
 				Ok(())
 			},
-			Self::Label(label) => label.replace_macro_parent(replacement_parent, source_code),
+			Self::Reference(reference) => reference.replace_macro_parent(replacement_parent, source_code),
 			Self::Negate(number) => number.replace_macro_parent(replacement_parent, source_code),
 			Self::Add(lhs, rhs) | Self::Subtract(lhs, rhs) | Self::Multiply(lhs, rhs) | Self::Divide(lhs, rhs) => {
 				lhs.replace_macro_parent(replacement_parent.clone(), source_code)?;
@@ -371,25 +374,25 @@ impl UpperHex for Number {
 		};
 
 		match self {
-			Self::Label(Label::Global(ref unresolved_label)) => {
-				let unresolved_label = unresolved_label.borrow();
-				match unresolved_label.location {
+			Self::Reference(Reference::Global(ref unresolved_reference)) => {
+				let unresolved_reference = unresolved_reference.borrow();
+				match unresolved_reference.location {
 					Some(ref numeric_address) => write_correctly('$', f, numeric_address),
-					None => write!(f, "{}", unresolved_label.name),
+					None => write!(f, "{}", unresolved_reference.name),
 				}
 			},
-			Self::Label(Label::Local(ref local)) => {
+			Self::Reference(Reference::Local(ref local)) => {
 				let local = local.borrow();
 				match &local.location {
 					Some(numeric_address) => f.pad(&format!("{:0X}", **numeric_address)),
 					None => write!(f, "{}", local.name),
 				}
 			},
-			Self::Label(Label::MacroArgument { value, name, .. }) => match value {
+			Self::Reference(Reference::MacroArgument { value, name, .. }) => match value {
 				Some(numeric_address) => f.pad(&format!("{:0X}", **numeric_address)),
 				None => write!(f, "{}", name),
 			},
-			Self::Label(Label::MacroGlobal { .. }) => f.write_str("\\@"),
+			Self::Reference(Reference::MacroGlobal { .. }) => f.write_str("\\@"),
 			Self::Literal(numeric_address) => {
 				f.write_char('$')?;
 				fmt::UpperHex::fmt(numeric_address, f)
@@ -536,7 +539,7 @@ impl AddressingMode {
 impl MacroParentReplacable for AddressingMode {
 	fn replace_macro_parent(
 		&mut self,
-		replacement_parent: Arc<RefCell<label::MacroParent>>,
+		replacement_parent: Arc<RefCell<reference::MacroParent>>,
 		source_code: &Arc<AssemblyCode>,
 	) -> Result<(), Box<AssemblyError>> {
 		match self {

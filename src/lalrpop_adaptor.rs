@@ -113,7 +113,7 @@ pub fn preprocess_token_stream(tokens: Vec<Token>) -> Vec<Token> {
 			},
 			// After all of these tokens we can be sure we can't have an indexing addressing mode, so parentheses can
 			// stay. For example: '#' signals immediate, '/' signals negated bit indexing, '+', '-' signal the
-			// unambiguous start of a number, '.'/identifier signal labels.
+			// unambiguous start of a number, '.'/identifier signal references.
 			_ if expecting_indexing_addressing_mode => expecting_indexing_addressing_mode = false,
 			_ => (),
 		}

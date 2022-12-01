@@ -27,17 +27,17 @@ pub(super) fn assemble_branching_instruction(
 	match &target {
 		// Note that a direct page address in the target is also interpreted as a relative offset for some branch
 		// instructions. For the other relative branches, it's in the source. JMP is absolute and uses full addresses.
-		AddressingMode::DirectPage(page_address_or_relative) | AddressingMode::Address(page_address_or_relative @ Number::Label(_)) if mnemonic != Mnemonic::Jmp =>
+		AddressingMode::DirectPage(page_address_or_relative) | AddressingMode::Address(page_address_or_relative @ Number::Reference(_)) if mnemonic != Mnemonic::Jmp =>
 			match mnemonic {
-				Mnemonic::Bra => data.append_instruction_with_relative_label(0x2F, page_address_or_relative.clone(), instruction)?,
-				Mnemonic::Beq => data.append_instruction_with_relative_label(0xF0, page_address_or_relative.clone(), instruction)?,
-				Mnemonic::Bne => data.append_instruction_with_relative_label(0xD0, page_address_or_relative.clone(), instruction)?,
-				Mnemonic::Bcs => data.append_instruction_with_relative_label(0xB0, page_address_or_relative.clone(), instruction)?,
-				Mnemonic::Bcc => data.append_instruction_with_relative_label(0x90, page_address_or_relative.clone(), instruction)?,
-				Mnemonic::Bvs => data.append_instruction_with_relative_label(0x70, page_address_or_relative.clone(), instruction)?,
-				Mnemonic::Bvc => data.append_instruction_with_relative_label(0x50, page_address_or_relative.clone(), instruction)?,
-				Mnemonic::Bmi => data.append_instruction_with_relative_label(0x30, page_address_or_relative.clone(), instruction)?,
-				Mnemonic::Bpl => data.append_instruction_with_relative_label(0x10, page_address_or_relative.clone(), instruction)?,
+				Mnemonic::Bra => data.append_instruction_with_relative_reference(0x2F, page_address_or_relative.clone(), instruction)?,
+				Mnemonic::Beq => data.append_instruction_with_relative_reference(0xF0, page_address_or_relative.clone(), instruction)?,
+				Mnemonic::Bne => data.append_instruction_with_relative_reference(0xD0, page_address_or_relative.clone(), instruction)?,
+				Mnemonic::Bcs => data.append_instruction_with_relative_reference(0xB0, page_address_or_relative.clone(), instruction)?,
+				Mnemonic::Bcc => data.append_instruction_with_relative_reference(0x90, page_address_or_relative.clone(), instruction)?,
+				Mnemonic::Bvs => data.append_instruction_with_relative_reference(0x70, page_address_or_relative.clone(), instruction)?,
+				Mnemonic::Bvc => data.append_instruction_with_relative_reference(0x50, page_address_or_relative.clone(), instruction)?,
+				Mnemonic::Bmi => data.append_instruction_with_relative_reference(0x30, page_address_or_relative.clone(), instruction)?,
+				Mnemonic::Bpl => data.append_instruction_with_relative_reference(0x10, page_address_or_relative.clone(), instruction)?,
 				Mnemonic::Pcall => data.append_instruction_with_8_bit_operand(0x4F, page_address_or_relative.clone(), instruction)?,
 				Mnemonic::Tcall => data.append_instruction(0x01 | match page_address_or_relative {
 						Number::Literal(value) => (value & 0x0F) as u8,
@@ -74,7 +74,7 @@ pub(super) fn assemble_branching_instruction(
 							value => data.append_8_bits_unresolved(value.clone(), 0, None, instruction.span)?,
 						}
 						// Second argument is the relative jump target.
-						// The relative unresolved label needs a negative offset of 2, because we're the second operand.
+						// The relative unresolved reference needs a negative offset of 2, because we're the second operand.
 						match relative_source {
 							Number::Literal(relative_offset) => data.append_8_bits(relative_offset, None, instruction.span)?,
 							value => data.append_relative_unresolved(value, instruction.span)?,
@@ -100,7 +100,7 @@ pub(super) fn assemble_branching_instruction(
 					value => data.append_8_bits_unresolved(value.clone(), 0, None, instruction.span)?,
 				}
 				// Second argument is the relative jump target.
-				// The relative unresolved label needs a negative offset of 2, because we're the second operand.
+				// The relative unresolved reference needs a negative offset of 2, because we're the second operand.
 				match relative_source {
 					Number::Literal(relative_offset) => data.append_8_bits(relative_offset, None, instruction.span)?,
 					value => data.append_relative_unresolved(value, instruction.span)?,
@@ -110,7 +110,7 @@ pub(super) fn assemble_branching_instruction(
 			},
 		AddressingMode::Register(Register::Y) =>
 			if let Some(AddressingMode::DirectPage(relative_jump_target)) = source && mnemonic == Mnemonic::Dbnz {
-				data.append_instruction_with_relative_label(0xFE, relative_jump_target, instruction);
+				data.append_instruction_with_relative_reference(0xFE, relative_jump_target, instruction);
 			} else {
 				return make_target_error(vec![]);
 			},

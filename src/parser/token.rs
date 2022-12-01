@@ -15,7 +15,7 @@ use crate::parser::Register;
 pub enum Token {
 	/// Mnemonic, the start of an instruction.
 	Mnemonic(Mnemonic, SourceSpan),
-	/// Identifier, i.e. a label.
+	/// Identifier, i.e. a reference.
 	Identifier(String, SourceSpan),
 	/// Register name (this can never be used as an identifier).
 	Register(Register, SourceSpan),

@@ -11,9 +11,9 @@ use super::instruction::{MemoryAddress, Number};
 use crate::error::{AssemblyCode, AssemblyError};
 
 pub trait Resolvable {
-	/// Whether this label has already been resolved to a memory location.
+	/// Whether this reference has already been resolved to a memory location.
 	fn is_resolved(&self) -> bool;
-	/// Resolves the label to the given memory location.
+	/// Resolves the reference to the given memory location.
 	/// # Errors
 	/// Warnings and errors are passed on to the caller. **The caller must separate out warnings and print or discard
 	/// them!**
@@ -25,12 +25,12 @@ pub trait Resolvable {
 	) -> Result<(), Box<AssemblyError>>;
 }
 
-/// A textual label that refers to some location in memory and resolves to a numeric value at some point.
+/// A textual reference that refers to some location in memory and resolves to a numeric value at some point.
 #[derive(Clone, Debug)]
-pub enum Label {
-	/// A label that's the same everywhere.
+pub enum Reference {
+	/// A reference that's the same everywhere.
 	Global(Arc<RefCell<GlobalLabel>>),
-	/// A label only valid within a global label. It may be reused with a different value later on.
+	/// A reference only valid within a global label. It may be reused with a different value later on.
 	Local(Arc<RefCell<LocalLabel>>),
 	/// A macro argument that is resolved at a later point.
 	MacroArgument {
@@ -49,7 +49,7 @@ pub enum Label {
 	MacroGlobal { span: SourceSpan },
 }
 
-impl Label {
+impl Reference {
 	pub fn source_span(&self) -> SourceSpan {
 		match self {
 			Self::Global(global) => global.borrow().span,
@@ -70,7 +70,7 @@ impl Label {
 	}
 }
 
-impl MacroParentReplacable for Label {
+impl MacroParentReplacable for Reference {
 	fn replace_macro_parent(
 		&mut self,
 		replacement_parent: Arc<RefCell<MacroParent>>,
@@ -108,7 +108,7 @@ impl MacroParentReplacable for Label {
 	}
 }
 
-impl Display for Label {
+impl Display for Reference {
 	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
 		write!(f, "{}", match self {
 			Self::Global(global) => global.borrow().name.clone(),
@@ -119,7 +119,7 @@ impl Display for Label {
 	}
 }
 
-impl PartialEq for Label {
+impl PartialEq for Reference {
 	fn eq(&self, other: &Self) -> bool {
 		match self {
 			Self::Global(label) => match other {
@@ -137,7 +137,7 @@ impl PartialEq for Label {
 	}
 }
 
-impl Resolvable for Label {
+impl Resolvable for Reference {
 	#[must_use]
 	fn is_resolved(&self) -> bool {
 		match self {
@@ -162,22 +162,22 @@ impl Resolvable for Label {
 				*value = Some(Box::new(Number::Literal(location)));
 				Ok(())
 			},
-			Self::MacroGlobal { .. } => unimplemented!("macro global leaked to label resolution, what to do?"),
+			Self::MacroGlobal { .. } => unimplemented!("macro global leaked to reference resolution, what to do?"),
 		}
 	}
 }
 
-/// A textual label that refers to some location in memory and resolves to a numeric value at some point. It is global,
-/// meaning that it refers to the same value everywhere.
+/// A textual reference that refers to some location in memory and resolves to a numeric value at some point. It is
+/// global, meaning that it refers to the same value everywhere.
 #[derive(Clone, Debug)]
 pub struct GlobalLabel {
-	/// User-given label name.
+	/// User-given reference name.
 	pub name:            String,
-	/// Resolved memory location of the label, if any.
+	/// Resolved memory location of the reference, if any.
 	pub location:        Option<Number>,
-	/// Source code location where this label is defined.
+	/// Source code location where this reference is defined.
 	pub span:            SourceSpan,
-	/// Whether anyone references this label as an address.
+	/// Whether anyone references this reference as an address.
 	pub used_as_address: bool,
 	/// Local labels belonging to this global label.
 	pub locals:          HashMap<String, Arc<RefCell<LocalLabel>>>,
@@ -218,12 +218,12 @@ impl Resolvable for GlobalLabel {
 	) -> Result<(), Box<AssemblyError>> {
 		self.location = Some(Number::Literal(location));
 		if location <= 0xFF && self.used_as_address {
-			Err(AssemblyError::NonDirectPageLabel {
-				name:             self.name.clone(),
-				label_definition: self.span,
-				address:          location,
-				location:         usage_span,
-				src:              source_code,
+			Err(AssemblyError::NonDirectPageReference {
+				name:                 self.name.clone(),
+				reference_definition: self.span,
+				address:              location,
+				location:             usage_span,
+				src:                  source_code,
 			}
 			.into())
 		} else {
@@ -232,14 +232,14 @@ impl Resolvable for GlobalLabel {
 	}
 }
 
-/// A textual label that refers to some location in memory and resolves to a numeric value at some point.
+/// A textual reference that refers to some location in memory and resolves to a numeric value at some point.
 #[derive(Debug, Clone)]
 pub struct LocalLabel {
-	/// User-given label name.
+	/// User-given reference name.
 	pub name:     String,
-	/// Resolved memory location of the label, if any.
+	/// Resolved memory location of the reference, if any.
 	pub location: Option<Box<Number>>,
-	/// Source code location where this label is defined.
+	/// Source code location where this reference is defined.
 	pub span:     SourceSpan,
 	/// The parent label that this local label is contained within.
 	pub parent:   Weak<RefCell<GlobalLabel>>,
@@ -251,7 +251,7 @@ impl LocalLabel {
 	}
 
 	pub fn strong_parent(&self) -> Arc<RefCell<GlobalLabel>> {
-		self.parent.upgrade().expect("Parent deleted before label resolution finished")
+		self.parent.upgrade().expect("Parent deleted before reference resolution finished")
 	}
 }
 
@@ -282,12 +282,12 @@ impl Resolvable for LocalLabel {
 	) -> Result<(), Box<AssemblyError>> {
 		self.location = Some(Box::new(Number::Literal(location)));
 		if location <= 0xFF {
-			Err(AssemblyError::NonDirectPageLabel {
-				name:             format!(".{}", self.name),
-				label_definition: self.span,
-				address:          location,
-				location:         usage_span,
-				src:              source_code,
+			Err(AssemblyError::NonDirectPageReference {
+				name:                 format!(".{}", self.name),
+				reference_definition: self.span,
+				address:              location,
+				location:             usage_span,
+				src:                  source_code,
 			}
 			.into())
 		} else {
@@ -387,13 +387,13 @@ pub fn merge_local_into_parent(
 ) -> Result<Arc<RefCell<LocalLabel>>, Box<AssemblyError>> {
 	if let Some(mut actual_global_label) = current_global_label {
 		let mut mutable_global = actual_global_label.borrow_mut();
-		let label_value = local.borrow().location.clone();
-		let label_name = local.borrow().name.clone();
+		let reference_value = local.borrow().location.clone();
+		let reference_name = local.borrow().name.clone();
 
-		local = mutable_global.locals.entry(label_name).or_insert_with(|| local).clone();
+		local = mutable_global.locals.entry(reference_name).or_insert_with(|| local).clone();
 		let mut mutable_local = local.borrow_mut();
 		mutable_local.parent = Arc::downgrade(&actual_global_label);
-		mutable_local.location = mutable_local.location.clone().or(label_value);
+		mutable_local.location = mutable_local.location.clone().or(reference_value);
 		drop(mutable_local);
 		Ok(local)
 	} else {

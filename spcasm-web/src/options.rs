@@ -9,7 +9,7 @@ use spcasm::cli::BackendOptions;
 pub struct WebOptions {
 	pub silence_all:                 bool,
 	pub silenced:                    Vec<String>,
-	pub max_label_resolution_passes: usize,
+	pub max_reference_resolution_passes: usize,
 	pub max_macro_expansion_depth:   usize,
 }
 
@@ -24,8 +24,8 @@ impl BackendOptions for WebOptions {
 		self.silence_all || self.silenced.contains(&warning.code().unwrap().to_string())
 	}
 
-	fn maximum_label_resolution_passes(&self) -> usize {
-		self.max_label_resolution_passes
+	fn maximum_reference_resolution_passes(&self) -> usize {
+		self.max_reference_resolution_passes
 	}
 
 	fn maximum_macro_expansion_depth(&self) -> usize {

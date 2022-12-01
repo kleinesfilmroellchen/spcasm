@@ -26,8 +26,8 @@ fn parser() {
 }
 
 #[test]
-fn labels() {
-	test_file("examples/labels.spcasm");
+fn references() {
+	test_file("examples/references.spcasm");
 }
 
 #[bench]

@@ -21,10 +21,10 @@ Options:
   -W, --error <ERROR>
           Warnings to turn into a hard error
 
-  -l, --label-pass-limit <LABEL_PASS_LIMIT>
-          Limit for the number of label resolution passes spcasm will perform.
+  -l, --reference-pass-limit <REFERENCE_PASS_LIMIT>
+          Limit for the number of reference resolution passes spcasm will perform.
 
-          Usually 2-3 passes are enough and very high pass numbers often indicate infinite loops. If this number of passes is exceeded during label resolution, spcasm will report unresolved labels as normal.
+          Usually 2-3 passes are enough and very high pass numbers often indicate infinite loops. If this number of passes is exceeded during reference resolution, spcasm will report unresolved references as normal.
 
           [default: 10]
 
@@ -65,6 +65,8 @@ If an error occurs during any step of the assembly process, spcasm will provide 
 There may also be hints and warnings (identifiable by the pointing finger or exclamation mark that replace the red x) which inform you of possible problems with the assembly code that aren't fatal. These warnings can be turned off with `-w` or turned into hard errors with `-W`. Use `all` as a shorthand for all warnings. Note that spcasm will print error "codes" with the prefix `spcasm::` but you do not have to include this prefix when referencing a warning on the command line, meaning that `-w label_shenanigans` and `-w spcasm::label_shenanigans` mean the same thing.
 
 [All errors, warning and advice messages are documented here in detail.](errors.md)
+
+spcasm uses some terminology which might be unfamiliar to you if you haven't written much assembly code so far, and which is also used inconsistently across assemblers and tools. The [Terminology](terminology.md) page provides a brief glossary explaining what those terms mean.
 
 ## brr
 

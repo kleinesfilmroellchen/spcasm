@@ -10,7 +10,7 @@ use miette::SourceSpan;
 use spcasm_derive::Parse;
 
 use crate::parser::instruction::{MemoryAddress, Number};
-use crate::parser::label::{Label, MacroParent, MacroParentReplacable};
+use crate::parser::reference::{Reference, MacroParent, MacroParentReplacable};
 use crate::parser::{source_range, ProgramElement};
 use crate::{AssemblyCode, AssemblyError};
 
@@ -21,7 +21,7 @@ pub struct Macro {
 	pub value:       MacroValue,
 	pub(crate) span: SourceSpan,
 	/// Label at the start of the macro. Some macros ignore this.
-	pub label:       Option<Label>,
+	pub label:       Option<Reference>,
 }
 
 impl Default for Macro {
@@ -104,8 +104,8 @@ pub enum MacroValue {
 	Brr(String),
 	/// ascii(z) <string>
 	String { text: Vec<u8>, has_null_terminator: bool },
-	/// <label> = <value>
-	AssignLabel { label: Label, value: Number },
+	/// <reference> = <value>
+	AssignReference { reference: Reference, value: Number },
 	/// incbin <file name>
 	Include { file: String, range: Option<SourceSpan> },
 	/// end
@@ -132,7 +132,7 @@ impl MacroParentReplacable for MacroValue {
 				Ok(())
 			},
 			Self::String { text, has_null_terminator } => Ok(()),
-			Self::AssignLabel { label, value } => value.replace_macro_parent(replacement_parent, source_code),
+			Self::AssignReference { reference, value } => value.replace_macro_parent(replacement_parent, source_code),
 			Self::Include { file, range } => Ok(()),
 			Self::End | Self::PushSection | Self::Brr(_) | Self::PopSection | Self::Org(_) => Ok(()),
 			Self::UserDefinedMacro { name, arguments, body } => Err(AssemblyError::RecursiveMacroDefinition {

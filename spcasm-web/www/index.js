@@ -8,7 +8,7 @@ function createOptions() {
     silence_all: true,
     silenced: [],
     max_label_resolution_passes: Number(
-      document.querySelector("#max-label-resolution-passes").value
+      document.querySelector("#max-reference-resolution-passes").value
     ),
     max_macro_expansion_depth: Number(
       document.querySelector("#max-macro-expansion-depth").value
@@ -18,7 +18,7 @@ function createOptions() {
 
 const updatingObjects = [
   document.querySelector("code.assembly-source"),
-  document.querySelector("#max-label-resolution-passes"),
+  document.querySelector("#max-reference-resolution-passes"),
   document.querySelector("#max-macro-expansion-depth"),
 ];
 

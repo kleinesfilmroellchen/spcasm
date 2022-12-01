@@ -10,8 +10,8 @@ use std::sync::{Arc, Weak};
 use miette::{SourceOffset, SourceSpan};
 
 use self::instruction::{AddressingMode, Instruction, Number, Opcode};
-use self::label::{GlobalLabel, Label, MacroParameters, MacroParent, MacroParentReplacable};
 use self::lexer::lex;
+use self::reference::{GlobalLabel, MacroParameters, MacroParent, MacroParentReplacable, Reference};
 use crate::assembler::resolve_file;
 use crate::cli::{default_backend_options, BackendOptions};
 use crate::error::{AssemblyCode, AssemblyError};
@@ -19,9 +19,9 @@ use crate::mcro::MacroValue;
 use crate::{lalrpop_adaptor, Macro};
 
 pub mod instruction;
-pub(crate) mod label;
 pub mod lexer;
 pub(crate) mod program;
+pub(crate) mod reference;
 pub(crate) mod register;
 pub mod token;
 
@@ -29,11 +29,11 @@ pub use program::ProgramElement;
 pub use register::Register;
 pub use token::Token;
 
-/// How a looked-up label is used. See ``Environment::get_global_label``.
+/// How a looked-up reference is used. See ``Environment::get_global_label``.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[repr(u8)]
 pub enum LabelUsageKind {
-	/// Label is used as a parameter, i.e. it's address is of interest.
+	/// Reference is used as a parameter, i.e. it's address is of interest.
 	AsAddress,
 	/// Label is being defined.
 	AsDefinition,
@@ -54,11 +54,11 @@ where
 	fn is_valid(value: &str) -> bool;
 }
 
-/// Environment object for parsing. Holds the list of labels.
+/// Environment object for parsing. Holds the list of references.
 #[derive(Debug)]
 pub struct Environment {
-	/// The list of labels.
-	pub labels:         Vec<Arc<RefCell<GlobalLabel>>>,
+	/// The list of global labels.
+	pub globals:        Vec<Arc<RefCell<GlobalLabel>>>,
 	/// The files included in this "tree" created by include statements.
 	pub(crate) files:   HashMap<PathBuf, Arc<RefCell<AssemblyFile>>>,
 	/// Error and warning options passed on the command line.
@@ -80,7 +80,7 @@ impl Environment {
 	#[must_use]
 	pub fn new() -> Arc<RefCell<Self>> {
 		Arc::new(RefCell::new(Self {
-			labels:  Vec::new(),
+			globals: Vec::new(),
 			files:   HashMap::new(),
 			options: default_backend_options(),
 		}))
@@ -140,7 +140,7 @@ impl Environment {
 		source_code: &Arc<AssemblyCode>,
 	) -> Result<Arc<RefCell<AssemblyFile>>, Box<AssemblyError>> {
 		if let Some(already_parsed_file) = this.borrow().find_file_by_source(source_code)? {
-			// If we're in a cycle, the already parsed file still has unresolved labels.
+			// If we're in a cycle, the already parsed file still has unresolved references.
 			// I'm not sure whether this can happen in the first place given that find_file_by_source can't borrow such
 			// a file and therefore won't return it, but let's better be safe than sorry.
 			return if already_parsed_file.try_borrow().is_ok_and(|file| file.has_unresolved_source_includes()) {
@@ -168,7 +168,7 @@ impl Environment {
 		}));
 		let mut file = rc_file.borrow_mut();
 
-		file.fill_in_label_references()?;
+		file.fill_in_reference_links()?;
 		file.resolve_user_macro_arguments()?;
 		file.coerce_to_direct_page_addressing();
 
@@ -181,7 +181,7 @@ impl Environment {
 		file.resolve_source_includes()?;
 
 		file.expand_user_macros()?;
-		file.fill_in_label_references()?;
+		file.fill_in_reference_links()?;
 		drop(file);
 
 		Ok(rc_file)
@@ -194,27 +194,27 @@ impl Environment {
 		span: SourceSpan,
 		usage_kind: LabelUsageKind,
 	) -> Arc<RefCell<GlobalLabel>> {
-		if let Some(matching_label) = self.labels.iter_mut().find(|label| label.borrow().name == name) {
-			let mut mutable_matching_label = matching_label.borrow_mut();
-			if usage_kind == LabelUsageKind::AsAddress && !mutable_matching_label.used_as_address {
-				mutable_matching_label.used_as_address = true;
+		if let Some(matching_reference) = self.globals.iter_mut().find(|reference| reference.borrow().name == name) {
+			let mut mutable_matching_reference = matching_reference.borrow_mut();
+			if usage_kind == LabelUsageKind::AsAddress && !mutable_matching_reference.used_as_address {
+				mutable_matching_reference.used_as_address = true;
 			}
-			// If the caller flags this use of the label as its definition, we override the label's position with what
-			// we were just given.
+			// If the caller flags this use of the reference as its definition, we override the reference's position
+			// with what we were just given.
 			if usage_kind == LabelUsageKind::AsDefinition {
-				mutable_matching_label.span = span;
+				mutable_matching_reference.span = span;
 			}
-			matching_label.clone()
+			matching_reference.clone()
 		} else {
-			let new_label = Arc::new(RefCell::new(GlobalLabel {
+			let new_reference = Arc::new(RefCell::new(GlobalLabel {
 				name: name.to_owned(),
 				location: None,
 				span,
 				used_as_address: usage_kind == LabelUsageKind::AsAddress,
 				locals: HashMap::new(),
 			}));
-			self.labels.push(new_label.clone());
-			new_label
+			self.globals.push(new_reference.clone());
+			new_reference
 		}
 	}
 }
@@ -227,29 +227,32 @@ impl AssemblyFile {
 	/// If a local label precedes any global labels.
 	/// # Panics
 	/// All panics are programming errors.
-	pub fn fill_in_label_references(&mut self) -> Result<(), Box<AssemblyError>> {
+	pub fn fill_in_reference_links(&mut self) -> Result<(), Box<AssemblyError>> {
 		let mut current_global_label: Option<Arc<RefCell<GlobalLabel>>> = None;
 
 		for element in &mut self.content {
-			// First match for label reference resolution in instruction position
+			// First match for reference resolution in instruction position
 			match element {
 				// Macro labeled with local label
-				ProgramElement::Macro(Macro { value, label: Some(Label::Local(ref mut local)), .. }) => {
-					if let MacroValue::AssignLabel { label: Label::Local(assigned_local), .. } = value {
-						*assigned_local = label::merge_local_into_parent(
+				ProgramElement::Macro(Macro { value, label: Some(Reference::Local(ref mut local)), .. }) => {
+					if let MacroValue::AssignReference { reference: Reference::Local(assigned_local), .. } = value {
+						*assigned_local = reference::merge_local_into_parent(
 							assigned_local.clone(),
 							current_global_label.clone(),
 							&self.source_code,
 						)?;
 					}
-					*local =
-						label::merge_local_into_parent(local.clone(), current_global_label.clone(), &self.source_code)?;
+					*local = reference::merge_local_into_parent(
+						local.clone(),
+						current_global_label.clone(),
+						&self.source_code,
+					)?;
 				},
 				// Macro labeled with global label
-				ProgramElement::Macro(Macro { label: Some(Label::Global(ref global)), value, .. }) => {
+				ProgramElement::Macro(Macro { label: Some(Reference::Global(ref global)), value, .. }) => {
 					current_global_label = Some(global.clone());
-					if let MacroValue::AssignLabel { label: Label::Local(local), .. } = value {
-						*local = label::merge_local_into_parent(
+					if let MacroValue::AssignReference { reference: Reference::Local(local), .. } = value {
+						*local = reference::merge_local_into_parent(
 							local.clone(),
 							current_global_label.clone(),
 							&self.source_code,
@@ -258,47 +261,50 @@ impl AssemblyFile {
 				},
 
 				// Anything else labeled with global label - we need to update the current global
-				ProgramElement::Instruction(Instruction { label: Some(Label::Global(ref global)), .. })
-				| ProgramElement::UserDefinedMacroCall { label: Some(Label::Global(ref global)), .. }
-				| ProgramElement::IncludeSource { label: Some(Label::Global(ref global)), .. } =>
+				ProgramElement::Instruction(Instruction { label: Some(Reference::Global(ref global)), .. })
+				| ProgramElement::UserDefinedMacroCall { label: Some(Reference::Global(ref global)), .. }
+				| ProgramElement::IncludeSource { label: Some(Reference::Global(ref global)), .. } =>
 					current_global_label = Some(global.clone()),
 
 				// Anything labeled with local label: fill in the reference and merge local label.
 				ProgramElement::Macro(Macro {
-					value: MacroValue::AssignLabel { label: Label::Local(ref mut local), .. },
+					value: MacroValue::AssignReference { reference: Reference::Local(ref mut local), .. },
 					..
 				})
-				| ProgramElement::Instruction(Instruction { label: Some(Label::Local(ref mut local)), .. })
-				| ProgramElement::UserDefinedMacroCall { label: Some(Label::Local(ref mut local)), .. }
-				| ProgramElement::IncludeSource { label: Some(Label::Local(ref mut local)), .. } =>
-					*local =
-						label::merge_local_into_parent(local.clone(), current_global_label.clone(), &self.source_code)?,
+				| ProgramElement::Instruction(Instruction { label: Some(Reference::Local(ref mut local)), .. })
+				| ProgramElement::UserDefinedMacroCall { label: Some(Reference::Local(ref mut local)), .. }
+				| ProgramElement::IncludeSource { label: Some(Reference::Local(ref mut local)), .. } =>
+					*local = reference::merge_local_into_parent(
+						local.clone(),
+						current_global_label.clone(),
+						&self.source_code,
+					)?,
 
-				// Anything unlabeled or labeled with irrelevant label: ignore
+				// Anything unreferenced or referenceed with irrelevant reference: ignore
 				ProgramElement::Instruction(Instruction { label: None, .. })
 				| ProgramElement::IncludeSource { label: None, .. }
 				| ProgramElement::UserDefinedMacroCall { label: None, .. }
 				| ProgramElement::Macro(Macro { label: None, .. })
-				| ProgramElement::Instruction(Instruction { label: Some(Label::MacroGlobal { .. }), .. })
-				| ProgramElement::IncludeSource { label: Some(Label::MacroGlobal { .. }), .. }
-				| ProgramElement::UserDefinedMacroCall { label: Some(Label::MacroGlobal { .. }), .. }
-				| ProgramElement::Macro(Macro { label: Some(Label::MacroGlobal { .. }), .. }) => (),
+				| ProgramElement::Instruction(Instruction { label: Some(Reference::MacroGlobal { .. }), .. })
+				| ProgramElement::IncludeSource { label: Some(Reference::MacroGlobal { .. }), .. }
+				| ProgramElement::UserDefinedMacroCall { label: Some(Reference::MacroGlobal { .. }), .. }
+				| ProgramElement::Macro(Macro { label: Some(Reference::MacroGlobal { .. }), .. }) => (),
 
 				// Anything labeled with a user macro argument: This is always an error; we're not inside a user macro.
 				ProgramElement::Instruction(Instruction {
-					label: Some(ref mal @ Label::MacroArgument { ref name, ref value, ref span, .. }),
+					label: Some(ref mal @ Reference::MacroArgument { ref name, ref value, ref span, .. }),
 					..
 				})
 				| ProgramElement::IncludeSource {
-					label: Some(ref mal @ Label::MacroArgument { ref name, ref value, ref span, .. }),
+					label: Some(ref mal @ Reference::MacroArgument { ref name, ref value, ref span, .. }),
 					..
 				}
 				| ProgramElement::UserDefinedMacroCall {
-					label: Some(ref mal @ Label::MacroArgument { ref name, ref value, ref span, .. }),
+					label: Some(ref mal @ Reference::MacroArgument { ref name, ref value, ref span, .. }),
 					..
 				}
 				| ProgramElement::Macro(Macro {
-					label: Some(ref mal @ Label::MacroArgument { ref name, ref value, ref span, .. }),
+					label: Some(ref mal @ Reference::MacroArgument { ref name, ref value, ref span, .. }),
 					..
 				}) =>
 					return Err(AssemblyError::UsingMacroArgumentOutsideMacro {
@@ -362,9 +368,9 @@ impl AssemblyFile {
 	}
 
 	/// Sets the first label in this file if a label was given.
-	pub fn set_first_label(&mut self, label: Option<Label>) {
+	pub fn set_first_label(&mut self, reference: Option<Reference>) {
 		if let Some(first) = self.content.get_mut(0) {
-			*first = first.clone().set_label(label);
+			*first = first.clone().set_label(reference);
 		}
 	}
 
@@ -475,8 +481,8 @@ impl AssemblyFile {
 							})
 							.collect(),
 						GlobalLabel {
-							// We use a unique label name just to make sure that we don't combine different labels
-							// accidentally.
+							// We use a unique reference name just to make sure that we don't combine different
+							// references accidentally.
 							name:            format!("{}_global_label_{}", macro_name, index),
 							locals:          HashMap::new(),
 							location:        None,
@@ -484,7 +490,8 @@ impl AssemblyFile {
 							used_as_address: false,
 						},
 					);
-					// FIXME: Doesn't handle macro-internal labels correctly; also no support for the \@ special label.
+					// FIXME: Doesn't handle macro-internal references correctly; also no support for the \@ special
+					// label.
 					let mut inserted_body = body.clone();
 					for mut macro_element in &mut inserted_body {
 						macro_element.replace_macro_parent(actual_argument_parent.clone(), &self.source_code)?;

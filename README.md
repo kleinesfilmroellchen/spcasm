@@ -40,10 +40,10 @@ Options:
   -W, --error <ERROR>
           Warnings to turn into a hard error
 
-  -l, --label-pass-limit <LABEL_PASS_LIMIT>
-          Limit for the number of label resolution passes spcasm will perform.
+  -l, --reference-pass-limit <REFERENCE_PASS_LIMIT>
+          Limit for the number of reference resolution passes spcasm will perform.
 
-          Usually 2-3 passes are enough and very high pass numbers often indicate infinite loops. If this number of passes is exceeded during label resolution, spcasm will report unresolved labels as normal.
+          Usually 2-3 passes are enough and very high pass numbers often indicate infinite loops. If this number of passes is exceeded during reference resolution, spcasm will report unresolved references as normal.
 
           [default: 10]
 

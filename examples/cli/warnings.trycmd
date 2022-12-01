@@ -15,10 +15,10 @@ spcasm::valid_arch_macro
         architecture assembler. This arch directive points to the spc700
         architecture and is therefore safely ignored.
 
-spcasm::non_direct_page_label
+spcasm::non_direct_page_reference
 
-  ☞ This label "start" has an 8-bit value, did you want to use it in direct
-  │ page addressing?
+  ☞ This reference "start" has an 8-bit value, did you want to use it in
+  │ direct page addressing?
    ╭─[examples/test.spcasm:1:1]
  1 │ arch spc700-raw
  2 │ org 0
@@ -34,9 +34,9 @@ spcasm::non_direct_page_label
    ╰────
   help: Use a forced direct page addressing mnemonic by suffixing `.b`
 
-spcasm::non_direct_page_label
+spcasm::non_direct_page_reference
 
-  ☞ This label "data" has an 8-bit value, did you want to use it in direct
+  ☞ This reference "data" has an 8-bit value, did you want to use it in direct
   │ page addressing?
     ╭─[examples/test.spcasm:10:1]
  10 │    MOV A,$3320+X ;= F5 20 33
@@ -100,10 +100,10 @@ spcasm::valid_arch_macro
         architecture assembler. This arch directive points to the spc700
         architecture and is therefore safely ignored.
 
-spcasm::non_direct_page_label
+spcasm::non_direct_page_reference
 
-  ☞ This label "start" has an 8-bit value, did you want to use it in direct
-  │ page addressing?
+  ☞ This reference "start" has an 8-bit value, did you want to use it in
+  │ direct page addressing?
    ╭─[examples/test.spcasm:1:1]
  1 │ arch spc700-raw
  2 │ org 0
@@ -119,9 +119,9 @@ spcasm::non_direct_page_label
    ╰────
   help: Use a forced direct page addressing mnemonic by suffixing `.b`
 
-spcasm::non_direct_page_label
+spcasm::non_direct_page_reference
 
-  ☞ This label "data" has an 8-bit value, did you want to use it in direct
+  ☞ This reference "data" has an 8-bit value, did you want to use it in direct
   │ page addressing?
     ╭─[examples/test.spcasm:10:1]
  10 │    MOV A,$3320+X ;= F5 20 33
@@ -159,10 +159,10 @@ spcasm::valid_arch_macro
         architecture assembler. This arch directive points to the spc700
         architecture and is therefore safely ignored.
 
-spcasm::non_direct_page_label
+spcasm::non_direct_page_reference
 
-  ☞ This label "start" has an 8-bit value, did you want to use it in direct
-  │ page addressing?
+  ☞ This reference "start" has an 8-bit value, did you want to use it in
+  │ direct page addressing?
    ╭─[examples/test.spcasm:1:1]
  1 │ arch spc700-raw
  2 │ org 0
@@ -178,9 +178,9 @@ spcasm::non_direct_page_label
    ╰────
   help: Use a forced direct page addressing mnemonic by suffixing `.b`
 
-spcasm::non_direct_page_label
+spcasm::non_direct_page_reference
 
-  ☞ This label "data" has an 8-bit value, did you want to use it in direct
+  ☞ This reference "data" has an 8-bit value, did you want to use it in direct
   │ page addressing?
     ╭─[examples/test.spcasm:10:1]
  10 │    MOV A,$3320+X ;= F5 20 33

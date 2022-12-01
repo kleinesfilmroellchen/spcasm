@@ -17,7 +17,7 @@ use crate::cli::{default_backend_options, BackendOptions};
 use crate::error::{AssemblyCode, AssemblyError};
 use crate::mcro::MacroValue;
 use crate::parser::instruction::{AddressingMode, Instruction, MemoryAddress, Mnemonic, Number, Opcode};
-use crate::parser::label::{Label, Resolvable};
+use crate::parser::reference::{Reference, Resolvable};
 use crate::parser::{AssemblyFile, ProgramElement, Register};
 use crate::{pretty_hex, Macro};
 
@@ -37,7 +37,7 @@ pub(crate) fn assemble(
 ) -> Result<Vec<u8>, Box<AssemblyError>> {
 	let mut main_file = main_file.borrow_mut();
 	let mut data = AssembledData::new(main_file.source_code.clone());
-	let maximum_label_resolution_passes = options.maximum_label_resolution_passes();
+	let maximum_reference_resolution_passes = options.maximum_reference_resolution_passes();
 	data.set_error_options(options);
 
 	data.new_segment(0);
@@ -56,7 +56,7 @@ pub(crate) fn assemble(
 		}
 	}
 	let mut pass_count = 0;
-	while pass_count < maximum_label_resolution_passes && data.execute_label_resolution_pass()? {
+	while pass_count < maximum_reference_resolution_passes && data.execute_reference_resolution_pass()? {
 		pass_count += 1;
 	}
 	data.combine_segments()
@@ -247,15 +247,15 @@ fn assemble_macro(data: &mut AssembledData, mcro: &mut Macro) -> Result<(), Box<
 			data.new_segment(address);
 		},
 		MacroValue::Table { entry_size, ref values } => {
-			let mut label = mcro.label.clone();
+			let mut reference = mcro.label.clone();
 			for value in values {
 				match entry_size {
-					1 => data.append_8_bits_unresolved(value.clone(), 0, label, mcro.span)?,
-					2 => data.append_16_bits_unresolved(value.clone(), label, mcro.span)?,
+					1 => data.append_8_bits_unresolved(value.clone(), 0, reference, mcro.span)?,
+					2 => data.append_16_bits_unresolved(value.clone(), reference, mcro.span)?,
 					3 | 4 => unimplemented!(),
 					_ => unreachable!(),
 				}
-				label = None;
+				reference = None;
 			}
 		},
 		MacroValue::Brr(ref file_name) => {
@@ -288,21 +288,21 @@ fn assemble_macro(data: &mut AssembledData, mcro: &mut Macro) -> Result<(), Box<
 				data.append(0, if is_first { mcro.label.clone() } else { None }, mcro.span);
 			}
 		},
-		MacroValue::AssignLabel { ref mut label, ref value } => match label {
-			Label::Local(label) => {
-				label.borrow_mut().location = Some(Box::new(value.clone().try_resolve()));
+		MacroValue::AssignReference { ref mut reference, ref value } => match reference {
+			Reference::Local(reference) => {
+				reference.borrow_mut().location = Some(Box::new(value.clone().try_resolve()));
 			},
-			Label::Global(ref mut global) => {
+			Reference::Global(ref mut global) => {
 				global.borrow_mut().location = Some(value.clone().try_resolve());
 			},
-			Label::MacroArgument { span, name, .. } =>
+			Reference::MacroArgument { span, name, .. } =>
 				return Err(AssemblyError::AssigningToMacroArgument {
 					name:     (*name).to_string(),
 					src:      data.source_code.clone(),
 					location: *span,
 				}
 				.into()),
-			Label::MacroGlobal { span, .. } =>
+			Reference::MacroGlobal { span, .. } =>
 				return Err(AssemblyError::AssigningToMacroGlobal {
 					src:      data.source_code.clone(),
 					location: *span,
@@ -394,12 +394,12 @@ pub(crate) fn resolve_file(
 	})
 }
 
-/// Data in memory while we still need to resolve labels.
-/// This data may have an attached label.
+/// Data in memory while we still need to resolve references.
+/// This data may have an attached reference.
 #[derive(Clone, Debug)]
 pub struct LabeledMemoryValue {
 	/// The label of this memory value.
-	pub label:                Option<Label>,
+	pub label:                Option<Reference>,
 	/// The actual memory value, which might or might not be resolved.
 	pub value:                MemoryValue,
 	/// The source span of the instruction or macro that was compiled to this memory value.
@@ -407,7 +407,8 @@ pub struct LabeledMemoryValue {
 }
 
 impl LabeledMemoryValue {
-	/// Try to resolve this memory value if it has a label. This always does nothing if the data is already resolved.
+	/// Try to resolve this memory value if it has a reference. This always does nothing if the data is already
+	/// resolved.
 	/// * `own_memory_address`: The actual location in memory that this value is at. Some resolution strategies need
 	///   this.
 	#[inline]
@@ -425,18 +426,19 @@ impl LabeledMemoryValue {
 
 	/// Return the resolved memory value.
 	/// # Errors
-	/// If the memory value is not resolved, a nice "unresolved label" error is returned.
+	/// If the memory value is not resolved, a nice "unresolved reference" error is returned.
 	#[inline]
 	pub fn try_as_resolved(&self, src: &Arc<AssemblyCode>) -> Result<u8, Box<AssemblyError>> {
 		self.value.try_resolved(self.instruction_location, src).map_err(|number| {
 			{
-				let first_label =
-					number.first_label().expect("Number resolution failure was not caused by label; this is a bug!");
-				AssemblyError::UnresolvedLabel {
-					label:          first_label.to_string(),
-					label_location: Some(first_label.source_span()),
-					usage_location: self.instruction_location,
-					src:            src.clone(),
+				let first_reference = number
+					.first_reference()
+					.expect("Number resolution failure was not caused by reference; this is a bug!");
+				AssemblyError::UnresolvedReference {
+					reference:          first_reference.to_string(),
+					reference_location: Some(first_reference.source_span()),
+					usage_location:     self.instruction_location,
+					src:                src.clone(),
 				}
 			}
 			.into()
@@ -471,15 +473,15 @@ impl MemoryValue {
 				resolved => Self::Number(resolved, byte),
 			},
 			Self::NumberRelative(number) => match number.try_resolve() {
-				Number::Literal(label_memory_address) => {
-					let resolved_data = (label_memory_address - (own_memory_address + 1)) as u8;
+				Number::Literal(reference_memory_address) => {
+					let resolved_data = (reference_memory_address - (own_memory_address + 1)) as u8;
 					Self::Resolved(resolved_data)
 				},
 				resolved => Self::NumberRelative(resolved),
 			},
 			Self::NumberHighByteWithContainedBitIndex(number, bit_index) => match number.try_resolve() {
-				Number::Literal(label_memory_address) => {
-					let resolved_data = ((label_memory_address & 0x1F00) >> 8) as u8 | (bit_index << 5);
+				Number::Literal(reference_memory_address) => {
+					let resolved_data = ((reference_memory_address & 0x1F00) >> 8) as u8 | (bit_index << 5);
 					Self::Resolved(resolved_data)
 				},
 				resolved => Self::NumberHighByteWithContainedBitIndex(resolved, bit_index),
@@ -646,7 +648,7 @@ impl AssembledData {
 	pub fn append_16_bits(
 		&mut self,
 		value: MemoryAddress,
-		label: Option<Label>,
+		reference: Option<Reference>,
 		span: SourceSpan,
 	) -> Result<(), Box<AssemblyError>> {
 		if (value & 0xFFFF) != value {
@@ -657,7 +659,7 @@ impl AssembledData {
 				size: 16,
 			})?;
 		}
-		self.append((value & 0xFF) as u8, label, span);
+		self.append((value & 0xFF) as u8, reference, span);
 		self.append(((value & 0xFF00) >> 8) as u8, None, span);
 		Ok(())
 	}
@@ -671,7 +673,7 @@ impl AssembledData {
 	pub fn append_8_bits(
 		&mut self,
 		value: MemoryAddress,
-		label: Option<Label>,
+		reference: Option<Reference>,
 		span: SourceSpan,
 	) -> Result<(), Box<AssemblyError>> {
 		if (value & 0xFF) != value {
@@ -682,7 +684,7 @@ impl AssembledData {
 				size: 8,
 			})?;
 		}
-		self.append((value & 0xFF) as u8, label, span);
+		self.append((value & 0xFF) as u8, reference, span);
 		Ok(())
 	}
 
@@ -699,30 +701,34 @@ impl AssembledData {
 
 	/// Appends an 8-bit value to the current segment.
 	#[inline]
-	fn append(&mut self, value: u8, label: Option<Label>, span: SourceSpan) -> Result<(), Box<AssemblyError>> {
+	fn append(&mut self, value: u8, reference: Option<Reference>, span: SourceSpan) -> Result<(), Box<AssemblyError>> {
 		let src = self.source_code.clone();
-		self.current_segment_mut()
-			.map_err(|_| AssemblyError::MissingSegment { location: span, src })?
-			.push(LabeledMemoryValue { value: MemoryValue::Resolved(value), label, instruction_location: span });
+		self.current_segment_mut().map_err(|_| AssemblyError::MissingSegment { location: span, src })?.push(
+			LabeledMemoryValue {
+				value:                MemoryValue::Resolved(value),
+				label:                reference,
+				instruction_location: span,
+			},
+		);
 		Ok(())
 	}
 
 	fn append_bytes(
 		&mut self,
 		values: Vec<u8>,
-		label: &Option<Label>,
+		reference: &Option<Reference>,
 		span: SourceSpan,
 	) -> Result<(), Box<AssemblyError>> {
 		let mut is_first = true;
 		for value in values {
-			self.append(value, if is_first { label.clone() } else { None }, span)?;
+			self.append(value, if is_first { reference.clone() } else { None }, span)?;
 			is_first = false;
 		}
 		Ok(())
 	}
 
 	/// Appends an unresolved value to the current segment. The `byte` parameter decides
-	/// which byte will be used in this memory address when the label is resolved.
+	/// which byte will be used in this memory address when the reference is resolved.
 	///
 	/// # Errors
 	/// If there is no segment currently.
@@ -730,13 +736,17 @@ impl AssembledData {
 		&mut self,
 		value: Number,
 		byte: u8,
-		label: Option<Label>,
+		reference: Option<Reference>,
 		span: SourceSpan,
 	) -> Result<(), Box<AssemblyError>> {
 		let src = self.source_code.clone();
-		self.current_segment_mut()
-			.map_err(|_| AssemblyError::MissingSegment { location: span, src })?
-			.push(LabeledMemoryValue { value: MemoryValue::Number(value, byte), label, instruction_location: span });
+		self.current_segment_mut().map_err(|_| AssemblyError::MissingSegment { location: span, src })?.push(
+			LabeledMemoryValue {
+				value:                MemoryValue::Number(value, byte),
+				label:                reference,
+				instruction_location: span,
+			},
+		);
 		Ok(())
 	}
 
@@ -747,14 +757,14 @@ impl AssembledData {
 	pub fn append_16_bits_unresolved(
 		&mut self,
 		value: Number,
-		label: Option<Label>,
+		reference: Option<Reference>,
 		span: SourceSpan,
 	) -> Result<(), Box<AssemblyError>> {
-		self.append_8_bits_unresolved(value.clone(), 0, label, span)?;
+		self.append_8_bits_unresolved(value.clone(), 0, reference, span)?;
 		self.append_8_bits_unresolved(value, 1, None, span)
 	}
 
-	/// Appends an unresolved value to the current segment. The label will be resolved to a
+	/// Appends an unresolved value to the current segment. The reference will be resolved to a
 	/// relative offset, like various branch instructions need it.
 	///
 	/// # Errors
@@ -771,7 +781,7 @@ impl AssembledData {
 		Ok(())
 	}
 
-	/// Appends an unresolved value with a bit index that will be placed into the upper three bits after label
+	/// Appends an unresolved value with a bit index that will be placed into the upper three bits after reference
 	/// resolution.
 	///
 	/// # Errors
@@ -873,7 +883,7 @@ impl AssembledData {
 	}
 
 	/// Appends an instruction with a 16-bit operand. The upper three bits of it are replaced by the bit index, either
-	/// now (if the operand is a resolved number) or later (if the operand is a label).
+	/// now (if the operand is a resolved number) or later (if the operand is a reference).
 	/// # Errors
 	/// If the given value is too large for the memory address and the related warning is promoted to an error via
 	/// command-line arguments, this error will be returned.
@@ -903,11 +913,11 @@ impl AssembledData {
 		Ok(())
 	}
 
-	/// Appends an instruction with an 8-bit operand. If this is a label, it's stored as a relative unresolved label.
-	/// # Errors
+	/// Appends an instruction with an 8-bit operand. If this is a reference, it's stored as a relative unresolved
+	/// reference. # Errors
 	/// If the given value is too large for the memory address and the related warning is promoted to an error via
 	/// command-line arguments, this error will be returned.
-	pub fn append_instruction_with_relative_label(
+	pub fn append_instruction_with_relative_reference(
 		&mut self,
 		opcode: u8,
 		operand: Number,
@@ -926,53 +936,57 @@ impl AssembledData {
 		Ok(())
 	}
 
-	/// Executes a label resolution pass. This means the following:
+	/// Executes a reference resolution pass. This means the following:
 	/// * All data in all segments is traversed. The current memory location is kept track of during traversal.
-	/// * All data with a label has that label assigned the current memory location.
-	/// * All data that references a label has a resolution attempted, which succeeds if the label has "gained" an
-	///   actual memory location. The label reference is then gone.
-	/// This means that data which references labels declared later needs one additional resolution pass.
+	/// * All data with a reference has that reference assigned the current memory location.
+	/// * All data that references a reference has a resolution attempted, which succeeds if the reference has "gained"
+	///   an actual memory location. The reference reference is then gone.
+	/// This means that data which uses references declared later needs one additional resolution pass.
 	/// # Returns
 	/// Whether any modifications were actually done during the resolution pass.
 	/// # Errors
 	/// Any warnings and warning-promoted errors from resolution are passed on.
 	#[allow(clippy::missing_panics_doc)]
-	pub fn execute_label_resolution_pass(&mut self) -> Result<bool, Box<AssemblyError>> {
+	pub fn execute_reference_resolution_pass(&mut self) -> Result<bool, Box<AssemblyError>> {
 		let mut had_modifications = true;
 		for (segment_start, segment_data) in &mut self.segments {
 			let mut current_global_label = None;
 			for (offset, datum) in segment_data.iter_mut().enumerate() {
 				let memory_address = segment_start + offset as i64;
-				current_global_label =
-					datum.label.clone().filter(|label| matches!(label, Label::Global(..))).or(current_global_label);
-				// Resolve the actual label definition; i.e. if the below code executes, we're at the memory location
-				// which is labeled.
+				current_global_label = datum
+					.label
+					.clone()
+					.filter(|reference| matches!(reference, Reference::Global(..)))
+					.or(current_global_label);
+				// Resolve the actual reference definition; i.e. if the below code executes, we're at the memory
+				// location which is labeled.
 				datum
 					.label
 					.as_mut()
-					.filter(|existing_label| !existing_label.is_resolved())
-					.and_then(|resolved_label| {
+					.filter(|existing_reference| !existing_reference.is_resolved())
+					.and_then(|resolved_reference| {
 						had_modifications |= true;
-						match *resolved_label {
-							Label::Global(ref mut global) => global.borrow_mut().resolve_to(
+						match *resolved_reference {
+							Reference::Global(ref mut global) => global.borrow_mut().resolve_to(
 								memory_address,
 								datum.instruction_location,
 								self.source_code.clone(),
 							),
-							Label::Local(ref mut local) => local.borrow_mut().resolve_to(
+							Reference::Local(ref mut local) => local.borrow_mut().resolve_to(
 								memory_address,
 								datum.instruction_location,
 								self.source_code.clone(),
 							),
-							Label::MacroArgument { value: Some(_), .. } => Ok(()),
-							Label::MacroArgument { value: None, span, .. } => Err(AssemblyError::UnresolvedLabel {
-								label:          resolved_label.to_string(),
-								label_location: None,
-								usage_location: span,
-								src:            self.source_code.clone(),
-							}
-							.into()),
-							Label::MacroGlobal { span } => Err(AssemblyError::UnresolvedMacroGlobal {
+							Reference::MacroArgument { value: Some(_), .. } => Ok(()),
+							Reference::MacroArgument { value: None, span, .. } =>
+								Err(AssemblyError::UnresolvedReference {
+									reference:          resolved_reference.to_string(),
+									reference_location: None,
+									usage_location:     span,
+									src:                self.source_code.clone(),
+								}
+								.into()),
+							Reference::MacroGlobal { span } => Err(AssemblyError::UnresolvedMacroGlobal {
 								usage_location: span,
 								src:            self.source_code.clone(),
 							}
@@ -981,7 +995,7 @@ impl AssembledData {
 						.err()
 					})
 					.map_or_else(|| Ok(()), |err| err.report_or_throw(&*self.options))?;
-				// Resolve a label used as a memory address, e.g. in an instruction operand like a jump target.
+				// Resolve a reference used as a memory address, e.g. in an instruction operand like a jump target.
 				had_modifications |= datum.try_resolve(memory_address);
 			}
 		}

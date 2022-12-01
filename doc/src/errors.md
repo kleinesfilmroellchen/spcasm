@@ -8,10 +8,10 @@ In the following, each error is listed with an example and a detailed explanatio
 
 ## Advice
 
-### spcasm::non_direct_page_label
+### spcasm::non_direct_page_reference
 
 ```
-  ☞ This label "data" has an 8-bit value, did you want to use it in direct page addressing?
+  ☞ This reference "data" has an 8-bit value, did you want to use it in direct page addressing?
     ╭─[examples/test.spcasm:10:1]
  10 │    MOV A,$3320+X ;= F5 20 33
  11 │    MOV A,$FF00+Y ;= F6 00 FF
@@ -29,7 +29,7 @@ In the following, each error is listed with an example and a detailed explanatio
   help: Use a forced direct page addressing mnemonic by suffixing `.b`
 ```
 
-Many SPC700 instructions can save space and clock cycles by using direct page addressing when accessing either the zeroth or first page of memory (see [the reference](reference/)). However, because direct page addresses depend on which of the two direct pages are selected and how large instructions actually are, spcasm can't currently automatically use direct page addressing if labels appear in an operand that _might_ be a direct page address mode. Therefore, spcasm warns you that it found out this address is within a direct page, but it couldn't actually assemble the instruction to use direct-page addressing. The mnemonic suffix `.b` is available to force any instruction to use direct page addressing if possible.
+Many SPC700 instructions can save space and clock cycles by using direct page addressing when accessing either the zeroth or first page of memory (see [the reference](reference/)). However, because direct page addresses depend on which of the two direct pages are selected and how large instructions actually are, spcasm can't currently automatically use direct page addressing if references appear in an operand that _might_ be a direct page address mode. Therefore, spcasm warns you that it found out this address is within a direct page, but it couldn't actually assemble the instruction to use direct-page addressing. The mnemonic suffix `.b` is available to force any instruction to use direct page addressing if possible.
 
 ### spcasm::valid_arch_macro
 
@@ -218,20 +218,20 @@ Note: This is a theoretical error the lexer can produce, but because invalid con
 
 For range specifications, like when including binary files, the Asar style range syntax is a `start-end` format. Obviously, the start then needs to be before (or the same as) the end. Often you just accidentally swapped these limits.
 
-### spcasm::labels_in_macro_argument
+### spcasm::references_in_macro_argument
 
 ```
-  × Invalid use of labels in an argument for `org`
+  × Invalid use of references in an argument for `org`
    ╭─[examples/errors/label-in-org.spasm:3:1]
  3 │
  4 │ org dp_label
    · ─┬─
    ·  ╰── This macro
    ╰────
-  help: Because the macro argument can determine a label's position, resolving the argument value is not generally possible. For this reason, labels are not allowed to be used in a macro argument.
+  help: Because the macro argument can determine a reference's position, resolving the argument value is not generally possible. For this reason, references are not allowed to be used in a macro argument.
 ```
 
-Some macros, notably the `org` macro, disallow the use of labels and other dynamic expressions in their argument(s) as that easily creates unresolvable circular dependencies. For example, consider this assembly code:
+Some macros, notably the `org` macro, disallow the use of references and other dynamic expressions in their argument(s) as that easily creates unresolvable circular dependencies. For example, consider this assembly code:
 
 ```asm
 org loop
@@ -252,7 +252,7 @@ org custom_code_bank
 	; custom code...
 ```
 
-Therefore, for now, spcasm disallows the use of labels in these cases entirely.
+Therefore, for now, spcasm disallows the use of references in these cases entirely.
 
 ### spcasm::macro_argument_outside_macro
 
@@ -460,24 +460,24 @@ A generic early error when spcasm can't at all make sense of some character in t
 
 Similar to [operand_not_allowed](#spcasmoperandnotallowed). The instruction only takes one operand/addressing mode, but two were given.
 
-### spcasm::unresolved_label
+### spcasm::unresolved_reference
 
 ```
-  × Label 'no_exist' can not be resolved to a value
+  × reference 'no_exist' can not be resolved to a value
    ╭─[examples/errors/unresolved-label.spcasm:1:1]
  1 │ mov a,no_exist
    · ──────┬───┬───
    ·       │   ╰── 'no_exist' defined here
    ·       ╰── Used here
    ╰────
-  help: Any symbolic label must be defined somewhere. Did you misspell the label's name?
+  help: Any symbolic reference must be defined somewhere. Did you misspell the reference's name?
 ```
 
-Evidently, labels which are not defined anywhere in the assembly source cannot be used in instructions or macros. Defining a label involves either using it as the label for some instruction (then the memory address will be filled in automatically), or assigning it a literal value to make it act like a constant.
+Evidently, references which are not defined anywhere in the assembly source cannot be used in instructions or macros. Defining a reference involves either using it as the label for some instruction (then the memory address will be filled in automatically), or assigning it a literal value to make it act like a constant.
 
 ```assembly
-label: nop ; label has the memory address of the nop instruction
-label = 50 ; label has value 50
+label: nop ; reference has the memory address of the nop instruction
+label = 50 ; reference has value 50
 ```
 
-Often, however, a label is simply misspelled.
+Often, however, a reference is simply misspelled.

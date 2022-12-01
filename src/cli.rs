@@ -28,8 +28,8 @@ pub trait BackendOptions: std::fmt::Debug {
 
 	/// Returns the maximum macro expansion/recursion depth.
 	fn maximum_macro_expansion_depth(&self) -> usize;
-	/// Returns the maximum number of label resolution passes.
-	fn maximum_label_resolution_passes(&self) -> usize;
+	/// Returns the maximum number of reference resolution passes.
+	fn maximum_reference_resolution_passes(&self) -> usize;
 }
 
 /// Returns a ``BackendOptions`` implementation with default behavior.
@@ -48,12 +48,12 @@ pub struct CliOptions {
 	#[arg(num_args = 1, action = clap::ArgAction::Append, long, short = 'W')]
 	pub(crate) error:  Vec<ErrorCodeSpec>,
 
-	/// Limit for the number of label resolution passes spcasm will perform.
+	/// Limit for the number of reference resolution passes spcasm will perform.
 	///
 	/// Usually 2-3 passes are enough and very high pass numbers often indicate infinite loops. If this number of
-	/// passes is exceeded during label resolution, spcasm will report unresolved labels as normal.
+	/// passes is exceeded during reference resolution, spcasm will report unresolved references as normal.
 	#[arg(long, short = 'l', default_value = "10")]
-	pub(crate) label_pass_limit: usize,
+	pub(crate) reference_pass_limit: usize,
 
 	/// Limit for the number of recursive macro calls allowed by spcasm.
 	///
@@ -87,8 +87,8 @@ impl BackendOptions for CliOptions {
 		self.ignore.contains(&discriminant.into())
 	}
 
-	fn maximum_label_resolution_passes(&self) -> usize {
-		self.label_pass_limit
+	fn maximum_reference_resolution_passes(&self) -> usize {
+		self.reference_pass_limit
 	}
 
 	fn maximum_macro_expansion_depth(&self) -> usize {
@@ -113,7 +113,7 @@ impl BackendOptions for DummyOptions {
 		false
 	}
 
-	fn maximum_label_resolution_passes(&self) -> usize {
+	fn maximum_reference_resolution_passes(&self) -> usize {
 		10
 	}
 

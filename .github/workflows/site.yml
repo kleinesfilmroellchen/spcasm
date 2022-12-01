@@ -62,7 +62,7 @@ jobs:
         run: cp -rT doc/book/html site/doc
 
       - name: Upload page artifact
-        uses: actions/upload-pages-artifact@v1.0.4
+        uses: actions/upload-pages-artifact@v1.0.5
         with:
           path: site
 

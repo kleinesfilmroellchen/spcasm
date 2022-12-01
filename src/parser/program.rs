@@ -5,7 +5,7 @@ use std::sync::Arc;
 
 use miette::SourceSpan;
 
-use super::instruction::{Instruction, Number};
+use super::instruction::{Instruction, AssemblyTimeValue};
 use super::reference::{Reference, MacroParent, MacroParentReplacable};
 use super::Directive;
 use crate::parser::source_range;
@@ -32,7 +32,7 @@ pub enum ProgramElement {
 		/// Name of the macro that is being called.
 		macro_name: String,
 		/// The arguments to the macro; currently only numbers are supported.
-		arguments:  Vec<Number>,
+		arguments:  Vec<AssemblyTimeValue>,
 		/// Location in source code of the macro call.
 		span:       SourceSpan,
 		/// Label before the macro call. This label will be used for the first instruction in the macro.

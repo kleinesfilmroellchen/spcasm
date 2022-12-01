@@ -7,7 +7,7 @@ use std::sync::{Arc, Weak};
 
 use miette::SourceSpan;
 
-use super::instruction::{MemoryAddress, Number};
+use super::instruction::{MemoryAddress, AssemblyTimeValue};
 use crate::error::{AssemblyCode, AssemblyError};
 
 pub trait Resolvable {
@@ -37,7 +37,7 @@ pub enum Reference {
 		/// The name of the argument.
 		name:         String,
 		/// The resolved value of the argument. Note that this is always None for the macro definition.
-		value:        Option<Box<Number>>,
+		value:        Option<Box<AssemblyTimeValue>>,
 		/// The location where this macro argument usage is defined. Note that because macro arguments are not coerced,
 		/// this always points to the usage of the argument, never the definition in the macro argument list.
 		span:         SourceSpan,
@@ -59,7 +59,7 @@ impl Reference {
 		}
 	}
 
-	pub fn set_location(&mut self, location: Number) {
+	pub fn set_location(&mut self, location: AssemblyTimeValue) {
 		match self {
 			Self::Global(global) => global.borrow_mut().location = Some(location),
 			Self::Local(local) => local.borrow_mut().location = Some(Box::new(location)),
@@ -159,7 +159,7 @@ impl Resolvable for Reference {
 			Self::Global(label) => label.borrow_mut().resolve_to(location, usage_span, source_code),
 			Self::Local(label) => label.borrow_mut().resolve_to(location, usage_span, source_code),
 			Self::MacroArgument { name, value, span, .. } => {
-				*value = Some(Box::new(Number::Literal(location)));
+				*value = Some(Box::new(AssemblyTimeValue::Literal(location)));
 				Ok(())
 			},
 			Self::MacroGlobal { .. } => unimplemented!("macro global leaked to reference resolution, what to do?"),
@@ -174,7 +174,7 @@ pub struct GlobalLabel {
 	/// User-given reference name.
 	pub name:            String,
 	/// Resolved memory location of the reference, if any.
-	pub location:        Option<Number>,
+	pub location:        Option<AssemblyTimeValue>,
 	/// Source code location where this reference is defined.
 	pub span:            SourceSpan,
 	/// Whether anyone references this reference as an address.
@@ -216,7 +216,7 @@ impl Resolvable for GlobalLabel {
 		usage_span: SourceSpan,
 		source_code: Arc<AssemblyCode>,
 	) -> Result<(), Box<AssemblyError>> {
-		self.location = Some(Number::Literal(location));
+		self.location = Some(AssemblyTimeValue::Literal(location));
 		if location <= 0xFF && self.used_as_address {
 			Err(AssemblyError::NonDirectPageReference {
 				name:                 self.name.clone(),
@@ -238,7 +238,7 @@ pub struct LocalLabel {
 	/// User-given reference name.
 	pub name:     String,
 	/// Resolved memory location of the reference, if any.
-	pub location: Option<Box<Number>>,
+	pub location: Option<Box<AssemblyTimeValue>>,
 	/// Source code location where this reference is defined.
 	pub span:     SourceSpan,
 	/// The parent label that this local label is contained within.
@@ -280,7 +280,7 @@ impl Resolvable for LocalLabel {
 		usage_span: SourceSpan,
 		source_code: Arc<AssemblyCode>,
 	) -> Result<(), Box<AssemblyError>> {
-		self.location = Some(Box::new(Number::Literal(location)));
+		self.location = Some(Box::new(AssemblyTimeValue::Literal(location)));
 		if location <= 0xFF {
 			Err(AssemblyError::NonDirectPageReference {
 				name:                 format!(".{}", self.name),
@@ -304,7 +304,7 @@ pub struct MacroParent {
 }
 
 impl MacroParent {
-	pub fn new_actual(parameters: HashMap<String, Number>, label: GlobalLabel) -> Arc<RefCell<MacroParent>> {
+	pub fn new_actual(parameters: HashMap<String, AssemblyTimeValue>, label: GlobalLabel) -> Arc<RefCell<MacroParent>> {
 		Arc::new(RefCell::new(Self {
 			label:      Arc::new(RefCell::new(label)),
 			parameters: MacroParameters::Actual(parameters),
@@ -335,7 +335,7 @@ pub enum MacroParameters {
 	/// Formal parameters, used in the macro's definition.
 	Formal(Vec<(String, SourceSpan)>),
 	/// Actual parameters, used while a macro is being resolved.
-	Actual(HashMap<String, Number>),
+	Actual(HashMap<String, AssemblyTimeValue>),
 }
 
 impl MacroParameters {
@@ -356,7 +356,7 @@ impl MacroParameters {
 		}
 	}
 
-	pub fn get_value_of(&self, name: &str) -> Option<Number> {
+	pub fn get_value_of(&self, name: &str) -> Option<AssemblyTimeValue> {
 		match self {
 			Self::Formal(..) => None,
 			Self::Actual(list) => list.get(name).cloned(),

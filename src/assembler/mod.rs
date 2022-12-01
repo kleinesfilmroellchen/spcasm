@@ -16,7 +16,7 @@ use crate::brr::{self, wav};
 use crate::cli::{default_backend_options, BackendOptions};
 use crate::error::{AssemblyCode, AssemblyError};
 use crate::directive::DirectiveValue;
-use crate::parser::instruction::{AddressingMode, Instruction, MemoryAddress, Mnemonic, Number, Opcode};
+use crate::parser::instruction::{AddressingMode, Instruction, MemoryAddress, Mnemonic, AssemblyTimeValue, Opcode};
 use crate::parser::reference::{Reference, Resolvable};
 use crate::parser::{AssemblyFile, ProgramElement, Register};
 use crate::{pretty_hex, Directive};
@@ -433,7 +433,7 @@ impl LabeledMemoryValue {
 			{
 				let first_reference = number
 					.first_reference()
-					.expect("Number resolution failure was not caused by reference; this is a bug!");
+					.expect("AssemblyTimeValue resolution failure was not caused by reference; this is a bug!");
 				AssemblyError::UnresolvedReference {
 					reference:          first_reference.to_string(),
 					reference_location: Some(first_reference.source_span()),
@@ -453,13 +453,13 @@ pub enum MemoryValue {
 	Resolved(u8),
 	/// Some byte of an (unresolved) number. The u8 is the byte index, where 0 means the lowest byte, 1 means the
 	/// second-lowest byte etc.
-	Number(Number, u8),
+	Number(AssemblyTimeValue, u8),
 	/// An (unresolved) number. The resolved memory value will be the difference between this memory value's location
 	/// plus one and the number's location.
-	NumberRelative(Number),
+	NumberRelative(AssemblyTimeValue),
 	/// An (unresolved) number. The upper three bits are used for the bit index value which can range from 0 to 7. This
 	/// is used for most absolute bit addressing modes.
-	NumberHighByteWithContainedBitIndex(Number, u8),
+	NumberHighByteWithContainedBitIndex(AssemblyTimeValue, u8),
 }
 
 impl MemoryValue {
@@ -468,19 +468,19 @@ impl MemoryValue {
 		match self {
 			Self::Resolved(_) => self,
 			Self::Number(number, byte) => match number.try_resolve() {
-				Number::Literal(memory_location) =>
+				AssemblyTimeValue::Literal(memory_location) =>
 					Self::Resolved(((memory_location & (0xFF << (byte * 8))) >> (byte * 8)) as u8),
 				resolved => Self::Number(resolved, byte),
 			},
 			Self::NumberRelative(number) => match number.try_resolve() {
-				Number::Literal(reference_memory_address) => {
+				AssemblyTimeValue::Literal(reference_memory_address) => {
 					let resolved_data = (reference_memory_address - (own_memory_address + 1)) as u8;
 					Self::Resolved(resolved_data)
 				},
 				resolved => Self::NumberRelative(resolved),
 			},
 			Self::NumberHighByteWithContainedBitIndex(number, bit_index) => match number.try_resolve() {
-				Number::Literal(reference_memory_address) => {
+				AssemblyTimeValue::Literal(reference_memory_address) => {
 					let resolved_data = ((reference_memory_address & 0x1F00) >> 8) as u8 | (bit_index << 5);
 					Self::Resolved(resolved_data)
 				},
@@ -490,7 +490,7 @@ impl MemoryValue {
 	}
 
 	#[allow(clippy::missing_const_for_fn)]
-	fn try_resolved(&self, location: SourceSpan, source_code: &Arc<AssemblyCode>) -> Result<u8, Number> {
+	fn try_resolved(&self, location: SourceSpan, source_code: &Arc<AssemblyCode>) -> Result<u8, AssemblyTimeValue> {
 		match self {
 			Self::Resolved(value) => Ok(*value),
 			Self::Number(number, ..)
@@ -734,7 +734,7 @@ impl AssembledData {
 	/// If there is no segment currently.
 	pub fn append_8_bits_unresolved(
 		&mut self,
-		value: Number,
+		value: AssemblyTimeValue,
 		byte: u8,
 		reference: Option<Reference>,
 		span: SourceSpan,
@@ -756,7 +756,7 @@ impl AssembledData {
 	/// If there is no segment currently.
 	pub fn append_16_bits_unresolved(
 		&mut self,
-		value: Number,
+		value: AssemblyTimeValue,
 		reference: Option<Reference>,
 		span: SourceSpan,
 	) -> Result<(), Box<AssemblyError>> {
@@ -769,7 +769,7 @@ impl AssembledData {
 	///
 	/// # Errors
 	/// If there is no segment currently.
-	pub fn append_relative_unresolved(&mut self, value: Number, span: SourceSpan) -> Result<(), Box<AssemblyError>> {
+	pub fn append_relative_unresolved(&mut self, value: AssemblyTimeValue, span: SourceSpan) -> Result<(), Box<AssemblyError>> {
 		let src = self.source_code.clone();
 		self.current_segment_mut().map_err(|_| AssemblyError::MissingSegment { location: span, src })?.push(
 			LabeledMemoryValue {
@@ -788,7 +788,7 @@ impl AssembledData {
 	/// If there is no segment currently.
 	pub fn append_unresolved_with_bit_index(
 		&mut self,
-		value: Number,
+		value: AssemblyTimeValue,
 		bit_index: u8,
 		span: SourceSpan,
 	) -> Result<(), Box<AssemblyError>> {
@@ -811,12 +811,12 @@ impl AssembledData {
 	pub fn append_instruction_with_8_bit_operand(
 		&mut self,
 		opcode: u8,
-		operand: Number,
+		operand: AssemblyTimeValue,
 		instruction: &mut Instruction,
 	) -> Result<(), Box<AssemblyError>> {
 		self.append(opcode, instruction.label.clone(), instruction.span);
 		match operand.try_resolve() {
-			Number::Literal(value) => self.append_8_bits(value, None, instruction.span)?,
+			AssemblyTimeValue::Literal(value) => self.append_8_bits(value, None, instruction.span)?,
 			value => self.append_8_bits_unresolved(value, 0, None, instruction.span)?,
 		}
 
@@ -838,15 +838,15 @@ impl AssembledData {
 	pub fn append_instruction_with_two_8_bit_operands(
 		&mut self,
 		opcode: u8,
-		second_machine_operand: Number,
-		first_machine_operand: Number,
+		second_machine_operand: AssemblyTimeValue,
+		first_machine_operand: AssemblyTimeValue,
 		instruction: &mut Instruction,
 	) -> Result<(), Box<AssemblyError>> {
 		// The operands are flipped in machine code from what the assembly does. It's not target, source; it's source,
 		// target.
 		self.append_instruction_with_8_bit_operand(opcode, first_machine_operand, instruction);
 		match second_machine_operand.try_resolve() {
-			Number::Literal(value) => self.append_8_bits(value, None, instruction.span)?,
+			AssemblyTimeValue::Literal(value) => self.append_8_bits(value, None, instruction.span)?,
 			value => self.append_8_bits_unresolved(value, 0, None, instruction.span)?,
 		}
 
@@ -865,12 +865,12 @@ impl AssembledData {
 	pub fn append_instruction_with_16_bit_operand(
 		&mut self,
 		opcode: u8,
-		operand: Number,
+		operand: AssemblyTimeValue,
 		instruction: &mut Instruction,
 	) -> Result<(), Box<AssemblyError>> {
 		self.append(opcode, instruction.label.clone(), instruction.span);
 		match operand.try_resolve() {
-			Number::Literal(value) => self.append_16_bits(value, None, instruction.span)?,
+			AssemblyTimeValue::Literal(value) => self.append_16_bits(value, None, instruction.span)?,
 			value => self.append_16_bits_unresolved(value, None, instruction.span)?,
 		}
 
@@ -891,14 +891,14 @@ impl AssembledData {
 	pub fn append_instruction_with_16_bit_operand_and_bit_index(
 		&mut self,
 		opcode: u8,
-		operand: Number,
+		operand: AssemblyTimeValue,
 		bit_index: u8,
 		instruction: &mut Instruction,
 	) -> Result<(), Box<AssemblyError>> {
 		self.append(opcode, instruction.label.clone(), instruction.span);
 
 		match operand.try_resolve() {
-			Number::Literal(value) =>
+			AssemblyTimeValue::Literal(value) =>
 				self.append_16_bits(value | (MemoryAddress::from(bit_index) << 13), None, instruction.span)?,
 			value => {
 				self.append_8_bits_unresolved(value.clone(), 0, None, instruction.span);
@@ -920,12 +920,12 @@ impl AssembledData {
 	pub fn append_instruction_with_relative_reference(
 		&mut self,
 		opcode: u8,
-		operand: Number,
+		operand: AssemblyTimeValue,
 		instruction: &mut Instruction,
 	) -> Result<(), Box<AssemblyError>> {
 		self.append(opcode, instruction.label.clone(), instruction.span);
 		match operand.try_resolve() {
-			Number::Literal(value) => self.append_8_bits(value, None, instruction.span)?,
+			AssemblyTimeValue::Literal(value) => self.append_8_bits(value, None, instruction.span)?,
 			value => self.append_relative_unresolved(value, instruction.span)?,
 		}
 

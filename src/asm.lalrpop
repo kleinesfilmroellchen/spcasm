@@ -8,7 +8,7 @@ use std::sync::{Weak, Arc};
 use std::cell::RefCell;
 
 use crate::parser::{
-	instruction::{Instruction, Mnemonic, Number, AddressingMode, Opcode},
+	instruction::{Instruction, Mnemonic, AssemblyTimeValue, AddressingMode, Opcode},
 	Environment,
 	LabelUsageKind, 
 	Token,
@@ -40,7 +40,7 @@ InstructionOrDirective: ProgramElement = {
 	MacroCall => <>,
 };
 
-MacroCall: ProgramElement = <start:"%"> <macro_name:"identifier"> "(" <arguments:Comma<Number>?> <end:")"> => ProgramElement::UserDefinedMacroCall {
+MacroCall: ProgramElement = <start:"%"> <macro_name:"identifier"> "(" <arguments:Comma<AssemblyTimeValue>?> <end:")"> => ProgramElement::UserDefinedMacroCall {
 	macro_name: macro_name.0,
 	arguments: arguments.unwrap_or(Vec::new()),
 	span: source_range(start.into(), end.into()),
@@ -86,7 +86,7 @@ Mnemonic: (Mnemonic, bool, SourceSpan) = {
 };
 
 Directive: Directive = {	
-	<data_directive:TableDirective> <numbers:NumberList> => Directive {
+	<data_directive:TableDirective> <numbers:AssemblyTimeValueList> => Directive {
 		value: DirectiveValue::Table {
 			values: numbers,
 			entry_size: match data_directive.0 {
@@ -100,7 +100,7 @@ Directive: Directive = {
 		span: data_directive.1,
 		label: None,
 	},
-	<directive:"org"> <address:Number> =>? Ok(Directive {
+	<directive:"org"> <address:AssemblyTimeValue> =>? Ok(Directive {
 		value: DirectiveValue::Org(address.try_value(directive, source_code.clone()).map_err(|err| ParseError::User {
 			error: AssemblyError::ReferencesInDirectiveArgument {
 				directive: DirectiveSymbol::Org,
@@ -196,13 +196,13 @@ UserDefinedMacroArguments: Vec<(String, SourceSpan)> = {
 	"," <Comma<"identifier">> => <>,
 };
 
-NumberList = Comma<Number>;
+AssemblyTimeValueList = Comma<AssemblyTimeValue>;
 
 /// Allows both vasm and asar syntax; note that asar requires an end point.
 /// vasm: `, start [, length]`
 /// asar: `: start - end`
 InclusionRange: SourceSpan = {
-	<comma:","> <start:Number> <length:( "," <Number> )?> =>? {
+	<comma:","> <start:AssemblyTimeValue> <length:( "," <AssemblyTimeValue> )?> =>? {
 		let start = usize::try_from(start.try_value(comma.into(), source_code.clone()).map_err(AssemblyError::from)?)
 			.map_err(|err| AssemblyError::from_number_error(err, comma.into(), source_code.clone()))?;
 		let length = usize::try_from(length.map(|length| length.try_value(comma.into(), source_code.clone())).transpose()
@@ -210,7 +210,7 @@ InclusionRange: SourceSpan = {
 			.map_err(|err| AssemblyError::from_number_error(err, comma.into(), source_code.clone()))?;
 		Ok((start, length).into())
 	},
-	<colon:":"> <start:Number> <dash:"-range-"> <end:Number> =>? {
+	<colon:":"> <start:AssemblyTimeValue> <dash:"-range-"> <end:AssemblyTimeValue> =>? {
 		let colon_dash_range = source_range(colon.into(), dash.into());
 		let start = usize::try_from(start.try_value(colon_dash_range, source_code.clone())
 				.map_err(AssemblyError::from)?)
@@ -262,7 +262,7 @@ Reference: Reference = {
 	}
 };
 
-LabelAssignment: Directive = <mut reference:Reference> <eq:"="> <value:Number> => {
+LabelAssignment: Directive = <mut reference:Reference> <eq:"="> <value:AssemblyTimeValue> => {
 	reference.set_location(value.clone());
 	Directive {
 		value: DirectiveValue::AssignReference { reference: reference.clone(), value },
@@ -271,29 +271,29 @@ LabelAssignment: Directive = <mut reference:Reference> <eq:"="> <value:Number> =
 	}
 };
 
-Number: Number = {
-	<lhs:Factor> "+" <rhs:Factor> => Number::Add(Box::new(lhs), Box::new(rhs)),
-	<lhs:Factor> "-" <rhs:Factor> => Number::Subtract(Box::new(lhs), Box::new(rhs)),
+AssemblyTimeValue: AssemblyTimeValue = {
+	<lhs:Factor> "+" <rhs:Factor> => AssemblyTimeValue::Add(Box::new(lhs), Box::new(rhs)),
+	<lhs:Factor> "-" <rhs:Factor> => AssemblyTimeValue::Subtract(Box::new(lhs), Box::new(rhs)),
 	Factor,
 };
 
-Factor: Number = {
-	<lhs:Factor> "*" <rhs:Term> => Number::Multiply(Box::new(lhs), Box::new(rhs)),
-	<lhs:Factor> "/" <rhs:Term> => Number::Divide(Box::new(lhs), Box::new(rhs)),
+Factor: AssemblyTimeValue = {
+	<lhs:Factor> "*" <rhs:Term> => AssemblyTimeValue::Multiply(Box::new(lhs), Box::new(rhs)),
+	<lhs:Factor> "/" <rhs:Term> => AssemblyTimeValue::Divide(Box::new(lhs), Box::new(rhs)),
 	Term,
 };
 
-Term: Number = {
-	"number" => Number::Literal(<>.0),
+Term: AssemblyTimeValue = {
+	"number" => AssemblyTimeValue::Literal(<>.0),
 	"+" <Term>,
-	"-" <Term> => Number::Negate(Box::new(<>)),
-	"(" <Number> ")",
-	Reference => Number::Reference(<>),
+	"-" <Term> => AssemblyTimeValue::Negate(Box::new(<>)),
+	"(" <AssemblyTimeValue> ")",
+	Reference => AssemblyTimeValue::Reference(<>),
 };
 
 AddressingMode: AddressingMode = {
-	<Number> => try_make_direct_page_addressing_mode(<>, AddressingMode::DirectPage, AddressingMode::Address),
-	"#" <Number> => AddressingMode::Immediate(<>),
+	<AssemblyTimeValue> => try_make_direct_page_addressing_mode(<>, AddressingMode::DirectPage, AddressingMode::Address),
+	"#" <AssemblyTimeValue> => AddressingMode::Immediate(<>),
 	"A" => AddressingMode::Register(Register::A),
 	"X" => AddressingMode::Register(Register::X),
 	"Y" => AddressingMode::Register(Register::Y),
@@ -301,14 +301,14 @@ AddressingMode: AddressingMode = {
 	"PSW" => AddressingMode::Register(Register::PSW),
 	"YA" => AddressingMode::Register(Register::YA),
 	"C" => AddressingMode::CarryFlag,
-	<Number> "+X" => try_make_direct_page_addressing_mode(<>, AddressingMode::DirectPageXIndexed, AddressingMode::XIndexed),
-	<Number> "+Y" => try_make_direct_page_addressing_mode(<>, AddressingMode::DirectPageYIndexed, AddressingMode::YIndexed),
-	"[" <Number> "+X" "]" => try_make_direct_page_addressing_mode(<>, AddressingMode::DirectPageXIndexedIndirect, AddressingMode::DirectPageXIndexedIndirect),
-	"[" <Number> "]" "+Y" => try_make_direct_page_addressing_mode(<>, AddressingMode::DirectPageIndirectYIndexed, AddressingMode::DirectPageIndirectYIndexed),
-	<Number> "." <"number"> =>? try_make_direct_page_addressing_mode((<>),
+	<AssemblyTimeValue> "+X" => try_make_direct_page_addressing_mode(<>, AddressingMode::DirectPageXIndexed, AddressingMode::XIndexed),
+	<AssemblyTimeValue> "+Y" => try_make_direct_page_addressing_mode(<>, AddressingMode::DirectPageYIndexed, AddressingMode::YIndexed),
+	"[" <AssemblyTimeValue> "+X" "]" => try_make_direct_page_addressing_mode(<>, AddressingMode::DirectPageXIndexedIndirect, AddressingMode::DirectPageXIndexedIndirect),
+	"[" <AssemblyTimeValue> "]" "+Y" => try_make_direct_page_addressing_mode(<>, AddressingMode::DirectPageIndirectYIndexed, AddressingMode::DirectPageIndirectYIndexed),
+	<AssemblyTimeValue> "." <"number"> =>? try_make_direct_page_addressing_mode((<>),
 		|(a, b)| Ok(AddressingMode::DirectPageBit(a, AddressingMode::check_bit(b.0 as u8, b.1, &source_code)?)),
 		|(a, b)| Ok(AddressingMode::AddressBit(a, AddressingMode::check_bit(b.0 as u8, b.1, &source_code)?))),
-	"/" <address:Number> "." <bit:"number"> =>? Ok(AddressingMode::NegatedAddressBit(address, AddressingMode::check_bit(bit.0 as u8, bit.1, &source_code)?)),
+	"/" <address:AssemblyTimeValue> "." <bit:"number"> =>? Ok(AddressingMode::NegatedAddressBit(address, AddressingMode::check_bit(bit.0 as u8, bit.1, &source_code)?)),
 	"[" "X" "]" "+" => AddressingMode::IndirectXAutoIncrement,
 	"[" "X" "+" "]" => AddressingMode::IndirectXAutoIncrement,
 	"[" "X" "]" => AddressingMode::IndirectX,

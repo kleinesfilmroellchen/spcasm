@@ -10,7 +10,7 @@ pub(super) enum MovDirection {
 pub(super) fn assemble_incw_decw_instruction(
 	data: &mut AssembledData,
 	is_increment: bool,
-	target_address: Number,
+	target_address: AssemblyTimeValue,
 	instruction: &mut Instruction,
 ) {
 	data.append_instruction_with_8_bit_operand(if is_increment { 0x3A } else { 0x1A }, target_address, instruction);
@@ -19,7 +19,7 @@ pub(super) fn assemble_incw_decw_instruction(
 pub(super) fn assemble_add_sub_cmp_wide_instruction(
 	data: &mut AssembledData,
 	mnemonic: Mnemonic,
-	target_address: Number,
+	target_address: AssemblyTimeValue,
 	instruction: &mut Instruction,
 ) {
 	data.append_instruction_with_8_bit_operand(
@@ -36,7 +36,7 @@ pub(super) fn assemble_add_sub_cmp_wide_instruction(
 
 pub(super) fn assemble_mov_wide_instruction(
 	data: &mut AssembledData,
-	page_address: Number,
+	page_address: AssemblyTimeValue,
 	direction: &MovDirection,
 	instruction: &mut Instruction,
 ) {

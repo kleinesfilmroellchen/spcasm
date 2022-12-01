@@ -9,7 +9,7 @@ use std::sync::{Arc, Weak};
 
 use miette::{SourceOffset, SourceSpan};
 
-use self::instruction::{AddressingMode, Instruction, Number, Opcode};
+use self::instruction::{AddressingMode, Instruction, AssemblyTimeValue, Opcode};
 use self::lexer::lex;
 use self::reference::{GlobalLabel, MacroParameters, MacroParent, MacroParentReplacable, Reference};
 use crate::assembler::resolve_file;
@@ -537,11 +537,11 @@ pub fn try_make_direct_page_addressing_mode<T, ReturnType>(
 	non_dp_mode: impl FnOnce(T) -> ReturnType,
 ) -> ReturnType
 where
-	T: Into<Number> + Clone,
+	T: Into<AssemblyTimeValue> + Clone,
 {
-	let number: Number = value.clone().into().try_resolve();
+	let number: AssemblyTimeValue = value.clone().into().try_resolve();
 	match number {
-		Number::Literal(literal) if literal <= 0xFF => dp_mode(value),
+		AssemblyTimeValue::Literal(literal) if literal <= 0xFF => dp_mode(value),
 		_ => non_dp_mode(value),
 	}
 }

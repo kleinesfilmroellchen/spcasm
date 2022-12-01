@@ -27,7 +27,7 @@ pub(super) fn assemble_branching_instruction(
 	match &target {
 		// Note that a direct page address in the target is also interpreted as a relative offset for some branch
 		// instructions. For the other relative branches, it's in the source. JMP is absolute and uses full addresses.
-		AddressingMode::DirectPage(page_address_or_relative) | AddressingMode::Address(page_address_or_relative @ Number::Reference(_)) if mnemonic != Mnemonic::Jmp =>
+		AddressingMode::DirectPage(page_address_or_relative) | AddressingMode::Address(page_address_or_relative @ AssemblyTimeValue::Reference(_)) if mnemonic != Mnemonic::Jmp =>
 			match mnemonic {
 				Mnemonic::Bra => data.append_instruction_with_relative_reference(0x2F, page_address_or_relative.clone(), instruction)?,
 				Mnemonic::Beq => data.append_instruction_with_relative_reference(0xF0, page_address_or_relative.clone(), instruction)?,
@@ -40,7 +40,7 @@ pub(super) fn assemble_branching_instruction(
 				Mnemonic::Bpl => data.append_instruction_with_relative_reference(0x10, page_address_or_relative.clone(), instruction)?,
 				Mnemonic::Pcall => data.append_instruction_with_8_bit_operand(0x4F, page_address_or_relative.clone(), instruction)?,
 				Mnemonic::Tcall => data.append_instruction(0x01 | match page_address_or_relative {
-						Number::Literal(value) => (value & 0x0F) as u8,
+						AssemblyTimeValue::Literal(value) => (value & 0x0F) as u8,
 						_ => return Err(AssemblyError::InvalidAddressingMode {
 							is_first_operand: true,
 							mode: target.to_string(),
@@ -70,13 +70,13 @@ pub(super) fn assemble_branching_instruction(
 
 						// First argument is the checked direct page address
 						match page_address_or_relative {
-							Number::Literal(page_address) => data.append_8_bits(*page_address, None, instruction.span)?,
+							AssemblyTimeValue::Literal(page_address) => data.append_8_bits(*page_address, None, instruction.span)?,
 							value => data.append_8_bits_unresolved(value.clone(), 0, None, instruction.span)?,
 						}
 						// Second argument is the relative jump target.
 						// The relative unresolved reference needs a negative offset of 2, because we're the second operand.
 						match relative_source {
-							Number::Literal(relative_offset) => data.append_8_bits(relative_offset, None, instruction.span)?,
+							AssemblyTimeValue::Literal(relative_offset) => data.append_8_bits(relative_offset, None, instruction.span)?,
 							value => data.append_relative_unresolved(value, instruction.span)?,
 						}
 					} else {
@@ -96,13 +96,13 @@ pub(super) fn assemble_branching_instruction(
 				data.append_instruction(0xDE, instruction);
 				// First argument is the checked direct page address
 				match page_address {
-					Number::Literal(page_address) => data.append_8_bits(*page_address, None, instruction.span)?,
+					AssemblyTimeValue::Literal(page_address) => data.append_8_bits(*page_address, None, instruction.span)?,
 					value => data.append_8_bits_unresolved(value.clone(), 0, None, instruction.span)?,
 				}
 				// Second argument is the relative jump target.
 				// The relative unresolved reference needs a negative offset of 2, because we're the second operand.
 				match relative_source {
-					Number::Literal(relative_offset) => data.append_8_bits(relative_offset, None, instruction.span)?,
+					AssemblyTimeValue::Literal(relative_offset) => data.append_8_bits(relative_offset, None, instruction.span)?,
 					value => data.append_relative_unresolved(value, instruction.span)?,
 				}
 			} else {

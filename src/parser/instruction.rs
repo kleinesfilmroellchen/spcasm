@@ -183,26 +183,26 @@ impl Display for Mnemonic {
 	}
 }
 
-/// Any number, may be an expression that can be calculated at assembly time.
+/// Any numeric value that can be calculated at assembly time.
 #[derive(Clone, Debug, PartialEq)]
-pub enum Number {
-	/// A literal number.
+pub enum AssemblyTimeValue {
+	/// A literal.
 	Literal(MemoryAddress),
-	/// A reference that will resolve to a number later.
+	/// A reference that will resolve later.
 	Reference(Reference),
-	/// - expr; negating another number.
-	Negate(Box<Number>),
+	/// - expr; negating another value.
+	Negate(Box<AssemblyTimeValue>),
 	/// expr + expr
-	Add(Box<Number>, Box<Number>),
+	Add(Box<AssemblyTimeValue>, Box<AssemblyTimeValue>),
 	/// expr - expr
-	Subtract(Box<Number>, Box<Number>),
+	Subtract(Box<AssemblyTimeValue>, Box<AssemblyTimeValue>),
 	/// expr * expr
-	Multiply(Box<Number>, Box<Number>),
+	Multiply(Box<AssemblyTimeValue>, Box<AssemblyTimeValue>),
 	/// expr / expr
-	Divide(Box<Number>, Box<Number>),
+	Divide(Box<AssemblyTimeValue>, Box<AssemblyTimeValue>),
 }
 
-impl Number {
+impl AssemblyTimeValue {
 	/// Return the first reference that can be found in this expression.
 	#[must_use]
 	pub fn first_reference(&self) -> Option<Reference> {
@@ -235,7 +235,7 @@ impl Number {
 		}
 	}
 
-	/// Extracts the actual value of this number.
+	/// Extracts the concrete value.
 	/// # Panics
 	/// If the reference was not yet resolved, this function panics as it assumes that that has already happened.
 	#[must_use]
@@ -243,9 +243,9 @@ impl Number {
 		self.try_value((0, 0).into(), Arc::default()).unwrap()
 	}
 
-	/// Extracts the actual value of this number, if possible.
+	/// Extracts the concrete value, if possible.
 	/// # Errors
-	/// If the number cannot be resolved to a final numeric value.
+	/// If the value cannot be resolved.
 	pub fn try_value(
 		&self,
 		location: SourceSpan,
@@ -291,7 +291,7 @@ impl Number {
 		})
 	}
 
-	/// Try to resolve this number down to a literal. Even if that's not entirely possible, sub-expressions are
+	/// Try to resolve this value down to a literal. Even if that's not entirely possible, sub-expressions are
 	/// collapsed and resolved as far as possible.
 	#[must_use]
 	pub fn try_resolve(self) -> Self {
@@ -324,7 +324,7 @@ impl Number {
 	}
 }
 
-impl MacroParentReplacable for Number {
+impl MacroParentReplacable for AssemblyTimeValue {
 	fn replace_macro_parent(
 		&mut self,
 		replacement_parent: Arc<RefCell<reference::MacroParent>>,
@@ -347,27 +347,27 @@ impl MacroParentReplacable for Number {
 	}
 }
 
-impl From<MemoryAddress> for Number {
+impl From<MemoryAddress> for AssemblyTimeValue {
 	fn from(address: MemoryAddress) -> Self {
 		Self::Literal(address)
 	}
 }
 
-impl<T> From<(Number, T)> for Number {
-	fn from(value: (Number, T)) -> Self {
+impl<T> From<(AssemblyTimeValue, T)> for AssemblyTimeValue {
+	fn from(value: (AssemblyTimeValue, T)) -> Self {
 		value.0
 	}
 }
 
 // should be closure in upperhex formatter but borrow checker says no, again, no passing references to other closures
-fn write_correctly(prefix: char, f: &mut Formatter<'_>, address: &Number) -> Result<(), Error> {
+fn write_correctly(prefix: char, f: &mut Formatter<'_>, address: &AssemblyTimeValue) -> Result<(), Error> {
 	f.write_char(prefix)?;
 	fmt::UpperHex::fmt(address, f)
 }
 
-impl UpperHex for Number {
+impl UpperHex for AssemblyTimeValue {
 	fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), Error> {
-		let write_binary = |op, f: &mut Formatter, lhs: &Number, rhs: &Number| {
+		let write_binary = |op, f: &mut Formatter, lhs: &AssemblyTimeValue, rhs: &AssemblyTimeValue| {
 			write_correctly('(', f, lhs)?;
 			write_correctly(op, f, rhs)?;
 			f.write_char(')')
@@ -397,11 +397,11 @@ impl UpperHex for Number {
 				f.write_char('$')?;
 				fmt::UpperHex::fmt(numeric_address, f)
 			},
-			Number::Negate(number) => write_correctly('-', f, number.as_ref()),
-			Number::Add(lhs, rhs) => write_binary('+', f, lhs, rhs),
-			Number::Subtract(lhs, rhs) => write_binary('-', f, lhs.as_ref(), rhs.as_ref()),
-			Number::Multiply(lhs, rhs) => write_binary('*', f, lhs.as_ref(), rhs.as_ref()),
-			Number::Divide(lhs, rhs) => write_binary('/', f, lhs.as_ref(), rhs.as_ref()),
+			AssemblyTimeValue::Negate(number) => write_correctly('-', f, number.as_ref()),
+			AssemblyTimeValue::Add(lhs, rhs) => write_binary('+', f, lhs, rhs),
+			AssemblyTimeValue::Subtract(lhs, rhs) => write_binary('-', f, lhs.as_ref(), rhs.as_ref()),
+			AssemblyTimeValue::Multiply(lhs, rhs) => write_binary('*', f, lhs.as_ref(), rhs.as_ref()),
+			AssemblyTimeValue::Divide(lhs, rhs) => write_binary('/', f, lhs.as_ref(), rhs.as_ref()),
 		}
 	}
 }
@@ -410,7 +410,7 @@ impl UpperHex for Number {
 #[derive(Clone, Debug, PartialEq)]
 pub enum AddressingMode {
 	/// #immediate
-	Immediate(Number),
+	Immediate(AssemblyTimeValue),
 	/// (X)
 	IndirectX,
 	/// (Y)
@@ -418,27 +418,27 @@ pub enum AddressingMode {
 	/// (X) with automatic X++
 	IndirectXAutoIncrement,
 	/// (dp)
-	DirectPage(Number),
+	DirectPage(AssemblyTimeValue),
 	/// dp+X
-	DirectPageXIndexed(Number),
+	DirectPageXIndexed(AssemblyTimeValue),
 	/// dp+Y
-	DirectPageYIndexed(Number),
+	DirectPageYIndexed(AssemblyTimeValue),
 	/// abs
-	Address(Number),
+	Address(AssemblyTimeValue),
 	/// abs+X
-	XIndexed(Number),
+	XIndexed(AssemblyTimeValue),
 	/// abs+Y
-	YIndexed(Number),
+	YIndexed(AssemblyTimeValue),
 	/// (dp+X)
-	DirectPageXIndexedIndirect(Number),
+	DirectPageXIndexedIndirect(AssemblyTimeValue),
 	/// (dp)+Y
-	DirectPageIndirectYIndexed(Number),
+	DirectPageIndirectYIndexed(AssemblyTimeValue),
 	/// dp.bit
-	DirectPageBit(Number, u8),
+	DirectPageBit(AssemblyTimeValue, u8),
 	/// abs.bit
-	AddressBit(Number, u8),
+	AddressBit(AssemblyTimeValue, u8),
 	/// /abs.bit
-	NegatedAddressBit(Number, u8),
+	NegatedAddressBit(AssemblyTimeValue, u8),
 	/// C
 	CarryFlag,
 	/// A, X, Y, SP, ...
@@ -468,7 +468,7 @@ impl AddressingMode {
 	/// Return the number that this addressing mode references (mostly as an address), if any.
 	#[must_use]
 	#[allow(clippy::missing_const_for_fn)]
-	pub fn number(&self) -> Option<Number> {
+	pub fn number(&self) -> Option<AssemblyTimeValue> {
 		match self {
 			Self::Immediate(number)
 			| Self::DirectPage(number)
@@ -487,7 +487,7 @@ impl AddressingMode {
 	}
 
 	/// Returns a mutable reference to the number this addressing mode references, if any.
-	pub fn number_mut(&mut self) -> Option<&mut Number> {
+	pub fn number_mut(&mut self) -> Option<&mut AssemblyTimeValue> {
 		match self {
 			Self::Immediate(number)
 			| Self::DirectPage(number)
@@ -508,8 +508,8 @@ impl AddressingMode {
 	/// Try to coerce this addressing mode to direct page addressing if the internal number allows it.
 	#[must_use]
 	pub fn coerce_to_direct_page_addressing(self) -> Self {
-		if let Some(Number::Literal(resolved_address)) = self.number().map(Number::try_resolve) && resolved_address <= 0xFF {
-			let number = Number::Literal(resolved_address);
+		if let Some(AssemblyTimeValue::Literal(resolved_address)) = self.number().map(AssemblyTimeValue::try_resolve) && resolved_address <= 0xFF {
+			let number = AssemblyTimeValue::Literal(resolved_address);
 			match self {
 				Self::Address(..) => Self::DirectPage(number),
 				Self::XIndexed(..) => Self::DirectPageXIndexed(number),

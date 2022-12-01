@@ -9,7 +9,7 @@ use std::sync::Arc;
 use miette::SourceSpan;
 use spcasm_derive::Parse;
 
-use crate::parser::instruction::{MemoryAddress, Number};
+use crate::parser::instruction::{MemoryAddress, AssemblyTimeValue};
 use crate::parser::reference::{MacroParent, MacroParentReplacable, Reference};
 use crate::parser::{source_range, ProgramElement};
 use crate::{AssemblyCode, AssemblyError};
@@ -97,7 +97,7 @@ pub enum DirectiveValue {
 	/// dw <16-bit word>
 	Table {
 		/// The entries of the table. For simple directives like "dw $0A", this only has one entry.
-		values:     Vec<Number>,
+		values:     Vec<AssemblyTimeValue>,
 		/// How many bytes each entry occupies; depends on the specific directive used.
 		entry_size: u8,
 	},
@@ -106,7 +106,7 @@ pub enum DirectiveValue {
 	/// ascii(z) <string>
 	String { text: Vec<u8>, has_null_terminator: bool },
 	/// <reference> = <value>
-	AssignReference { reference: Reference, value: Number },
+	AssignReference { reference: Reference, value: AssemblyTimeValue },
 	/// incbin <file name>
 	Include { file: String, range: Option<SourceSpan> },
 	/// end

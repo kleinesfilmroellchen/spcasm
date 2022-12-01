@@ -10,7 +10,7 @@ use super::register::Register;
 use super::token::Token;
 use super::Parse;
 use crate::error::{AssemblyCode, AssemblyError};
-use crate::mcro::MacroSymbol;
+use crate::directive::DirectiveSymbol;
 
 /// Lex the given assembly into a list of tokens.
 /// # Errors
@@ -59,8 +59,8 @@ pub fn lex(source_code: Arc<AssemblyCode>) -> Result<Vec<Token>, Box<AssemblyErr
 				let identifier_span =  (start_index, identifier.len()).into();
 				tokens.push(Register::parse(&identifier.to_lowercase(), identifier_span, source_code.clone())
 								.map(|value| Token::Register(value, identifier_span))
-								.or_else(|_| MacroSymbol::parse(&identifier.to_lowercase(), identifier_span, source_code.clone())
-									.map(|value| Token::Macro(value, identifier_span)))
+								.or_else(|_| DirectiveSymbol::parse(&identifier.to_lowercase(), identifier_span, source_code.clone())
+									.map(|value| Token::Directive(value, identifier_span)))
 								.or_else(|_| Mnemonic::parse(&identifier.to_lowercase(), identifier_span, source_code.clone())
 									.map(|mnemonic| Token::Mnemonic(mnemonic, identifier_span)))
 								.or_else::<AssemblyError, _>(|_| Ok(Token::Identifier(identifier, identifier_span)))?);

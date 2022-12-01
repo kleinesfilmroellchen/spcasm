@@ -15,8 +15,8 @@ use self::reference::{GlobalLabel, MacroParameters, MacroParent, MacroParentRepl
 use crate::assembler::resolve_file;
 use crate::cli::{default_backend_options, BackendOptions};
 use crate::error::{AssemblyCode, AssemblyError};
-use crate::mcro::MacroValue;
-use crate::{lalrpop_adaptor, Macro};
+use crate::directive::DirectiveValue;
+use crate::{lalrpop_adaptor, Directive};
 
 pub mod instruction;
 pub mod lexer;
@@ -234,8 +234,8 @@ impl AssemblyFile {
 			// First match for reference resolution in instruction position
 			match element {
 				// Macro labeled with local label
-				ProgramElement::Macro(Macro { value, label: Some(Reference::Local(ref mut local)), .. }) => {
-					if let MacroValue::AssignReference { reference: Reference::Local(assigned_local), .. } = value {
+				ProgramElement::Directive(Directive { value, label: Some(Reference::Local(ref mut local)), .. }) => {
+					if let DirectiveValue::AssignReference { reference: Reference::Local(assigned_local), .. } = value {
 						*assigned_local = reference::merge_local_into_parent(
 							assigned_local.clone(),
 							current_global_label.clone(),
@@ -249,9 +249,9 @@ impl AssemblyFile {
 					)?;
 				},
 				// Macro labeled with global label
-				ProgramElement::Macro(Macro { label: Some(Reference::Global(ref global)), value, .. }) => {
+				ProgramElement::Directive(Directive { label: Some(Reference::Global(ref global)), value, .. }) => {
 					current_global_label = Some(global.clone());
-					if let MacroValue::AssignReference { reference: Reference::Local(local), .. } = value {
+					if let DirectiveValue::AssignReference { reference: Reference::Local(local), .. } = value {
 						*local = reference::merge_local_into_parent(
 							local.clone(),
 							current_global_label.clone(),
@@ -267,8 +267,8 @@ impl AssemblyFile {
 					current_global_label = Some(global.clone()),
 
 				// Anything labeled with local label: fill in the reference and merge local label.
-				ProgramElement::Macro(Macro {
-					value: MacroValue::AssignReference { reference: Reference::Local(ref mut local), .. },
+				ProgramElement::Directive(Directive {
+					value: DirectiveValue::AssignReference { reference: Reference::Local(ref mut local), .. },
 					..
 				})
 				| ProgramElement::Instruction(Instruction { label: Some(Reference::Local(ref mut local)), .. })
@@ -284,11 +284,11 @@ impl AssemblyFile {
 				ProgramElement::Instruction(Instruction { label: None, .. })
 				| ProgramElement::IncludeSource { label: None, .. }
 				| ProgramElement::UserDefinedMacroCall { label: None, .. }
-				| ProgramElement::Macro(Macro { label: None, .. })
+				| ProgramElement::Directive(Directive { label: None, .. })
 				| ProgramElement::Instruction(Instruction { label: Some(Reference::MacroGlobal { .. }), .. })
 				| ProgramElement::IncludeSource { label: Some(Reference::MacroGlobal { .. }), .. }
 				| ProgramElement::UserDefinedMacroCall { label: Some(Reference::MacroGlobal { .. }), .. }
-				| ProgramElement::Macro(Macro { label: Some(Reference::MacroGlobal { .. }), .. }) => (),
+				| ProgramElement::Directive(Directive { label: Some(Reference::MacroGlobal { .. }), .. }) => (),
 
 				// Anything labeled with a user macro argument: This is always an error; we're not inside a user macro.
 				ProgramElement::Instruction(Instruction {
@@ -303,7 +303,7 @@ impl AssemblyFile {
 					label: Some(ref mal @ Reference::MacroArgument { ref name, ref value, ref span, .. }),
 					..
 				}
-				| ProgramElement::Macro(Macro {
+				| ProgramElement::Directive(Directive {
 					label: Some(ref mal @ Reference::MacroArgument { ref name, ref value, ref span, .. }),
 					..
 				}) =>
@@ -334,8 +334,8 @@ impl AssemblyFile {
 	/// If a macro argument with a wrong name was encountered.
 	pub fn resolve_user_macro_arguments(&mut self) -> Result<(), Box<AssemblyError>> {
 		for element in &mut self.content {
-			if let ProgramElement::Macro(Macro {
-				value: MacroValue::UserDefinedMacro { ref arguments, body, name },
+			if let ProgramElement::Directive(Directive {
+				value: DirectiveValue::UserDefinedMacro { ref arguments, body, name },
 				..
 			}) = element
 			{
@@ -427,8 +427,8 @@ impl AssemblyFile {
 			.content
 			.iter()
 			.filter_map(|el| match el {
-				ProgramElement::Macro(Macro {
-					span, value: value @ MacroValue::UserDefinedMacro { name, .. }, ..
+				ProgramElement::Directive(Directive {
+					span, value: value @ DirectiveValue::UserDefinedMacro { name, .. }, ..
 				}) => Some((name.clone(), (*span, value.clone()))),
 				_ => None,
 			})
@@ -456,7 +456,7 @@ impl AssemblyFile {
 				}
 
 				let called_macro = user_macros.get(macro_name);
-				if let Some((span, MacroValue::UserDefinedMacro { name, arguments, body })) = called_macro {
+				if let Some((span, DirectiveValue::UserDefinedMacro { name, arguments, body })) = called_macro {
 					let arguments = arguments.borrow();
 					let formal_arguments = match &(&*arguments).parameters {
 						MacroParameters::Formal(formal_arguments) => formal_arguments,

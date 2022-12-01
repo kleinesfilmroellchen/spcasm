@@ -18,7 +18,7 @@ use crate::parser::{
 	source_range,
 	program::ProgramElement,
 };
-use crate::mcro::{MacroSymbol, Macro, MacroValue};
+use crate::directive::{DirectiveSymbol, Directive, DirectiveValue};
 use crate::error::AssemblyError;
 use crate::AssemblyCode;
 
@@ -26,15 +26,15 @@ grammar<'env, 'src>(environment: &'env Arc<RefCell<Environment>>, source_code: &
 
 pub Program: Vec<ProgramElement> = "\n"* <line:( <Line> )*> => line;
 
-Line: ProgramElement = <label:( <LabelForInstruction> "\n"* )?> <element:InstructionOrMacro> <newlines:("\n"+)> => 
+Line: ProgramElement = <label:( <LabelForInstruction> "\n"* )?> <element:InstructionOrDirective> <newlines:("\n"+)> => 
 	element.set_label(label).extend_span(newlines[0].into());
 
-InstructionOrMacro: ProgramElement = {
+InstructionOrDirective: ProgramElement = {
 	InstructionWithTestComment => ProgramElement::Instruction(<>),
-	Macro => ProgramElement::Macro(<>),
-	<mcro:"include"> <file:"string"> => ProgramElement::IncludeSource {
+	Directive => ProgramElement::Directive(<>),
+	<directive:"include"> <file:"string"> => ProgramElement::IncludeSource {
 		file: String::from_utf8_lossy(&file.0).to_string(),
-		span: source_range(mcro.into(), file.1.into()),
+		span: source_range(directive.into(), file.1.into()),
 		label: None,
 	},
 	MacroCall => <>,
@@ -85,104 +85,104 @@ Mnemonic: (Mnemonic, bool, SourceSpan) = {
 	<mnemonic:"mnemonic"> <b:".b"> => (mnemonic.0, true, source_range(mnemonic.1.into(), b.into())),
 };
 
-Macro: Macro = {	
-	<data_macro:TableMacro> <numbers:NumberList> => Macro {
-		value: MacroValue::Table {
+Directive: Directive = {	
+	<data_directive:TableDirective> <numbers:NumberList> => Directive {
+		value: DirectiveValue::Table {
 			values: numbers,
-			entry_size: match data_macro.0 {
-				MacroSymbol::Byte | MacroSymbol::Db => 1,
-				MacroSymbol::Dw | MacroSymbol::Word => 2,
-				MacroSymbol::Dl => 3,
-				MacroSymbol::Dd => 4,
+			entry_size: match data_directive.0 {
+				DirectiveSymbol::Byte | DirectiveSymbol::Db => 1,
+				DirectiveSymbol::Dw | DirectiveSymbol::Word => 2,
+				DirectiveSymbol::Dl => 3,
+				DirectiveSymbol::Dd => 4,
 				_ => unreachable!(),
 			},
 		},
-		span: data_macro.1,
+		span: data_directive.1,
 		label: None,
 	},
-	<mcro:"org"> <address:Number> =>? Ok(Macro {
-		value: MacroValue::Org(address.try_value(mcro, source_code.clone()).map_err(|err| ParseError::User {
-			error: AssemblyError::ReferencesInMacroArgument {
-				mcro: MacroSymbol::Org,
+	<directive:"org"> <address:Number> =>? Ok(Directive {
+		value: DirectiveValue::Org(address.try_value(directive, source_code.clone()).map_err(|err| ParseError::User {
+			error: AssemblyError::ReferencesInDirectiveArgument {
+				directive: DirectiveSymbol::Org,
 				src: source_code.clone(),
-				location: mcro,
+				location: directive,
 				// TODO: reintroduce when numbers have source locations
 				// argument_location: address.source_span(),
 			},
 		})?),
-		span: mcro,
+		span: directive,
 		label: None,
 	}),
-	<mcro:"brr"> <filename:"string"> => Macro {
-		value: MacroValue::Brr(String::from_utf8_lossy(&filename.0).into_owned()),
-		span: source_range(mcro.into(), filename.1.into()),
+	<directive:"brr"> <filename:"string"> => Directive {
+		value: DirectiveValue::Brr(String::from_utf8_lossy(&filename.0).into_owned()),
+		span: source_range(directive.into(), filename.1.into()),
 		label: None,
 	},
-	<mcro:"ascii"> <text:"string"> => Macro {
-		value: MacroValue::String { text: text.0, has_null_terminator: false },
-		span: source_range(mcro.into(), text.1.into()),
+	<directive:"ascii"> <text:"string"> => Directive {
+		value: DirectiveValue::String { text: text.0, has_null_terminator: false },
+		span: source_range(directive.into(), text.1.into()),
 		label: None,
 	},
-	<mcro:"asciiz"> <text:"string"> => Macro {
-		value: MacroValue::String { text: text.0, has_null_terminator: true },
-		span: source_range(mcro.into(), text.1.into()),
+	<directive:"asciiz"> <text:"string"> => Directive {
+		value: DirectiveValue::String { text: text.0, has_null_terminator: true },
+		span: source_range(directive.into(), text.1.into()),
 		label: None,
 	},
-	<mcro:"incbin"> <text:"string"> <range:InclusionRange?> => Macro {
-		value: MacroValue::Include {
+	<directive:"incbin"> <text:"string"> <range:InclusionRange?> => Directive {
+		value: DirectiveValue::Include {
 			file: String::from_utf8_lossy(&text.0).into_owned(),
 			range,
 		},
-		span: source_range(mcro.into(), text.1.into()),
+		span: source_range(directive.into(), text.1.into()),
 		label: None,
 	},
-	"end" => Macro {
-		value: MacroValue::End,
+	"end" => Directive {
+		value: DirectiveValue::End,
 		span: <>,
 		label: None,
 	},
-	"pushpc" => Macro {
-		value: MacroValue::PushSection,
+	"pushpc" => Directive {
+		value: DirectiveValue::PushSection,
 		span: <>,
 		label: None,
 	},
-	"pullpc" => Macro {
-		value: MacroValue::PopSection,
+	"pullpc" => Directive {
+		value: DirectiveValue::PopSection,
 		span: <>,
 		label: None,
 	},
-	ArchMacro,
+	ArchDirective,
 	LabelAssignment,
 	UserDefinedMacro,
 };
 
-TableMacro: (MacroSymbol, SourceSpan) = {
-	"db" => (MacroSymbol::Db, <>),
-	"byte" => (MacroSymbol::Db, <>),
-	"dw" => (MacroSymbol::Dw, <>),
-	"word" => (MacroSymbol::Dw, <>),
-	"dl" => (MacroSymbol::Dl, <>),
-	"dd" => (MacroSymbol::Dd, <>),
+TableDirective: (DirectiveSymbol, SourceSpan) = {
+	"db" => (DirectiveSymbol::Db, <>),
+	"byte" => (DirectiveSymbol::Db, <>),
+	"dw" => (DirectiveSymbol::Dw, <>),
+	"word" => (DirectiveSymbol::Dw, <>),
+	"dl" => (DirectiveSymbol::Dl, <>),
+	"dd" => (DirectiveSymbol::Dd, <>),
 };
 
-ArchMacro: Macro = <mcro:"arch"> <arch:"identifier"> =>? {
+ArchDirective: Directive = <directive:"arch"> <arch:"identifier"> =>? {
 	let architecture = arch.0;
 	if ["spc700", "spc700-raw"].contains(&&*architecture) {
-		environment.borrow().report_or_throw(AssemblyError::ArchitectureMacroIgnored {
+		environment.borrow().report_or_throw(AssemblyError::ArchitectureDirectiveIgnored {
 			src:      source_code.clone(),
-			location: source_range(mcro.into(), arch.1.into()),
-		}).map_err(|error| ParseError::User { error: *error }).map(|_| Macro::default())
+			location: source_range(directive.into(), arch.1.into()),
+		}).map_err(|error| ParseError::User { error: *error }).map(|_| Directive::default())
 	} else {
-		Err(AssemblyError::InvalidArchitectureMacro {
+		Err(AssemblyError::InvalidArchitectureDirective {
 			arch:     architecture,
 			src:      source_code.clone(),
-			location: source_range(mcro.into(), arch.1.into()),
+			location: source_range(directive.into(), arch.1.into()),
 		}).map_err(|error| ParseError::User { error })
 	}
 };
 
-UserDefinedMacro: Macro = <start:"macro"> <name:"identifier"> <arguments:UserDefinedMacroArguments?> "\n" <body:Program> <end:"endmacro"> => Macro {
-	value: MacroValue::UserDefinedMacro {
+UserDefinedMacro: Directive = <start:"macro"> <name:"identifier"> <arguments:UserDefinedMacroArguments?> "\n" <body:Program> <end:"endmacro"> => Directive {
+	value: DirectiveValue::UserDefinedMacro {
 		name: name.0,
 		arguments: MacroParent::new_formal(arguments, name.1),
 		body,
@@ -262,10 +262,10 @@ Reference: Reference = {
 	}
 };
 
-LabelAssignment: Macro = <mut reference:Reference> <eq:"="> <value:Number> => {
+LabelAssignment: Directive = <mut reference:Reference> <eq:"="> <value:Number> => {
 	reference.set_location(value.clone());
-	Macro {
-		value: MacroValue::AssignReference { reference: reference.clone(), value },
+	Directive {
+		value: DirectiveValue::AssignReference { reference: reference.clone(), value },
 		span: source_range(reference.source_span().into(), eq.into()),
 		label: None,
 	}
@@ -340,24 +340,24 @@ extern {
 		"PSW" => Token::Register(Register::PSW, <SourceSpan>),
 		"YA" => Token::Register(Register::YA, <SourceSpan>),
 		"C" => Token::Register(Register::C, <SourceSpan>),
-		"org" => Token::Macro(MacroSymbol::Org, <SourceSpan>),
-		"db" => Token::Macro(MacroSymbol::Db, <SourceSpan>),
-		"byte" => Token::Macro(MacroSymbol::Byte, <SourceSpan>),
-		"dw" => Token::Macro(MacroSymbol::Dw, <SourceSpan>),
-		"word" => Token::Macro(MacroSymbol::Word, <SourceSpan>),
-		"dl" => Token::Macro(MacroSymbol::Dl, <SourceSpan>),
-		"dd" => Token::Macro(MacroSymbol::Dd, <SourceSpan>),
-		"ascii" => Token::Macro(MacroSymbol::Ascii, <SourceSpan>),
-		"asciiz" => Token::Macro(MacroSymbol::Asciiz, <SourceSpan>),
-		"incbin" => Token::Macro(MacroSymbol::Incbin, <SourceSpan>),
-		"include" => Token::Macro(MacroSymbol::Include, <SourceSpan>),
-		"end" => Token::Macro(MacroSymbol::End, <SourceSpan>),
-		"brr" => Token::Macro(MacroSymbol::Brr, <SourceSpan>),
-		"pushpc" => Token::Macro(MacroSymbol::Pushpc, <SourceSpan>),
-		"pullpc" => Token::Macro(MacroSymbol::Pullpc, <SourceSpan>),
-		"arch" => Token::Macro(MacroSymbol::Arch, <SourceSpan>),
-		"macro" => Token::Macro(MacroSymbol::Macro, <SourceSpan>),
-		"endmacro" => Token::Macro(MacroSymbol::EndMacro, <SourceSpan>),
+		"org" => Token::Directive(DirectiveSymbol::Org, <SourceSpan>),
+		"db" => Token::Directive(DirectiveSymbol::Db, <SourceSpan>),
+		"byte" => Token::Directive(DirectiveSymbol::Byte, <SourceSpan>),
+		"dw" => Token::Directive(DirectiveSymbol::Dw, <SourceSpan>),
+		"word" => Token::Directive(DirectiveSymbol::Word, <SourceSpan>),
+		"dl" => Token::Directive(DirectiveSymbol::Dl, <SourceSpan>),
+		"dd" => Token::Directive(DirectiveSymbol::Dd, <SourceSpan>),
+		"ascii" => Token::Directive(DirectiveSymbol::Ascii, <SourceSpan>),
+		"asciiz" => Token::Directive(DirectiveSymbol::Asciiz, <SourceSpan>),
+		"incbin" => Token::Directive(DirectiveSymbol::Incbin, <SourceSpan>),
+		"include" => Token::Directive(DirectiveSymbol::Include, <SourceSpan>),
+		"end" => Token::Directive(DirectiveSymbol::End, <SourceSpan>),
+		"brr" => Token::Directive(DirectiveSymbol::Brr, <SourceSpan>),
+		"pushpc" => Token::Directive(DirectiveSymbol::Pushpc, <SourceSpan>),
+		"pullpc" => Token::Directive(DirectiveSymbol::Pullpc, <SourceSpan>),
+		"arch" => Token::Directive(DirectiveSymbol::Arch, <SourceSpan>),
+		"macro" => Token::Directive(DirectiveSymbol::Macro, <SourceSpan>),
+		"endmacro" => Token::Directive(DirectiveSymbol::EndMacro, <SourceSpan>),
 		"number" => Token::Number(<i64>, <SourceSpan>),
 		"string" => Token::String(<Vec<u8>>, <SourceSpan>),
 		"#" => Token::Hash(<SourceOffset>),

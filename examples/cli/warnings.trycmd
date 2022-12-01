@@ -1,19 +1,19 @@
 ```trycmd
 $ spcasm examples/test.spcasm
-spcasm::valid_arch_macro
+spcasm::valid_arch_directive
 
-  ☞ Legal architecture macro ignored
+  ☞ Legal architecture directive ignored
    ╭─[examples/test.spcasm:1:1]
  1 │ arch spc700-raw
    · ───────┬───────
-   ·        ╰── `arch` macro
+   ·        ╰── `arch` directive
  2 │ org 0
  3 │ start:        ; @ 0
  4 │    MOV A,#$10    ;= E8 10
    ╰────
-  help: spcasm supports `arch` macros for compatibility with the Asar multi-
-        architecture assembler. This arch directive points to the spc700
-        architecture and is therefore safely ignored.
+  help: spcasm supports `arch` directives for compatibility with the Asar
+        multi-architecture assembler. This arch directive points to the
+        spc700 architecture and is therefore safely ignored.
 
 spcasm::non_direct_page_reference
 
@@ -65,40 +65,40 @@ $ spcasm -w all examples/test.spcasm
 ```trycmd
 $ spcasm -W all examples/test.spcasm
 ? failed
-Error: spcasm::valid_arch_macro
+Error: spcasm::valid_arch_directive
 
-  ☞ Legal architecture macro ignored
+  ☞ Legal architecture directive ignored
    ╭─[examples/test.spcasm:1:1]
  1 │ arch spc700-raw
    · ───────┬───────
-   ·        ╰── `arch` macro
+   ·        ╰── `arch` directive
  2 │ org 0
  3 │ start:        ; @ 0
  4 │    MOV A,#$10    ;= E8 10
    ╰────
-  help: spcasm supports `arch` macros for compatibility with the Asar multi-
-        architecture assembler. This arch directive points to the spc700
-        architecture and is therefore safely ignored.
+  help: spcasm supports `arch` directives for compatibility with the Asar
+        multi-architecture assembler. This arch directive points to the
+        spc700 architecture and is therefore safely ignored.
 
 
 ```
 
 ```trycmd
 $ spcasm -w file_not_found examples/test.spcasm
-spcasm::valid_arch_macro
+spcasm::valid_arch_directive
 
-  ☞ Legal architecture macro ignored
+  ☞ Legal architecture directive ignored
    ╭─[examples/test.spcasm:1:1]
  1 │ arch spc700-raw
    · ───────┬───────
-   ·        ╰── `arch` macro
+   ·        ╰── `arch` directive
  2 │ org 0
  3 │ start:        ; @ 0
  4 │    MOV A,#$10    ;= E8 10
    ╰────
-  help: spcasm supports `arch` macros for compatibility with the Asar multi-
-        architecture assembler. This arch directive points to the spc700
-        architecture and is therefore safely ignored.
+  help: spcasm supports `arch` directives for compatibility with the Asar
+        multi-architecture assembler. This arch directive points to the
+        spc700 architecture and is therefore safely ignored.
 
 spcasm::non_direct_page_reference
 
@@ -144,20 +144,20 @@ spcasm::non_direct_page_reference
 
 ```trycmd
 $ spcasm -w spcasm::file_not_found examples/test.spcasm
-spcasm::valid_arch_macro
+spcasm::valid_arch_directive
 
-  ☞ Legal architecture macro ignored
+  ☞ Legal architecture directive ignored
    ╭─[examples/test.spcasm:1:1]
  1 │ arch spc700-raw
    · ───────┬───────
-   ·        ╰── `arch` macro
+   ·        ╰── `arch` directive
  2 │ org 0
  3 │ start:        ; @ 0
  4 │    MOV A,#$10    ;= E8 10
    ╰────
-  help: spcasm supports `arch` macros for compatibility with the Asar multi-
-        architecture assembler. This arch directive points to the spc700
-        architecture and is therefore safely ignored.
+  help: spcasm supports `arch` directives for compatibility with the Asar
+        multi-architecture assembler. This arch directive points to the
+        spc700 architecture and is therefore safely ignored.
 
 spcasm::non_direct_page_reference
 

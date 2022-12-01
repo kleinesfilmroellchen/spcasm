@@ -15,11 +15,11 @@ use r16bit::MovDirection;
 use crate::brr::{self, wav};
 use crate::cli::{default_backend_options, BackendOptions};
 use crate::error::{AssemblyCode, AssemblyError};
-use crate::mcro::MacroValue;
+use crate::directive::DirectiveValue;
 use crate::parser::instruction::{AddressingMode, Instruction, MemoryAddress, Mnemonic, Number, Opcode};
 use crate::parser::reference::{Reference, Resolvable};
 use crate::parser::{AssemblyFile, ProgramElement, Register};
-use crate::{pretty_hex, Macro};
+use crate::{pretty_hex, Directive};
 
 mod arithmetic_logic;
 mod bit;
@@ -45,7 +45,7 @@ pub(crate) fn assemble(
 	for program_element in &mut main_file.content {
 		match program_element {
 			ProgramElement::Instruction(instruction) => assemble_instruction(&mut data, instruction)?,
-			ProgramElement::Macro(r#macro) => assemble_macro(&mut data, r#macro)?,
+			ProgramElement::Directive(directive) => assemble_directive(&mut data, directive)?,
 			ProgramElement::IncludeSource { .. } =>
 				unreachable!("there should not be any remaining unincluded source code at assembly time"),
 			ProgramElement::UserDefinedMacroCall { .. } =>
@@ -241,54 +241,54 @@ fn assemble_instruction(data: &mut AssembledData, instruction: &mut Instruction)
 }
 
 #[allow(clippy::unnecessary_wraps)]
-fn assemble_macro(data: &mut AssembledData, mcro: &mut Macro) -> Result<(), Box<AssemblyError>> {
-	match mcro.value {
-		MacroValue::Org(address) => {
+fn assemble_directive(data: &mut AssembledData, directive: &mut Directive) -> Result<(), Box<AssemblyError>> {
+	match directive.value {
+		DirectiveValue::Org(address) => {
 			data.new_segment(address);
 		},
-		MacroValue::Table { entry_size, ref values } => {
-			let mut reference = mcro.label.clone();
+		DirectiveValue::Table { entry_size, ref values } => {
+			let mut reference = directive.label.clone();
 			for value in values {
 				match entry_size {
-					1 => data.append_8_bits_unresolved(value.clone(), 0, reference, mcro.span)?,
-					2 => data.append_16_bits_unresolved(value.clone(), reference, mcro.span)?,
+					1 => data.append_8_bits_unresolved(value.clone(), 0, reference, directive.span)?,
+					2 => data.append_16_bits_unresolved(value.clone(), reference, directive.span)?,
 					3 | 4 => unimplemented!(),
 					_ => unreachable!(),
 				}
 				reference = None;
 			}
 		},
-		MacroValue::Brr(ref file_name) => {
+		DirectiveValue::Brr(ref file_name) => {
 			// Resolve the audio file's path relative to the source file.
-			let actual_path = resolve_file(&data.source_code, mcro.span, file_name)?;
+			let actual_path = resolve_file(&data.source_code, directive.span, file_name)?;
 			let file = File::open(actual_path).map_err(|os_error| AssemblyError::FileNotFound {
 				os_error,
 				file_name: file_name.clone(),
 				src: data.source_code.clone(),
-				location: mcro.span,
+				location: directive.span,
 			})?;
 			let mut sample_data =
 				wav::read_wav_for_brr(file).map_err(|error_text| AssemblyError::AudioProcessingError {
 					error_text,
 					file_name: file_name.clone(),
 					src: data.source_code.clone(),
-					location: mcro.span,
+					location: directive.span,
 				})?;
 			let encoded = brr::encode_to_brr(&mut sample_data, false, brr::CompressionLevel::Max);
 
-			data.append_bytes(encoded, &mcro.label, mcro.span);
+			data.append_bytes(encoded, &directive.label, directive.span);
 		},
-		MacroValue::String { ref text, has_null_terminator } => {
+		DirectiveValue::String { ref text, has_null_terminator } => {
 			let mut is_first = true;
 			for chr in text {
-				data.append(*chr, if is_first { mcro.label.clone() } else { None }, mcro.span);
+				data.append(*chr, if is_first { directive.label.clone() } else { None }, directive.span);
 				is_first = false;
 			}
 			if has_null_terminator {
-				data.append(0, if is_first { mcro.label.clone() } else { None }, mcro.span);
+				data.append(0, if is_first { directive.label.clone() } else { None }, directive.span);
 			}
 		},
-		MacroValue::AssignReference { ref mut reference, ref value } => match reference {
+		DirectiveValue::AssignReference { ref mut reference, ref value } => match reference {
 			Reference::Local(reference) => {
 				reference.borrow_mut().location = Some(Box::new(value.clone().try_resolve()));
 			},
@@ -309,13 +309,13 @@ fn assemble_macro(data: &mut AssembledData, mcro: &mut Macro) -> Result<(), Box<
 				}
 				.into()),
 		},
-		MacroValue::Include { ref file, range } => {
-			let binary_file = resolve_file(&data.source_code, mcro.span, file)?;
+		DirectiveValue::Include { ref file, range } => {
+			let binary_file = resolve_file(&data.source_code, directive.span, file)?;
 			let mut binary_data = std::fs::read(binary_file).map_err(|os_error| AssemblyError::FileNotFound {
 				os_error,
 				file_name: file.clone(),
 				src: data.source_code.clone(),
-				location: mcro.span,
+				location: directive.span,
 			})?;
 			if let Some(range) = range {
 				let max_number_of_bytes = binary_data.len().saturating_sub(range.offset());
@@ -327,23 +327,23 @@ fn assemble_macro(data: &mut AssembledData, mcro: &mut Macro) -> Result<(), Box<
 						file:     file.clone(),
 						file_len: binary_data.len(),
 						src:      data.source_code.clone(),
-						location: mcro.span,
+						location: directive.span,
 					})?
 					.to_vec();
 			}
 
-			data.append_bytes(binary_data, &mcro.label, mcro.span);
+			data.append_bytes(binary_data, &directive.label, directive.span);
 		},
-		MacroValue::End => {
+		DirectiveValue::End => {
 			data.should_stop = true;
 		},
-		MacroValue::PopSection => data
+		DirectiveValue::PopSection => data
 			.pop_segment()
-			.map_err(|_| AssemblyError::NoSegmentOnStack { location: mcro.span, src: data.source_code.clone() })?,
-		MacroValue::PushSection => data
+			.map_err(|_| AssemblyError::NoSegmentOnStack { location: directive.span, src: data.source_code.clone() })?,
+		DirectiveValue::PushSection => data
 			.push_segment()
-			.map_err(|_| AssemblyError::MissingSegment { location: mcro.span, src: data.source_code.clone() })?,
-		MacroValue::UserDefinedMacro { .. } => {},
+			.map_err(|_| AssemblyError::MissingSegment { location: directive.span, src: data.source_code.clone() })?,
+		DirectiveValue::UserDefinedMacro { .. } => {},
 	}
 	Ok(())
 }
@@ -402,7 +402,7 @@ pub struct LabeledMemoryValue {
 	pub label:                Option<Reference>,
 	/// The actual memory value, which might or might not be resolved.
 	pub value:                MemoryValue,
-	/// The source span of the instruction or macro that was compiled to this memory value.
+	/// The source span of the instruction or directive that was compiled to this memory value.
 	pub instruction_location: SourceSpan,
 }
 

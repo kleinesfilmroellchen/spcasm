@@ -38,7 +38,7 @@ mod default_hacks;
 pub mod elf;
 mod error;
 mod lalrpop_adaptor;
-mod mcro;
+mod directive;
 pub mod parser;
 lalrpop_mod!(asm);
 

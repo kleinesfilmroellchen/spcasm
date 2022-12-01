@@ -31,22 +31,22 @@ In the following, each error is listed with an example and a detailed explanatio
 
 Many SPC700 instructions can save space and clock cycles by using direct page addressing when accessing either the zeroth or first page of memory (see [the reference](reference/)). However, because direct page addresses depend on which of the two direct pages are selected and how large instructions actually are, spcasm can't currently automatically use direct page addressing if references appear in an operand that _might_ be a direct page address mode. Therefore, spcasm warns you that it found out this address is within a direct page, but it couldn't actually assemble the instruction to use direct-page addressing. The mnemonic suffix `.b` is available to force any instruction to use direct page addressing if possible.
 
-### spcasm::valid_arch_macro
+### spcasm::valid_arch_directive
 
 ```
-  ☞ Legal architecture macro ignored
+  ☞ Legal architecture directive ignored
    ╭─[examples/test.spcasm:1:1]
  1 │ arch spc700
    · ─────┬─────
-   ·      ╰── `arch` macro
+   ·      ╰── `arch` directive
  2 │ org 0
  3 │ start:        ; @ 0
  4 │    MOV A,#$10    ;= E8 10
    ╰────
-  help: spcasm supports `arch` macros for compatibility with the Asar multi-architecture assembler. This arch directive points to the spc700 architecture and is therefore safely ignored.
+  help: spcasm supports `arch` directives for compatibility with the Asar multi-architecture assembler. This arch directive points to the spc700 architecture and is therefore safely ignored.
 ```
 
-spcasm has a whole collection of features targeted at compatibility with the popular [Asar](https://rpghacker.github.io/asar/manual/) multi-architecture SNES patch assembler. As a multi-architecture assembler, Asar allows you to [specify the architecture of an assembly file](https://rpghacker.github.io/asar/manual/#archs) and even switch between them. In order to allow compilation with pure SPC-700 assembly originally written for Asar, spcasm therefore recognizes the `arch` macro and accepts any SPC-700-related architecture specifications like `spc700`. This advice exists so that you are informed of ignored architecture macros and to allow you to forbid the use of such macros.
+spcasm has a whole collection of features targeted at compatibility with the popular [Asar](https://rpghacker.github.io/asar/manual/) multi-architecture SNES patch assembler. As a multi-architecture assembler, Asar allows you to [specify the architecture of an assembly file](https://rpghacker.github.io/asar/manual/#archs) and even switch between them. In order to allow compilation with pure SPC-700 assembly originally written for Asar, spcasm therefore recognizes the `arch` directive and accepts any SPC-700-related architecture specifications like `spc700`. This advice exists so that you are informed of ignored architecture directives and to allow you to forbid the use of such directives.
 
 ## Warnings
 
@@ -68,7 +68,7 @@ spcasm has a whole collection of features targeted at compatibility with the pop
   help: Remove these upper bits
 ```
 
-In most places, numbers have a limited size, often 8 or 16 bits. However, user-specified numbers are initially limited much higher, to 64-bit signed numbers, in order to allow computations that involve large intermediate values. When using those large numbers in these bit-limited places, the higher bits are simply cut off or truncated. This can be surprising depending on what exact instruction or macro the number is used in, so spcasm issues a specific warning by default.
+In most places, numbers have a limited size, often 8 or 16 bits. However, user-specified numbers are initially limited much higher, to 64-bit signed numbers, in order to allow computations that involve large intermediate values. When using those large numbers in these bit-limited places, the higher bits are simply cut off or truncated. This can be surprising depending on what exact instruction or directive the number is used in, so spcasm issues a specific warning by default.
 
 ## Errors
 
@@ -91,7 +91,7 @@ Arguments to user-defined macros are specified with angle bracket syntax, like `
   help: This error is caused by the malformed input audio file "../binary.bin". If your audio player understands this file just fine, please file an spcasm bug.
 ```
 
-The `brr` macro reads audio from WAV files and reports this error if the input file is not a valid WAV file. The exact error depends on what the third-party wav backend reports, but it is usually enough to check which file was included and test it with an audio player.
+The `brr` directive reads audio from WAV files and reports this error if the input file is not a valid WAV file. The exact error depends on what the third-party wav backend reports, but it is usually enough to check which file was included and test it with an audio player.
 
 Known unsupported WAV features include all WAV extensions which compress audio, so use standard uncompressed WAV files instead.
 
@@ -104,7 +104,7 @@ Known unsupported WAV features include all WAV extensions which compress audio, 
    · ──┬──
    ·   ╰── Segment stack access here
    ╰────
-  help: Macros like `pullpc` require that you push a segment to the stack beforehand with `pushpc`.
+  help: Directives like `pullpc` require that you push a segment to the stack beforehand with `pushpc`.
 ```
 
 The segment stack stores segments for later reuse and is manipulated with `pushpc` and `pullpc` Similar to [missing_segment](#spcasmmissingsegment), you can't restore a segment if none has been saved yet.
@@ -137,9 +137,9 @@ _Technically_ this is a proxy error for all kinds of I/O errors, but it almost e
         from examples/errors/circularly-included.spcasm.noerror
 ```
 
-_(The example is slightly confusing; the pointer is not referring to the include macro at the beginning of the file, it's just a coincidence.)_
+_(The example is slightly confusing; the pointer is not referring to the include directive at the beginning of the file, it's just a coincidence.)_
 
-Assembly source file inclusion must be free of cycles, as including another file effectively copies that file's content in place of the `include` macro. This error is one of the few times when you'll see the include path of a file as it helps with troubleshooting. The file (a) that was attempted to be included is a file that directly or indirectly is a parent of the current file (b). That means that it (a) included the current file (b), which establishes a loop.
+Assembly source file inclusion must be free of cycles, as including another file effectively copies that file's content in place of the `include` directive. This error is one of the few times when you'll see the include path of a file as it helps with troubleshooting. The file (a) that was attempted to be included is a file that directly or indirectly is a parent of the current file (b). That means that it (a) included the current file (b), which establishes a loop.
 
 ```
                  include cycle
@@ -184,19 +184,19 @@ This is one of the main instruction semantics errors together with [invalid_addr
 
 To solve this error, it doesn't hurt to look at [the SPC700 reference](reference/README.md).
 
-### spcasm::invalid_arch_macro
+### spcasm::invalid_arch_directive
 
 ```
   × Unknown architecture `65c816` specified
    ╭─[examples/errors/unsupported-arch.spcasm:1:1]
  1 │ arch 65c816
    · ─────┬─────
-   ·      ╰── `arch` macro
+   ·      ╰── `arch` directive
    ╰────
-  help: spcasm supports `arch` macros for compatibility with the Asar multi-architecture assembler. This macro specifies that the architecture of the assembly source is not (completely) SPC700, therefore spcasm cannot assemble this file.
+  help: spcasm supports `arch` directives for compatibility with the Asar multi-architecture assembler. This directive specifies that the architecture of the assembly source is not (completely) SPC700, therefore spcasm cannot assemble this file.
 ```
 
-See [valid_arch_macro](#spcasmvalidarchmacro); when compiling files originally targeted at Asar this error detects early when you are trying to compile non-SPC700 assembly.
+See [valid_arch_directive](#spcasmvalidarchdirective); when compiling files originally targeted at Asar this error detects early when you are trying to compile non-SPC700 assembly.
 
 ### spcasm::invalid_constant
 
@@ -218,7 +218,7 @@ Note: This is a theoretical error the lexer can produce, but because invalid con
 
 For range specifications, like when including binary files, the Asar style range syntax is a `start-end` format. Obviously, the start then needs to be before (or the same as) the end. Often you just accidentally swapped these limits.
 
-### spcasm::references_in_macro_argument
+### spcasm::references_in_directive_argument
 
 ```
   × Invalid use of references in an argument for `org`
@@ -226,12 +226,12 @@ For range specifications, like when including binary files, the Asar style range
  3 │
  4 │ org dp_label
    · ─┬─
-   ·  ╰── This macro
+   ·  ╰── This directive
    ╰────
-  help: Because the macro argument can determine a reference's position, resolving the argument value is not generally possible. For this reason, references are not allowed to be used in a macro argument.
+  help: Because the directive argument can determine a reference's position, resolving the argument value is not generally possible. For this reason, references are not allowed to be used in a directive argument.
 ```
 
-Some macros, notably the `org` macro, disallow the use of references and other dynamic expressions in their argument(s) as that easily creates unresolvable circular dependencies. For example, consider this assembly code:
+Some directives, notably the `org` directive, disallow the use of references and other dynamic expressions in their argument(s) as that easily creates unresolvable circular dependencies. For example, consider this assembly code:
 
 ```asm
 org loop
@@ -240,7 +240,7 @@ loop:
 	nop
 ```
 
-Let's ignore the org macro and assume that loop is at memory location 1. Then, however, loop must be at location 2 as the org macro now reads `org 1` (the nop instruction takes 1 byte). Then, however, loop must be at location 3 as the org macro now reads `org 3`. This line of reasoning will recurse to infinity and the above code is ill-formed.
+Let's ignore the org directive and assume that loop is at memory location 1. Then, however, loop must be at location 2 as the org directive now reads `org 1` (the nop instruction takes 1 byte). Then, however, loop must be at location 3 as the org directive now reads `org 3`. This line of reasoning will recurse to infinity and the above code is ill-formed.
 
 spcasm doesn't yet have the capability of distinguishing between such a case and one where there is no problem at all, like:
 
@@ -307,7 +307,7 @@ Similar to [operand_not_allowed](#spcasmoperandnotallowed). Some instructions in
   help: Start a new segment with `org <memory address>`
 ```
 
-Segments specify where the currently-being-assembled binary data belongs in the address space. In a variety of situations, the assembler has no active segment, like after saving the current segment to the stack. You now need to provide a new segment, for example with an `org` macro or by restoring the saved segment from the stack with `pullpc`.
+Segments specify where the currently-being-assembled binary data belongs in the address space. In a variety of situations, the assembler has no active segment, like after saving the current segment to the stack. You now need to provide a new segment, for example with an `org` directive or by restoring the saved segment from the stack with `pullpc`.
 
 ### spcasm::operand_not_allowed
 
@@ -370,7 +370,7 @@ Note: This is a theoretical error forwarded from the parser backend. It is not k
    ╰────
 ```
 
-The most common type of syntax error. "Token" in programming language lingo is the smallest sensible unit of text in the source code, which in this case was invalid. The parser expected a different token than what was actually found. A list of possible tokens (sometimes just one) is given by the parser, which hopefully helps you to discover the syntactical problem. In the above, for example, we can clearly see the parser expects, among other things, a macro, or a mnemonic, i.e. the start of an instruction.
+The most common type of syntax error. "Token" in programming language lingo is the smallest sensible unit of text in the source code, which in this case was invalid. The parser expected a different token than what was actually found. A list of possible tokens (sometimes just one) is given by the parser, which hopefully helps you to discover the syntactical problem. In the above, for example, we can clearly see the parser expects, among other things, a directive, or a mnemonic, i.e. the start of an instruction.
 
 ### spcasm::syntax::invalid_bit_index
 
@@ -473,7 +473,7 @@ Similar to [operand_not_allowed](#spcasmoperandnotallowed). The instruction only
   help: Any symbolic reference must be defined somewhere. Did you misspell the reference's name?
 ```
 
-Evidently, references which are not defined anywhere in the assembly source cannot be used in instructions or macros. Defining a reference involves either using it as the label for some instruction (then the memory address will be filled in automatically), or assigning it a literal value to make it act like a constant.
+Evidently, references which are not defined anywhere in the assembly source cannot be used in instructions or directives. Defining a reference involves either using it as the label for some instruction (then the memory address will be filled in automatically), or assigning it a literal value to make it act like a constant.
 
 ```assembly
 label: nop ; reference has the memory address of the nop instruction

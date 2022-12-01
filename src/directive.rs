@@ -1,4 +1,4 @@
-//! Assembly directives and macros.
+//! Assembly directives and user-defined macros
 #![deny(clippy::all, clippy::pedantic, clippy::nursery)]
 #![allow(clippy::module_name_repetitions)]
 
@@ -10,28 +10,29 @@ use miette::SourceSpan;
 use spcasm_derive::Parse;
 
 use crate::parser::instruction::{MemoryAddress, Number};
-use crate::parser::reference::{Reference, MacroParent, MacroParentReplacable};
+use crate::parser::reference::{MacroParent, MacroParentReplacable, Reference};
 use crate::parser::{source_range, ProgramElement};
 use crate::{AssemblyCode, AssemblyError};
 
-/// An assembly macro.
+/// An assembly directive, often confusingly referred to as a "macro". spcasm uses the term "macro" to specifically mean
+/// user-defined macros, and "directive" to mean builtin commands (i.e. directives) to the assembler.
 #[derive(Clone, Debug)]
-pub struct Macro {
-	/// Actual data of the macro.
-	pub value:       MacroValue,
+pub struct Directive {
+	/// Actual data of the directive.
+	pub value:       DirectiveValue,
 	pub(crate) span: SourceSpan,
-	/// Label at the start of the macro. Some macros ignore this.
+	/// Label at the start of the directive. Some directives ignore this.
 	pub label:       Option<Reference>,
 }
 
-impl Default for Macro {
+impl Default for Directive {
 	fn default() -> Self {
-		// We use the table macro with no entries as default as that will do nothing.
-		Self { value: MacroValue::Table { values: Vec::new(), entry_size: 1 }, label: None, span: (0, 0).into() }
+		// We use the table directive with no entries as default as that will do nothing.
+		Self { value: DirectiveValue::Table { values: Vec::new(), entry_size: 1 }, label: None, span: (0, 0).into() }
 	}
 }
 
-impl MacroParentReplacable for Macro {
+impl MacroParentReplacable for Directive {
 	fn replace_macro_parent(
 		&mut self,
 		replacement_parent: Arc<RefCell<MacroParent>>,
@@ -41,9 +42,9 @@ impl MacroParentReplacable for Macro {
 	}
 }
 
-/// Macro symbols, used in lexing.
+/// Directive symbols, used in lexing.
 #[derive(Debug, Clone, Copy, Parse, Eq, PartialEq)]
-pub enum MacroSymbol {
+pub enum DirectiveSymbol {
 	Org,
 	Db,
 	Byte,
@@ -64,7 +65,7 @@ pub enum MacroSymbol {
 	EndMacro,
 }
 
-impl Display for MacroSymbol {
+impl Display for DirectiveSymbol {
 	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
 		write!(f, "{}", match self {
 			Self::Org => "org",
@@ -87,17 +88,17 @@ impl Display for MacroSymbol {
 	}
 }
 
-/// An assembly macro's value and relevant data.
+/// An assembly directive's value and relevant data.
 #[derive(Clone, Debug)]
-pub enum MacroValue {
+pub enum DirectiveValue {
 	/// org <memory address>
 	Org(MemoryAddress),
-	/// Various table macros, such as byte/db, word/dw, dl, dd, ascii(z), ...
+	/// Various table directives, such as byte/db, word/dw, dl, dd, ascii(z), ...
 	/// dw <16-bit word>
 	Table {
-		/// The entries of the table. For simple macros like "dw $0A", this only has one entry.
+		/// The entries of the table. For simple directives like "dw $0A", this only has one entry.
 		values:     Vec<Number>,
-		/// How many bytes each entry occupies; depends on the specific macro used.
+		/// How many bytes each entry occupies; depends on the specific directive used.
 		entry_size: u8,
 	},
 	/// brr <file name>
@@ -118,7 +119,7 @@ pub enum MacroValue {
 	UserDefinedMacro { name: String, arguments: Arc<RefCell<MacroParent>>, body: Vec<ProgramElement> },
 }
 
-impl MacroParentReplacable for MacroValue {
+impl MacroParentReplacable for DirectiveValue {
 	fn replace_macro_parent(
 		&mut self,
 		replacement_parent: Arc<RefCell<MacroParent>>,

@@ -7,15 +7,15 @@ use miette::SourceSpan;
 
 use super::instruction::{Instruction, Number};
 use super::reference::{Reference, MacroParent, MacroParentReplacable};
-use super::Macro;
+use super::Directive;
 use crate::parser::source_range;
 use crate::{AssemblyCode, AssemblyError};
 
 /// A program element of an assenbled program. A list of program elements makes an assembled program itself.
 #[derive(Clone, Debug)]
 pub enum ProgramElement {
-	/// An assembly directive or macro that doesn't necessarily correspond to assembled data directly.
-	Macro(Macro),
+	/// An assembly directive that doesn't necessarily correspond to assembled data directly.
+	Directive(Directive),
 	/// A processor instruction that corresponds to some assembled data.
 	Instruction(Instruction),
 	/// Include directive that copy-pastes another file's assembly into this one.
@@ -45,7 +45,7 @@ impl ProgramElement {
 	#[must_use]
 	pub const fn span(&self) -> &SourceSpan {
 		match self {
-			Self::Macro(Macro { span, .. })
+			Self::Directive(Directive { span, .. })
 			| Self::Instruction(Instruction { span, .. })
 			| Self::UserDefinedMacroCall { span, .. }
 			| Self::IncludeSource { span, .. } => span,
@@ -56,7 +56,7 @@ impl ProgramElement {
 	#[must_use]
 	pub fn extend_span(mut self, end: SourceSpan) -> Self {
 		match &mut self {
-			Self::Macro(Macro { span, .. })
+			Self::Directive(Directive { span, .. })
 			| Self::Instruction(Instruction { span, .. })
 			| Self::UserDefinedMacroCall { span, .. }
 			| Self::IncludeSource { span, .. } => *span = source_range((*span).into(), end.into()),
@@ -69,9 +69,9 @@ impl ProgramElement {
 	#[must_use]
 	pub fn set_label(self, label: Option<Reference>) -> Self {
 		match self {
-			Self::Macro(mut r#macro) => {
-				r#macro.label = r#macro.label.or(label);
-				Self::Macro(r#macro)
+			Self::Directive(mut directive) => {
+				directive.label = directive.label.or(label);
+				Self::Directive(directive)
 			},
 			Self::Instruction(mut instruction) => {
 				instruction.label = instruction.label.or(label);
@@ -92,7 +92,7 @@ impl MacroParentReplacable for ProgramElement {
 		source_code: &Arc<AssemblyCode>,
 	) -> Result<(), Box<AssemblyError>> {
 		match self {
-			Self::Macro(r#macro) => r#macro.replace_macro_parent(replacement_parent, source_code),
+			Self::Directive(directive) => directive.replace_macro_parent(replacement_parent, source_code),
 			Self::Instruction(instruction) => instruction.replace_macro_parent(replacement_parent, source_code),
 			Self::UserDefinedMacroCall { arguments, .. } => {
 				for argument in arguments {

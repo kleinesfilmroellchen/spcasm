@@ -13,7 +13,7 @@ use spcasm_derive::ErrorCodes;
 use thiserror::Error;
 
 use crate::cli::BackendOptions;
-use crate::mcro::MacroSymbol;
+use crate::directive::DirectiveSymbol;
 use crate::parser::instruction::{MemoryAddress, Mnemonic};
 use crate::parser::Token;
 
@@ -144,46 +144,46 @@ pub enum AssemblyError {
 	#[diagnostic(code(all), severity(Error))]
 	AllMarker {},
 
-	#[error("Legal architecture macro ignored")]
+	#[error("Legal architecture directive ignored")]
 	#[diagnostic(
-		code(spcasm::valid_arch_macro),
+		code(spcasm::valid_arch_directive),
 		severity(Advice),
 		help(
-			"spcasm supports `arch` macros for compatibility with the Asar multi-architecture assembler. This arch \
+			"spcasm supports `arch` directives for compatibility with the Asar multi-architecture assembler. This arch \
 			 directive points to the spc700 architecture and is therefore safely ignored."
 		)
 	)]
-	ArchitectureMacroIgnored {
+	ArchitectureDirectiveIgnored {
 		#[source_code]
 		src:      Arc<AssemblyCode>,
-		#[label("`arch` macro")]
+		#[label("`arch` directive")]
 		location: SourceSpan,
 	},
 
 	#[error("Unknown architecture `{arch}` specified")]
 	#[diagnostic(
-		code(spcasm::invalid_arch_macro),
+		code(spcasm::invalid_arch_directive),
 		severity(Error),
 		help(
-			"spcasm supports `arch` macros for compatibility with the Asar multi-architecture assembler. This macro \
+			"spcasm supports `arch` directives for compatibility with the Asar multi-architecture assembler. This directive \
 			 specifies that the architecture of the assembly source is not (completely) SPC700, therefore spcasm \
 			 cannot assemble this file."
 		)
 	)]
-	InvalidArchitectureMacro {
+	InvalidArchitectureDirective {
 		arch:     String,
 		#[source_code]
 		src:      Arc<AssemblyCode>,
-		#[label("`arch` macro")]
+		#[label("`arch` directive")]
 		location: SourceSpan,
 	},
 
-	#[error("Assigning a value to the user defined macro argument '<{name}>' is not possible")]
+	#[error("Assigning a value to the macro argument '<{name}>' is not possible")]
 	#[diagnostic(
-		code(spcasm::assign_to_macro_argument),
+		code(spcasm::assign_to_directive_argument),
 		severity(Error),
 		help(
-			"Arguments of user-defined macros are given a value when the macro is called. Therefore, it does not make \
+			"Arguments of macros are given a value when the macro is called. Therefore, it does not make \
 			 sense to assign them a value. If you need a label with a specific value inside a macro, use a local \
 			 label under the macro's special '\\@' label instead"
 		)
@@ -399,7 +399,7 @@ pub enum AssemblyError {
 	#[diagnostic(
 		code(spcasm::empty_segment_stack),
 		severity(Error),
-		help("Macros like `pullpc` require that you push a segment to the stack beforehand with `pushpc`.")
+		help("Directives like `pullpc` require that you push a segment to the stack beforehand with `pushpc`.")
 	)]
 	NoSegmentOnStack {
 		#[label("Segment stack access here")]
@@ -494,22 +494,22 @@ pub enum AssemblyError {
 		location: SourceSpan,
 	},
 
-	#[error("Invalid use of labels in an argument for `{mcro}`")]
+	#[error("Invalid use of labels in an argument for `{directive}`")]
 	#[diagnostic(
-		code(spcasm::references_in_macro_argument),
+		code(spcasm::references_in_directive_argument),
 		help(
-			"Because the macro argument can determine a reference's position, resolving the argument value is not \
-			 generally possible. For this reason, references are not allowed to be used in a macro argument."
+			"Because the directive argument can determine a reference's position, resolving the argument value is not \
+			 generally possible. For this reason, references are not allowed to be used in a directive argument."
 		)
 	)]
-	ReferencesInMacroArgument {
-		mcro:     MacroSymbol,
+	ReferencesInDirectiveArgument {
+		directive:     DirectiveSymbol,
 		#[source_code]
 		src:      Arc<AssemblyCode>,
-		#[label("This macro")]
+		#[label("This directive")]
 		location: SourceSpan,
 		// TODO: reintroduce when numbers have source locations
-		// #[label("This macro argument")]
+		// #[label("This directive argument")]
 		// argument_location: SourceSpan,
 	},
 

@@ -6,7 +6,7 @@ use std::sync::Arc;
 use miette::{SourceOffset, SourceSpan};
 
 use crate::error::{AssemblyCode, AssemblyError};
-use crate::mcro::MacroSymbol;
+use crate::directive::DirectiveSymbol;
 use crate::parser::instruction::Mnemonic;
 use crate::parser::Register;
 
@@ -21,8 +21,8 @@ pub enum Token {
 	Register(Register, SourceSpan),
 	/// + Register name; necessary for LALRPOP.
 	PlusRegister(Register, SourceSpan),
-	/// Start of a macro.
-	Macro(MacroSymbol, SourceSpan),
+	/// Start of a directive.
+	Directive(DirectiveSymbol, SourceSpan),
 	/// Literal number which was already parsed.
 	Number(i64, SourceSpan),
 	/// Text string delimited by "".
@@ -75,7 +75,7 @@ impl PartialEq for Token {
 	fn eq(&self, other: &Self) -> bool {
 		match (self, other) {
 			(Self::Identifier(name, ..), Self::Identifier(other_name, ..)) => name == other_name,
-			(Self::Macro(name, ..), Self::Macro(other_name, ..)) => name == other_name,
+			(Self::Directive(name, ..), Self::Directive(other_name, ..)) => name == other_name,
 			(Self::Number(value, ..), Self::Number(other_value, ..)) => value == other_value,
 			(Self::Register(register, ..), Self::Register(other_register, ..)) => register == other_register,
 			(Self::PlusRegister(register, ..), Self::PlusRegister(other_register, ..)) => register == other_register,
@@ -125,13 +125,13 @@ impl Token {
 	}
 
 	/// Checks whether the two tokens equal in type. For the most part, this ignores token-internal data, especially
-	/// source spans. It does however consider register and macro enum types, as those are finite unlike identifier
+	/// source spans. It does however consider register and directive enum types, as those are finite unlike identifier
 	/// strings.
 	#[must_use]
 	pub fn equals_type(&self, other: &Self) -> bool {
 		match (self, other) {
 			(Self::Identifier(..), Self::Identifier(..))
-			| (Self::Macro(..), Self::Macro(..))
+			| (Self::Directive(..), Self::Directive(..))
 			| (Self::Number(..), Self::Number(..))
 			| (Self::Colon(..), Self::Colon(..))
 			| (Self::OpenParenthesis(..), Self::OpenParenthesis(..))
@@ -189,7 +189,7 @@ impl Token {
 			| Self::String(_, location)
 			| Self::PlusRegister(_, location)
 			| Self::Mnemonic(_, location)
-			| Self::Macro(_, location) => *location,
+			| Self::Directive(_, location) => *location,
 			// #[cfg(test)]
 			Self::TestComment(_, location) => *location,
 		}
@@ -206,7 +206,7 @@ impl Display for Token {
 			Self::String(..) => "string",
 			Self::Register(..) => "register name",
 			Self::PlusRegister(..) => "'+' register name",
-			Self::Macro(..) => "macro",
+			Self::Directive(..) => "directive",
 			Self::Number(..) => "number",
 			Self::Hash(..) => "hash",
 			Self::Comma(..) => "comma",

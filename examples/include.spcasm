@@ -1,4 +1,4 @@
-; Include macro tests
+; Include directive tests
 
 incbin "binary.bin"
 

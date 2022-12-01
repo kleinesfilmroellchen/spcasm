@@ -10,7 +10,7 @@ use std::num::ParseIntError;
 use std::sync::Arc;
 
 use crate::error::TokenOrString;
-use crate::mcro::MacroSymbol;
+use crate::directive::DirectiveSymbol;
 use crate::parser::instruction::Mnemonic;
 use crate::parser::Token;
 use crate::AssemblyCode;
@@ -68,7 +68,7 @@ impl FakeDefaultForIgnoredValues for Token {
 	}
 }
 
-impl FakeDefaultForIgnoredValues for MacroSymbol {
+impl FakeDefaultForIgnoredValues for DirectiveSymbol {
 	fn default() -> Self {
 		Self::Byte
 	}

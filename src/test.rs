@@ -96,7 +96,7 @@ fn assemble_expected_binary(instructions: Vec<ProgramElement>) -> Vec<Option<u8>
 	for program_element in instructions {
 		match program_element {
 			ProgramElement::Instruction(instruction) => filtered_instructions.push(instruction),
-			ProgramElement::Macro(crate::Macro { value: crate::mcro::MacroValue::End, .. }) => break,
+			ProgramElement::Directive(crate::Directive { value: crate::directive::DirectiveValue::End, .. }) => break,
 			_ => (),
 		}
 	}

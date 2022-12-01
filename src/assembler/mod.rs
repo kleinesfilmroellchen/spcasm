@@ -14,11 +14,11 @@ use r16bit::MovDirection;
 
 use crate::brr::{self, wav};
 use crate::cli::{default_backend_options, BackendOptions};
-use crate::error::{AssemblyCode, AssemblyError};
 use crate::directive::DirectiveValue;
-use crate::parser::instruction::{AddressingMode, Instruction, MemoryAddress, Mnemonic, AssemblyTimeValue, Opcode};
+use crate::error::{AssemblyCode, AssemblyError};
+use crate::parser::instruction::{AddressingMode, Instruction, MemoryAddress, Mnemonic, Opcode};
 use crate::parser::reference::{Reference, Resolvable};
-use crate::parser::{AssemblyFile, ProgramElement, Register};
+use crate::parser::{AssemblyFile, AssemblyTimeValue, ProgramElement, Register};
 use crate::{pretty_hex, Directive};
 
 mod arithmetic_logic;
@@ -337,12 +337,14 @@ fn assemble_directive(data: &mut AssembledData, directive: &mut Directive) -> Re
 		DirectiveValue::End => {
 			data.should_stop = true;
 		},
-		DirectiveValue::PopSection => data
-			.pop_segment()
-			.map_err(|_| AssemblyError::NoSegmentOnStack { location: directive.span, src: data.source_code.clone() })?,
-		DirectiveValue::PushSection => data
-			.push_segment()
-			.map_err(|_| AssemblyError::MissingSegment { location: directive.span, src: data.source_code.clone() })?,
+		DirectiveValue::PopSection => data.pop_segment().map_err(|_| AssemblyError::NoSegmentOnStack {
+			location: directive.span,
+			src:      data.source_code.clone(),
+		})?,
+		DirectiveValue::PushSection => data.push_segment().map_err(|_| AssemblyError::MissingSegment {
+			location: directive.span,
+			src:      data.source_code.clone(),
+		})?,
 		DirectiveValue::UserDefinedMacro { .. } => {},
 	}
 	Ok(())
@@ -769,7 +771,11 @@ impl AssembledData {
 	///
 	/// # Errors
 	/// If there is no segment currently.
-	pub fn append_relative_unresolved(&mut self, value: AssemblyTimeValue, span: SourceSpan) -> Result<(), Box<AssemblyError>> {
+	pub fn append_relative_unresolved(
+		&mut self,
+		value: AssemblyTimeValue,
+		span: SourceSpan,
+	) -> Result<(), Box<AssemblyError>> {
 		let src = self.source_code.clone();
 		self.current_segment_mut().map_err(|_| AssemblyError::MissingSegment { location: span, src })?.push(
 			LabeledMemoryValue {

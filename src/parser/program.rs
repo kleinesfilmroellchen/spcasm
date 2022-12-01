@@ -5,9 +5,9 @@ use std::sync::Arc;
 
 use miette::SourceSpan;
 
-use super::instruction::{Instruction, AssemblyTimeValue};
-use super::reference::{Reference, MacroParent, MacroParentReplacable};
-use super::Directive;
+use super::instruction::Instruction;
+use super::reference::{MacroParent, MacroParentReplacable, Reference};
+use super::{AssemblyTimeValue, Directive};
 use crate::parser::source_range;
 use crate::{AssemblyCode, AssemblyError};
 

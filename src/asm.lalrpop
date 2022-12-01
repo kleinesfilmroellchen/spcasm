@@ -8,8 +8,9 @@ use std::sync::{Weak, Arc};
 use std::cell::RefCell;
 
 use crate::parser::{
-	instruction::{Instruction, Mnemonic, AssemblyTimeValue, AddressingMode, Opcode},
+	instruction::{Instruction, Mnemonic, AddressingMode, Opcode},
 	Environment,
+	AssemblyTimeValue,
 	LabelUsageKind, 
 	Token,
 	Register,

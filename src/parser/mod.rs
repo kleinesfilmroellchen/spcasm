@@ -9,13 +9,13 @@ use std::sync::{Arc, Weak};
 
 use miette::{SourceOffset, SourceSpan};
 
-use self::instruction::{AddressingMode, Instruction, AssemblyTimeValue, Opcode};
+use self::instruction::{AddressingMode, Instruction, Opcode};
 use self::lexer::lex;
 use self::reference::{GlobalLabel, MacroParameters, MacroParent, MacroParentReplacable, Reference};
 use crate::assembler::resolve_file;
 use crate::cli::{default_backend_options, BackendOptions};
-use crate::error::{AssemblyCode, AssemblyError};
 use crate::directive::DirectiveValue;
+use crate::error::{AssemblyCode, AssemblyError};
 use crate::{lalrpop_adaptor, Directive};
 
 pub mod instruction;
@@ -24,10 +24,12 @@ pub(crate) mod program;
 pub(crate) mod reference;
 pub(crate) mod register;
 pub mod token;
+pub mod value;
 
 pub use program::ProgramElement;
 pub use register::Register;
 pub use token::Token;
+pub use value::AssemblyTimeValue;
 
 /// How a looked-up reference is used. See ``Environment::get_global_label``.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -234,7 +236,9 @@ impl AssemblyFile {
 			// First match for reference resolution in instruction position
 			match element {
 				// Macro labeled with local label
-				ProgramElement::Directive(Directive { value, label: Some(Reference::Local(ref mut local)), .. }) => {
+				ProgramElement::Directive(Directive {
+					value, label: Some(Reference::Local(ref mut local)), ..
+				}) => {
 					if let DirectiveValue::AssignReference { reference: Reference::Local(assigned_local), .. } = value {
 						*assigned_local = reference::merge_local_into_parent(
 							assigned_local.clone(),
@@ -428,7 +432,9 @@ impl AssemblyFile {
 			.iter()
 			.filter_map(|el| match el {
 				ProgramElement::Directive(Directive {
-					span, value: value @ DirectiveValue::UserDefinedMacro { name, .. }, ..
+					span,
+					value: value @ DirectiveValue::UserDefinedMacro { name, .. },
+					..
 				}) => Some((name.clone(), (*span, value.clone()))),
 				_ => None,
 			})

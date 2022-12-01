@@ -7,10 +7,10 @@ use spcasm::cli::BackendOptions;
 #[allow(clippy::module_name_repetitions)]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct WebOptions {
-	pub silence_all:                 bool,
-	pub silenced:                    Vec<String>,
+	pub silence_all:                     bool,
+	pub silenced:                        Vec<String>,
 	pub max_reference_resolution_passes: usize,
-	pub max_macro_expansion_depth:   usize,
+	pub max_macro_expansion_depth:       usize,
 }
 
 impl BackendOptions for WebOptions {

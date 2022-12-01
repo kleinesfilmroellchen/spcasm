@@ -34,11 +34,11 @@ pub mod brr;
 pub mod cli;
 mod common;
 mod default_hacks;
+mod directive;
 #[cfg(feature = "binaries")]
 pub mod elf;
 mod error;
 mod lalrpop_adaptor;
-mod directive;
 pub mod parser;
 lalrpop_mod!(asm);
 

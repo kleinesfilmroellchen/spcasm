@@ -9,8 +9,8 @@
 use std::num::ParseIntError;
 use std::sync::Arc;
 
-use crate::error::TokenOrString;
 use crate::directive::DirectiveSymbol;
+use crate::error::TokenOrString;
 use crate::parser::instruction::Mnemonic;
 use crate::parser::Token;
 use crate::AssemblyCode;

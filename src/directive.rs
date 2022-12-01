@@ -9,9 +9,9 @@ use std::sync::Arc;
 use miette::SourceSpan;
 use spcasm_derive::Parse;
 
-use crate::parser::instruction::{MemoryAddress, AssemblyTimeValue};
+use crate::parser::instruction::MemoryAddress;
 use crate::parser::reference::{MacroParent, MacroParentReplacable, Reference};
-use crate::parser::{source_range, ProgramElement};
+use crate::parser::{source_range, AssemblyTimeValue, ProgramElement};
 use crate::{AssemblyCode, AssemblyError};
 
 /// An assembly directive, often confusingly referred to as a "macro". spcasm uses the term "macro" to specifically mean

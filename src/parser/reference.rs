@@ -7,7 +7,8 @@ use std::sync::{Arc, Weak};
 
 use miette::SourceSpan;
 
-use super::instruction::{MemoryAddress, AssemblyTimeValue};
+use super::instruction::MemoryAddress;
+use super::AssemblyTimeValue;
 use crate::error::{AssemblyCode, AssemblyError};
 
 pub trait Resolvable {

@@ -149,8 +149,8 @@ pub enum AssemblyError {
 		code(spcasm::valid_arch_directive),
 		severity(Advice),
 		help(
-			"spcasm supports `arch` directives for compatibility with the Asar multi-architecture assembler. This arch \
-			 directive points to the spc700 architecture and is therefore safely ignored."
+			"spcasm supports `arch` directives for compatibility with the Asar multi-architecture assembler. This \
+			 arch directive points to the spc700 architecture and is therefore safely ignored."
 		)
 	)]
 	ArchitectureDirectiveIgnored {
@@ -165,9 +165,9 @@ pub enum AssemblyError {
 		code(spcasm::invalid_arch_directive),
 		severity(Error),
 		help(
-			"spcasm supports `arch` directives for compatibility with the Asar multi-architecture assembler. This directive \
-			 specifies that the architecture of the assembly source is not (completely) SPC700, therefore spcasm \
-			 cannot assemble this file."
+			"spcasm supports `arch` directives for compatibility with the Asar multi-architecture assembler. This \
+			 directive specifies that the architecture of the assembly source is not (completely) SPC700, therefore \
+			 spcasm cannot assemble this file."
 		)
 	)]
 	InvalidArchitectureDirective {
@@ -183,9 +183,9 @@ pub enum AssemblyError {
 		code(spcasm::assign_to_directive_argument),
 		severity(Error),
 		help(
-			"Arguments of macros are given a value when the macro is called. Therefore, it does not make \
-			 sense to assign them a value. If you need a label with a specific value inside a macro, use a local \
-			 label under the macro's special '\\@' label instead"
+			"Arguments of macros are given a value when the macro is called. Therefore, it does not make sense to \
+			 assign them a value. If you need a label with a specific value inside a macro, use a local label under \
+			 the macro's special '\\@' label instead"
 		)
 	)]
 	AssigningToMacroArgument {
@@ -414,8 +414,8 @@ pub enum AssemblyError {
 		severity(Error),
 		help(
 			"Any symbolic reference must be defined somewhere. Did you misspell the reference's name?\nThis error is \
-			 sometimes caused by too few reference resolution passes. Use `--reference-pass-limit` to increase the limit on \
-			 the number of passes."
+			 sometimes caused by too few reference resolution passes. Use `--reference-pass-limit` to increase the \
+			 limit on the number of passes."
 		)
 	)]
 	UnresolvedReference {
@@ -423,9 +423,9 @@ pub enum AssemblyError {
 		#[label("'{reference}' defined here")]
 		reference_location: Option<SourceSpan>,
 		#[label("Used here")]
-		usage_location: SourceSpan,
+		usage_location:     SourceSpan,
 		#[source_code]
-		src:            Arc<AssemblyCode>,
+		src:                Arc<AssemblyCode>,
 	},
 
 	#[error("Reference '\\@' can not be resolved to a value")]
@@ -503,11 +503,11 @@ pub enum AssemblyError {
 		)
 	)]
 	ReferencesInDirectiveArgument {
-		directive:     DirectiveSymbol,
+		directive: DirectiveSymbol,
 		#[source_code]
-		src:      Arc<AssemblyCode>,
+		src:       Arc<AssemblyCode>,
 		#[label("This directive")]
-		location: SourceSpan,
+		location:  SourceSpan,
 		// TODO: reintroduce when numbers have source locations
 		// #[label("This directive argument")]
 		// argument_location: SourceSpan,
@@ -669,14 +669,14 @@ pub enum AssemblyError {
 		severity(Advice)
 	)]
 	NonDirectPageReference {
-		name:             String,
-		address:          MemoryAddress,
+		name:                 String,
+		address:              MemoryAddress,
 		#[label("Might point at a direct page address")]
 		reference_definition: SourceSpan,
 		#[label("Memory address {address:02X}")]
-		location:         SourceSpan,
+		location:             SourceSpan,
 		#[source_code]
-		src:              Arc<AssemblyCode>,
+		src:                  Arc<AssemblyCode>,
 	},
 }
 

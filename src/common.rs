@@ -4,8 +4,8 @@
 use std::cmp::min;
 use std::sync::Arc;
 
-pub use super::error::{AssemblyCode, AssemblyError};
 pub use super::directive::Directive;
+pub use super::error::{AssemblyCode, AssemblyError};
 pub use super::parser::Environment;
 use crate::cli::{default_backend_options, BackendOptions};
 

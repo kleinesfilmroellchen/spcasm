@@ -5,8 +5,8 @@ use std::sync::Arc;
 
 use miette::{SourceOffset, SourceSpan};
 
-use crate::error::{AssemblyCode, AssemblyError};
 use crate::directive::DirectiveSymbol;
+use crate::error::{AssemblyCode, AssemblyError};
 use crate::parser::instruction::Mnemonic;
 use crate::parser::Register;
 

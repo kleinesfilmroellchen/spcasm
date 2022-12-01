@@ -185,11 +185,28 @@ pub enum AssemblyError {
 		help(
 			"Arguments of user-defined macros are given a value when the macro is called. Therefore, it does not make \
 			 sense to assign them a value. If you need a label with a specific value inside a macro, use a local \
-			 label under the macro's special `\\@` label instead"
+			 label under the macro's special '\\@' label instead"
 		)
 	)]
 	AssigningToMacroArgument {
 		name:     String,
+		#[source_code]
+		src:      Arc<AssemblyCode>,
+		#[label("Assignment happens here")]
+		location: SourceSpan,
+	},
+
+	#[error("Assigning a value to the special macro label '\\@' is not possible")]
+	#[diagnostic(
+		code(spcasm::assign_to_macro_global),
+		severity(Error),
+		help(
+			"The special macro label '\\@' can be used for creating a unique global label per user macro call. It can \
+			 therefore only be assigned a value by using it as the label for an instruction. If you need to compute \
+			 values based on macro arguments, there is currently no non-repetitive way to do this."
+		)
+	)]
+	AssigningToMacroGlobal {
 		#[source_code]
 		src:      Arc<AssemblyCode>,
 		#[label("Assignment happens here")]
@@ -404,7 +421,22 @@ pub enum AssemblyError {
 	UnresolvedLabel {
 		label:          String,
 		#[label("'{label}' defined here")]
-		label_location: SourceSpan,
+		label_location: Option<SourceSpan>,
+		#[label("Used here")]
+		usage_location: SourceSpan,
+		#[source_code]
+		src:            Arc<AssemblyCode>,
+	},
+
+	#[error("Label '\\@' can not be resolved to a value")]
+	#[diagnostic(
+		code(spcasm::unresolved_label),
+		severity(Error),
+		help(
+			"The special macro global '\\@' is only usable inside user defined macros."
+		)
+	)]
+	UnresolvedMacroGlobal {
 		#[label("Used here")]
 		usage_location: SourceSpan,
 		#[source_code]

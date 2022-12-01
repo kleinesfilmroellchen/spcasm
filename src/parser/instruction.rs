@@ -227,7 +227,8 @@ impl Number {
 				lhs.set_global_label(label);
 				rhs.set_global_label(label);
 			},
-			Self::Literal(..) | Self::Label(Label::Global(..) | Label::MacroArgument { .. }) => (),
+			Self::Literal(..)
+			| Self::Label(Label::Global(..) | Label::MacroArgument { .. } | Label::MacroGlobal { .. }) => (),
 		}
 	}
 
@@ -255,19 +256,25 @@ impl Number {
 				Label::Local(local) if let Some(ref value) = local.borrow().location => value.value(),
 				Label::Local(local) => return Err(AssemblyError::UnresolvedLabel {
 					label: label.to_string(),
-					label_location: local.borrow().span,
+					label_location: Some(local.borrow().span),
 					usage_location: location,
 					src: source_code
 				}.into()),
 				Label::Global(global) => return Err(AssemblyError::UnresolvedLabel {
 					label: label.to_string(),
-					label_location: global.borrow().span,
+					label_location: Some(global.borrow().span),
 					usage_location: location,
+					src: source_code
+				}.into()),
+				Label::MacroGlobal { span, .. } => return Err(AssemblyError::UnresolvedLabel {
+					label: label.to_string(),
+					label_location: None,
+					usage_location: *span,
 					src: source_code
 				}.into()),
 				Label::MacroArgument{value: None, span, ..} => return Err(AssemblyError::UnresolvedLabel {
 					label: label.to_string(),
-					label_location: *span,
+					label_location: None,
 					usage_location: *span,
 					src: source_code
 				}.into()),
@@ -289,27 +296,27 @@ impl Number {
 			Self::Label(Label::Global(global)) if let Some(memory_location) = global.clone().borrow().location.clone() => memory_location.try_resolve(),
 			Self::Label(Label::Local(local)) if let Some(memory_location) = local.clone().borrow().location.clone() => memory_location.try_resolve(),
 			Self::Label(Label::MacroArgument { value: Some(memory_location) , .. }) => memory_location.try_resolve(),
-			Number::Negate(number) => match number.try_resolve() {
-				Number::Literal(value) => Number::Literal(-value),
-				resolved => Number::Negate(Box::new(resolved)),
+			Self::Negate(number) => match number.try_resolve() {
+				Self::Literal(value) => Self::Literal(-value),
+				resolved => Self::Negate(Box::new(resolved)),
 			},
-			Number::Add(lhs, rhs) => match (lhs.try_resolve(), rhs.try_resolve()) {
-				(Number::Literal(lhs_value), Number::Literal(rhs_value)) => Number::Literal(lhs_value + rhs_value),
-				(lhs, rhs) => Number::Add(Box::new(lhs), Box::new(rhs)),
+			Self::Add(lhs, rhs) => match (lhs.try_resolve(), rhs.try_resolve()) {
+				(Self::Literal(lhs_value), Self::Literal(rhs_value)) => Self::Literal(lhs_value + rhs_value),
+				(lhs, rhs) => Self::Add(Box::new(lhs), Box::new(rhs)),
 			},
-			Number::Subtract(lhs, rhs) => match (lhs.try_resolve(), rhs.try_resolve()) {
-				(Number::Literal(lhs_value), Number::Literal(rhs_value)) => Number::Literal(lhs_value - rhs_value),
-				(lhs, rhs) => Number::Subtract(Box::new(lhs), Box::new(rhs)),
+			Self::Subtract(lhs, rhs) => match (lhs.try_resolve(), rhs.try_resolve()) {
+				(Self::Literal(lhs_value), Self::Literal(rhs_value)) => Self::Literal(lhs_value - rhs_value),
+				(lhs, rhs) => Self::Subtract(Box::new(lhs), Box::new(rhs)),
 			},
-			Number::Multiply(lhs, rhs) => match (lhs.try_resolve(), rhs.try_resolve()) {
-				(Number::Literal(lhs_value), Number::Literal(rhs_value)) => Number::Literal(lhs_value * rhs_value),
-				(lhs, rhs) => Number::Multiply(Box::new(lhs), Box::new(rhs)),
+			Self::Multiply(lhs, rhs) => match (lhs.try_resolve(), rhs.try_resolve()) {
+				(Self::Literal(lhs_value), Self::Literal(rhs_value)) => Self::Literal(lhs_value * rhs_value),
+				(lhs, rhs) => Self::Multiply(Box::new(lhs), Box::new(rhs)),
 			},
-			Number::Divide(lhs, rhs) => match (lhs.try_resolve(), rhs.try_resolve()) {
-				(Number::Literal(lhs_value), Number::Literal(rhs_value)) => Number::Literal(lhs_value / rhs_value),
-				(lhs, rhs) => Number::Divide(Box::new(lhs), Box::new(rhs)),
+			Self::Divide(lhs, rhs) => match (lhs.try_resolve(), rhs.try_resolve()) {
+				(Self::Literal(lhs_value), Self::Literal(rhs_value)) => Self::Literal(lhs_value / rhs_value),
+				(lhs, rhs) => Self::Divide(Box::new(lhs), Box::new(rhs)),
 			},
-			Number::Literal(..) | Self::Label(Label::Local(..) | Label::Global(..) | Label::MacroArgument { value: None, .. }) => self,
+			Self::Literal(..) | Self::Label(Label::Local(..) | Label::Global(..) | Label::MacroArgument { value: None, .. } | Label::MacroGlobal { .. }) => self,
 		}
 	}
 }
@@ -321,13 +328,15 @@ impl MacroParentReplacable for Number {
 		source_code: &Arc<AssemblyCode>,
 	) -> Result<(), Box<AssemblyError>> {
 		match self {
-			Number::Literal(_) => Ok(()),
-			Number::Label(label) => label.replace_macro_parent(replacement_parent, source_code),
-			Number::Negate(number) => number.replace_macro_parent(replacement_parent, source_code),
-			Number::Add(lhs, rhs)
-			| Number::Subtract(lhs, rhs)
-			| Number::Multiply(lhs, rhs)
-			| Number::Divide(lhs, rhs) => {
+			Self::Literal(_) => Ok(()),
+			Self::Label(label @ Label::MacroGlobal { .. }) => {
+				let new_global = replacement_parent.borrow().global_label();
+				*label = Label::Global(new_global);
+				Ok(())
+			},
+			Self::Label(label) => label.replace_macro_parent(replacement_parent, source_code),
+			Self::Negate(number) => number.replace_macro_parent(replacement_parent, source_code),
+			Self::Add(lhs, rhs) | Self::Subtract(lhs, rhs) | Self::Multiply(lhs, rhs) | Self::Divide(lhs, rhs) => {
 				lhs.replace_macro_parent(replacement_parent.clone(), source_code)?;
 				rhs.replace_macro_parent(replacement_parent, source_code)
 			},
@@ -380,6 +389,7 @@ impl UpperHex for Number {
 				Some(numeric_address) => f.pad(&format!("{:0X}", **numeric_address)),
 				None => write!(f, "{}", name),
 			},
+			Self::Label(Label::MacroGlobal { .. }) => f.write_str("\\@"),
 			Self::Literal(numeric_address) => {
 				f.write_char('$')?;
 				fmt::UpperHex::fmt(numeric_address, f)

@@ -10,7 +10,7 @@ use std::sync::{Arc, Weak};
 use miette::{SourceOffset, SourceSpan};
 
 use self::instruction::{AddressingMode, Instruction, Number, Opcode};
-use self::label::{GlobalLabel, Label, MacroParent, MacroParentReplacable};
+use self::label::{GlobalLabel, Label, MacroParameters, MacroParent, MacroParentReplacable};
 use self::lexer::lex;
 use crate::assembler::resolve_file;
 use crate::cli::{default_backend_options, BackendOptions};
@@ -233,6 +233,7 @@ impl AssemblyFile {
 		for element in &mut self.content {
 			// First match for label reference resolution in instruction position
 			match element {
+				// Macro labeled with local label
 				ProgramElement::Macro(Macro { value, label: Some(Label::Local(ref mut local)), .. }) => {
 					if let MacroValue::AssignLabel { label: Label::Local(assigned_local), .. } = value {
 						*assigned_local = label::merge_local_into_parent(
@@ -244,6 +245,7 @@ impl AssemblyFile {
 					*local =
 						label::merge_local_into_parent(local.clone(), current_global_label.clone(), &self.source_code)?;
 				},
+				// Macro labeled with global label
 				ProgramElement::Macro(Macro { label: Some(Label::Global(ref global)), value, .. }) => {
 					current_global_label = Some(global.clone());
 					if let MacroValue::AssignLabel { label: Label::Local(local), .. } = value {
@@ -255,11 +257,13 @@ impl AssemblyFile {
 					}
 				},
 
+				// Anything else labeled with global label - we need to update the current global
 				ProgramElement::Instruction(Instruction { label: Some(Label::Global(ref global)), .. })
 				| ProgramElement::UserDefinedMacroCall { label: Some(Label::Global(ref global)), .. }
 				| ProgramElement::IncludeSource { label: Some(Label::Global(ref global)), .. } =>
 					current_global_label = Some(global.clone()),
 
+				// Anything labeled with local label: fill in the reference and merge local label.
 				ProgramElement::Macro(Macro {
 					value: MacroValue::AssignLabel { label: Label::Local(ref mut local), .. },
 					..
@@ -270,11 +274,17 @@ impl AssemblyFile {
 					*local =
 						label::merge_local_into_parent(local.clone(), current_global_label.clone(), &self.source_code)?,
 
+				// Anything unlabeled or labeled with irrelevant label: ignore
 				ProgramElement::Instruction(Instruction { label: None, .. })
 				| ProgramElement::IncludeSource { label: None, .. }
 				| ProgramElement::UserDefinedMacroCall { label: None, .. }
-				| ProgramElement::Macro(Macro { label: None, .. }) => (),
+				| ProgramElement::Macro(Macro { label: None, .. })
+				| ProgramElement::Instruction(Instruction { label: Some(Label::MacroGlobal { .. }), .. })
+				| ProgramElement::IncludeSource { label: Some(Label::MacroGlobal { .. }), .. }
+				| ProgramElement::UserDefinedMacroCall { label: Some(Label::MacroGlobal { .. }), .. }
+				| ProgramElement::Macro(Macro { label: Some(Label::MacroGlobal { .. }), .. }) => (),
 
+				// Anything labeled with a user macro argument: This is always an error; we're not inside a user macro.
 				ProgramElement::Instruction(Instruction {
 					label: Some(ref mal @ Label::MacroArgument { ref name, ref value, ref span, .. }),
 					..
@@ -298,6 +308,8 @@ impl AssemblyFile {
 					}
 					.into()),
 			}
+			// Instruction's operands are also in need of setting the global label. To reduce complexity in the above
+			// `match`, we do this separately here.
 			if let ProgramElement::Instruction(Instruction {
 				opcode: Opcode { first_operand, second_operand, .. },
 				..
@@ -440,9 +452,9 @@ impl AssemblyFile {
 				let called_macro = user_macros.get(macro_name);
 				if let Some((span, MacroValue::UserDefinedMacro { name, arguments, body })) = called_macro {
 					let arguments = arguments.borrow();
-					let formal_arguments = match &*arguments {
-						MacroParent::Formal(formal_arguments) => formal_arguments,
-						MacroParent::Actual(_) => unreachable!(),
+					let formal_arguments = match &(&*arguments).parameters {
+						MacroParameters::Formal(formal_arguments) => formal_arguments,
+						MacroParameters::Actual(_) => unreachable!(),
 					};
 					if formal_arguments.len() != actual_arguments.len() {
 						return Err(AssemblyError::IncorrectNumberOfMacroArguments {
@@ -454,7 +466,7 @@ impl AssemblyFile {
 						}
 						.into());
 					}
-					let actual_argument_parent = Arc::new(RefCell::new(MacroParent::Actual(
+					let actual_argument_parent = MacroParent::new_actual(
 						formal_arguments
 							.iter()
 							.zip(actual_arguments.iter())
@@ -462,7 +474,16 @@ impl AssemblyFile {
 								(formal_argument.clone(), actual_argument.clone())
 							})
 							.collect(),
-					)));
+						GlobalLabel {
+							// We use a unique label name just to make sure that we don't combine different labels
+							// accidentally.
+							name:            format!("{}_global_label_{}", macro_name, index),
+							locals:          HashMap::new(),
+							location:        None,
+							span:            *span,
+							used_as_address: false,
+						},
+					);
 					// FIXME: Doesn't handle macro-internal labels correctly; also no support for the \@ special label.
 					let mut inserted_body = body.clone();
 					for mut macro_element in &mut inserted_body {

@@ -302,6 +302,12 @@ fn assemble_macro(data: &mut AssembledData, mcro: &mut Macro) -> Result<(), Box<
 					location: *span,
 				}
 				.into()),
+			Label::MacroGlobal { span, .. } =>
+				return Err(AssemblyError::AssigningToMacroGlobal {
+					src:      data.source_code.clone(),
+					location: *span,
+				}
+				.into()),
 		},
 		MacroValue::Include { ref file, range } => {
 			let binary_file = resolve_file(&data.source_code, mcro.span, file)?;
@@ -428,7 +434,7 @@ impl LabeledMemoryValue {
 					number.first_label().expect("Number resolution failure was not caused by label; this is a bug!");
 				AssemblyError::UnresolvedLabel {
 					label:          first_label.to_string(),
-					label_location: first_label.source_span(),
+					label_location: Some(first_label.source_span()),
 					usage_location: self.instruction_location,
 					src:            src.clone(),
 				}
@@ -961,7 +967,12 @@ impl AssembledData {
 							Label::MacroArgument { value: Some(_), .. } => Ok(()),
 							Label::MacroArgument { value: None, span, .. } => Err(AssemblyError::UnresolvedLabel {
 								label:          resolved_label.to_string(),
-								label_location: span,
+								label_location: None,
+								usage_location: span,
+								src:            self.source_code.clone(),
+							}
+							.into()),
+							Label::MacroGlobal { span } => Err(AssemblyError::UnresolvedMacroGlobal {
 								usage_location: span,
 								src:            self.source_code.clone(),
 							}

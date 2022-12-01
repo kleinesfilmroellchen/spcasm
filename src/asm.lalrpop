@@ -184,7 +184,7 @@ ArchMacro: Macro = <mcro:"arch"> <arch:"identifier"> =>? {
 UserDefinedMacro: Macro = <start:"macro"> <name:"identifier"> <arguments:UserDefinedMacroArguments?> "\n" <body:Program> <end:"endmacro"> => Macro {
 	value: MacroValue::UserDefinedMacro {
 		name: name.0,
-		arguments: Arc::new(RefCell::new(MacroParent::Formal(arguments.unwrap_or(Vec::new())))),
+		arguments: MacroParent::new_formal(arguments, name.1),
 		body,
 	},
 	span: source_range(start.into(), end.into()),
@@ -257,7 +257,7 @@ Label: Label = {
 	<start:"<"> <identifier:"identifier"> <end:">"> => Label::MacroArgument {
 		name: identifier.0,
 		span: source_range(start.into(), end.into()),
-		macro_parent: Arc::new(RefCell::new(MacroParent::Formal(Vec::new()))),
+		macro_parent: MacroParent::new_formal(None, identifier.1),
 		value: None,
 	}
 };

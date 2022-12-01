@@ -44,6 +44,9 @@ pub enum Label {
 		/// The parent structure that this macro belongs to, used for resolving values.
 		macro_parent: Arc<RefCell<MacroParent>>,
 	},
+	/// A global label placeholder that will become a unique global label for each use of the containing macro.
+	/// This can be used to create a global label for a macro and use local labels within it safely.
+	MacroGlobal { span: SourceSpan },
 }
 
 impl Label {
@@ -52,6 +55,7 @@ impl Label {
 			Self::Global(global) => global.borrow().span,
 			Self::Local(label) => label.borrow().span,
 			Self::MacroArgument { span, .. } => *span,
+			Self::MacroGlobal { span, .. } => *span,
 		}
 	}
 
@@ -61,6 +65,7 @@ impl Label {
 			Self::Local(local) => local.borrow_mut().location = Some(Box::new(location)),
 			// noop on macro arguments
 			Self::MacroArgument { .. } => {},
+			Self::MacroGlobal { .. } => {},
 		}
 	}
 }
@@ -76,15 +81,16 @@ impl MacroParentReplacable for Label {
 			Self::Local(local) => local.borrow_mut().replace_macro_parent(replacement_parent, source_code),
 			Self::MacroArgument { macro_parent, name, span, value } => {
 				*macro_parent = replacement_parent;
-				macro_parent.borrow().get_value_of(name).map_or_else(
+				let parameters = &macro_parent.borrow().parameters;
+				parameters.get_value_of(name).map_or_else(
 					|| {
-						if macro_parent.borrow().has_argument_named(name) {
+						if parameters.has_argument_named(name) {
 							// The parent is formal arguments, so we are a valid argument but there is no value yet.
 							Ok(())
 						} else {
 							Err(AssemblyError::UnknownMacroArgument {
 								name:            (*name).to_string(),
-								available_names: macro_parent.borrow().argument_names(),
+								available_names: parameters.argument_names(),
 								location:        *span,
 								src:             source_code.clone(),
 							}
@@ -97,6 +103,7 @@ impl MacroParentReplacable for Label {
 					},
 				)
 			},
+			Self::MacroGlobal { span, .. } => Ok(()),
 		}
 	}
 }
@@ -107,6 +114,7 @@ impl Display for Label {
 			Self::Global(global) => global.borrow().name.clone(),
 			Self::Local(local) => format!(".{}", local.borrow().name),
 			Self::MacroArgument { name, .. } => format!("<{}>", name),
+			Self::MacroGlobal { .. } => format!("\\@"),
 		})
 	}
 }
@@ -123,6 +131,8 @@ impl PartialEq for Label {
 				Self::MacroArgument { name: other_name, .. } => name.eq(other_name),
 				_ => false,
 			},
+			// Equality doesn't really make sense for dynamic user macro globals.
+			Self::MacroGlobal { .. } => false,
 		}
 	}
 }
@@ -135,6 +145,7 @@ impl Resolvable for Label {
 			Self::Local(label) => label.borrow().is_resolved(),
 			Self::MacroArgument { value: Some(resolved), .. } => true,
 			Self::MacroArgument { .. } => false,
+			Self::MacroGlobal { .. } => false,
 		}
 	}
 
@@ -151,6 +162,7 @@ impl Resolvable for Label {
 				*value = Some(Box::new(Number::Literal(location)));
 				Ok(())
 			},
+			Self::MacroGlobal { .. } => unimplemented!("macro global leaked to label resolution, what to do?"),
 		}
 	}
 }
@@ -286,12 +298,47 @@ impl Resolvable for LocalLabel {
 
 /// The structure holding all of the data for the macro arguments.
 #[derive(Debug, Clone)]
-pub enum MacroParent {
-	Formal(Vec<(String, SourceSpan)>),
-	Actual(HashMap<String, Number>),
+pub struct MacroParent {
+	label:          Arc<RefCell<GlobalLabel>>,
+	pub parameters: MacroParameters,
 }
 
 impl MacroParent {
+	pub fn new_actual(parameters: HashMap<String, Number>, label: GlobalLabel) -> Arc<RefCell<MacroParent>> {
+		Arc::new(RefCell::new(Self {
+			label:      Arc::new(RefCell::new(label)),
+			parameters: MacroParameters::Actual(parameters),
+		}))
+	}
+
+	pub fn new_formal(parameters: Option<Vec<(String, SourceSpan)>>, span: SourceSpan) -> Arc<RefCell<MacroParent>> {
+		Arc::new(RefCell::new(Self {
+			label:      Arc::new(RefCell::new(GlobalLabel {
+				name: "macro global placeholder".into(),
+				location: None,
+				span,
+				used_as_address: false,
+				locals: HashMap::new(),
+			})),
+			parameters: MacroParameters::Formal(parameters.unwrap_or(Vec::new())),
+		}))
+	}
+
+	pub fn global_label(&self) -> Arc<RefCell<GlobalLabel>> {
+		self.label.clone()
+	}
+}
+
+/// The kinds of parameters that a macro parent can have.
+#[derive(Debug, Clone)]
+pub enum MacroParameters {
+	/// Formal parameters, used in the macro's definition.
+	Formal(Vec<(String, SourceSpan)>),
+	/// Actual parameters, used while a macro is being resolved.
+	Actual(HashMap<String, Number>),
+}
+
+impl MacroParameters {
 	/// Returns whether the macro parent has any argument with this name. This function will usually be faster than
 	/// searching through the result of `argument_names`.
 	pub fn has_argument_named(&self, name: &str) -> bool {

@@ -202,12 +202,6 @@ pub(super) fn assemble_push_pop(
 	instruction: &mut Instruction,
 ) -> Result<(), Box<AssemblyError>> {
 	let source_code_copy = data.source_code.clone();
-
-	#[cfg(test)]
-	{
-		instruction.assembled_size = Some(1);
-	}
-
 	let make_error = || {
 		Err(AssemblyError::InvalidAddressingMode {
 			is_first_operand: true,

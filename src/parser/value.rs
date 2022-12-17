@@ -53,6 +53,21 @@ impl AssemblyTimeValue {
 		}
 	}
 
+	/// Returns all references in this expression.
+	pub fn references(&self) -> Vec<&Reference> {
+		match self {
+			Self::Literal(..) => Vec::default(),
+			Self::Reference(reference) => vec![reference],
+			Self::Negate(value) => value.references(),
+			Self::Add(lhs, rhs) | Self::Subtract(lhs, rhs) | Self::Multiply(lhs, rhs) | Self::Divide(lhs, rhs) => {
+				let mut references = lhs.references();
+				let mut more_references = rhs.references();
+				references.append(&mut more_references);
+				references
+			},
+		}
+	}
+
 	/// Sets the given global label as the parent for all unresolved local labels.
 	/// # Panics
 	/// All panics are programming errors.

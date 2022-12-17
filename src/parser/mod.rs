@@ -16,7 +16,8 @@ use crate::assembler::resolve_file;
 use crate::cli::{default_backend_options, BackendOptions};
 use crate::directive::DirectiveValue;
 use crate::error::{AssemblyCode, AssemblyError};
-use crate::{lalrpop_adaptor, Directive};
+use crate::parser::instruction::MemoryAddress;
+use crate::{lalrpop_adaptor, Directive, Segments};
 
 pub mod instruction;
 pub mod lexer;
@@ -369,6 +370,191 @@ impl AssemblyFile {
 				*second_operand = second_operand.clone().map(coercion_function);
 			}
 		}
+	}
+
+	fn to_asm_error<'a>(
+		span: &'a SourceSpan,
+		source_code: &'a Arc<AssemblyCode>,
+	) -> impl Fn(()) -> Box<AssemblyError> + 'a {
+		|_| AssemblyError::MissingSegment { location: *span, src: source_code.clone() }.into()
+	}
+
+	/// Tries to coerce instructions into direct page mode if the associated reference is in the direct
+	/// page. This involves some complex computation because changing the addressing mode of an instruction changes its
+	/// size, shifting around later labels and possibly shifting them in or out of the direct page. The algorithm
+	/// implemented here is not optimal (from the similarity to linker relocation relaxation problems, it seems like the
+	/// optimal algorithm must solve some NP-hard graph theory problem) and it also never executes more passes than the
+	/// number of reference resolution passes for safety.
+	pub fn split_into_segments(&self) -> Result<Segments<ProgramElement>, Box<AssemblyError>> {
+		let mut segments = Segments::default();
+		for element in &self.content {
+			match element {
+				ProgramElement::Instruction(instruction) => segments
+					.add_element(element.clone())
+					.map_err(Self::to_asm_error(&instruction.span, &self.source_code))?,
+				ProgramElement::Directive(directive @ Directive { span, label, .. }) => {
+					directive.perform_segment_operations_if_necessary(&mut segments, self.source_code.clone())?;
+					if directive.value.assembled_size() > 0 {
+						segments.add_element(element.clone()).map_err(Self::to_asm_error(span, &self.source_code))?;
+					}
+				},
+				ProgramElement::IncludeSource { label, span, .. }
+				| ProgramElement::UserDefinedMacroCall { label, span, .. } => {},
+			}
+		}
+
+		self.optimize_direct_page_labels(&mut segments);
+
+		Ok(segments)
+	}
+
+	/// Optimizes long addressing instructions to use direct page addressing if the reference is in the direct page.
+	/// This involves non-trivial semantic analysis:
+	///
+	/// 1. Collect all references, and all non-direct-page instructions referring to them; and their current
+	/// locations.
+	/// General hint: Calculate new reference positions by subtracting from every reference's position the number of
+	/// dp-coerced instructions.
+	/// 2. Assume all references lie in the direct page; i.e. the instructions can shrink by 1 byte.
+	/// 3. Repeatedly find references that do not lie in the direct page anymore, and update instructions and
+	/// positions. Repeat until no changes happen or the reference resolution limit is reached.
+	/// 4. Modify instructions accordingly
+	fn optimize_direct_page_labels(&self, segments: &mut Segments<ProgramElement>) {
+		let max_coercion_passes =
+			self.parent.upgrade().expect("parent disappeared").borrow().options.maximum_reference_resolution_passes();
+
+		/// Do the more complex direct page coercing with references. We only consider references in the direct page if
+		/// they are in the *zero page*. If that is a problem, forcing to direct page addressing is always possible.
+		#[derive(Debug)]
+		enum InstructionOrReference {
+			Instruction {
+				segment_start:    MemoryAddress,
+				/// The index is required to recover the actual instruction and modify it later on. It is purely
+				/// symbolic and has nothing to do with the instruction's address.
+				index_in_segment: usize,
+				references:       Vec<Reference>,
+				// Whether this instruction is (now) short, i.e. in direct page mode.
+				is_short:         bool,
+			},
+			Reference {
+				reference:                      Reference,
+				known_to_be_ouside_direct_page: bool,
+			},
+		}
+
+		// 1. (collect relevant objects)
+		let mut referenced_objects = Vec::<(MemoryAddress, InstructionOrReference)>::new();
+
+		for (segment_start, segment_contents) in &segments.segments {
+			for (index_in_segment, (element, offset)) in segment_contents
+				.iter()
+				.scan(0.into(), |offset, element| {
+					*offset += element.assembled_size() as MemoryAddress;
+					Some((element, *offset))
+				})
+				.enumerate()
+			{
+				macro_rules! handle_label {
+					($label:expr) => {
+						if let Some(label) = $label {
+							referenced_objects.push((offset, InstructionOrReference::Reference {
+								reference:                      label.clone(),
+								known_to_be_ouside_direct_page: false,
+							}));
+						}
+					};
+				}
+
+				match element {
+					ProgramElement::Instruction(Instruction { label, opcode, .. }) => {
+						handle_label!(label);
+						if opcode.has_long_address() {
+							referenced_objects.push((offset, InstructionOrReference::Instruction {
+								segment_start: *segment_start,
+								index_in_segment,
+								references: opcode.references().into_iter().cloned().collect(),
+								is_short: false,
+							}));
+						}
+					},
+					ProgramElement::Directive(directive @ Directive { span, label, .. }) => handle_label!(label),
+					ProgramElement::IncludeSource { label, span, .. }
+					| ProgramElement::UserDefinedMacroCall { label, span, .. } => panic!(
+						"source includes and unresolved macro calls at reference optimization time, this is a bug"
+					),
+				}
+			}
+		}
+
+		// 2. (assume direct page references everywhere)
+		// Store by how much later objects need to be offset forwards.
+		let mut address_offset = 0;
+		for (address, instruction_or_reference) in &mut referenced_objects {
+			*address += address_offset;
+			match instruction_or_reference {
+				InstructionOrReference::Instruction { segment_start, index_in_segment, references, is_short } => {
+					address_offset -= 1;
+					*is_short = true;
+				},
+				_ => {},
+			}
+		}
+
+		let mut iteration = 1;
+		let mut change = true;
+		// 3.
+		while change && iteration <= max_coercion_passes {
+			change = false;
+
+			// We can't keep this as an iterator because the borrow checker doesn't understand that we're not referring
+			// back to anything in referenced_objects (even though we intentionally copy the references we need)
+			let references_outside_direct_page = referenced_objects
+				.iter_mut()
+				.filter_map(|(address, object)| match object {
+					InstructionOrReference::Reference { reference, known_to_be_ouside_direct_page }
+						if known_to_be_ouside_direct_page == &false =>
+						if *address > 0xFF {
+							*known_to_be_ouside_direct_page = true;
+							Some(reference.clone())
+						} else {
+							None
+						},
+					_ => None,
+				})
+				.collect::<Vec<_>>();
+
+			// dbg!(&references_outside_direct_page);
+
+			let mut address_offset = 0;
+			for moved_reference in references_outside_direct_page {
+				for (address, possible_referent) in &mut referenced_objects {
+					*address += address_offset;
+					match possible_referent {
+						InstructionOrReference::Instruction {
+							segment_start,
+							index_in_segment,
+							references,
+							is_short,
+						} if references.iter().any(|reference| reference == &moved_reference) => {
+							// println!(
+							// 	"enlarging instruction #{} (segment {}) because reference {} is beyond the direct page",
+							// 	index_in_segment,
+							// 	segment_start,
+							// 	moved_reference.to_string(),
+							// );
+							change = true;
+							*is_short = true;
+							address_offset += 1;
+						},
+						_ => {},
+					}
+				}
+			}
+
+			iteration += 1;
+		}
+
+		// TODO: 4.
 	}
 
 	/// Sets the first label in this file if a label was given.

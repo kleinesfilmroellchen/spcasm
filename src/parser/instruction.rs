@@ -31,8 +31,6 @@ pub struct Instruction {
 	/// file.
 	#[cfg(test)]
 	pub expected_value: Option<Vec<u8>>,
-	#[cfg(test)]
-	pub assembled_size: Option<u8>,
 }
 
 impl Default for Instruction {
@@ -48,9 +46,15 @@ impl Default for Instruction {
 			span:                        (0, 0).into(),
 			#[cfg(test)]
 			expected_value:              None,
-			#[cfg(test)]
-			assembled_size:              None,
 		}
+	}
+}
+
+impl Instruction {
+	/// Returns the assembled size of this instruction. Every instruction requires at least 1 byte, but additional bytes
+	/// are required for addresses and immediates.
+	pub fn assembled_size(&self) -> u8 {
+		self.opcode.assembled_size()
 	}
 }
 
@@ -75,6 +79,102 @@ pub struct Opcode {
 	pub second_operand:    Option<AddressingMode>,
 	/// Whether this opcode is forced to use direct page addressing.
 	pub force_direct_page: bool,
+}
+
+impl Opcode {
+	/// Returns the assembled size of this opcode. Every opcode requires at least 1 byte, but additional bytes are
+	/// required for addresses and immediates.
+	pub fn assembled_size(&self) -> u8 {
+		match self.mnemonic {
+			// These instructions depend 100% on their operands for their size, so we just add that up.
+			Mnemonic::Mov
+			| Mnemonic::Adc
+			| Mnemonic::Sbc
+			| Mnemonic::Cmp
+			| Mnemonic::And
+			| Mnemonic::Or
+			| Mnemonic::Eor
+			| Mnemonic::Inc
+			| Mnemonic::Dec
+			| Mnemonic::Asl
+			| Mnemonic::Lsr
+			| Mnemonic::Rol
+			| Mnemonic::Ror
+			| Mnemonic::Dbnz =>
+				1 + self.first_operand.clone().map(AddressingMode::assembled_size).unwrap_or(0)
+					+ self.second_operand.clone().map(AddressingMode::assembled_size).unwrap_or(0),
+			// Just to be sure: for these instructions, we know they have a constant size, so we explicitly use that.
+			Mnemonic::Xcn
+			| Mnemonic::Mul
+			| Mnemonic::Div
+			| Mnemonic::Daa
+			| Mnemonic::Das
+			| Mnemonic::Tcall
+			| Mnemonic::Brk
+			| Mnemonic::Ret
+			| Mnemonic::Ret1
+			| Mnemonic::Reti
+			| Mnemonic::Push
+			| Mnemonic::Pop
+			| Mnemonic::Clrc
+			| Mnemonic::Setc
+			| Mnemonic::Notc
+			| Mnemonic::Clrv
+			| Mnemonic::Clrp
+			| Mnemonic::Setp
+			| Mnemonic::Ei
+			| Mnemonic::Di
+			| Mnemonic::Nop
+			| Mnemonic::Sleep
+			| Mnemonic::Stop => 1,
+			Mnemonic::Bra
+			| Mnemonic::Beq
+			| Mnemonic::Bne
+			| Mnemonic::Bcs
+			| Mnemonic::Bcc
+			| Mnemonic::Bvs
+			| Mnemonic::Bvc
+			| Mnemonic::Bmi
+			| Mnemonic::Bpl
+			| Mnemonic::Movw
+			| Mnemonic::Incw
+			| Mnemonic::Decw
+			| Mnemonic::Addw
+			| Mnemonic::Subw
+			| Mnemonic::Cmpw
+			| Mnemonic::Pcall
+			| Mnemonic::Set1
+			| Mnemonic::Clr1 => 2,
+			Mnemonic::And1
+			| Mnemonic::Or1
+			| Mnemonic::Eor1
+			| Mnemonic::Not1
+			| Mnemonic::Mov1
+			| Mnemonic::Tset1
+			| Mnemonic::Tset
+			| Mnemonic::Tclr1
+			| Mnemonic::Tclr
+			| Mnemonic::Bbs
+			| Mnemonic::Bbc
+			| Mnemonic::Cbne
+			| Mnemonic::Jmp
+			| Mnemonic::Call => 3,
+		}
+	}
+
+	/// Returns whether this opcode contains a two-byte "long" address.
+	pub fn has_long_address(&self) -> bool {
+		self.first_operand.clone().map(AddressingMode::has_long_address).unwrap_or(false)
+			|| self.second_operand.clone().map(AddressingMode::has_long_address).unwrap_or(false)
+	}
+
+	/// Return all references that this opcode points to.
+	pub fn references(&self) -> Vec<&Reference> {
+		let mut references = self.first_operand.as_ref().map(|operand| operand.references()).unwrap_or_default();
+		let mut more_references = self.second_operand.as_ref().map(|operand| operand.references()).unwrap_or_default();
+		references.append(&mut more_references);
+		references
+	}
 }
 
 impl MacroParentReplacable for Opcode {
@@ -243,10 +343,11 @@ impl AddressingMode {
 		}
 	}
 
-	/// Return the number that this addressing mode references (mostly as an address), if any.
+	/// Return the number that this addressing mode references (mostly as an address), if any. The original number is
+	/// borrowed.
 	#[must_use]
 	#[allow(clippy::missing_const_for_fn)]
-	pub fn number(&self) -> Option<AssemblyTimeValue> {
+	pub fn number_ref(&self) -> Option<&AssemblyTimeValue> {
 		match self {
 			Self::Immediate(number)
 			| Self::DirectPage(number)
@@ -259,9 +360,16 @@ impl AddressingMode {
 			| Self::NegatedAddressBit(number, ..)
 			| Self::Address(number)
 			| Self::XIndexed(number)
-			| Self::YIndexed(number) => Some(number.clone()),
+			| Self::YIndexed(number) => Some(number),
 			_ => None,
 		}
+	}
+
+	/// Return the number that this addressing mode references (mostly as an address), if any.
+	#[must_use]
+	#[allow(clippy::missing_const_for_fn)]
+	pub fn number(&self) -> Option<AssemblyTimeValue> {
+		self.number_ref().cloned()
 	}
 
 	/// Returns a mutable reference to the number this addressing mode references, if any.
@@ -311,6 +419,42 @@ impl AddressingMode {
 			Self::AddressBit(number, bit) => Self::DirectPageBit(number, bit),
 			_ => self,
 		}
+	}
+
+	/// Returns the assembled size of this addressing mode. This size is always added to the instruction using the
+	/// addressing mode.
+	pub fn assembled_size(self) -> u8 {
+		match self {
+			AddressingMode::IndirectX
+			| AddressingMode::IndirectY
+			| AddressingMode::IndirectXAutoIncrement
+			| AddressingMode::CarryFlag
+			| AddressingMode::Register(_) => 0,
+			AddressingMode::Immediate(_)
+			| AddressingMode::DirectPageXIndexedIndirect(_)
+			| AddressingMode::DirectPageIndirectYIndexed(_)
+			| AddressingMode::DirectPage(_)
+			| AddressingMode::DirectPageXIndexed(_)
+			| AddressingMode::DirectPageBit(_, _) // bit will be merged into opcode byte, so it needs no extra space
+			| AddressingMode::DirectPageYIndexed(_) => 1,
+			AddressingMode::AddressBit(_, _)
+			| AddressingMode::NegatedAddressBit(_, _)
+			| AddressingMode::Address(_)
+			| AddressingMode::XIndexed(_)
+			| AddressingMode::YIndexed(_) => 2,
+		}
+	}
+
+	/// Returns whether this addressing mode contains a long, i.e. two-byte, address.
+	pub fn has_long_address(self) -> bool {
+		match self {
+			Self::XIndexed(..) | Self::YIndexed(..) | Self::AddressBit(..) | Self::Address(..) => true,
+			_ => false,
+		}
+	}
+
+	fn references(&self) -> Vec<&Reference> {
+		self.number_ref().map(|value| value.references()).unwrap_or_default()
 	}
 }
 

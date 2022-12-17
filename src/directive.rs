@@ -12,7 +12,7 @@ use spcasm_derive::Parse;
 use crate::parser::instruction::MemoryAddress;
 use crate::parser::reference::{MacroParent, MacroParentReplacable, Reference};
 use crate::parser::{source_range, AssemblyTimeValue, ProgramElement};
-use crate::{AssemblyCode, AssemblyError};
+use crate::{AssemblyCode, AssemblyError, Segments};
 
 /// An assembly directive, often confusingly referred to as a "macro". spcasm uses the term "macro" to specifically mean
 /// user-defined macros, and "directive" to mean builtin commands (i.e. directives) to the assembler.
@@ -23,6 +23,26 @@ pub struct Directive {
 	pub(crate) span: SourceSpan,
 	/// Label at the start of the directive. Some directives ignore this.
 	pub label:       Option<Reference>,
+}
+
+impl Directive {
+	/// Perform the segments operations of this directive, if this directive does any segment operations.
+	pub fn perform_segment_operations_if_necessary<Contained>(
+		&self,
+		segments: &mut Segments<Contained>,
+		source_code: Arc<AssemblyCode>,
+	) -> Result<(), Box<AssemblyError>> {
+		match self.value {
+			DirectiveValue::PopSection => segments.pop_segment(),
+			DirectiveValue::PushSection => segments.push_segment(),
+			DirectiveValue::Org(address) => {
+				segments.new_segment(address);
+				Ok(())
+			},
+			_ => Ok(()),
+		}
+		.map_err(|_| AssemblyError::NoSegmentOnStack { location: self.span, src: source_code }.into())
+	}
 }
 
 impl Default for Directive {
@@ -119,12 +139,38 @@ pub enum DirectiveValue {
 	UserDefinedMacro { name: String, arguments: Arc<RefCell<MacroParent>>, body: Vec<ProgramElement> },
 }
 
+impl DirectiveValue {
+	/// Returns the final size of this directive once assembled. Note that:
+	/// - some directives are purely symbolic and will not (directly) impact the size of the assembly, at least not
+	///   here, and
+	/// - the size of some directives is not known at this point, so a large placeholder is used instead. Because the
+	///   purpose of this function is to estimate memory locations for coercing references into direct page mode, the
+	///   large value will force later references into normal addressing, which is always correct.
+	pub fn assembled_size(&self) -> usize {
+		match self {
+			// Symbolic operations take no space.
+			Self::Include { .. }
+			| Self::End
+			| Self::PushSection
+			| Self::PopSection
+			| Self::UserDefinedMacro { .. }
+			| Self::AssignReference { .. }
+			| Self::Org(..) => 0,
+			Self::Table { values, entry_size } => values.len() * *entry_size as usize,
+			// Use a large assembled size as a signal that we don't know at this point. This will force any later
+			// reference out of the direct page, which will always yield correct behavior.
+			Self::Brr(..) => 65536,
+			Self::String { text, has_null_terminator } => text.len() + (if *has_null_terminator { 1 } else { 0 }),
+		}
+	}
+}
+
 impl MacroParentReplacable for DirectiveValue {
 	fn replace_macro_parent(
 		&mut self,
 		replacement_parent: Arc<RefCell<MacroParent>>,
 		source_code: &Arc<AssemblyCode>,
-	) -> Result<(), Box<crate::AssemblyError>> {
+	) -> Result<(), Box<AssemblyError>> {
 		match self {
 			Self::Table { values, entry_size } => {
 				for value in values {

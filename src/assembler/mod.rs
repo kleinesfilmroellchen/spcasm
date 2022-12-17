@@ -3,7 +3,7 @@
 #![allow(clippy::cast_possible_truncation, clippy::cast_sign_loss, clippy::wildcard_imports)]
 
 use std::cell::RefCell;
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, HashSet};
 use std::fs::File;
 use std::io::ErrorKind;
 use std::path::PathBuf;
@@ -19,7 +19,7 @@ use crate::error::{AssemblyCode, AssemblyError};
 use crate::parser::instruction::{AddressingMode, Instruction, MemoryAddress, Mnemonic, Opcode};
 use crate::parser::reference::{Reference, Resolvable};
 use crate::parser::{AssemblyFile, AssemblyTimeValue, ProgramElement, Register};
-use crate::{pretty_hex, Directive};
+use crate::{pretty_hex, Directive, Segments};
 
 mod arithmetic_logic;
 mod bit;
@@ -240,10 +240,8 @@ fn assemble_instruction(data: &mut AssembledData, instruction: &mut Instruction)
 
 #[allow(clippy::unnecessary_wraps)]
 fn assemble_directive(data: &mut AssembledData, directive: &mut Directive) -> Result<(), Box<AssemblyError>> {
+	directive.perform_segment_operations_if_necessary(&mut data.segments, data.source_code.clone())?;
 	match directive.value {
-		DirectiveValue::Org(address) => {
-			data.new_segment(address);
-		},
 		DirectiveValue::Table { entry_size, ref values } => {
 			let mut reference = directive.label.clone();
 			for value in values {
@@ -335,15 +333,7 @@ fn assemble_directive(data: &mut AssembledData, directive: &mut Directive) -> Re
 		DirectiveValue::End => {
 			data.should_stop = true;
 		},
-		DirectiveValue::PopSection => data.pop_segment().map_err(|_| AssemblyError::NoSegmentOnStack {
-			location: directive.span,
-			src:      data.source_code.clone(),
-		})?,
-		DirectiveValue::PushSection => data.push_segment().map_err(|_| AssemblyError::MissingSegment {
-			location: directive.span,
-			src:      data.source_code.clone(),
-		})?,
-		DirectiveValue::UserDefinedMacro { .. } => {},
+		_ => {},
 	}
 	Ok(())
 }
@@ -369,11 +359,6 @@ fn assemble_operandless_instruction(data: &mut AssembledData, mnemonic: Mnemonic
 		},
 		instruction,
 	);
-
-	#[cfg(test)]
-	{
-		instruction.assembled_size = Some(1);
-	}
 }
 
 pub(crate) fn resolve_file(
@@ -503,18 +488,14 @@ impl MemoryValue {
 /// The assembled data, which consists of multiple sections.
 #[derive(Debug)]
 pub struct AssembledData {
-	/// The data segments. These are checked later when being combined into one.
-	pub segments:              BTreeMap<MemoryAddress, Vec<LabeledMemoryValue>>,
-	/// The starting address of the current segment. This is the key to the segments map.
-	pub current_segment_start: Option<MemoryAddress>,
-	/// The stack of saved segments, manipulated with pushpc/pullpc.
-	pub segment_stack:         Vec<MemoryAddress>,
+	/// The segment data.
+	pub segments:    Segments<LabeledMemoryValue>,
 	/// The source code behind this assembled data
-	pub source_code:           Arc<AssemblyCode>,
+	pub source_code: Arc<AssemblyCode>,
 	/// Assembler subroutines use this as a flag to signal an end of assembly as soon as possible.
-	should_stop:               bool,
+	should_stop:     bool,
 	/// Options that command line received; used for determining what to do with warnings.
-	options:                   Arc<dyn BackendOptions>,
+	options:         Arc<dyn BackendOptions>,
 }
 
 impl AssembledData {
@@ -525,7 +506,7 @@ impl AssembledData {
 	pub fn combine_segments(&self) -> Result<Vec<u8>, Box<AssemblyError>> {
 		let mut all_data = Vec::new();
 		// The iteration is sorted
-		for (starting_address, segment_data) in &self.segments {
+		for (starting_address, segment_data) in &self.segments.segments {
 			if *starting_address < all_data.len() as i64 {
 				return Err(AssemblyError::SegmentMismatch {
 					src:           Arc::new(AssemblyCode {
@@ -553,14 +534,7 @@ impl AssembledData {
 	#[must_use]
 	#[inline]
 	pub fn new(source_code: Arc<AssemblyCode>) -> Self {
-		Self {
-			segments: BTreeMap::default(),
-			current_segment_start: Option::default(),
-			source_code,
-			should_stop: false,
-			options: default_backend_options(),
-			segment_stack: Vec::new(),
-		}
+		Self { segments: Segments::default(), source_code, should_stop: false, options: default_backend_options() }
 	}
 
 	/// Change the error options for assembler warning and error reporting.
@@ -576,67 +550,6 @@ impl AssembledData {
 	/// errors.
 	pub fn report_or_throw(&self, error: AssemblyError) -> Result<(), Box<AssemblyError>> {
 		error.report_or_throw(&*self.options)
-	}
-
-	/// Push the current segment onto the segment stack, leaving the current segment vacant.
-	///
-	/// # Errors
-	/// If there is no current segment.
-	#[allow(clippy::result_unit_err)]
-	pub fn push_segment(&mut self) -> Result<(), ()> {
-		self.segment_stack.push(self.current_segment_start.ok_or(())?);
-		self.current_segment_start = None;
-		Ok(())
-	}
-
-	/// Pop the current segment off the stack, re-enabling it.
-	///
-	/// # Errors
-	/// If there is no segment on the stack.
-	#[allow(clippy::result_unit_err)]
-	pub fn pop_segment(&mut self) -> Result<(), ()> {
-		if self.segment_stack.is_empty() {
-			return Err(());
-		}
-		self.current_segment_start = self.segment_stack.pop();
-		Ok(())
-	}
-
-	/// Starts a new segment at the given memory address and set it as the current segment.
-	/// <strong>Warning: This replaces any segment that currently starts at this memory address!</strong>
-	#[inline]
-	pub fn new_segment(&mut self, segment_start: MemoryAddress) -> &mut Self {
-		self.segments.insert(segment_start, Vec::new());
-		self.current_segment_start = Some(segment_start);
-		self
-	}
-
-	/// Returns an immutable reference to the data of the current segment.
-	/// # Errors
-	/// If this assembly data doesn't have a started segment yet.
-	#[inline]
-	#[allow(clippy::result_unit_err)]
-	pub fn current_segment(&self) -> Result<&Vec<LabeledMemoryValue>, ()> {
-		Ok(&self.segments[&self.current_segment_start.ok_or(())?])
-	}
-
-	/// Returns the current memory location where data is written to.
-	/// # Errors
-	/// If this assembly data doesn't have a started segment yet.
-	#[inline]
-	#[allow(clippy::result_unit_err, clippy::missing_panics_doc)]
-	pub fn current_location(&self) -> Result<MemoryAddress, ()> {
-		Ok(self.segments[&self.current_segment_start.ok_or(())?].len() as MemoryAddress
-			+ self.current_segment_start.unwrap())
-	}
-
-	/// Returns a mutable reference to the data of the current segment.
-	/// # Errors
-	/// If this assembly data doesn't have a started segment yet.
-	#[inline]
-	#[allow(clippy::result_unit_err, clippy::missing_panics_doc)]
-	pub fn current_segment_mut(&mut self) -> Result<&mut Vec<LabeledMemoryValue>, ()> {
-		Ok(self.segments.get_mut(&self.current_segment_start.ok_or(())?).unwrap())
 	}
 
 	/// Appends a little endian (LSB first) 16-bit value to the current segment. The given number is truncated to 16
@@ -692,18 +605,13 @@ impl AssembledData {
 	#[inline]
 	pub fn append_instruction(&mut self, opcode: u8, instruction: &mut Instruction) {
 		self.append(opcode, instruction.label.clone(), instruction.span);
-
-		#[cfg(test)]
-		{
-			instruction.assembled_size = Some(1);
-		}
 	}
 
 	/// Appends an 8-bit value to the current segment.
 	#[inline]
 	fn append(&mut self, value: u8, reference: Option<Reference>, span: SourceSpan) -> Result<(), Box<AssemblyError>> {
 		let src = self.source_code.clone();
-		self.current_segment_mut().map_err(|_| AssemblyError::MissingSegment { location: span, src })?.push(
+		self.segments.current_segment_mut().map_err(|_| AssemblyError::MissingSegment { location: span, src })?.push(
 			LabeledMemoryValue {
 				value:                MemoryValue::Resolved(value),
 				label:                reference,
@@ -740,7 +648,7 @@ impl AssembledData {
 		span: SourceSpan,
 	) -> Result<(), Box<AssemblyError>> {
 		let src = self.source_code.clone();
-		self.current_segment_mut().map_err(|_| AssemblyError::MissingSegment { location: span, src })?.push(
+		self.segments.current_segment_mut().map_err(|_| AssemblyError::MissingSegment { location: span, src })?.push(
 			LabeledMemoryValue {
 				value:                MemoryValue::Number(value, byte),
 				label:                reference,
@@ -775,7 +683,7 @@ impl AssembledData {
 		span: SourceSpan,
 	) -> Result<(), Box<AssemblyError>> {
 		let src = self.source_code.clone();
-		self.current_segment_mut().map_err(|_| AssemblyError::MissingSegment { location: span, src })?.push(
+		self.segments.current_segment_mut().map_err(|_| AssemblyError::MissingSegment { location: span, src })?.push(
 			LabeledMemoryValue {
 				label:                None,
 				value:                MemoryValue::NumberRelative(value),
@@ -797,7 +705,7 @@ impl AssembledData {
 		span: SourceSpan,
 	) -> Result<(), Box<AssemblyError>> {
 		let src = self.source_code.clone();
-		self.current_segment_mut().map_err(|_| AssemblyError::MissingSegment { location: span, src })?.push(
+		self.segments.current_segment_mut().map_err(|_| AssemblyError::MissingSegment { location: span, src })?.push(
 			LabeledMemoryValue {
 				value:                MemoryValue::NumberHighByteWithContainedBitIndex(value, bit_index),
 				label:                None,
@@ -822,11 +730,6 @@ impl AssembledData {
 		match operand.try_resolve() {
 			AssemblyTimeValue::Literal(value) => self.append_8_bits(value, None, instruction.span)?,
 			value => self.append_8_bits_unresolved(value, 0, None, instruction.span)?,
-		}
-
-		#[cfg(test)]
-		{
-			instruction.assembled_size = Some(2);
 		}
 		Ok(())
 	}
@@ -853,11 +756,6 @@ impl AssembledData {
 			AssemblyTimeValue::Literal(value) => self.append_8_bits(value, None, instruction.span)?,
 			value => self.append_8_bits_unresolved(value, 0, None, instruction.span)?,
 		}
-
-		#[cfg(test)]
-		{
-			instruction.assembled_size = Some(3);
-		}
 		Ok(())
 	}
 
@@ -877,12 +775,6 @@ impl AssembledData {
 			AssemblyTimeValue::Literal(value) => self.append_16_bits(value, None, instruction.span)?,
 			value => self.append_16_bits_unresolved(value, None, instruction.span)?,
 		}
-
-		#[cfg(test)]
-		{
-			instruction.assembled_size = Some(3);
-		}
-
 		Ok(())
 	}
 
@@ -909,11 +801,6 @@ impl AssembledData {
 				self.append_unresolved_with_bit_index(value, bit_index, instruction.span);
 			},
 		}
-
-		#[cfg(test)]
-		{
-			instruction.assembled_size = Some(3);
-		}
 		Ok(())
 	}
 
@@ -932,11 +819,6 @@ impl AssembledData {
 			AssemblyTimeValue::Literal(value) => self.append_8_bits(value, None, instruction.span)?,
 			value => self.append_relative_unresolved(value, instruction.span)?,
 		}
-
-		#[cfg(test)]
-		{
-			instruction.assembled_size = Some(2);
-		}
 		Ok(())
 	}
 
@@ -953,7 +835,7 @@ impl AssembledData {
 	#[allow(clippy::missing_panics_doc)]
 	pub fn execute_reference_resolution_pass(&mut self) -> Result<bool, Box<AssemblyError>> {
 		let mut had_modifications = true;
-		for (segment_start, segment_data) in &mut self.segments {
+		for (segment_start, segment_data) in &mut self.segments.segments {
 			let mut current_global_label = None;
 			for (offset, datum) in segment_data.iter_mut().enumerate() {
 				let memory_address = segment_start + offset as i64;

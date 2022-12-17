@@ -65,6 +65,7 @@ pub fn run_assembler_on_source(source_code: &Arc<AssemblyCode>, options: Arc<dyn
 	env.borrow_mut().set_error_options(options.clone());
 	let tokens = crate::parser::lexer::lex(source_code.clone()).map_err(AssemblyError::from)?;
 	let program = crate::Environment::parse(&env, tokens, source_code).map_err(AssemblyError::from)?;
+	let segmented_program = program.borrow_mut().split_into_segments().map_err(AssemblyError::from)?;
 	let assembled = crate::assembler::assemble(&program, options).map_err(AssemblyError::from)?;
 	Ok((env, assembled))
 }

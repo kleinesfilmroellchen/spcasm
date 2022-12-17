@@ -31,6 +31,7 @@ use std::io::Write;
 
 #[allow(clippy::wildcard_imports)]
 pub use common::*;
+pub use segments::Segments;
 
 pub mod assembler;
 pub mod brr;
@@ -43,6 +44,7 @@ pub mod elf;
 mod error;
 mod lalrpop_adaptor;
 pub mod parser;
+mod segments;
 lalrpop_mod!(asm);
 
 #[cfg(feature = "binaries")]

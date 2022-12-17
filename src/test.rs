@@ -103,16 +103,9 @@ fn assemble_expected_binary(instructions: Vec<ProgramElement>) -> Vec<Option<u8>
 	filtered_instructions
 		.into_iter()
 		.flat_map(|instruction| {
-			instruction.expected_value.clone().map_or(
-				vec![
-					None;
-					instruction
-						.assembled_size
-						.unwrap_or_else(|| panic!("Instruction {:?} received no size at assembly time", instruction))
-						.into()
-				],
-				|value| value.iter().map(|b| Some(*b)).collect(),
-			)
+			instruction.expected_value.clone().map_or(vec![None; instruction.assembled_size().into()], |value| {
+				value.iter().map(|b| Some(*b)).collect()
+			})
 		})
 		.collect()
 }

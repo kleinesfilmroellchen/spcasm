@@ -83,6 +83,17 @@ impl ProgramElement {
 				Self::UserDefinedMacroCall { span, arguments, macro_name, label: original_label.or(label) },
 		}
 	}
+
+	/// Returns the assembled size of this program element. Note that some program elements return a size of 0 as they
+	/// should be gone by the end of the assembly process, and others return a large size intentionally because their
+	/// size is not known yet and they should prevent any low-address optimizations.
+	pub fn assembled_size(&self) -> usize {
+		match self {
+			ProgramElement::Directive(directive) => directive.value.assembled_size(),
+			ProgramElement::Instruction(instruction) => instruction.assembled_size() as usize,
+			ProgramElement::IncludeSource { .. } | ProgramElement::UserDefinedMacroCall { .. } => 0,
+		}
+	}
 }
 
 impl MacroParentReplacable for ProgramElement {

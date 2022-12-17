@@ -54,11 +54,6 @@ pub(super) fn assemble_branching_instruction(
 				// address that's checked and/or decremented.
 				Mnemonic::Cbne | Mnemonic::Dbnz =>
 					if let Some(AddressingMode::DirectPage(relative_source) | AddressingMode::Address(relative_source)) = source.clone() {
-						#[cfg(test)]
-						{
-							instruction.assembled_size = Some(2);
-						}
-
 						data.append_instruction(
 							if mnemonic == Mnemonic::Cbne {
 								0x2E

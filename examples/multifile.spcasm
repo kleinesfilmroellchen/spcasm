@@ -1,3 +1,5 @@
+org 0
+
 mov a,#collection_label
 
 collection_label:

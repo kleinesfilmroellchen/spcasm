@@ -40,8 +40,6 @@ pub(crate) fn assemble(
 	let maximum_reference_resolution_passes = options.maximum_reference_resolution_passes();
 	data.set_error_options(options);
 
-	data.new_segment(0);
-
 	for program_element in &mut main_file.content {
 		match program_element {
 			ProgramElement::Instruction(instruction) => assemble_instruction(&mut data, instruction)?,

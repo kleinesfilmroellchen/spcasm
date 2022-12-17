@@ -1,3 +1,5 @@
+org 0
+
 zero_label:
 MoV a,X
 

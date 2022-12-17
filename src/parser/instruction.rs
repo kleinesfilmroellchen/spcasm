@@ -53,6 +53,7 @@ impl Default for Instruction {
 impl Instruction {
 	/// Returns the assembled size of this instruction. Every instruction requires at least 1 byte, but additional bytes
 	/// are required for addresses and immediates.
+	#[must_use]
 	pub fn assembled_size(&self) -> u8 {
 		self.opcode.assembled_size()
 	}
@@ -101,8 +102,8 @@ impl Opcode {
 			| Mnemonic::Rol
 			| Mnemonic::Ror
 			| Mnemonic::Dbnz =>
-				1 + self.first_operand.clone().map(AddressingMode::assembled_size).unwrap_or(0)
-					+ self.second_operand.clone().map(AddressingMode::assembled_size).unwrap_or(0),
+				1 + self.first_operand.clone().map_or(0, AddressingMode::assembled_size)
+					+ self.second_operand.clone().map_or(0, AddressingMode::assembled_size),
 			// Just to be sure: for these instructions, we know they have a constant size, so we explicitly use that.
 			Mnemonic::Xcn
 			| Mnemonic::Mul
@@ -164,14 +165,14 @@ impl Opcode {
 
 	/// Returns whether this opcode contains a two-byte "long" address.
 	pub fn has_long_address(&self) -> bool {
-		self.first_operand.clone().map(AddressingMode::has_long_address).unwrap_or(false)
-			|| self.second_operand.clone().map(AddressingMode::has_long_address).unwrap_or(false)
+		self.first_operand.clone().map_or(false, AddressingMode::has_long_address)
+			|| self.second_operand.clone().map_or(false, AddressingMode::has_long_address)
 	}
 
 	/// Return all references that this opcode points to.
 	pub fn references(&self) -> Vec<&Reference> {
-		let mut references = self.first_operand.as_ref().map(|operand| operand.references()).unwrap_or_default();
-		let mut more_references = self.second_operand.as_ref().map(|operand| operand.references()).unwrap_or_default();
+		let mut references = self.first_operand.as_ref().map(AddressingMode::references).unwrap_or_default();
+		let mut more_references = self.second_operand.as_ref().map(AddressingMode::references).unwrap_or_default();
 		references.append(&mut more_references);
 		references
 	}
@@ -423,6 +424,8 @@ impl AddressingMode {
 
 	/// Returns the assembled size of this addressing mode. This size is always added to the instruction using the
 	/// addressing mode.
+	#[allow(clippy::missing_const_for_fn)]
+	#[must_use]
 	pub fn assembled_size(self) -> u8 {
 		match self {
 			AddressingMode::IndirectX
@@ -446,15 +449,14 @@ impl AddressingMode {
 	}
 
 	/// Returns whether this addressing mode contains a long, i.e. two-byte, address.
+	#[allow(clippy::missing_const_for_fn)]
+	#[must_use]
 	pub fn has_long_address(self) -> bool {
-		match self {
-			Self::XIndexed(..) | Self::YIndexed(..) | Self::AddressBit(..) | Self::Address(..) => true,
-			_ => false,
-		}
+		matches!(self, Self::XIndexed(..) | Self::YIndexed(..) | Self::AddressBit(..) | Self::Address(..))
 	}
 
 	fn references(&self) -> Vec<&Reference> {
-		self.number_ref().map(|value| value.references()).unwrap_or_default()
+		self.number_ref().map(AssemblyTimeValue::references).unwrap_or_default()
 	}
 }
 

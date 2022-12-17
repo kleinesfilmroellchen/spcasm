@@ -805,7 +805,8 @@ impl AssembledData {
 	}
 
 	/// Appends an instruction with an 8-bit operand. If this is a reference, it's stored as a relative unresolved
-	/// reference. # Errors
+	/// reference.
+	/// # Errors
 	/// If the given value is too large for the memory address and the related warning is promoted to an error via
 	/// command-line arguments, this error will be returned.
 	pub fn append_instruction_with_relative_reference(

@@ -27,6 +27,8 @@ pub struct Directive {
 
 impl Directive {
 	/// Perform the segments operations of this directive, if this directive does any segment operations.
+	/// # Errors
+	/// If the segments are mishandles, for example an empty segment stack.
 	pub fn perform_segment_operations_if_necessary<Contained>(
 		&self,
 		segments: &mut Segments<Contained>,
@@ -160,7 +162,7 @@ impl DirectiveValue {
 			// Use a large assembled size as a signal that we don't know at this point. This will force any later
 			// reference out of the direct page, which will always yield correct behavior.
 			Self::Brr(..) => 65536,
-			Self::String { text, has_null_terminator } => text.len() + (if *has_null_terminator { 1 } else { 0 }),
+			Self::String { text, has_null_terminator } => text.len() + (usize::from(*has_null_terminator)),
 		}
 	}
 }

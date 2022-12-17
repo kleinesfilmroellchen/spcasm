@@ -674,7 +674,7 @@ pub enum AssemblyError {
 		#[label("Might point at a direct page address")]
 		reference_definition: SourceSpan,
 		#[label("Memory address {address:02X}")]
-		location:             SourceSpan,
+		usage_location:       SourceSpan,
 		#[source_code]
 		src:                  Arc<AssemblyCode>,
 	},

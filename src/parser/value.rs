@@ -23,6 +23,7 @@ use crate::{lalrpop_adaptor, Directive, VariantName};
 
 /// Any numeric value that can be calculated at assembly time.
 #[derive(Clone, Debug, PartialEq)]
+#[allow(clippy::module_name_repetitions)]
 pub enum AssemblyTimeValue {
 	/// A literal.
 	Literal(MemoryAddress),
@@ -54,6 +55,7 @@ impl AssemblyTimeValue {
 	}
 
 	/// Returns all references in this expression.
+	#[must_use]
 	pub fn references(&self) -> Vec<&Reference> {
 		match self {
 			Self::Literal(..) => Vec::default(),
@@ -122,12 +124,7 @@ impl AssemblyTimeValue {
 					usage_location: location,
 					src: source_code
 				}.into()),
-				Reference::MacroGlobal { span, .. } => return Err(AssemblyError::UnresolvedReference {
-					reference: reference.to_string(),
-					reference_location: None,
-					usage_location: *span,
-					src: source_code
-				}.into()),
+				Reference::MacroGlobal { span, .. } |
 				Reference::MacroArgument{value: None, span, ..} => return Err(AssemblyError::UnresolvedReference {
 					reference: reference.to_string(),
 					reference_location: None,
@@ -206,8 +203,8 @@ impl From<MemoryAddress> for AssemblyTimeValue {
 	}
 }
 
-impl<T> From<(AssemblyTimeValue, T)> for AssemblyTimeValue {
-	fn from(value: (AssemblyTimeValue, T)) -> Self {
+impl<T> From<(Self, T)> for AssemblyTimeValue {
+	fn from(value: (Self, T)) -> Self {
 		value.0
 	}
 }
@@ -220,7 +217,7 @@ fn write_correctly(prefix: char, f: &mut Formatter<'_>, address: &AssemblyTimeVa
 
 impl UpperHex for AssemblyTimeValue {
 	fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), Error> {
-		let write_binary = |op, f: &mut Formatter, lhs: &AssemblyTimeValue, rhs: &AssemblyTimeValue| {
+		let write_binary = |op, f: &mut Formatter, lhs: &Self, rhs: &Self| {
 			write_correctly('(', f, lhs)?;
 			write_correctly(op, f, rhs)?;
 			f.write_char(')')
@@ -250,11 +247,11 @@ impl UpperHex for AssemblyTimeValue {
 				f.write_char('$')?;
 				fmt::UpperHex::fmt(numeric_address, f)
 			},
-			AssemblyTimeValue::Negate(number) => write_correctly('-', f, number.as_ref()),
-			AssemblyTimeValue::Add(lhs, rhs) => write_binary('+', f, lhs, rhs),
-			AssemblyTimeValue::Subtract(lhs, rhs) => write_binary('-', f, lhs.as_ref(), rhs.as_ref()),
-			AssemblyTimeValue::Multiply(lhs, rhs) => write_binary('*', f, lhs.as_ref(), rhs.as_ref()),
-			AssemblyTimeValue::Divide(lhs, rhs) => write_binary('/', f, lhs.as_ref(), rhs.as_ref()),
+			Self::Negate(number) => write_correctly('-', f, number.as_ref()),
+			Self::Add(lhs, rhs) => write_binary('+', f, lhs, rhs),
+			Self::Subtract(lhs, rhs) => write_binary('-', f, lhs.as_ref(), rhs.as_ref()),
+			Self::Multiply(lhs, rhs) => write_binary('*', f, lhs.as_ref(), rhs.as_ref()),
+			Self::Divide(lhs, rhs) => write_binary('/', f, lhs.as_ref(), rhs.as_ref()),
 		}
 	}
 }

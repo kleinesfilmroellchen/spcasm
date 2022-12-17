@@ -285,15 +285,13 @@ impl AssemblyFile {
 						&self.source_code,
 					)?,
 
-				// Anything unreferenced or referenceed with irrelevant reference: ignore
-				ProgramElement::Instruction(Instruction { label: None, .. })
-				| ProgramElement::IncludeSource { label: None, .. }
-				| ProgramElement::UserDefinedMacroCall { label: None, .. }
-				| ProgramElement::Directive(Directive { label: None, .. })
-				| ProgramElement::Instruction(Instruction { label: Some(Reference::MacroGlobal { .. }), .. })
-				| ProgramElement::IncludeSource { label: Some(Reference::MacroGlobal { .. }), .. }
-				| ProgramElement::UserDefinedMacroCall { label: Some(Reference::MacroGlobal { .. }), .. }
-				| ProgramElement::Directive(Directive { label: Some(Reference::MacroGlobal { .. }), .. }) => (),
+				// Anything unreferenced or referenced with irrelevant reference: ignore
+				ProgramElement::Instruction(Instruction {
+					label: None | Some(Reference::MacroGlobal { .. }), ..
+				})
+				| ProgramElement::IncludeSource { label: None | Some(Reference::MacroGlobal { .. }), .. }
+				| ProgramElement::UserDefinedMacroCall { label: None | Some(Reference::MacroGlobal { .. }), .. }
+				| ProgramElement::Directive(Directive { label: None | Some(Reference::MacroGlobal { .. }), .. }) => (),
 
 				// Anything labeled with a user macro argument: This is always an error; we're not inside a user macro.
 				ProgramElement::Instruction(Instruction {
@@ -419,10 +417,8 @@ impl AssemblyFile {
 	/// 3. Repeatedly find references that do not lie in the direct page anymore, and update instructions and
 	/// positions. Repeat until no changes happen or the reference resolution limit is reached.
 	/// 4. Modify instructions accordingly
+	#[allow(clippy::too_many_lines)]
 	fn optimize_direct_page_labels(&self, segments: &mut Segments<ProgramElement>) {
-		let max_coercion_passes =
-			self.parent.upgrade().expect("parent disappeared").borrow().options.maximum_reference_resolution_passes();
-
 		/// Do the more complex direct page coercing with references. We only consider references in the direct page if
 		/// they are in the *zero page*. If that is a problem, forcing to direct page addressing is always possible.
 		#[derive(Debug)]
@@ -441,6 +437,9 @@ impl AssemblyFile {
 				known_to_be_ouside_direct_page: bool,
 			},
 		}
+
+		let max_coercion_passes =
+			self.parent.upgrade().expect("parent disappeared").borrow().options.maximum_reference_resolution_passes();
 
 		// 1. (collect relevant objects)
 		let mut referenced_objects = Vec::<(MemoryAddress, InstructionOrReference)>::new();
@@ -468,11 +467,12 @@ impl AssemblyFile {
 				match element {
 					ProgramElement::Instruction(Instruction { label, opcode, .. }) => {
 						handle_label!(label);
-						if opcode.has_long_address() {
+						let references = opcode.references();
+						if opcode.has_long_address() && !references.is_empty() {
 							referenced_objects.push((offset, InstructionOrReference::Instruction {
 								segment_start: *segment_start,
 								index_in_segment,
-								references: opcode.references().into_iter().cloned().collect(),
+								references: references.into_iter().cloned().collect(),
 								is_short: false,
 							}));
 						}
@@ -491,12 +491,11 @@ impl AssemblyFile {
 		let mut address_offset = 0;
 		for (address, instruction_or_reference) in &mut referenced_objects {
 			*address += address_offset;
-			match instruction_or_reference {
-				InstructionOrReference::Instruction { segment_start, index_in_segment, references, is_short } => {
-					address_offset -= 1;
-					*is_short = true;
-				},
-				_ => {},
+			if let InstructionOrReference::Instruction { segment_start, index_in_segment, references, is_short } =
+				instruction_or_reference
+			{
+				address_offset -= 1;
+				*is_short = true;
 			}
 		}
 
@@ -523,8 +522,6 @@ impl AssemblyFile {
 				})
 				.collect::<Vec<_>>();
 
-			// dbg!(&references_outside_direct_page);
-
 			let mut address_offset = 0;
 			for moved_reference in references_outside_direct_page {
 				for (address, possible_referent) in &mut referenced_objects {
@@ -537,10 +534,8 @@ impl AssemblyFile {
 							is_short,
 						} if references.iter().any(|reference| reference == &moved_reference) => {
 							// println!(
-							// 	"enlarging instruction #{} (segment {}) because reference {} is beyond the direct page",
-							// 	index_in_segment,
-							// 	segment_start,
-							// 	moved_reference.to_string(),
+							// 	"enlarging instruction #{} (address {}) because reference {} is beyond the direct page",
+							// 	index_in_segment, address, moved_reference,
 							// );
 							change = true;
 							*is_short = true;
@@ -555,6 +550,22 @@ impl AssemblyFile {
 		}
 
 		// TODO: 4.
+		for (segment_start, index_in_segment) in referenced_objects.iter().filter_map(|(_, object)| match object {
+			InstructionOrReference::Instruction { segment_start, index_in_segment, is_short: true, .. } =>
+				Some((*segment_start, *index_in_segment)),
+			_ => None,
+		}) {
+			let instruction_segment = segments.segments.get_mut(&segment_start).unwrap();
+			if let ProgramElement::Instruction(instruction) = &mut instruction_segment[index_in_segment] {
+				// println!("instruction {} will now become direct page mode! {:?}", index_in_segment, instruction);
+				if let Some(op) = instruction.opcode.first_operand.as_mut() {
+					*op = op.clone().force_to_direct_page_addressing();
+				}
+				if let Some(op) = instruction.opcode.second_operand.as_mut() {
+					*op = op.clone().force_to_direct_page_addressing();
+				}
+			}
+		}
 	}
 
 	/// Sets the first label in this file if a label was given.
@@ -650,7 +661,7 @@ impl AssemblyFile {
 				let called_macro = user_macros.get(macro_name);
 				if let Some((span, DirectiveValue::UserDefinedMacro { name, arguments, body })) = called_macro {
 					let arguments = arguments.borrow();
-					let formal_arguments = match &(&*arguments).parameters {
+					let formal_arguments = match &(arguments).parameters {
 						MacroParameters::Formal(formal_arguments) => formal_arguments,
 						MacroParameters::Actual(_) => unreachable!(),
 					};

@@ -87,11 +87,12 @@ impl ProgramElement {
 	/// Returns the assembled size of this program element. Note that some program elements return a size of 0 as they
 	/// should be gone by the end of the assembly process, and others return a large size intentionally because their
 	/// size is not known yet and they should prevent any low-address optimizations.
+	#[must_use]
 	pub fn assembled_size(&self) -> usize {
 		match self {
-			ProgramElement::Directive(directive) => directive.value.assembled_size(),
-			ProgramElement::Instruction(instruction) => instruction.assembled_size() as usize,
-			ProgramElement::IncludeSource { .. } | ProgramElement::UserDefinedMacroCall { .. } => 0,
+			Self::Directive(directive) => directive.value.assembled_size(),
+			Self::Instruction(instruction) => instruction.assembled_size() as usize,
+			Self::IncludeSource { .. } | Self::UserDefinedMacroCall { .. } => 0,
 		}
 	}
 }

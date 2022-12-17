@@ -55,8 +55,7 @@ impl Reference {
 		match self {
 			Self::Global(global) => global.borrow().span,
 			Self::Local(label) => label.borrow().span,
-			Self::MacroArgument { span, .. } => *span,
-			Self::MacroGlobal { span, .. } => *span,
+			Self::MacroArgument { span, .. } | Self::MacroGlobal { span, .. } => *span,
 		}
 	}
 
@@ -65,8 +64,7 @@ impl Reference {
 			Self::Global(global) => global.borrow_mut().location = Some(location),
 			Self::Local(local) => local.borrow_mut().location = Some(Box::new(location)),
 			// noop on macro arguments
-			Self::MacroArgument { .. } => {},
-			Self::MacroGlobal { .. } => {},
+			Self::MacroArgument { .. } | Self::MacroGlobal { .. } => {},
 		}
 	}
 }
@@ -115,7 +113,7 @@ impl Display for Reference {
 			Self::Global(global) => global.borrow().name.clone(),
 			Self::Local(local) => format!(".{}", local.borrow().name),
 			Self::MacroArgument { name, .. } => format!("<{}>", name),
-			Self::MacroGlobal { .. } => format!("\\@"),
+			Self::MacroGlobal { .. } => "\\@".to_string(),
 		})
 	}
 }
@@ -127,13 +125,13 @@ impl PartialEq for Reference {
 				Self::Global(other_label) => label.eq(other_label),
 				_ => false,
 			},
-			Self::Local(..) => false,
+			Self::Local(..) |
+			// Equality doesn't really make sense for dynamic user macro globals.
+			Self::MacroGlobal { .. } => false,
 			Self::MacroArgument { name, .. } => match other {
 				Self::MacroArgument { name: other_name, .. } => name.eq(other_name),
 				_ => false,
 			},
-			// Equality doesn't really make sense for dynamic user macro globals.
-			Self::MacroGlobal { .. } => false,
 		}
 	}
 }
@@ -145,8 +143,7 @@ impl Resolvable for Reference {
 			Self::Global(label) => label.borrow().is_resolved(),
 			Self::Local(label) => label.borrow().is_resolved(),
 			Self::MacroArgument { value: Some(resolved), .. } => true,
-			Self::MacroArgument { .. } => false,
-			Self::MacroGlobal { .. } => false,
+			Self::MacroArgument { .. } | Self::MacroGlobal { .. } => false,
 		}
 	}
 
@@ -218,18 +215,7 @@ impl Resolvable for GlobalLabel {
 		source_code: Arc<AssemblyCode>,
 	) -> Result<(), Box<AssemblyError>> {
 		self.location = Some(AssemblyTimeValue::Literal(location));
-		if location <= 0xFF && self.used_as_address {
-			Err(AssemblyError::NonDirectPageReference {
-				name:                 self.name.clone(),
-				reference_definition: self.span,
-				address:              location,
-				location:             usage_span,
-				src:                  source_code,
-			}
-			.into())
-		} else {
-			Ok(())
-		}
+		Ok(())
 	}
 }
 
@@ -282,18 +268,7 @@ impl Resolvable for LocalLabel {
 		source_code: Arc<AssemblyCode>,
 	) -> Result<(), Box<AssemblyError>> {
 		self.location = Some(Box::new(AssemblyTimeValue::Literal(location)));
-		if location <= 0xFF {
-			Err(AssemblyError::NonDirectPageReference {
-				name:                 format!(".{}", self.name),
-				reference_definition: self.span,
-				address:              location,
-				location:             usage_span,
-				src:                  source_code,
-			}
-			.into())
-		} else {
-			Ok(())
-		}
+		Ok(())
 	}
 }
 
@@ -305,14 +280,14 @@ pub struct MacroParent {
 }
 
 impl MacroParent {
-	pub fn new_actual(parameters: HashMap<String, AssemblyTimeValue>, label: GlobalLabel) -> Arc<RefCell<MacroParent>> {
+	pub fn new_actual(parameters: HashMap<String, AssemblyTimeValue>, label: GlobalLabel) -> Arc<RefCell<Self>> {
 		Arc::new(RefCell::new(Self {
 			label:      Arc::new(RefCell::new(label)),
 			parameters: MacroParameters::Actual(parameters),
 		}))
 	}
 
-	pub fn new_formal(parameters: Option<Vec<(String, SourceSpan)>>, span: SourceSpan) -> Arc<RefCell<MacroParent>> {
+	pub fn new_formal(parameters: Option<Vec<(String, SourceSpan)>>, span: SourceSpan) -> Arc<RefCell<Self>> {
 		Arc::new(RefCell::new(Self {
 			label:      Arc::new(RefCell::new(GlobalLabel {
 				name: "macro global placeholder".into(),
@@ -321,7 +296,7 @@ impl MacroParent {
 				used_as_address: false,
 				locals: HashMap::new(),
 			})),
-			parameters: MacroParameters::Formal(parameters.unwrap_or(Vec::new())),
+			parameters: MacroParameters::Formal(parameters.unwrap_or_default()),
 		}))
 	}
 

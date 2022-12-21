@@ -491,6 +491,8 @@ impl AssemblyFile {
 
 		// 2. (assume direct page references everywhere)
 		// Store by how much later objects need to be offset forwards.
+		// FIXME: This will move objects in later segments even though they should not be influenced; the segment start
+		// position is independent of the size (change) of previous instructions.
 		let mut address_offset = 0;
 		for (address, instruction_or_reference) in &mut referenced_objects {
 			*address += address_offset;

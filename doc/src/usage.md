@@ -47,6 +47,9 @@ Options:
           [default: elf]
           [possible values: elf, plain, hex-dump]
 
+  -d, --dump-references
+          Dump all references and their final values / locations
+
   -h, --help
           Print help information (use `-h` for a summary)
 

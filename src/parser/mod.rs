@@ -390,6 +390,7 @@ impl AssemblyFile {
 				ProgramElement::Instruction(instruction) => segments
 					.add_element(element.clone())
 					.map_err(Self::to_asm_error(&instruction.span, &self.source_code))?,
+				ProgramElement::Directive(Directive { value: DirectiveValue::End, .. }) => break,
 				ProgramElement::Directive(directive @ Directive { span, label, .. }) => {
 					directive.perform_segment_operations_if_necessary(&mut segments, self.source_code.clone())?;
 					if directive.value.assembled_size() > 0 {

@@ -468,7 +468,9 @@ impl AssemblyFile {
 					ProgramElement::Instruction(Instruction { label, opcode, .. }) => {
 						handle_label!(label);
 						let references = opcode.references();
-						if opcode.has_long_address() && !references.is_empty() {
+						if opcode.has_long_address()
+							&& !references.is_empty() && opcode.can_use_direct_page_addressing()
+						{
 							referenced_objects.push((offset, InstructionOrReference::Instruction {
 								segment_start: *segment_start,
 								index_in_segment,

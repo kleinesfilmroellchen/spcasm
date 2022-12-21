@@ -169,6 +169,26 @@ impl Opcode {
 			|| self.second_operand.clone().map_or(false, AddressingMode::has_long_address)
 	}
 
+	/// Returns whether this opcode can use a direct page addressing mode. Many opcodes can, but some, like JMP,
+	/// actually can't. Note that the result of this function may be wrong for opcodes that shouldn't contain addresses
+	/// at all. These will fail the compiler later on, so the correctness is not important.
+	pub fn can_use_direct_page_addressing(&self) -> bool {
+		return ![
+			Mnemonic::Jmp,
+			Mnemonic::Call,
+			Mnemonic::Tset1,
+			Mnemonic::Tset,
+			Mnemonic::Tclr,
+			Mnemonic::Tclr1,
+			Mnemonic::And1,
+			Mnemonic::Or1,
+			Mnemonic::Eor1,
+			Mnemonic::Not1,
+			Mnemonic::Mov1,
+		]
+		.contains(&self.mnemonic);
+	}
+
 	/// Return all references that this opcode points to.
 	pub fn references(&self) -> Vec<&Reference> {
 		let mut references = self.first_operand.as_ref().map(AddressingMode::references).unwrap_or_default();

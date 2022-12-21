@@ -48,6 +48,9 @@ Options:
           [default: elf]
           [possible values: elf, plain, hex-dump]
 
+  -d, --dump-references
+          Dump all references and their final values / locations
+
   -h, --help
           Print help information (use `-h` for a summary)
 
@@ -77,6 +80,8 @@ Options:
           Limit for the number of recursive macro calls allowed by spcasm [default: 1000]
   -f, --output-format <OUTPUT_FORMAT>
           Format to output to [default: elf] [possible values: elf, plain, hex-dump]
+  -d, --dump-references
+          Dump all references and their final values / locations
   -h, --help
           Print help information (use `--help` for more detail)
   -V, --version

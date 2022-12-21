@@ -15,45 +15,6 @@ spcasm::valid_arch_directive
         multi-architecture assembler. This arch directive points to the
         spc700 architecture and is therefore safely ignored.
 
-spcasm::non_direct_page_reference
-
-  ☞ This reference "start" has an 8-bit value, did you want to use it in
-  │ direct page addressing?
-   ╭─[examples/test.spcasm:1:1]
- 1 │ arch spc700-raw
- 2 │ org 0
- 3 │ start:        ; @ 0
-   · ──┬──
-   ·   ╰── Might point at a direct page address
- 4 │    MOV A,#$10    ;= E8 10
-   ·    ───────────┬──────────
-   ·               ╰── Memory address 00
- 5 │    MOV A,(X)     ;= E6
- 6 │    MOV A,(X+)    ;= BF
- 7 │    MOV A,$32     ;= E4 32
-   ╰────
-  help: Use a forced direct page addressing mnemonic by suffixing `.b`
-
-spcasm::non_direct_page_reference
-
-  ☞ This reference "data" has an 8-bit value, did you want to use it in direct
-  │ page addressing?
-    ╭─[examples/test.spcasm:10:1]
- 10 │    MOV A,$3320+X ;= F5 20 33
- 11 │    MOV A,$FF00+Y ;= F6 00 FF
- 12 │    MOV A,($40+X) ;= E7 40
- 13 │ data:         ; @ 13
-    · ──┬─
-    ·   ╰── Might point at a direct page address
- 14 │    MOV A,(%00100000)+Y ;= F7 20
-    ·    ──────────────┬─────────────
-    ·                  ╰── Memory address 13
- 15 │    MOV X,#$60    ;= CD 60
- 16 │    MOV X,$9A     ;= F8 9A
- 17 │    MOV X,$2E+Y   ;= F9 2E
-    ╰────
-  help: Use a forced direct page addressing mnemonic by suffixing `.b`
-
 
 ```
 
@@ -100,45 +61,6 @@ spcasm::valid_arch_directive
         multi-architecture assembler. This arch directive points to the
         spc700 architecture and is therefore safely ignored.
 
-spcasm::non_direct_page_reference
-
-  ☞ This reference "start" has an 8-bit value, did you want to use it in
-  │ direct page addressing?
-   ╭─[examples/test.spcasm:1:1]
- 1 │ arch spc700-raw
- 2 │ org 0
- 3 │ start:        ; @ 0
-   · ──┬──
-   ·   ╰── Might point at a direct page address
- 4 │    MOV A,#$10    ;= E8 10
-   ·    ───────────┬──────────
-   ·               ╰── Memory address 00
- 5 │    MOV A,(X)     ;= E6
- 6 │    MOV A,(X+)    ;= BF
- 7 │    MOV A,$32     ;= E4 32
-   ╰────
-  help: Use a forced direct page addressing mnemonic by suffixing `.b`
-
-spcasm::non_direct_page_reference
-
-  ☞ This reference "data" has an 8-bit value, did you want to use it in direct
-  │ page addressing?
-    ╭─[examples/test.spcasm:10:1]
- 10 │    MOV A,$3320+X ;= F5 20 33
- 11 │    MOV A,$FF00+Y ;= F6 00 FF
- 12 │    MOV A,($40+X) ;= E7 40
- 13 │ data:         ; @ 13
-    · ──┬─
-    ·   ╰── Might point at a direct page address
- 14 │    MOV A,(%00100000)+Y ;= F7 20
-    ·    ──────────────┬─────────────
-    ·                  ╰── Memory address 13
- 15 │    MOV X,#$60    ;= CD 60
- 16 │    MOV X,$9A     ;= F8 9A
- 17 │    MOV X,$2E+Y   ;= F9 2E
-    ╰────
-  help: Use a forced direct page addressing mnemonic by suffixing `.b`
-
 
 ```
 
@@ -158,45 +80,6 @@ spcasm::valid_arch_directive
   help: spcasm supports `arch` directives for compatibility with the Asar
         multi-architecture assembler. This arch directive points to the
         spc700 architecture and is therefore safely ignored.
-
-spcasm::non_direct_page_reference
-
-  ☞ This reference "start" has an 8-bit value, did you want to use it in
-  │ direct page addressing?
-   ╭─[examples/test.spcasm:1:1]
- 1 │ arch spc700-raw
- 2 │ org 0
- 3 │ start:        ; @ 0
-   · ──┬──
-   ·   ╰── Might point at a direct page address
- 4 │    MOV A,#$10    ;= E8 10
-   ·    ───────────┬──────────
-   ·               ╰── Memory address 00
- 5 │    MOV A,(X)     ;= E6
- 6 │    MOV A,(X+)    ;= BF
- 7 │    MOV A,$32     ;= E4 32
-   ╰────
-  help: Use a forced direct page addressing mnemonic by suffixing `.b`
-
-spcasm::non_direct_page_reference
-
-  ☞ This reference "data" has an 8-bit value, did you want to use it in direct
-  │ page addressing?
-    ╭─[examples/test.spcasm:10:1]
- 10 │    MOV A,$3320+X ;= F5 20 33
- 11 │    MOV A,$FF00+Y ;= F6 00 FF
- 12 │    MOV A,($40+X) ;= E7 40
- 13 │ data:         ; @ 13
-    · ──┬─
-    ·   ╰── Might point at a direct page address
- 14 │    MOV A,(%00100000)+Y ;= F7 20
-    ·    ──────────────┬─────────────
-    ·                  ╰── Memory address 13
- 15 │    MOV X,#$60    ;= CD 60
- 16 │    MOV X,$9A     ;= F8 9A
- 17 │    MOV X,$2E+Y   ;= F9 2E
-    ╰────
-  help: Use a forced direct page addressing mnemonic by suffixing `.b`
 
 
 ```

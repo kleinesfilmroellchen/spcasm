@@ -1,4 +1,5 @@
 ; Include directive tests
+org 0
 
 incbin "binary.bin"
 

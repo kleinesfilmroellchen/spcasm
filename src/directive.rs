@@ -151,8 +151,7 @@ impl DirectiveValue {
 	pub fn assembled_size(&self) -> usize {
 		match self {
 			// Symbolic operations take no space.
-			Self::Include { .. }
-			| Self::End
+			Self::End
 			| Self::PushSection
 			| Self::PopSection
 			| Self::UserDefinedMacro { .. }
@@ -161,7 +160,7 @@ impl DirectiveValue {
 			Self::Table { values, entry_size } => values.len() * *entry_size as usize,
 			// Use a large assembled size as a signal that we don't know at this point. This will force any later
 			// reference out of the direct page, which will always yield correct behavior.
-			Self::Brr(..) => 65536,
+			Self::Include { .. } | Self::Brr(..) => 65536,
 			Self::String { text, has_null_terminator } => text.len() + (usize::from(*has_null_terminator)),
 		}
 	}

@@ -17,7 +17,6 @@ fn all_opcodes(bencher: &mut Bencher) {
 }
 
 #[test]
-#[cfg(feature = "test_bootrom")]
 fn boot_rom() {
 	test_file("examples/bootrom.spcasm");
 }

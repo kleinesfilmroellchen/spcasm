@@ -42,7 +42,6 @@ bench = false
 
 [features]
 default = ["expensive_tests", "binaries"]
-test_bootrom = []
 binaries = ["dep:clap", "dep:object"]
 expensive_tests = []
 

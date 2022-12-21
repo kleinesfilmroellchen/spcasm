@@ -552,7 +552,7 @@ impl AssemblyFile {
 			iteration += 1;
 		}
 
-		// TODO: 4.
+		// 4.
 		for (segment_start, index_in_segment) in referenced_objects.iter().filter_map(|(_, object)| match object {
 			InstructionOrReference::Instruction { segment_start, index_in_segment, is_short: true, .. } =>
 				Some((*segment_start, *index_in_segment)),
@@ -560,7 +560,6 @@ impl AssemblyFile {
 		}) {
 			let instruction_segment = segments.segments.get_mut(&segment_start).unwrap();
 			if let ProgramElement::Instruction(instruction) = &mut instruction_segment[index_in_segment] {
-				// println!("instruction {} will now become direct page mode! {:?}", index_in_segment, instruction);
 				if let Some(op) = instruction.opcode.first_operand.as_mut() {
 					*op = op.clone().force_to_direct_page_addressing();
 				}

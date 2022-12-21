@@ -6,8 +6,10 @@ use std::path::PathBuf;
 
 use test::Bencher;
 
+use crate::cli::default_backend_options;
+use crate::parser::instruction::MemoryAddress;
 use crate::parser::ProgramElement;
-use crate::pretty_hex;
+use crate::{pretty_hex, Segments};
 
 #[bench]
 fn all_opcodes(bencher: &mut Bencher) {
@@ -63,49 +65,67 @@ fn cli() {
 }
 
 fn test_file(file: &str) {
-	let (parsed, assembled) = super::run_assembler_with_default_options(file).unwrap();
-	let expected_binary = assemble_expected_binary(
-		parsed
-			.borrow()
-			.files
-			.get(&crate::error::uniform_canonicalize(&PathBuf::from(file)).unwrap())
-			.unwrap()
-			.borrow()
-			.content
-			.clone(),
-	);
-	for (byte, (expected, actual)) in expected_binary.iter().zip(assembled.iter()).enumerate() {
-		if let Some(expected) = expected {
-			assert_eq!(
-				expected,
-				actual,
-				"Expected and actual assembly differ at byte {:04X}:\n\texpected: {:02X}\n\tactual:   {:02X}\nhint: \
-				 the bytes before and after are:\n\t{}",
-				byte,
-				expected,
-				actual,
-				pretty_hex(&assembled[byte.saturating_sub(4) .. min(assembled.len(), byte + 5)])
-			);
+	let (parsed, assembled) = super::run_assembler_into_segments(
+		&crate::AssemblyCode::from_file_or_assembly_error(file).unwrap(),
+		default_backend_options(),
+	)
+	.unwrap();
+	let expected_binary = assemble_expected_binary(parsed);
+	for ((parsed_segment_start, expected_segment), (assembled_segment_start, assembled)) in
+		expected_binary.segments.iter().zip(assembled.segments.iter())
+	{
+		assert_eq!(
+			parsed_segment_start, assembled_segment_start,
+			"Assembly and AST differ in segments; something has gone wrong!"
+		);
+		// dbg!(&expected_segment, &assembled);
+		for (byte, (expected, actual)) in expected_segment.iter().zip(assembled.iter()).enumerate() {
+			if let Some(expected) = expected {
+				assert_eq!(
+					expected,
+					actual,
+					"In segment {}: Expected and actual assembly differ at byte {:04X}:\n\texpected: \
+					 {:02X}\n\tactual:   {:02X}\nhint: the bytes before and after are:\n\t{}",
+					assembled_segment_start,
+					byte as MemoryAddress + assembled_segment_start,
+					expected,
+					actual,
+					pretty_hex(&assembled[byte.saturating_sub(4) .. min(assembled.len(), byte + 5)], Some(4))
+				);
+			}
 		}
 	}
 }
 
 /// Assembles the contents of the expected value comments, which is what the file should assemble to.
-fn assemble_expected_binary(instructions: Vec<ProgramElement>) -> Vec<Option<u8>> {
-	let mut filtered_instructions = Vec::new();
-	for program_element in instructions {
-		match program_element {
-			ProgramElement::Instruction(instruction) => filtered_instructions.push(instruction),
-			ProgramElement::Directive(crate::Directive { value: crate::directive::DirectiveValue::End, .. }) => break,
-			_ => (),
-		}
-	}
-	filtered_instructions
-		.into_iter()
-		.flat_map(|instruction| {
-			instruction.expected_value.clone().map_or(vec![None; instruction.assembled_size().into()], |value| {
-				value.iter().map(|b| Some(*b)).collect()
-			})
+fn assemble_expected_binary(instructions: Segments<ProgramElement>) -> Segments<Option<u8>> {
+	instructions
+		.try_map_segments(|_, program_elements| {
+			// let mut filtered_instructions = Vec::new();
+			// for program_element in program_elements {
+			// 	match program_element {
+			// 		ProgramElement::Instruction(instruction) => filtered_instructions.push(instruction),
+			// 		ProgramElement::Directive(crate::Directive {
+			// 			value: crate::directive::DirectiveValue::End,
+			// 			..
+			// 		}) => break,
+			// 		_ => (),
+			// 	}
+			// }
+			Ok::<_, ()>(
+				program_elements
+					.into_iter()
+					.flat_map(|program_element| {
+						match program_element {
+							ProgramElement::Instruction(ref instruction) => instruction.expected_value.clone(),
+							_ => None,
+						}
+						.map_or(vec![None; program_element.assembled_size().into()], |value| {
+							value.iter().map(|b| Some(*b)).collect()
+						})
+					})
+					.collect(),
+			)
 		})
-		.collect()
+		.unwrap() // safe because we can never fail in the mapper function
 }

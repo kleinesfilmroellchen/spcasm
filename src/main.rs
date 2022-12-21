@@ -63,7 +63,12 @@ fn main() -> miette::Result<()> {
 	args.warning_flags.expand_all();
 	let file_name = args.input;
 
-	let (_, assembled) = run_assembler(&file_name.to_string_lossy(), std::sync::Arc::new(args.warning_flags))?;
+	let (environment, assembled) =
+		run_assembler_on_file(&file_name.to_string_lossy(), std::sync::Arc::new(args.warning_flags))?;
+
+	if (args.dump_references) {
+		dump_reference_tree(&environment.borrow().globals);
+	}
 
 	if let Some(outfile) = args.output {
 		let mut outfile: Box<dyn Write> = if outfile.to_string_lossy() == "-" {
@@ -81,7 +86,8 @@ fn main() -> miette::Result<()> {
 		match args.output_format {
 			cli::OutputFormat::Elf => elf::write_to_elf(&mut outfile, &assembled).unwrap(),
 			cli::OutputFormat::Plain => outfile.write_all(&assembled).unwrap(),
-			cli::OutputFormat::HexDump => outfile.write_fmt(format_args!("{}", crate::pretty_hex(&assembled))).unwrap(),
+			cli::OutputFormat::HexDump =>
+				outfile.write_fmt(format_args!("{}", crate::pretty_hex(&assembled, None))).unwrap(),
 		};
 	}
 	Ok(())

@@ -188,7 +188,7 @@ impl Opcode {
 			Mnemonic::Not1,
 			Mnemonic::Mov1,
 		]
-		.contains(&self.mnemonic) && 
+		.contains(&self.mnemonic) &&
 		// The MOV, ADC, SBC, CMP instruction allow some forms of direct page addressing, but not others! For example, dp+Y,A is impossible, but dp+Y,X is possible.
 		!([Mnemonic::Mov, Mnemonic::Adc, Mnemonic::Sbc, Mnemonic::Cmp, Mnemonic::And, Mnemonic::Or, Mnemonic::Eor].contains(&self.mnemonic) &&
 			matches!((&self.first_operand, &self.second_operand),

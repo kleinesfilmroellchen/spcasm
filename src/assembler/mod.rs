@@ -27,37 +27,70 @@ mod branching;
 mod mov;
 mod r16bit;
 
-/// Assembles the instructions into a byte sequence.
+/// Assembles the instructions into a byte sequence. This function receives already-separated sections as input, so it
+/// does not do section splitting itself. It might modify the input segments as well during optimization.
+///
 /// # Errors
 /// Unencodeable instructions will cause errors.
 #[allow(clippy::trivially_copy_pass_by_ref)]
-pub(crate) fn assemble(
-	main_file: &Arc<RefCell<AssemblyFile>>,
+pub(crate) fn assemble_from_segments(
+	segments: &mut Segments<ProgramElement>,
+	source_code: &Arc<AssemblyCode>,
 	options: Arc<dyn BackendOptions>,
 ) -> Result<Vec<u8>, Box<AssemblyError>> {
-	let mut main_file = main_file.borrow_mut();
-	let mut data = AssembledData::new(main_file.source_code.clone());
+	assemble_to_data(segments, source_code, options)?.combine_segments()
+}
+
+/// Runs the assembler, but does not combine data from different segments afterwards. Therefore, the assembler
+/// effectively only runs inside segments. This function might modify the given segments during optimization, and it
+/// returns the assembled segments.
+///
+/// # Errors
+/// Unencodeable instructions will cause errors.
+#[allow(clippy::trivially_copy_pass_by_ref)]
+pub(crate) fn assemble_inside_segments(
+	segments: &mut Segments<ProgramElement>,
+	source_code: &Arc<AssemblyCode>,
+	options: Arc<dyn BackendOptions>,
+) -> Result<Segments<u8>, Box<AssemblyError>> {
+	assemble_to_data(segments, source_code, options)?.resolve_segments()
+}
+
+#[allow(clippy::trivially_copy_pass_by_ref)]
+fn assemble_to_data(
+	segments: &mut Segments<ProgramElement>,
+	source_code: &Arc<AssemblyCode>,
+	options: Arc<dyn BackendOptions>,
+) -> Result<AssembledData, Box<AssemblyError>> {
+	let mut data = AssembledData::new(source_code.clone());
 	let maximum_reference_resolution_passes = options.maximum_reference_resolution_passes();
 	data.set_error_options(options);
 
-	for program_element in &mut main_file.content {
-		match program_element {
-			ProgramElement::Instruction(instruction) => assemble_instruction(&mut data, instruction)?,
-			ProgramElement::Directive(directive) => assemble_directive(&mut data, directive)?,
-			ProgramElement::IncludeSource { .. } =>
-				unreachable!("there should not be any remaining unincluded source code at assembly time"),
-			ProgramElement::UserDefinedMacroCall { .. } =>
-				unreachable!("there should not be unexpanded user macros at assembly time"),
+	for (segment_start, segment_content) in &mut segments.segments {
+		data.segments.new_segment(*segment_start);
+		for program_element in segment_content {
+			match program_element {
+				ProgramElement::Instruction(instruction) => assemble_instruction(&mut data, instruction)?,
+				ProgramElement::Directive(directive) => assemble_directive(&mut data, directive)?,
+				ProgramElement::IncludeSource { .. } =>
+					unreachable!("there should not be any remaining unincluded source code at assembly time"),
+				ProgramElement::UserDefinedMacroCall { .. } =>
+					unreachable!("there should not be unexpanded user macros at assembly time"),
+			}
+			if data.should_stop {
+				break;
+			}
 		}
 		if data.should_stop {
 			break;
 		}
 	}
+
 	let mut pass_count = 0;
 	while pass_count < maximum_reference_resolution_passes && data.execute_reference_resolution_pass()? {
 		pass_count += 1;
 	}
-	data.combine_segments()
+	Ok(data)
 }
 
 #[allow(clippy::too_many_lines)] // ¯\_(ツ)_/¯
@@ -505,29 +538,36 @@ impl AssembledData {
 	/// If the segments contain overlapping data, errors are returned.
 	pub fn combine_segments(&self) -> Result<Vec<u8>, Box<AssemblyError>> {
 		let mut all_data = Vec::new();
+		let segments = self.resolve_segments()?;
+
 		// The iteration is sorted
-		for (starting_address, segment_data) in &self.segments.segments {
-			if *starting_address < all_data.len() as i64 {
+		for (starting_address, segment_data) in segments.segments {
+			if starting_address < all_data.len() as i64 {
 				return Err(AssemblyError::SegmentMismatch {
 					src:           Arc::new(AssemblyCode {
-						text:         pretty_hex(&all_data),
+						text:         pretty_hex(&all_data, Some(starting_address as usize)),
 						name:         self.source_code.name.clone(),
 						include_path: Vec::new(),
 					}),
 					// TODO: This location is wrong, it ignores newlines.
-					location:      (*starting_address as usize * 3 + 1, 2).into(),
-					segment_start: *starting_address,
+					location:      (starting_address as usize * 3 + 1, 2).into(),
+					segment_start: starting_address,
 					segment_end:   all_data.len() as MemoryAddress,
 				}
 				.into());
 			}
-			let try_resolve = |lmv: &LabeledMemoryValue| lmv.try_as_resolved(&self.source_code);
-			let resolved_segment_data = segment_data.iter().map(try_resolve).try_collect::<Vec<u8>>()?;
-			all_data.resize(*starting_address as usize, 0);
-			all_data.extend_from_slice(&resolved_segment_data);
+			all_data.resize(starting_address as usize, 0);
+			all_data.extend_from_slice(&segment_data);
 		}
 
 		Ok(all_data)
+	}
+
+	/// Resolve the assembled data's segments by resolving individual memory values. This yields the final data segments
+	/// containing raw bytes.
+	pub fn resolve_segments(&self) -> Result<Segments<u8>, Box<AssemblyError>> {
+		let try_resolve = |lmv: &LabeledMemoryValue| lmv.try_as_resolved(&self.source_code);
+		self.segments.clone().try_map_segments(|_, elements| elements.iter().map(try_resolve).try_collect::<Vec<u8>>())
 	}
 
 	/// Creates new assembled data

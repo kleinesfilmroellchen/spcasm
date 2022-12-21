@@ -182,6 +182,10 @@ mod clap_dependent {
 		/// - hexdump: Dump hexadecimal representation in a pretty format like in a hex editor.
 		#[arg(default_value = "elf", long, short = 'f')]
 		pub output_format: OutputFormat,
+
+		/// Dump all references and their final values / locations
+		#[arg(long, short = 'd')]
+		pub dump_references: bool,
 	}
 
 	#[derive(Clone, Copy, Debug, Eq, PartialEq, ValueEnum)]

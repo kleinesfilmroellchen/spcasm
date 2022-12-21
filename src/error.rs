@@ -28,6 +28,7 @@ pub struct AssemblyCode {
 
 impl AssemblyCode {
 	/// Create a new source code struct by loading a file's contents.
+	///
 	/// # Errors
 	/// If reading the file fails (doesn't exist, permissions wrong, I/O error etc.)
 	pub fn from_file(filename: &str) -> Result<Arc<Self>, std::io::Error> {
@@ -38,6 +39,27 @@ impl AssemblyCode {
 		path = uniform_canonicalize(&path)?;
 		let contents = std::fs::read_to_string(&path)?.chars().filter(|c| c != &'\r').collect();
 		Ok(Arc::new(Self { name: path, text: contents, include_path: Vec::new() }))
+	}
+
+	/// Create a new source code struct by loading a file's contents, and immediately create an assembler error if that
+	/// fails.
+	///
+	/// # Errors
+	/// If reading the file fails (doesn't exist, permissions wrong, I/O error etc.)
+	pub fn from_file_or_assembly_error(file_name: &str) -> Result<Arc<Self>, Box<AssemblyError>> {
+		Self::from_file(file_name).map_err(|os_error| {
+			AssemblyError::FileNotFound {
+				os_error,
+				file_name: file_name.to_string(),
+				src: std::sync::Arc::new(AssemblyCode {
+					name: std::path::PathBuf::from("<<arguments>>"),
+					text: file_name.to_string(),
+					..Default::default()
+				}),
+				location: (0, file_name.len()).into(),
+			}
+			.into()
+		})
 	}
 
 	/// Create a new source code struct from source code text and a (possibly fake) name.

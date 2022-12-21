@@ -9,7 +9,7 @@ use miette::{GraphicalReportHandler, GraphicalTheme};
 use once_cell::sync::Lazy;
 use options::WebOptions;
 use regex::{Captures, Regex};
-use spcasm::{pretty_hex, run_assembler_on_source, AssemblyCode, AssemblyError};
+use spcasm::{pretty_hex, run_assembler, AssemblyCode, AssemblyError};
 use wasm_bindgen::prelude::*;
 use wasm_bindgen::JsCast;
 use web_sys::HtmlElement;
@@ -117,14 +117,14 @@ pub fn on_assembly_change(options: JsValue) {
 	let source = Arc::new(AssemblyCode::new(&code_text, "<<input>>".to_owned()));
 
 	let start_time = js_sys::Date::now();
-	let assembler_result = run_assembler_on_source(&source, Arc::new(options));
+	let assembler_result = run_assembler(&source, Arc::new(options));
 
 	let end_time = js_sys::Date::now();
 	let elapsed_time = end_time - start_time;
 
 	let status_text = match assembler_result {
 		Ok((_environment, binary)) => {
-			let binary_text = pretty_hex(&binary);
+			let binary_text = pretty_hex(&binary, None);
 			output.set_inner_html(&htmlify(&binary_text));
 			"Assembly compiled successfully."
 		},

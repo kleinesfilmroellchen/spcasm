@@ -22,15 +22,15 @@ data:         ; @ 13
    MOV Y,$2100   ;= EC 00 21
 
    MOV A,#data     ;= E8 13
-   MOV A,data      ;= E5 13 00
-   MOV A,data+X    ;= F5 13 00
+   MOV A,data      ;= E4 13
+   MOV A,data+X    ;= F4 13
    MOV A,data+Y    ;= F6 13 00
    MOV A,(data+X)  ;= E7 13
    MOV A,(data)+Y  ;= F7 13
    MOV X,#data     ;= CD 13
-   MOV X,data      ;= E9 13 00
+   MOV X,data      ;= F8 13
    MOV Y,#data     ;= 8D 13
-   MOV Y,data      ;= EC 13 00
+   MOV Y,data      ;= EB 13
 
    MOV (X),A       ;= C6
    MOV (X+),A      ;= AF
@@ -210,13 +210,13 @@ reltarget:    ; @ 01 62
    jmp $2122     ;= 5F 22 21
    jmp ($2324+X)     ;= 1F 24 23
 
-   jmp .subtarget  ;= 5F 63 01
-   jmp reltarget   ;= 5F 62 01
+   jmp .subtarget  ;= 5F 5F 01
+   jmp reltarget   ;= 5F 5E 01
 another_global: ; @ 01 8D
    NOP             ;= 00
 .subtarget:     ; @ 01 8E
    NOP             ;= 00
-   jmp .subtarget  ;= 5F 8E 01
+   jmp .subtarget  ;= 5F 8A 01
 
 .selftarget:
    bne .selftarget       ;= D0 FE

@@ -88,6 +88,24 @@ impl<Contained> Segments<Contained> {
 	pub fn add_element(&mut self, element: Contained) -> Result<(), ()> {
 		self.current_segment_mut().map(|segment| segment.push(element))
 	}
+
+	/// Creates new segments by mapping all of the segments over to a new container type. This may fail
+	pub fn try_map_segments<Output, Error>(
+		self,
+		map: impl Fn(MemoryAddress, Vec<Contained>) -> Result<Vec<Output>, Error>,
+	) -> Result<Segments<Output>, Error> {
+		Ok(Segments::<Output> {
+			current_segment_start: self.current_segment_start,
+			segment_stack:         self.segment_stack,
+			segments:              self
+				.segments
+				.into_iter()
+				.map(|(address, contents)| -> Result<(MemoryAddress, Vec<Output>), Error> {
+					Ok((address, map(address, contents)?))
+				})
+				.try_collect()?,
+		})
+	}
 }
 
 impl Segments<MemoryAddress> {

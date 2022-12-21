@@ -11,7 +11,7 @@ LABEL: jmp label
 
 adc a,#3+4 ;= 88 07
 adc a,3+4 ;= 84 07
-mov x,zero_label  + $0F ;= E9 0F 00
+mov x,zero_label  + $0F ;= F8 0F
 mov x, 80 /10 ;= F8 08
 mov A, +(80/10)+5 ;= E4 0D
 mov A, 80/ (10+5) ;= E4 05

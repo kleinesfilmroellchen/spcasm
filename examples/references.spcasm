@@ -7,7 +7,7 @@ nop ;= 00
 coolvalue = $bb
 
 mov x,coolvalue ;= F8 BB
-mov x,zero ;= E9 00 00
+mov x,zero ;= F8 00
 mov x,.local_cool ;= F8 AA
 
 later_on:

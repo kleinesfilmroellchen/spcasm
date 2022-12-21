@@ -51,7 +51,7 @@ impl AssemblyCode {
 			AssemblyError::FileNotFound {
 				os_error,
 				file_name: file_name.to_string(),
-				src: std::sync::Arc::new(AssemblyCode {
+				src: std::sync::Arc::new(Self {
 					name: std::path::PathBuf::from("<<arguments>>"),
 					text: file_name.to_string(),
 					..Default::default()

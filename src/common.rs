@@ -42,29 +42,22 @@ pub fn pretty_hex(bytes: &[u8], emphasis: Option<usize>) -> String {
 pub fn dump_reference_tree(global_references: &[Arc<std::cell::RefCell<GlobalLabel>>]) {
 	for global in global_references {
 		let global = global.borrow();
-		let label_text = if let Some(location) = global
+		let label_text = global
 			.location
 			.as_ref()
-			.map(|location| location.try_value(global.span, Arc::new(AssemblyCode::new("", "".to_owned()))).ok())
-			.flatten()
-		{
-			format!("{:04X}", location)
-		} else {
-			"(unknown)".to_string()
-		};
+			.and_then(|location| location.try_value(global.span, Arc::new(AssemblyCode::new("", String::new()))).ok())
+			.map_or_else(|| "(unknown)".to_string(), |location| format!("{:04X}", location));
+
 		println!("{:<20} {:>8}", global.name, label_text);
-		for (_, local) in &global.locals {
+		for local in global.locals.values() {
 			let local = local.borrow();
-			let label_text = if let Some(location) = local
+			let label_text = local
 				.location
 				.as_ref()
-				.map(|location| location.try_value(local.span, Arc::new(AssemblyCode::new("", "".to_owned()))).ok())
-				.flatten()
-			{
-				format!("{:04X}", location)
-			} else {
-				"(unknown)".to_string()
-			};
+				.and_then(|location| {
+					location.try_value(local.span, Arc::new(AssemblyCode::new("", String::new()))).ok()
+				})
+				.map_or_else(|| "(unknown)".to_string(), |location| format!("{:04X}", location));
 
 			println!("  .{:<17} {:>8}", local.name, label_text);
 		}

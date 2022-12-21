@@ -565,6 +565,9 @@ impl AssembledData {
 
 	/// Resolve the assembled data's segments by resolving individual memory values. This yields the final data segments
 	/// containing raw bytes.
+	///
+	/// # Errors
+	/// If any memory location cannot be resolved to a value.
 	pub fn resolve_segments(&self) -> Result<Segments<u8>, Box<AssemblyError>> {
 		let try_resolve = |lmv: &LabeledMemoryValue| lmv.try_as_resolved(&self.source_code);
 		self.segments.clone().try_map_segments(|_, elements| elements.iter().map(try_resolve).try_collect::<Vec<u8>>())

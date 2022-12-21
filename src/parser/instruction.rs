@@ -172,10 +172,10 @@ impl Opcode {
 	/// Returns whether this opcode can use a direct page addressing mode. Many opcodes can, but some, like JMP,
 	/// actually can't. Note that the result of this function may be wrong for opcodes that shouldn't contain addresses
 	/// at all. These will fail the compiler later on, so the correctness is not important.
+	#[must_use]
 	pub fn can_use_direct_page_addressing(&self) -> bool {
-		return
 		// Some instructions plain-out never accept direct page addressing.
-		![
+		!([
 			Mnemonic::Jmp,
 			Mnemonic::Call,
 			Mnemonic::Tset1,
@@ -188,14 +188,14 @@ impl Opcode {
 			Mnemonic::Not1,
 			Mnemonic::Mov1,
 		]
-		.contains(&self.mnemonic) &&
+		.contains(&self.mnemonic) ||
 		// The MOV, ADC, SBC, CMP instruction allow some forms of direct page addressing, but not others! For example, dp+Y,A is impossible, but dp+Y,X is possible.
-		!([Mnemonic::Mov, Mnemonic::Adc, Mnemonic::Sbc, Mnemonic::Cmp, Mnemonic::And, Mnemonic::Or, Mnemonic::Eor].contains(&self.mnemonic) &&
+		([Mnemonic::Mov, Mnemonic::Adc, Mnemonic::Sbc, Mnemonic::Cmp, Mnemonic::And, Mnemonic::Or, Mnemonic::Eor].contains(&self.mnemonic) &&
 			matches!((&self.first_operand, &self.second_operand),
 				(Some(AddressingMode::Register(Register::A)), Some(AddressingMode::YIndexed(..))) |
 				(Some(AddressingMode::YIndexed(..)), Some(AddressingMode::Register(Register::A)))
 			)
-		);
+		))
 	}
 
 	/// Return all references that this opcode points to.

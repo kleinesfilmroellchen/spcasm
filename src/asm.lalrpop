@@ -32,7 +32,7 @@ Line: ProgramElement = <label:( <LabelForInstruction> "\n"* )?> <element:Instruc
 
 InstructionOrDirective: ProgramElement = {
 	InstructionWithTestComment => ProgramElement::Instruction(<>),
-	Directive => ProgramElement::Directive(<>),
+	DirectiveWithTestComment => ProgramElement::Directive(<>),
 	<directive:"include"> <file:"string"> => ProgramElement::IncludeSource {
 		file: String::from_utf8_lossy(&file.0).to_string(),
 		span: source_range(directive.into(), file.1.into()),
@@ -55,6 +55,15 @@ InstructionWithTestComment: Instruction = <mut instruction:Instruction> <expecte
 		instruction.span = source_range(instruction.span.into(), expected.1.into());
 	}
 	instruction
+};
+
+DirectiveWithTestComment: Directive = <mut directive:Directive> <expected:";="?> => {
+	#[cfg(test)]
+	if let Some(expected) = expected {
+		directive.expected_value = Some(expected.0);
+		directive.span = source_range(directive.span.into(), expected.1.into());
+	}
+	directive
 };
 
 Instruction: Instruction = {
@@ -100,6 +109,7 @@ Directive: Directive = {
 		},
 		span: data_directive.1,
 		label: None,
+		expected_value: None,
 	},
 	<directive:"org"> <address:AssemblyTimeValue> =>? Ok(Directive {
 		value: DirectiveValue::Org(address.try_value(directive, source_code.clone()).map_err(|err| ParseError::User {
@@ -113,21 +123,25 @@ Directive: Directive = {
 		})?),
 		span: directive,
 		label: None,
+		expected_value: None,
 	}),
 	<directive:"brr"> <filename:"string"> => Directive {
 		value: DirectiveValue::Brr(String::from_utf8_lossy(&filename.0).into_owned()),
 		span: source_range(directive.into(), filename.1.into()),
 		label: None,
+		expected_value: None,
 	},
 	<directive:"ascii"> <text:"string"> => Directive {
 		value: DirectiveValue::String { text: text.0, has_null_terminator: false },
 		span: source_range(directive.into(), text.1.into()),
 		label: None,
+		expected_value: None,
 	},
 	<directive:"asciiz"> <text:"string"> => Directive {
 		value: DirectiveValue::String { text: text.0, has_null_terminator: true },
 		span: source_range(directive.into(), text.1.into()),
 		label: None,
+		expected_value: None,
 	},
 	<directive:"incbin"> <text:"string"> <range:InclusionRange?> => Directive {
 		value: DirectiveValue::Include {
@@ -136,21 +150,25 @@ Directive: Directive = {
 		},
 		span: source_range(directive.into(), text.1.into()),
 		label: None,
+		expected_value: None,
 	},
 	"end" => Directive {
 		value: DirectiveValue::End,
 		span: <>,
 		label: None,
+		expected_value: None,
 	},
 	"pushpc" => Directive {
 		value: DirectiveValue::PushSection,
 		span: <>,
 		label: None,
+		expected_value: None,
 	},
 	"pullpc" => Directive {
 		value: DirectiveValue::PopSection,
 		span: <>,
 		label: None,
+		expected_value: None,
 	},
 	ArchDirective,
 	LabelAssignment,
@@ -190,6 +208,7 @@ UserDefinedMacro: Directive = <start:"macro"> <name:"identifier"> <arguments:Use
 	},
 	span: source_range(start.into(), end.into()),
 	label: None,
+	expected_value: None,
 };
 
 UserDefinedMacroArguments: Vec<(String, SourceSpan)> = {
@@ -269,6 +288,7 @@ LabelAssignment: Directive = <mut reference:Reference> <eq:"="> <value:AssemblyT
 		value: DirectiveValue::AssignReference { reference: reference.clone(), value },
 		span: source_range(reference.source_span().into(), eq.into()),
 		label: None,
+		expected_value: None,
 	}
 };
 

@@ -101,23 +101,13 @@ fn test_file(file: &str) {
 fn assemble_expected_binary(instructions: Segments<ProgramElement>) -> Segments<Option<u8>> {
 	instructions
 		.try_map_segments(|_, program_elements| {
-			// let mut filtered_instructions = Vec::new();
-			// for program_element in program_elements {
-			// 	match program_element {
-			// 		ProgramElement::Instruction(instruction) => filtered_instructions.push(instruction),
-			// 		ProgramElement::Directive(crate::Directive {
-			// 			value: crate::directive::DirectiveValue::End,
-			// 			..
-			// 		}) => break,
-			// 		_ => (),
-			// 	}
-			// }
 			Ok::<_, ()>(
 				program_elements
 					.into_iter()
 					.flat_map(|program_element| {
 						match program_element {
 							ProgramElement::Instruction(ref instruction) => instruction.expected_value.clone(),
+							ProgramElement::Directive(ref directive) => directive.expected_value.clone(),
 							_ => None,
 						}
 						.map_or(vec![None; program_element.assembled_size().into()], |value| {

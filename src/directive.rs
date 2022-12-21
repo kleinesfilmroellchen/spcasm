@@ -19,10 +19,12 @@ use crate::{AssemblyCode, AssemblyError, Segments};
 #[derive(Clone, Debug)]
 pub struct Directive {
 	/// Actual data of the directive.
-	pub value:       DirectiveValue,
-	pub(crate) span: SourceSpan,
+	pub value:          DirectiveValue,
+	pub(crate) span:    SourceSpan,
 	/// Label at the start of the directive. Some directives ignore this.
-	pub label:       Option<Reference>,
+	pub label:          Option<Reference>,
+	/// Expected value of the directive, for testing.
+	pub expected_value: Option<Vec<u8>>,
 }
 
 impl Directive {
@@ -50,7 +52,12 @@ impl Directive {
 impl Default for Directive {
 	fn default() -> Self {
 		// We use the table directive with no entries as default as that will do nothing.
-		Self { value: DirectiveValue::Table { values: Vec::new(), entry_size: 1 }, label: None, span: (0, 0).into() }
+		Self {
+			value:          DirectiveValue::Table { values: Vec::new(), entry_size: 1 },
+			label:          None,
+			span:           (0, 0).into(),
+			expected_value: None,
+		}
 	}
 }
 

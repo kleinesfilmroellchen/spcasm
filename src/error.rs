@@ -358,7 +358,7 @@ pub enum AssemblyError {
 		code(spcasm::invalid_addressing_mode),
 		severity(Error),
 		help("The instruction `{mnemonic}` accepts the modes {} here", 
-			.legal_modes.iter().map(|mode| format!("{}, ", mode)).collect::<String>().strip_suffix(", ").unwrap()),
+			.legal_modes.iter().map(|mode| format!("{}, ", mode)).collect::<String>().strip_suffix(", ").unwrap_or_default()),
 	)]
 	InvalidAddressingMode {
 		mode:             String,

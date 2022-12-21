@@ -29,7 +29,9 @@ In the following, each error is listed with an example and a detailed explanatio
   help: Use a forced direct page addressing mnemonic by suffixing `.b`
 ```
 
-Many SPC700 instructions can save space and clock cycles by using direct page addressing when accessing either the zeroth or first page of memory (see [the reference](reference/)). However, because direct page addresses depend on which of the two direct pages are selected and how large instructions actually are, spcasm can't currently automatically use direct page addressing if references appear in an operand that _might_ be a direct page address mode. Therefore, spcasm warns you that it found out this address is within a direct page, but it couldn't actually assemble the instruction to use direct-page addressing. The mnemonic suffix `.b` is available to force any instruction to use direct page addressing if possible.
+Many SPC700 instructions can save space and clock cycles by using direct page addressing when accessing either the zeroth or first page of memory (see [the reference](reference/)). Spcasm is able to sometimes deduce when it is possible to use such an instruction, but not always. Therefore, spcasm warns you that it found out this address is within a direct page, but it couldn't actually assemble the instruction to use direct-page addressing. The mnemonic suffix `.b` is available to force any instruction to use direct page addressing if possible.
+
+Note: No known assembly code causes this message anymore, since spcasm gained the ability to deduce direct page addressing in most circumstances.
 
 ### spcasm::valid_arch_directive
 
@@ -260,6 +262,8 @@ Therefore, for now, spcasm disallows the use of references in these cases entire
 ```
 
 Macro arguments are specific to user-defined macros and cannot be used in any way outside of them.
+
+Note: This error is theoretical, macro arguments currently cause undefined reference errors.
 
 ### spcasm::missing_global
 

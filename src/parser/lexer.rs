@@ -82,7 +82,17 @@ pub fn lex(source_code: Arc<AssemblyCode>) -> Result<Vec<Token>, Box<AssemblyErr
 				chars.next();
 				index += 2;
 				tokens.push(Token::DoubleStar((index - 2, 2).into()));
-			}
+			},
+			'<' if chars.peek().contains(&&'<') => {
+				chars.next();
+				index += 2;
+				tokens.push(Token::DoubleOpenAngleBracket((index - 2, 2).into()));
+			},
+			'>' if chars.peek().contains(&&'>') => {
+				chars.next();
+				index += 2;
+				tokens.push(Token::DoubleCloseAngleBracket((index - 2, 2).into()));
+			},
 			'#' | ',' | '+' | '-' | '*' | '(' | ')' | '[' | ']' | ':' | '.' | '/' | '!' | '=' | '<' | '>' => {
 				tokens.push(parse_single_char_tokens(chr, index.into()));
 				index += 1;

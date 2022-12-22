@@ -93,7 +93,7 @@ pub fn lex(source_code: Arc<AssemblyCode>) -> Result<Vec<Token>, Box<AssemblyErr
 				index += 2;
 				tokens.push(Token::DoubleCloseAngleBracket((index - 2, 2).into()));
 			},
-			'#' | ',' | '+' | '-' | '*' | '(' | ')' | '[' | ']' | ':' | '.' | '/' | '!' | '=' | '<' | '>' => {
+			'#' | ',' | '+' | '-' | '^' | '|' | '&' | '*' | '(' | ')' | '[' | ']' | ':' | '.' | '/' | '!' | '=' | '<' | '>' => {
 				tokens.push(parse_single_char_tokens(chr, index.into()));
 				index += 1;
 			},
@@ -288,6 +288,9 @@ fn parse_single_char_tokens(chr: char, location: SourceOffset) -> Token {
 		'<' => Token::OpenAngleBracket(location),
 		'>' => Token::CloseAngleBracket(location),
 		'%' => Token::Percent(location),
+		'&' => Token::Ampersand(location),
+		'|' => Token::Pipe(location),
+		'^' => Token::Caret(location),
 		':' => Token::Colon(location),
 		'/' | '!' => Token::Slash(location),
 		'.' => Token::Period(location),

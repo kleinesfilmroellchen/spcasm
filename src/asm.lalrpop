@@ -294,8 +294,27 @@ LabelAssignment: Directive = <mut reference:Reference> <eq:"="> <value:AssemblyT
 };
 
 AssemblyTimeValue: AssemblyTimeValue = {
-	<lhs:AssemblyTimeValue> ">>" <rhs:Arithmetic> => AssemblyTimeValue::BinaryOperation(Box::new(lhs), Box::new(rhs), BinaryOperator::RightShift),
-	<lhs:AssemblyTimeValue> "<<" <rhs:Arithmetic> => AssemblyTimeValue::BinaryOperation(Box::new(lhs), Box::new(rhs), BinaryOperator::LeftShift),
+	Or,
+};
+
+Or: AssemblyTimeValue = {
+	<lhs:Or> "|" <rhs:And> => AssemblyTimeValue::BinaryOperation(Box::new(lhs), Box::new(rhs), BinaryOperator::Or),
+	And,
+};
+
+And: AssemblyTimeValue = {
+	<lhs:And> "&" <rhs:Xor> => AssemblyTimeValue::BinaryOperation(Box::new(lhs), Box::new(rhs), BinaryOperator::And),
+	Xor,
+};
+
+Xor: AssemblyTimeValue = {
+	<lhs:Xor> "^" <rhs:Shift> => AssemblyTimeValue::BinaryOperation(Box::new(lhs), Box::new(rhs), BinaryOperator::Xor),
+	Shift,
+};
+
+Shift: AssemblyTimeValue = {
+	<lhs:Shift> ">>" <rhs:Arithmetic> => AssemblyTimeValue::BinaryOperation(Box::new(lhs), Box::new(rhs), BinaryOperator::RightShift),
+	<lhs:Shift> "<<" <rhs:Arithmetic> => AssemblyTimeValue::BinaryOperation(Box::new(lhs), Box::new(rhs), BinaryOperator::LeftShift),
 	Arithmetic,
 };
 
@@ -405,6 +424,7 @@ extern {
 		"/" => Token::Slash(<SourceOffset>),
 		"|" => Token::Pipe(<SourceOffset>),
 		"&" => Token::Ampersand(<SourceOffset>),
+		"^" => Token::Caret(<SourceOffset>),
 		"(" => Token::OpenParenthesis(<SourceOffset>),
 		")" => Token::CloseParenthesis(<SourceOffset>),
 		"[" => Token::OpenIndexingParenthesis(<SourceOffset>),

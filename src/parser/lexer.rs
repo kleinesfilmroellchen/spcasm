@@ -5,7 +5,7 @@ use std::sync::Arc;
 
 use miette::SourceOffset;
 
-use super::instruction::Mnemonic;
+use super::instruction::{MemoryAddress, Mnemonic};
 use super::register::Register;
 use super::token::Token;
 use super::Parse;
@@ -51,7 +51,30 @@ pub fn lex(source_code: Arc<AssemblyCode>) -> Result<Vec<Token>, Box<AssemblyErr
 				let text = next_string(&mut chars, source_code.clone(), &mut index)?.into_iter().map(|chr| chr as u8).collect();
 				let text_span = (start_index, index - start_index).into();
 				tokens.push(Token::String(text, text_span));
-			}
+			},
+			'\'' => {
+				let start_index = index;
+				index += 1;
+				let mut end_index = index;
+				let chr = match chars.next() {
+					Some('\'') => Err(AssemblyError::UnexpectedCharacter { chr: '\'', location: (index, 1).into(), src: source_code.clone() }.into()),
+					Some('\\') => next_escape_sequence(&mut chars, source_code.clone(), &mut end_index),
+					Some(chr) => Ok(chr),
+					None => Err(AssemblyError::UnexpectedEndOfTokens {
+						expected: vec!["\"".into()],
+						location: (source_code.text.len() - 1, 0).into(),
+						src:      source_code.clone(),
+					}.into()),
+				}?;
+				let end = chars.next();
+				if let Some(end) = end && end != '\'' {
+					return Err(AssemblyError::UnexpectedCharacter { chr: end, location: (end_index, 1).into(), src: source_code.clone() }.into());
+				} else if end.is_none() {
+					return Err(AssemblyError::UnexpectedEndOfTokens { expected: vec!["'".into()], location: (end_index, 1).into(), src: source_code.clone() }.into());
+				}
+				end_index += 1;
+				tokens.push(Token::Number(chr as MemoryAddress, (start_index, end_index - start_index).into()));
+			},
 			'A' ..= 'Z' | 'a' ..= 'z' | '_' | '@' => {
 				let start_index = index;
 				let identifier = next_identifier(&mut chars, chr);

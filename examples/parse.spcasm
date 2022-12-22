@@ -1,7 +1,7 @@
 org 0
 
 zero_label:
-MoV a,X
+MoV a,X ;= 7D
 
 inc x : inc x
 
@@ -31,6 +31,8 @@ mov a,#6**3 ;= E8 D8
 
 mov a,$abcd    ;= E5 CD AB
 mov.b a,$abcd  ;= E4 CD
+
+db 'x', '\x67', '\\', '\"', '\''
 
 dw 40, 30, 20,10
 word $f707

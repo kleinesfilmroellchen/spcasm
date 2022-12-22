@@ -11,6 +11,7 @@ use crate::parser::{
 	instruction::{Instruction, Mnemonic, AddressingMode, Opcode},
 	Environment,
 	AssemblyTimeValue,
+	value::{UnaryOperator, BinaryOperator},
 	LabelUsageKind, 
 	Token,
 	Register,
@@ -293,21 +294,21 @@ LabelAssignment: Directive = <mut reference:Reference> <eq:"="> <value:AssemblyT
 };
 
 AssemblyTimeValue: AssemblyTimeValue = {
-	<lhs:Factor> "+" <rhs:Factor> => AssemblyTimeValue::Add(Box::new(lhs), Box::new(rhs)),
-	<lhs:Factor> "-" <rhs:Factor> => AssemblyTimeValue::Subtract(Box::new(lhs), Box::new(rhs)),
+	<lhs:Factor> "+" <rhs:Factor> => AssemblyTimeValue::BinaryOperation(Box::new(lhs), Box::new(rhs), BinaryOperator::Add),
+	<lhs:Factor> "-" <rhs:Factor> => AssemblyTimeValue::BinaryOperation(Box::new(lhs), Box::new(rhs), BinaryOperator::Subtract),
 	Factor,
 };
 
 Factor: AssemblyTimeValue = {
-	<lhs:Factor> "*" <rhs:Term> => AssemblyTimeValue::Multiply(Box::new(lhs), Box::new(rhs)),
-	<lhs:Factor> "/" <rhs:Term> => AssemblyTimeValue::Divide(Box::new(lhs), Box::new(rhs)),
+	<lhs:Factor> "*" <rhs:Term> => AssemblyTimeValue::BinaryOperation(Box::new(lhs), Box::new(rhs), BinaryOperator::Multiply),
+	<lhs:Factor> "/" <rhs:Term> => AssemblyTimeValue::BinaryOperation(Box::new(lhs), Box::new(rhs), BinaryOperator::Divide),
 	Term,
 };
 
 Term: AssemblyTimeValue = {
 	"number" => AssemblyTimeValue::Literal(<>.0),
 	"+" <Term>,
-	"-" <Term> => AssemblyTimeValue::Negate(Box::new(<>)),
+	"-" <Term> => AssemblyTimeValue::UnaryOperation(Box::new(<>), UnaryOperator::Negate),
 	"(" <AssemblyTimeValue> ")",
 	Reference => AssemblyTimeValue::Reference(<>),
 };

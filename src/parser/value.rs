@@ -29,16 +29,10 @@ pub enum AssemblyTimeValue {
 	Literal(MemoryAddress),
 	/// A reference that will resolve later.
 	Reference(Reference),
-	/// - expr; negating another value.
-	Negate(Box<AssemblyTimeValue>),
-	/// expr + expr
-	Add(Box<AssemblyTimeValue>, Box<AssemblyTimeValue>),
-	/// expr - expr
-	Subtract(Box<AssemblyTimeValue>, Box<AssemblyTimeValue>),
-	/// expr * expr
-	Multiply(Box<AssemblyTimeValue>, Box<AssemblyTimeValue>),
-	/// expr / expr
-	Divide(Box<AssemblyTimeValue>, Box<AssemblyTimeValue>),
+	/// A unary math operation.
+	UnaryOperation(Box<AssemblyTimeValue>, UnaryOperator),
+	/// A binary math operation.
+	BinaryOperation(Box<AssemblyTimeValue>, Box<AssemblyTimeValue>, BinaryOperator),
 }
 
 impl AssemblyTimeValue {
@@ -48,9 +42,8 @@ impl AssemblyTimeValue {
 		match self {
 			Self::Literal(..) => None,
 			Self::Reference(reference) => Some(reference.clone()),
-			Self::Negate(number) => number.first_reference(),
-			Self::Add(lhs, rhs) | Self::Subtract(lhs, rhs) | Self::Multiply(lhs, rhs) | Self::Divide(lhs, rhs) =>
-				lhs.first_reference().or_else(|| rhs.first_reference()),
+			Self::UnaryOperation(number, _) => number.first_reference(),
+			Self::BinaryOperation(lhs, rhs, _) => lhs.first_reference().or_else(|| rhs.first_reference()),
 		}
 	}
 
@@ -60,8 +53,8 @@ impl AssemblyTimeValue {
 		match self {
 			Self::Literal(..) => Vec::default(),
 			Self::Reference(reference) => vec![reference],
-			Self::Negate(value) => value.references(),
-			Self::Add(lhs, rhs) | Self::Subtract(lhs, rhs) | Self::Multiply(lhs, rhs) | Self::Divide(lhs, rhs) => {
+			Self::UnaryOperation(value, _) => value.references(),
+			Self::BinaryOperation(lhs, rhs, _) => {
 				let mut references = lhs.references();
 				let mut more_references = rhs.references();
 				references.append(&mut more_references);
@@ -78,8 +71,8 @@ impl AssemblyTimeValue {
 			Self::Reference(Reference::Local(local)) =>
 				*local =
 					reference::merge_local_into_parent(local.clone(), Some(label.clone()), &Arc::default()).unwrap(),
-			Self::Negate(val) => val.set_global_label(label),
-			Self::Add(lhs, rhs) | Self::Subtract(lhs, rhs) | Self::Multiply(lhs, rhs) | Self::Divide(lhs, rhs) => {
+			Self::UnaryOperation(val, _) => val.set_global_label(label),
+			Self::BinaryOperation(lhs, rhs, _) => {
 				lhs.set_global_label(label);
 				rhs.set_global_label(label);
 			},
@@ -133,11 +126,8 @@ impl AssemblyTimeValue {
 				}.into()),
 				Reference::MacroArgument{value: Some(value), span, ..} => value.try_value(location, source_code)?,
 			},
-			Self::Negate(number) => -number.try_value(location, source_code)?,
-			Self::Add(lhs, rhs) => lhs.try_value(location, source_code.clone())? + rhs.try_value(location, source_code)?,
-			Self::Subtract(lhs, rhs) => lhs.try_value(location, source_code.clone())? - rhs.try_value(location, source_code)?,
-			Self::Multiply(lhs, rhs) => lhs.try_value(location, source_code.clone())? * rhs.try_value(location, source_code)?,
-			Self::Divide(lhs, rhs) => lhs.try_value(location, source_code.clone())? / rhs.try_value(location, source_code)?,
+			Self::UnaryOperation(number, operator) => operator.execute(number.try_value(location, source_code)?),
+			Self::BinaryOperation(lhs, rhs, operator) => operator.execute(lhs.try_value(location, source_code.clone())?, rhs.try_value(location, source_code)?),
 		})
 	}
 
@@ -149,25 +139,13 @@ impl AssemblyTimeValue {
 			Self::Reference(Reference::Global(global)) if let Some(memory_location) = global.clone().borrow().location.clone() => memory_location.try_resolve(),
 			Self::Reference(Reference::Local(local)) if let Some(memory_location) = local.clone().borrow().location.clone() => memory_location.try_resolve(),
 			Self::Reference(Reference::MacroArgument { value: Some(memory_location) , .. }) => memory_location.try_resolve(),
-			Self::Negate(number) => match number.try_resolve() {
-				Self::Literal(value) => Self::Literal(-value),
-				resolved => Self::Negate(Box::new(resolved)),
+			Self::UnaryOperation(number, operator) => match number.try_resolve() {
+				Self::Literal(value) => Self::Literal(operator.execute(value)),
+				resolved => Self::UnaryOperation(Box::new(resolved), operator),
 			},
-			Self::Add(lhs, rhs) => match (lhs.try_resolve(), rhs.try_resolve()) {
-				(Self::Literal(lhs_value), Self::Literal(rhs_value)) => Self::Literal(lhs_value + rhs_value),
-				(lhs, rhs) => Self::Add(Box::new(lhs), Box::new(rhs)),
-			},
-			Self::Subtract(lhs, rhs) => match (lhs.try_resolve(), rhs.try_resolve()) {
-				(Self::Literal(lhs_value), Self::Literal(rhs_value)) => Self::Literal(lhs_value - rhs_value),
-				(lhs, rhs) => Self::Subtract(Box::new(lhs), Box::new(rhs)),
-			},
-			Self::Multiply(lhs, rhs) => match (lhs.try_resolve(), rhs.try_resolve()) {
-				(Self::Literal(lhs_value), Self::Literal(rhs_value)) => Self::Literal(lhs_value * rhs_value),
-				(lhs, rhs) => Self::Multiply(Box::new(lhs), Box::new(rhs)),
-			},
-			Self::Divide(lhs, rhs) => match (lhs.try_resolve(), rhs.try_resolve()) {
-				(Self::Literal(lhs_value), Self::Literal(rhs_value)) => Self::Literal(lhs_value / rhs_value),
-				(lhs, rhs) => Self::Divide(Box::new(lhs), Box::new(rhs)),
+			Self::BinaryOperation(lhs, rhs, operator) => match (lhs.try_resolve(), rhs.try_resolve()) {
+				(Self::Literal(lhs_value), Self::Literal(rhs_value)) => Self::Literal(operator.execute(lhs_value, rhs_value)),
+				(lhs, rhs) => Self::BinaryOperation(Box::new(lhs), Box::new(rhs), operator),
 			},
 			Self::Literal(..) | Self::Reference(Reference::Local(..) | Reference::Global(..) | Reference::MacroArgument { value: None, .. } | Reference::MacroGlobal { .. }) => self,
 		}
@@ -188,8 +166,8 @@ impl MacroParentReplacable for AssemblyTimeValue {
 				Ok(())
 			},
 			Self::Reference(reference) => reference.replace_macro_parent(replacement_parent, source_code),
-			Self::Negate(number) => number.replace_macro_parent(replacement_parent, source_code),
-			Self::Add(lhs, rhs) | Self::Subtract(lhs, rhs) | Self::Multiply(lhs, rhs) | Self::Divide(lhs, rhs) => {
+			Self::UnaryOperation(number, _) => number.replace_macro_parent(replacement_parent, source_code),
+			Self::BinaryOperation(lhs, rhs, _) => {
 				lhs.replace_macro_parent(replacement_parent.clone(), source_code)?;
 				rhs.replace_macro_parent(replacement_parent, source_code)
 			},
@@ -210,15 +188,15 @@ impl<T> From<(Self, T)> for AssemblyTimeValue {
 }
 
 // should be closure in upperhex formatter but borrow checker says no, again, no passing references to other closures
-fn write_correctly(prefix: char, f: &mut Formatter<'_>, address: &AssemblyTimeValue) -> Result<(), Error> {
-	f.write_char(prefix)?;
+fn write_correctly(prefix: &str, f: &mut Formatter<'_>, address: &AssemblyTimeValue) -> Result<(), Error> {
+	f.write_str(prefix)?;
 	fmt::UpperHex::fmt(address, f)
 }
 
 impl UpperHex for AssemblyTimeValue {
 	fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), Error> {
 		let write_binary = |op, f: &mut Formatter, lhs: &Self, rhs: &Self| {
-			write_correctly('(', f, lhs)?;
+			write_correctly("(", f, lhs)?;
 			write_correctly(op, f, rhs)?;
 			f.write_char(')')
 		};
@@ -227,7 +205,7 @@ impl UpperHex for AssemblyTimeValue {
 			Self::Reference(Reference::Global(ref unresolved_reference)) => {
 				let unresolved_reference = unresolved_reference.borrow();
 				match unresolved_reference.location {
-					Some(ref numeric_address) => write_correctly('$', f, numeric_address),
+					Some(ref numeric_address) => write_correctly("$", f, numeric_address),
 					None => write!(f, "{}", unresolved_reference.name),
 				}
 			},
@@ -247,11 +225,100 @@ impl UpperHex for AssemblyTimeValue {
 				f.write_char('$')?;
 				fmt::UpperHex::fmt(numeric_address, f)
 			},
-			Self::Negate(number) => write_correctly('-', f, number.as_ref()),
-			Self::Add(lhs, rhs) => write_binary('+', f, lhs, rhs),
-			Self::Subtract(lhs, rhs) => write_binary('-', f, lhs.as_ref(), rhs.as_ref()),
-			Self::Multiply(lhs, rhs) => write_binary('*', f, lhs.as_ref(), rhs.as_ref()),
-			Self::Divide(lhs, rhs) => write_binary('/', f, lhs.as_ref(), rhs.as_ref()),
+			Self::UnaryOperation(number, operator) => write_correctly(&operator.to_string(), f, number.as_ref()),
+			Self::BinaryOperation(lhs, rhs, operator) => write_binary(&operator.to_string(), f, lhs, rhs),
 		}
+	}
+}
+
+/// Unary operators for assembly time calculations.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum UnaryOperator {
+	/// -expr
+	Negate,
+	/// ~expr
+	Not,
+}
+
+impl UnaryOperator {
+	/// Run the math operation this operator represents.
+	pub fn execute(&self, value: MemoryAddress) -> MemoryAddress {
+		match self {
+			Self::Not => !value,
+			Self::Negate => -value,
+		}
+	}
+}
+
+impl Display for UnaryOperator {
+	fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+		write!(f, "{}", match self {
+			Self::Negate => '-',
+			Self::Not => '~',
+		})
+	}
+}
+
+/// The kinds of binary operators supported for assembly-time calculations.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum BinaryOperator {
+	/// expr + expr
+	Add,
+	/// expr - expr
+	Subtract,
+	/// expr * expr
+	Multiply,
+	/// expr / expr
+	Divide,
+	/// expr % expr
+	Modulus,
+	/// expr << expr
+	LeftShift,
+	/// expr >> expr
+	RightShift,
+	/// expr & expr
+	And,
+	/// expr | expr
+	Or,
+	/// expr ^ expr
+	Xor,
+	/// expr ** expr
+	Exponentiation,
+}
+
+impl BinaryOperator {
+	/// Run the math operation this binary operator represents.
+	pub fn execute(&self, lhs: MemoryAddress, rhs: MemoryAddress) -> MemoryAddress {
+		match self {
+			Self::Add => lhs + rhs,
+			Self::Subtract => lhs - rhs,
+			Self::Multiply => lhs * rhs,
+			Self::Divide => lhs / rhs,
+			Self::Modulus => lhs % rhs,
+			Self::LeftShift => lhs << rhs,
+			Self::RightShift => lhs >> rhs,
+			Self::And => lhs & rhs,
+			Self::Or => lhs | rhs,
+			Self::Xor => lhs ^ rhs,
+			Self::Exponentiation => lhs.pow(rhs as u32),
+		}
+	}
+}
+
+impl Display for BinaryOperator {
+	fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+		write!(f, "{}", match self {
+			Self::Add => "+",
+			Self::Subtract => "-",
+			Self::Multiply => "*",
+			Self::Divide => "/",
+			Self::Modulus => "%",
+			Self::LeftShift => "<<",
+			Self::RightShift => ">>",
+			Self::And => "&",
+			Self::Or => "|",
+			Self::Xor => "^",
+			Self::Exponentiation => "**",
+		})
 	}
 }

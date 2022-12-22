@@ -242,7 +242,8 @@ pub enum UnaryOperator {
 
 impl UnaryOperator {
 	/// Run the math operation this operator represents.
-	pub fn execute(&self, value: MemoryAddress) -> MemoryAddress {
+	#[must_use]
+	pub const fn execute(&self, value: MemoryAddress) -> MemoryAddress {
 		match self {
 			Self::Not => !value,
 			Self::Negate => -value,
@@ -288,7 +289,8 @@ pub enum BinaryOperator {
 
 impl BinaryOperator {
 	/// Run the math operation this binary operator represents.
-	pub fn execute(&self, lhs: MemoryAddress, rhs: MemoryAddress) -> MemoryAddress {
+	#[must_use]
+	pub const fn execute(&self, lhs: MemoryAddress, rhs: MemoryAddress) -> MemoryAddress {
 		match self {
 			Self::Add => lhs + rhs,
 			Self::Subtract => lhs - rhs,
@@ -300,6 +302,7 @@ impl BinaryOperator {
 			Self::And => lhs & rhs,
 			Self::Or => lhs | rhs,
 			Self::Xor => lhs ^ rhs,
+			#[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
 			Self::Exponentiation => lhs.pow(rhs as u32),
 		}
 	}

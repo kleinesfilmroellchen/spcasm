@@ -109,9 +109,10 @@ fn assemble_expected_binary(instructions: Segments<ProgramElement>) -> Segments<
 							ProgramElement::Directive(ref directive) => directive.expected_value.clone(),
 							_ => None,
 						}
-						.map_or(vec![None; program_element.assembled_size().into()], |value| {
-							value.iter().map(|b| Some(*b)).collect()
-						})
+						.map_or_else(
+							|| vec![None; program_element.assembled_size()],
+							|value| value.iter().map(|b| Some(*b)).collect(),
+						)
 					})
 					.collect(),
 			)

@@ -294,8 +294,12 @@ LabelAssignment: Directive = <mut reference:Reference> <eq:"="> <value:AssemblyT
 };
 
 AssemblyTimeValue: AssemblyTimeValue = {
-	<lhs:Factor> "+" <rhs:AssemblyTimeValue> => AssemblyTimeValue::BinaryOperation(Box::new(lhs), Box::new(rhs), BinaryOperator::Add),
-	<lhs:Factor> "-" <rhs:AssemblyTimeValue> => AssemblyTimeValue::BinaryOperation(Box::new(lhs), Box::new(rhs), BinaryOperator::Subtract),
+	Arithmetic,
+};
+
+Arithmetic: AssemblyTimeValue = {
+	<lhs:Arithmetic> "+" <rhs:Factor> => AssemblyTimeValue::BinaryOperation(Box::new(lhs), Box::new(rhs), BinaryOperator::Add),
+	<lhs:Arithmetic> "-" <rhs:Factor> => AssemblyTimeValue::BinaryOperation(Box::new(lhs), Box::new(rhs), BinaryOperator::Subtract),
 	Factor,
 };
 

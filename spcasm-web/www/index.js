@@ -7,7 +7,7 @@ function createOptions() {
   return {
     silence_all: true,
     silenced: [],
-    max_label_resolution_passes: Number(
+    max_reference_resolution_passes: Number(
       document.querySelector("#max-reference-resolution-passes").value
     ),
     max_macro_expansion_depth: Number(

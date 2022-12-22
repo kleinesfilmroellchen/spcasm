@@ -43,6 +43,10 @@ pub enum Token {
 	DoubleStar(SourceSpan),
 	/// '/'
 	Slash(SourceOffset),
+	/// '|'
+	Pipe(SourceOffset),
+	/// '&'
+	Ampersand(SourceOffset),
 	/// '('
 	OpenParenthesis(SourceOffset),
 	/// ')'
@@ -57,8 +61,12 @@ pub enum Token {
 	Period(SourceOffset),
 	/// '<'
 	OpenAngleBracket(SourceOffset),
+	/// '<<'
+	DoubleOpenAngleBracket(SourceSpan),
 	/// '>'
 	CloseAngleBracket(SourceOffset),
+	/// '>>'
+	DoubleCloseAngleBracket(SourceSpan),
 	/// '%'
 	Percent(SourceOffset),
 	/// '.b'
@@ -149,15 +157,23 @@ impl Token {
 			| (Self::Slash(..), Self::Slash(..))
 			| (Self::Newline(..), Self::Newline(..))
 			| (Self::Comma(..), Self::Comma(..))
+			| (Self::ExplicitDirectPage(..), Self::ExplicitDirectPage(..))
 			| (Self::OpenAngleBracket(..), Self::OpenAngleBracket(..))
 			| (Self::CloseAngleBracket(..), Self::CloseAngleBracket(..))
 			| (Self::Percent(..), Self::Percent(..))
+			| (Self::Equals(..), Self::Equals(..))
+			| (Self::Ampersand(..), Self::Ampersand(..))
+			| (Self::Pipe(..), Self::Pipe(..))
+			| (Self::DoubleStar(..), Self::DoubleStar(..))
+			| (Self::DoubleCloseAngleBracket(..), Self::DoubleCloseAngleBracket(..))
+			| (Self::DoubleOpenAngleBracket(..), Self::DoubleOpenAngleBracket(..))
 			| (Self::Period(..), Self::Period(..)) => true,
 			(Self::Register(first, ..), Self::Register(second, ..)) => first == second,
 			(Self::PlusRegister(first, ..), Self::PlusRegister(second, ..)) => first == second,
 			(Self::Mnemonic(first, ..), Self::Mnemonic(second, ..)) => first == second,
 			// #[cfg(test)]
 			(Self::TestComment(..), Self::TestComment(..)) => true,
+			(Self::Mnemonic(..) | Self::Register(..) | Self::PlusRegister(..), _) => false,
 			_ => false,
 		}
 	}
@@ -183,6 +199,8 @@ impl Token {
 			| Self::CloseAngleBracket(location)
 			| Self::Percent(location)
 			| Self::Slash(location)
+			| Self::Pipe(location)
+			| Self::Ampersand(location)
 			| Self::Plus(location) => (*location, SourceOffset::from(1)).into(),
 			Self::Identifier(_, location)
 			| Self::ExplicitDirectPage(location)
@@ -191,6 +209,8 @@ impl Token {
 			| Self::String(_, location)
 			| Self::PlusRegister(_, location)
 			| Self::DoubleStar(location)
+			| Self::DoubleOpenAngleBracket(location)
+			| Self::DoubleCloseAngleBracket(location)
 			| Self::Mnemonic(_, location)
 			| Self::Directive(_, location) => *location,
 			// #[cfg(test)]
@@ -221,11 +241,15 @@ impl Display for Token {
 			Self::DoubleStar(..) => "'**'",
 			Self::OpenAngleBracket(..) => "'<'",
 			Self::CloseAngleBracket(..) => "'>'",
+			Self::DoubleOpenAngleBracket(..) => "'<<'",
+			Self::DoubleCloseAngleBracket(..) => "'>>'",
 			Self::Percent(..) => "'%'",
 			Self::Equals(..) => "'='",
 			Self::CloseParenthesis(..) | Self::CloseIndexingParenthesis(..) => "')'",
 			Self::OpenIndexingParenthesis(..) | Self::OpenParenthesis(..) => "'('",
 			Self::Slash(..) => "'/'",
+			Self::Pipe(..) => "'|'",
+			Self::Ampersand(..) => "'&'",
 			Self::Newline(..) => "new line",
 			Self::Colon(..) => "':'",
 			// #[cfg(test)]

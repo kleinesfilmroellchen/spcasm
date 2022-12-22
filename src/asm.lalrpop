@@ -302,6 +302,7 @@ AssemblyTimeValue: AssemblyTimeValue = {
 Factor: AssemblyTimeValue = {
 	<lhs:Factor> "*" <rhs:Exponential> => AssemblyTimeValue::BinaryOperation(Box::new(lhs), Box::new(rhs), BinaryOperator::Multiply),
 	<lhs:Factor> "/" <rhs:Exponential> => AssemblyTimeValue::BinaryOperation(Box::new(lhs), Box::new(rhs), BinaryOperator::Divide),
+	<lhs:Factor> "%" <rhs:Exponential> => AssemblyTimeValue::BinaryOperation(Box::new(lhs), Box::new(rhs), BinaryOperator::Modulus),
 	Exponential,
 };
 

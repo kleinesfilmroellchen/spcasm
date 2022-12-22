@@ -47,6 +47,8 @@ pub enum Token {
 	Pipe(SourceOffset),
 	/// '&'
 	Ampersand(SourceOffset),
+	/// '~'
+	Tilde(SourceOffset),
 	/// '^'
 	Caret(SourceOffset),
 	/// '('
@@ -166,6 +168,7 @@ impl Token {
 			| (Self::Equals(..), Self::Equals(..))
 			| (Self::Ampersand(..), Self::Ampersand(..))
 			| (Self::Pipe(..), Self::Pipe(..))
+			| (Self::Tilde(..), Self::Tilde(..))
 			| (Self::Caret(..), Self::Caret(..))
 			| (Self::DoubleStar(..), Self::DoubleStar(..))
 			| (Self::DoubleCloseAngleBracket(..), Self::DoubleCloseAngleBracket(..))
@@ -203,6 +206,7 @@ impl Token {
 			| Self::Percent(location)
 			| Self::Slash(location)
 			| Self::Pipe(location)
+			| Self::Tilde(location)
 			| Self::Caret(location)
 			| Self::Ampersand(location)
 			| Self::Plus(location) => (*location, SourceOffset::from(1)).into(),
@@ -242,6 +246,7 @@ impl Display for Token {
 			Self::Plus(..) => "'+'",
 			Self::Minus(..) | Self::RangeMinus(..) => "'-'",
 			Self::Star(..) => "'*'",
+			Self::Tilde(..) => "'~'",
 			Self::DoubleStar(..) => "'**'",
 			Self::OpenAngleBracket(..) => "'<'",
 			Self::CloseAngleBracket(..) => "'>'",

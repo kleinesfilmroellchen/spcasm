@@ -25,6 +25,7 @@ mov   a,#1 << 4 ;= E8 10
 mov a, # 8 >>2 ;= E8 02
 mov a , #$ff &%11 ;= E8 03
  mov a,# $0F |$f0 ;= E8 FF
+mov a ,#~%10110010 ;= E8 4D
 mov a, #$9f ^ $78 ^$9F ;= E8 78
 mov a,#6**3 ;= E8 D8
 

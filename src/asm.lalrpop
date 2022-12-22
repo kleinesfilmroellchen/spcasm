@@ -341,6 +341,7 @@ Term: AssemblyTimeValue = {
 	"number" => AssemblyTimeValue::Literal(<>.0),
 	"+" <Term>,
 	"-" <Term> => AssemblyTimeValue::UnaryOperation(Box::new(<>), UnaryOperator::Negate),
+	"~" <Term> => AssemblyTimeValue::UnaryOperation(Box::new(<>), UnaryOperator::Not),
 	"(" <AssemblyTimeValue> ")",
 	Reference => AssemblyTimeValue::Reference(<>),
 };
@@ -425,6 +426,7 @@ extern {
 		"|" => Token::Pipe(<SourceOffset>),
 		"&" => Token::Ampersand(<SourceOffset>),
 		"^" => Token::Caret(<SourceOffset>),
+		"~" => Token::Tilde(<SourceOffset>),
 		"(" => Token::OpenParenthesis(<SourceOffset>),
 		")" => Token::CloseParenthesis(<SourceOffset>),
 		"[" => Token::OpenIndexingParenthesis(<SourceOffset>),

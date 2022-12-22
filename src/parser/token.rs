@@ -39,6 +39,8 @@ pub enum Token {
 	RangeMinus(SourceOffset),
 	/// '*'
 	Star(SourceOffset),
+	/// '**'
+	DoubleStar(SourceSpan),
 	/// '/'
 	Slash(SourceOffset),
 	/// '('
@@ -188,6 +190,7 @@ impl Token {
 			| Self::Register(_, location)
 			| Self::String(_, location)
 			| Self::PlusRegister(_, location)
+			| Self::DoubleStar(location)
 			| Self::Mnemonic(_, location)
 			| Self::Directive(_, location) => *location,
 			// #[cfg(test)]
@@ -215,6 +218,7 @@ impl Display for Token {
 			Self::Plus(..) => "'+'",
 			Self::Minus(..) | Self::RangeMinus(..) => "'-'",
 			Self::Star(..) => "'*'",
+			Self::DoubleStar(..) => "'**'",
 			Self::OpenAngleBracket(..) => "'<'",
 			Self::CloseAngleBracket(..) => "'>'",
 			Self::Percent(..) => "'%'",

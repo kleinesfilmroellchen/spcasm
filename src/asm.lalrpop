@@ -300,10 +300,16 @@ AssemblyTimeValue: AssemblyTimeValue = {
 };
 
 Factor: AssemblyTimeValue = {
-	<lhs:Factor> "*" <rhs:Term> => AssemblyTimeValue::BinaryOperation(Box::new(lhs), Box::new(rhs), BinaryOperator::Multiply),
-	<lhs:Factor> "/" <rhs:Term> => AssemblyTimeValue::BinaryOperation(Box::new(lhs), Box::new(rhs), BinaryOperator::Divide),
-	Term,
+	<lhs:Factor> "*" <rhs:Exponential> => AssemblyTimeValue::BinaryOperation(Box::new(lhs), Box::new(rhs), BinaryOperator::Multiply),
+	<lhs:Factor> "/" <rhs:Exponential> => AssemblyTimeValue::BinaryOperation(Box::new(lhs), Box::new(rhs), BinaryOperator::Divide),
+	Exponential,
 };
+
+/// Note that the sub-expressions are the other way around, as exponentials have right-to-left operator precedence!
+Exponential: AssemblyTimeValue = {
+	<lhs:Term> "**" <rhs:Exponential> => AssemblyTimeValue::BinaryOperation(Box::new(lhs), Box::new(rhs), BinaryOperator::Exponentiation),
+	Term,
+}
 
 Term: AssemblyTimeValue = {
 	"number" => AssemblyTimeValue::Literal(<>.0),
@@ -386,6 +392,7 @@ extern {
 		"," => Token::Comma(<SourceOffset>),
 		"+" => Token::Plus(<SourceOffset>),
 		"*" => Token::Star(<SourceOffset>),
+		"**" => Token::DoubleStar(<SourceSpan>),
 		"-" => Token::Minus(<SourceOffset>),
 		"-range-" => Token::RangeMinus(<SourceOffset>),
 		"/" => Token::Slash(<SourceOffset>),

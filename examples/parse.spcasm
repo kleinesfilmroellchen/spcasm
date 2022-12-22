@@ -18,6 +18,7 @@ mov A, 80/ (10+5) ;= E4 05
 mov A, +(80/10)+X ;= F4 08
 mov A,bytelabel
 
+mov a, #$10* 3 ;= E8 30
 mov a,#  72 %7 ;= E8 02
 mov a,#6**3 ;= E8 D8
 

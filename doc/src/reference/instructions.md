@@ -240,7 +240,7 @@ All opcodes are given in hexadecimal; other numbers are decimal.
 | $00+X    | 3B     | 2           | 5      | NZC       |
 | $0000    | 2C     | 3           | 5      | NZC       |
 
-## `ROL`
+## `ROR`
 
 `ROR` instructions perform (one) in-place right rotation on the operand; the shifted-around bit is stored in the carry flag.
 

@@ -7,7 +7,9 @@
 extern crate test;
 use test::Bencher;
 
-use super::*;
+use super::{
+	encode_to_brr, Block, CompressionLevel, DecodedBlockSamples, Header, LPCFilter, LoopEndFlags, WarmUpSamples,
+};
 
 const zero_warmup: WarmUpSamples = [0, 0];
 

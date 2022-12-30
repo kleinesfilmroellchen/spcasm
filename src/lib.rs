@@ -31,43 +31,40 @@
 pub use common::*;
 pub use segments::Segments;
 
-#[deny(missing_docs, clippy::all, clippy::pedantic, clippy::nursery)]
-pub mod assembler;
-#[deny(missing_docs, clippy::all, clippy::pedantic, clippy::nursery)]
-pub mod brr;
-#[deny(missing_docs, clippy::all, clippy::pedantic, clippy::nursery)]
-pub mod cli;
-#[deny(missing_docs, clippy::all, clippy::pedantic, clippy::nursery)]
-mod common;
-#[deny(missing_docs, clippy::all, clippy::pedantic, clippy::nursery)]
-mod default_hacks;
-#[deny(missing_docs, clippy::all, clippy::pedantic, clippy::nursery)]
-mod directive;
+/// Just like -Werror on C(++) compilers, make ALL THE WARNINGS INTO ERRORS!
+#[macro_export]
+macro_rules! w_error {
+	($vis:vis mod $modname:ident) => {
+		#[deny(missing_docs, clippy::all, clippy::pedantic, clippy::nursery)]
+		$vis mod $modname;
+	};
+}
+
+w_error!(pub mod assembler);
+w_error!(pub mod brr);
+w_error!(pub mod cli);
+w_error!(mod common);
+w_error!(mod default_hacks);
+w_error!(mod directive);
 #[cfg(feature = "binaries")]
-#[deny(missing_docs, clippy::all, clippy::pedantic, clippy::nursery)]
-pub mod elf;
-#[deny(missing_docs, clippy::all, clippy::pedantic, clippy::nursery)]
-mod error;
-#[deny(missing_docs, clippy::all, clippy::pedantic, clippy::nursery)]
-mod lalrpop_adaptor;
-#[deny(missing_docs, clippy::all, clippy::pedantic, clippy::nursery)]
-pub mod parser;
-#[deny(missing_docs, clippy::all, clippy::pedantic, clippy::nursery)]
-mod segments;
+w_error!(pub mod elf);
+w_error!(mod error);
+w_error!(mod lalrpop_adaptor);
+w_error!(pub mod parser);
+w_error!(mod segments);
+
 lalrpop_mod!(
-	#[allow(clippy::all, clippy::pedantic, clippy::nursery, missing_docs)]
+	#[allow(missing_docs, clippy::all, clippy::pedantic, clippy::nursery)]
 	asm
 );
 
 shadow_rs::shadow!(buildinfo);
 
 #[cfg(test)]
-#[deny(missing_docs, clippy::all, clippy::pedantic, clippy::nursery)]
-mod test;
+w_error!(mod test);
 
 #[cfg(feature = "binaries")]
-#[deny(missing_docs, clippy::all, clippy::pedantic, clippy::nursery)]
-mod spcasm;
+w_error!(mod spcasm);
 
 #[cfg(feature = "binaries")]
 fn main() -> miette::Result<()> {

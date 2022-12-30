@@ -1,5 +1,5 @@
 //! Interactive BRR test program.
-#![deny(clippy::all, clippy::nursery, clippy::pedantic)]
+#![deny(missing_docs, clippy::all, clippy::pedantic, clippy::nursery)]
 
 use std::convert::TryInto;
 use std::fs::File;

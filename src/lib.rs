@@ -24,7 +24,6 @@
 	maybe_uninit_array_assume_init
 )]
 #![allow(non_upper_case_globals, unused)]
-#![deny(clippy::all, clippy::pedantic, clippy::nursery)]
 
 #[macro_use] extern crate lalrpop_util;
 
@@ -62,9 +61,12 @@ lalrpop_mod!(
 
 shadow_rs::shadow!(buildinfo);
 
-#[cfg(test)] mod test;
+#[cfg(test)]
+#[deny(missing_docs, clippy::all, clippy::pedantic, clippy::nursery)]
+mod test;
 
 #[cfg(feature = "binaries")]
+#[deny(missing_docs, clippy::all, clippy::pedantic, clippy::nursery)]
 mod spcasm;
 
 #[cfg(feature = "binaries")]

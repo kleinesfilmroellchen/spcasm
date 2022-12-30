@@ -4,7 +4,6 @@
 //! implement the custom Default. There are no collisions at the moment; Rust is just worried there might be in the
 //! future. So we just tell Rust what types we want to copy the Default implementation for and add to that list if
 //! necessary.
-#![deny(clippy::all, clippy::pedantic, clippy::nursery)]
 
 use std::num::ParseIntError;
 use std::sync::Arc;

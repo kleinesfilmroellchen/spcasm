@@ -20,12 +20,12 @@ pub struct Segments<Contained> {
 	pub segment_stack:         Vec<MemoryAddress>,
 }
 
+#[allow(clippy::result_unit_err)]
 impl<Contained> Segments<Contained> {
 	/// Push the current segment onto the segment stack, leaving the current segment vacant.
 	///
 	/// # Errors
 	/// If there is no current segment.
-	#[allow(clippy::result_unit_err)]
 	pub fn push_segment(&mut self) -> Result<(), ()> {
 		self.segment_stack.push(self.current_segment_start.ok_or(())?);
 		self.current_segment_start = None;
@@ -36,7 +36,6 @@ impl<Contained> Segments<Contained> {
 	///
 	/// # Errors
 	/// If there is no segment on the stack.
-	#[allow(clippy::result_unit_err)]
 	pub fn pop_segment(&mut self) -> Result<(), ()> {
 		if self.segment_stack.is_empty() {
 			return Err(());
@@ -58,7 +57,6 @@ impl<Contained> Segments<Contained> {
 	/// # Errors
 	/// If this assembly data doesn't have a started segment yet.
 	#[inline]
-	#[allow(clippy::result_unit_err)]
 	pub fn current_segment(&self) -> Result<&Vec<Contained>, ()> {
 		Ok(&self.segments[&self.current_segment_start.ok_or(())?])
 	}
@@ -67,7 +65,7 @@ impl<Contained> Segments<Contained> {
 	/// # Errors
 	/// If this assembly data doesn't have a started segment yet.
 	#[inline]
-	#[allow(clippy::result_unit_err, clippy::missing_panics_doc)]
+	#[allow(clippy::missing_panics_doc)]
 	pub fn current_location(&self) -> Result<MemoryAddress, ()> {
 		Ok(self.segments[&self.current_segment_start.ok_or(())?].len() as MemoryAddress
 			+ self.current_segment_start.unwrap())
@@ -77,7 +75,7 @@ impl<Contained> Segments<Contained> {
 	/// # Errors
 	/// If this assembly data doesn't have a started segment yet.
 	#[inline]
-	#[allow(clippy::result_unit_err, clippy::missing_panics_doc)]
+	#[allow(clippy::missing_panics_doc)]
 	pub fn current_segment_mut(&mut self) -> Result<&mut Vec<Contained>, ()> {
 		Ok(self.segments.get_mut(&self.current_segment_start.ok_or(())?).unwrap())
 	}
@@ -89,7 +87,10 @@ impl<Contained> Segments<Contained> {
 		self.current_segment_mut().map(|segment| segment.push(element))
 	}
 
-	/// Creates new segments by mapping all of the segments over to a new container type. This may fail
+	/// Creates new segments by mapping all of the segments over to a new container type.
+	///
+	/// # Errors
+	/// May fail if the segment mapping fails.
 	pub fn try_map_segments<Output, Error>(
 		self,
 		map: impl Fn(MemoryAddress, Vec<Contained>) -> Result<Vec<Output>, Error>,
@@ -108,9 +109,13 @@ impl<Contained> Segments<Contained> {
 	}
 }
 
+#[allow(clippy::result_unit_err)]
 impl Segments<MemoryAddress> {
 	/// Returns the address we're currently at within the active segment. This assumes that the segment is a list of
 	/// sizes for assembled elements, such as instructions.
+	///
+	/// # Errors
+	/// If there is no current segment.
 	pub fn current_address_within_segment(&self) -> Result<MemoryAddress, ()> {
 		let assembled_size_within_segment = self.current_segment()?.iter().sum::<MemoryAddress>();
 		let start = self.current_segment_start.ok_or(())?;

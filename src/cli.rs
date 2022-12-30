@@ -33,6 +33,7 @@ pub trait BackendOptions: std::fmt::Debug {
 }
 
 /// Returns a ``BackendOptions`` implementation with default behavior.
+#[must_use]
 pub fn default_backend_options() -> Arc<dyn BackendOptions> {
 	Arc::new(DummyOptions {})
 }
@@ -40,6 +41,7 @@ pub fn default_backend_options() -> Arc<dyn BackendOptions> {
 /// Backend options created by clap in binary builds.
 #[derive(Debug, Clone, Eq, PartialEq, Default, Args)]
 #[cfg(feature = "binaries")]
+#[allow(clippy::module_name_repetitions)]
 pub struct CliOptions {
 	/// Warnings to silence.
 	#[arg(num_args = 1, action = clap::ArgAction::Append, long, short = 'w')]
@@ -132,7 +134,7 @@ impl From<Discriminant<AssemblyError>> for ErrorCodeSpec {
 	}
 }
 
-const error_prefix: &'static str = "spcasm::";
+const error_prefix: &str = "spcasm::";
 
 impl FromStr for ErrorCodeSpec {
 	type Err = String;
@@ -166,13 +168,14 @@ mod clap_dependent {
 	#[derive(Parser)]
 	#[command(version=
 		format!("{}\n{} {}, built {}", buildinfo::PKG_VERSION, buildinfo::RUST_VERSION, buildinfo::BUILD_TARGET, buildinfo::BUILD_TIME), about, long_about=None)]
-	pub(crate) struct SpcasmCli {
+	pub struct SpcasmCli {
 		/// Assembly file to assemble.
 		#[arg()]
 		pub input:         PathBuf,
 		/// Binary output file.
 		#[arg()]
 		pub output:        Option<PathBuf>,
+		///
 		#[command(flatten)]
 		pub warning_flags: CliOptions,
 		/// Format to output to.
@@ -190,11 +193,15 @@ mod clap_dependent {
 		pub dump_references: bool,
 	}
 
+	/// Format to output to; see `SpcasmCli`.
 	#[derive(Clone, Copy, Debug, Eq, PartialEq, ValueEnum)]
 	#[repr(u8)]
-	pub(crate) enum OutputFormat {
+	pub enum OutputFormat {
+		/// ELF
 		Elf,
+		/// Plain binary
 		Plain,
+		/// Human-readable hex dump
 		HexDump,
 	}
 }

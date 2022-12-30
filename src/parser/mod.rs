@@ -1,5 +1,4 @@
 //! Parser infrastructure; Utility functions for LALRPOP driver code.
-#![deny(clippy::all, clippy::pedantic, clippy::nursery)]
 
 use std::cell::RefCell;
 use std::collections::HashMap;

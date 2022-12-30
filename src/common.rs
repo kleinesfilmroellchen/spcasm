@@ -1,5 +1,4 @@
 //! Common includes and functions for both library and executable.
-#![deny(clippy::all, clippy::pedantic, clippy::nursery)]
 
 use std::cmp::min;
 use std::sync::Arc;

@@ -25,10 +25,13 @@ default-run = "spcasm"
 
 [lib]
 name = "spcasm"
+path = "src/lib.rs"
 required-features = []
 
 [[bin]]
 name = "spcasm"
+# shut up cargo
+path = "src/../src/lib.rs"
 required-features = ["binaries"]
 test = false
 bench = false

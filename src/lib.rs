@@ -58,6 +58,7 @@ lalrpop_mod!(
 	asm
 );
 
+#[cfg(feature = "binaries")]
 shadow_rs::shadow!(buildinfo);
 
 #[cfg(test)]

@@ -6,6 +6,7 @@ use std::sync::Arc;
 
 #[cfg(feature = "binaries")]
 use clap::Args;
+#[cfg(feature = "binaries")]
 use miette::Diagnostic;
 
 use crate::error::{AssemblyError, ErrorCodes};

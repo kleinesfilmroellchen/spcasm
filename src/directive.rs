@@ -179,17 +179,21 @@ impl MacroParentReplacable for DirectiveValue {
 		source_code: &Arc<AssemblyCode>,
 	) -> Result<(), Box<AssemblyError>> {
 		match self {
-			Self::Table { values, entry_size } => {
+			Self::Table { values, .. } => {
 				for value in values {
 					value.replace_macro_parent(replacement_parent.clone(), source_code)?;
 				}
 				Ok(())
 			},
-			Self::String { text, has_null_terminator } => Ok(()),
-			Self::AssignReference { reference, value } => value.replace_macro_parent(replacement_parent, source_code),
-			Self::Include { file, range } => Ok(()),
-			Self::End | Self::PushSection | Self::Brr(_) | Self::PopSection | Self::Org(_) => Ok(()),
-			Self::UserDefinedMacro { name, arguments, body } => Err(AssemblyError::RecursiveMacroDefinition {
+			Self::String { .. }
+			| Self::Include { .. }
+			| Self::End
+			| Self::PushSection
+			| Self::Brr(_)
+			| Self::PopSection
+			| Self::Org(_) => Ok(()),
+			Self::AssignReference { value, .. } => value.replace_macro_parent(replacement_parent, source_code),
+			Self::UserDefinedMacro { name, body, .. } => Err(AssemblyError::RecursiveMacroDefinition {
 				name:     (*name).to_string(),
 				location: source_range(
 					body.first().map_or_else(|| (0, 0).into(), |p| *p.span()).into(),

@@ -1,8 +1,6 @@
 //! Assembler/codegen
 #![allow(clippy::cast_possible_truncation, clippy::cast_sign_loss, clippy::wildcard_imports)]
 
-use std::cell::RefCell;
-use std::collections::{BTreeMap, HashSet};
 use std::fs::File;
 use std::io::ErrorKind;
 use std::path::PathBuf;
@@ -17,7 +15,7 @@ use crate::directive::DirectiveValue;
 use crate::error::{AssemblyCode, AssemblyError};
 use crate::parser::instruction::{AddressingMode, Instruction, MemoryAddress, Mnemonic, Opcode};
 use crate::parser::reference::{Reference, Resolvable};
-use crate::parser::{AssemblyFile, AssemblyTimeValue, ProgramElement, Register};
+use crate::parser::{AssemblyTimeValue, ProgramElement, Register};
 use crate::{pretty_hex, Directive, Segments};
 
 mod arithmetic_logic;
@@ -126,14 +124,14 @@ fn assemble_instruction(data: &mut AssembledData, instruction: &mut Instruction)
 			..
 		} => {
 			let is_increment = mnemonic == Mnemonic::Incw;
-			r16bit::assemble_incw_decw_instruction(data, is_increment, target, instruction);
+			r16bit::assemble_incw_decw_instruction(data, is_increment, target, instruction)?;
 		},
 		Opcode {
 			mnemonic: mnemonic @ (Mnemonic::Addw | Mnemonic::Subw | Mnemonic::Cmpw),
 			first_operand: Some(AddressingMode::Register(Register::YA)),
 			second_operand: Some(AddressingMode::DirectPage(target)),
 			..
-		} => r16bit::assemble_add_sub_cmp_wide_instruction(data, mnemonic, target, instruction),
+		} => r16bit::assemble_add_sub_cmp_wide_instruction(data, mnemonic, target, instruction)?,
 		Opcode {
 			mnemonic: Mnemonic::Movw,
 			first_operand: Some(target @ (AddressingMode::DirectPage(_) | AddressingMode::Register(Register::YA))),
@@ -161,26 +159,26 @@ fn assemble_instruction(data: &mut AssembledData, instruction: &mut Instruction)
 					_ => return make_movw_error(),
 				})
 			};
-			r16bit::assemble_mov_wide_instruction(data, page_address, &direction, instruction);
+			r16bit::assemble_mov_wide_instruction(data, page_address, &direction, instruction)?;
 		},
 		Opcode {
 			mnemonic: Mnemonic::Mul,
 			first_operand: Some(AddressingMode::Register(Register::YA)),
 			second_operand: None,
 			..
-		} => data.append_instruction(0xCF, instruction),
+		} => data.append_instruction(0xCF, instruction)?,
 		Opcode {
 			mnemonic: Mnemonic::Div,
 			first_operand: Some(AddressingMode::Register(Register::YA)),
 			second_operand: Some(AddressingMode::Register(Register::X)),
 			..
-		} => data.append_instruction(0x9E, instruction),
+		} => data.append_instruction(0x9E, instruction)?,
 		Opcode {
 			mnemonic: mnemonic @ (Mnemonic::Daa | Mnemonic::Das),
 			first_operand: Some(AddressingMode::Register(Register::A)),
 			second_operand: None,
 			..
-		} => data.append_instruction(if mnemonic == Mnemonic::Daa { 0xDF } else { 0xBE }, instruction),
+		} => data.append_instruction(if mnemonic == Mnemonic::Daa { 0xDF } else { 0xBE }, instruction)?,
 		Opcode {
 			mnemonic:
 				mnemonic @ (Mnemonic::Bra
@@ -223,7 +221,7 @@ fn assemble_instruction(data: &mut AssembledData, instruction: &mut Instruction)
 			first_operand: None,
 			second_operand: None,
 			..
-		} => assemble_operandless_instruction(data, mnemonic, instruction),
+		} => assemble_operandless_instruction(data, mnemonic, instruction)?,
 		Opcode {
 			mnemonic: mnemonic @ (Mnemonic::Push | Mnemonic::Pop),
 			first_operand: Some(AddressingMode::Register(target)),
@@ -304,16 +302,16 @@ fn assemble_directive(data: &mut AssembledData, directive: &mut Directive) -> Re
 				})?;
 			let encoded = brr::encode_to_brr(&mut sample_data, false, brr::CompressionLevel::Max);
 
-			data.append_bytes(encoded, &directive.label, directive.span);
+			data.append_bytes(encoded, &directive.label, directive.span)?;
 		},
 		DirectiveValue::String { ref text, has_null_terminator } => {
 			let mut is_first = true;
 			for chr in text {
-				data.append(*chr, if is_first { directive.label.clone() } else { None }, directive.span);
+				data.append(*chr, if is_first { directive.label.clone() } else { None }, directive.span)?;
 				is_first = false;
 			}
 			if has_null_terminator {
-				data.append(0, if is_first { directive.label.clone() } else { None }, directive.span);
+				data.append(0, if is_first { directive.label.clone() } else { None }, directive.span)?;
 			}
 		},
 		DirectiveValue::AssignReference { ref mut reference, ref value } => match reference {
@@ -360,7 +358,7 @@ fn assemble_directive(data: &mut AssembledData, directive: &mut Directive) -> Re
 					.to_vec();
 			}
 
-			data.append_bytes(binary_data, &directive.label, directive.span);
+			data.append_bytes(binary_data, &directive.label, directive.span)?;
 		},
 		DirectiveValue::End => {
 			data.should_stop = true;
@@ -370,7 +368,11 @@ fn assemble_directive(data: &mut AssembledData, directive: &mut Directive) -> Re
 	Ok(())
 }
 
-fn assemble_operandless_instruction(data: &mut AssembledData, mnemonic: Mnemonic, instruction: &mut Instruction) {
+fn assemble_operandless_instruction(
+	data: &mut AssembledData,
+	mnemonic: Mnemonic,
+	instruction: &mut Instruction,
+) -> Result<(), Box<AssemblyError>> {
 	data.append_instruction(
 		match mnemonic {
 			Mnemonic::Brk => 0x0F,
@@ -390,7 +392,7 @@ fn assemble_operandless_instruction(data: &mut AssembledData, mnemonic: Mnemonic
 			_ => unreachable!(),
 		},
 		instruction,
-	);
+	)
 }
 
 pub(crate) fn resolve_file(
@@ -507,7 +509,7 @@ impl MemoryValue {
 	}
 
 	#[allow(clippy::missing_const_for_fn)]
-	fn try_resolved(&self, location: SourceSpan, source_code: &Arc<AssemblyCode>) -> Result<u8, AssemblyTimeValue> {
+	fn try_resolved(&self, _location: SourceSpan, _source_code: &Arc<AssemblyCode>) -> Result<u8, AssemblyTimeValue> {
 		match self {
 			Self::Resolved(value) => Ok(*value),
 			Self::Number(number, ..)
@@ -614,9 +616,8 @@ impl AssembledData {
 				size: 16,
 			})?;
 		}
-		self.append((value & 0xFF) as u8, reference, span);
-		self.append(((value & 0xFF00) >> 8) as u8, None, span);
-		Ok(())
+		self.append((value & 0xFF) as u8, reference, span)?;
+		self.append(((value & 0xFF00) >> 8) as u8, None, span)
 	}
 
 	/// Appends an 8-bit value to the current segment. The given number is truncated to 8 bits.
@@ -639,14 +640,16 @@ impl AssembledData {
 				size: 8,
 			})?;
 		}
-		self.append((value & 0xFF) as u8, reference, span);
-		Ok(())
+		self.append((value & 0xFF) as u8, reference, span)
 	}
 
 	/// Appends the opcode of an instruction that doesn't take any operands.
+	///
+	/// # Errors
+	/// If there is no currently active section.
 	#[inline]
-	pub fn append_instruction(&mut self, opcode: u8, instruction: &mut Instruction) {
-		self.append(opcode, instruction.label.clone(), instruction.span);
+	pub fn append_instruction(&mut self, opcode: u8, instruction: &mut Instruction) -> Result<(), Box<AssemblyError>> {
+		self.append(opcode, instruction.label.clone(), instruction.span)
 	}
 
 	/// Appends an 8-bit value to the current segment.
@@ -768,7 +771,7 @@ impl AssembledData {
 		operand: AssemblyTimeValue,
 		instruction: &mut Instruction,
 	) -> Result<(), Box<AssemblyError>> {
-		self.append(opcode, instruction.label.clone(), instruction.span);
+		self.append(opcode, instruction.label.clone(), instruction.span)?;
 		match operand.try_resolve() {
 			AssemblyTimeValue::Literal(value) => self.append_8_bits(value, None, instruction.span)?,
 			value => self.append_8_bits_unresolved(value, 0, None, instruction.span)?,
@@ -793,7 +796,7 @@ impl AssembledData {
 	) -> Result<(), Box<AssemblyError>> {
 		// The operands are flipped in machine code from what the assembly does. It's not target, source; it's source,
 		// target.
-		self.append_instruction_with_8_bit_operand(opcode, first_machine_operand, instruction);
+		self.append_instruction_with_8_bit_operand(opcode, first_machine_operand, instruction)?;
 		match second_machine_operand.try_resolve() {
 			AssemblyTimeValue::Literal(value) => self.append_8_bits(value, None, instruction.span)?,
 			value => self.append_8_bits_unresolved(value, 0, None, instruction.span)?,
@@ -812,12 +815,11 @@ impl AssembledData {
 		operand: AssemblyTimeValue,
 		instruction: &mut Instruction,
 	) -> Result<(), Box<AssemblyError>> {
-		self.append(opcode, instruction.label.clone(), instruction.span);
+		self.append(opcode, instruction.label.clone(), instruction.span)?;
 		match operand.try_resolve() {
-			AssemblyTimeValue::Literal(value) => self.append_16_bits(value, None, instruction.span)?,
-			value => self.append_16_bits_unresolved(value, None, instruction.span)?,
+			AssemblyTimeValue::Literal(value) => self.append_16_bits(value, None, instruction.span),
+			value => self.append_16_bits_unresolved(value, None, instruction.span),
 		}
-		Ok(())
 	}
 
 	/// Appends an instruction with a 16-bit operand. The upper three bits of it are replaced by the bit index, either
@@ -833,17 +835,16 @@ impl AssembledData {
 		bit_index: u8,
 		instruction: &mut Instruction,
 	) -> Result<(), Box<AssemblyError>> {
-		self.append(opcode, instruction.label.clone(), instruction.span);
+		self.append(opcode, instruction.label.clone(), instruction.span)?;
 
 		match operand.try_resolve() {
 			AssemblyTimeValue::Literal(value) =>
-				self.append_16_bits(value | (MemoryAddress::from(bit_index) << 13), None, instruction.span)?,
+				self.append_16_bits(value | (MemoryAddress::from(bit_index) << 13), None, instruction.span),
 			value => {
-				self.append_8_bits_unresolved(value.clone(), 0, None, instruction.span);
-				self.append_unresolved_with_bit_index(value, bit_index, instruction.span);
+				self.append_8_bits_unresolved(value.clone(), 0, None, instruction.span)?;
+				self.append_unresolved_with_bit_index(value, bit_index, instruction.span)
 			},
 		}
-		Ok(())
 	}
 
 	/// Appends an instruction with an 8-bit operand. If this is a reference, it's stored as a relative unresolved
@@ -857,12 +858,11 @@ impl AssembledData {
 		operand: AssemblyTimeValue,
 		instruction: &mut Instruction,
 	) -> Result<(), Box<AssemblyError>> {
-		self.append(opcode, instruction.label.clone(), instruction.span);
+		self.append(opcode, instruction.label.clone(), instruction.span)?;
 		match operand.try_resolve() {
-			AssemblyTimeValue::Literal(value) => self.append_8_bits(value, None, instruction.span)?,
-			value => self.append_relative_unresolved(value, instruction.span)?,
+			AssemblyTimeValue::Literal(value) => self.append_8_bits(value, None, instruction.span),
+			value => self.append_relative_unresolved(value, instruction.span),
 		}
-		Ok(())
 	}
 
 	/// Executes a reference resolution pass. This means the following:

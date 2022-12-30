@@ -112,7 +112,7 @@ impl MacroParentReplacable for ProgramElement {
 				}
 				Ok(())
 			},
-			Self::IncludeSource { file, span, label } => Ok(()),
+			Self::IncludeSource { .. } => Ok(()),
 		}
 	}
 }

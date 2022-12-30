@@ -2,24 +2,15 @@
 
 use core::fmt;
 use std::cell::RefCell;
-use std::collections::HashMap;
 use std::fmt::{Display, Error, Formatter, UpperHex, Write};
-use std::path::PathBuf;
 use std::result::Result;
-use std::sync::{Arc, Weak};
+use std::sync::Arc;
 
-use miette::{SourceOffset, SourceSpan};
-use spcasm_derive::{Parse, VariantName};
+use miette::SourceSpan;
 
-use super::instruction::{Instruction, MemoryAddress, Opcode};
-use super::lexer::lex;
-use super::reference::{self, GlobalLabel, MacroParameters, MacroParentReplacable, Reference};
-use super::register::Register;
-use crate::assembler::resolve_file;
-use crate::cli::{default_backend_options, BackendOptions};
-use crate::directive::DirectiveValue;
+use super::instruction::MemoryAddress;
+use super::reference::{self, GlobalLabel, MacroParentReplacable, Reference};
 use crate::error::{AssemblyCode, AssemblyError};
-use crate::{lalrpop_adaptor, Directive, VariantName};
 
 /// Any numeric value that can be calculated at assembly time.
 #[derive(Clone, Debug, PartialEq)]
@@ -124,7 +115,7 @@ impl AssemblyTimeValue {
 					usage_location: *span,
 					src: source_code
 				}.into()),
-				Reference::MacroArgument{value: Some(value), span, ..} => value.try_value(location, source_code)?,
+				Reference::MacroArgument{value: Some(value), ..} => value.try_value(location, source_code)?,
 			},
 			Self::UnaryOperation(number, operator) => operator.execute(number.try_value(location, source_code)?),
 			Self::BinaryOperation(lhs, rhs, operator) => operator.execute(lhs.try_value(location, source_code.clone())?, rhs.try_value(location, source_code)?),

@@ -23,7 +23,7 @@
 	drain_filter,
 	maybe_uninit_array_assume_init
 )]
-#![allow(non_upper_case_globals, unused)]
+#![allow(non_upper_case_globals)]
 
 #[macro_use] extern crate lalrpop_util;
 
@@ -35,7 +35,7 @@ pub use segments::Segments;
 #[macro_export]
 macro_rules! w_error {
 	($vis:vis mod $modname:ident) => {
-		#[deny(missing_docs, clippy::all, clippy::pedantic, clippy::nursery)]
+		#[deny(missing_docs, unused, clippy::all, clippy::pedantic, clippy::nursery)]
 		$vis mod $modname;
 	};
 }
@@ -54,7 +54,7 @@ w_error!(pub mod parser);
 w_error!(mod segments);
 
 lalrpop_mod!(
-	#[allow(missing_docs, clippy::all, clippy::pedantic, clippy::nursery)]
+	#[allow(missing_docs, unused, clippy::all, clippy::pedantic, clippy::nursery)]
 	asm
 );
 
@@ -67,6 +67,7 @@ w_error!(mod test);
 w_error!(mod spcasm);
 
 #[cfg(feature = "binaries")]
+#[allow(unused)]
 fn main() -> miette::Result<()> {
 	spcasm::main()
 }

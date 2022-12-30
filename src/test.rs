@@ -1,6 +1,5 @@
 extern crate test;
 use std::cmp::min;
-use std::path::PathBuf;
 
 use test::Bencher;
 

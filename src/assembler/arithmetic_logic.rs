@@ -36,7 +36,7 @@ pub(super) fn assemble_arithmetic_instruction(
 					_ => unreachable!(),
 				},
 				instruction,
-			),
+			)?,
 			AddressingMode::DirectPage(page_address) => data.append_instruction_with_8_bit_operand(
 				match mnemonic {
 					Mnemonic::Adc => 0x84,
@@ -153,7 +153,7 @@ pub(super) fn assemble_arithmetic_instruction(
 						_ => unreachable!(),
 					},
 					instruction,
-				);
+				)?;
 			} else {
 				return Err(AssemblyError::InvalidAddressingMode {
 					is_first_operand: false,
@@ -289,7 +289,7 @@ pub(super) fn assemble_inc_dec_instruction(
 				_ => unreachable!(),
 			},
 			instruction,
-		),
+		)?,
 		AddressingMode::DirectPage(page_address) => data.append_instruction_with_8_bit_operand(
 			if is_increment { 0xAB } else { 0x8B },
 			page_address,
@@ -354,7 +354,7 @@ pub(super) fn assemble_shift_rotation_instruction(
 				_ => unreachable!(),
 			},
 			instruction,
-		),
+		)?,
 		AddressingMode::DirectPage(page_address) => data.append_instruction_with_8_bit_operand(
 			match mnemonic {
 				Mnemonic::Asl => 0x0B,

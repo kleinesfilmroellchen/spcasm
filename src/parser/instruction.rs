@@ -1,9 +1,8 @@
 //! Instruction/AST-related structs created in the parser and consumed in the assembler.
 #![allow(clippy::use_self)]
 
-use core::fmt;
 use std::cell::RefCell;
-use std::fmt::{Display, Error, Formatter, UpperHex, Write};
+use std::fmt::{Display, Error, Formatter};
 use std::result::Result;
 use std::sync::Arc;
 

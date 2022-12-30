@@ -175,14 +175,6 @@ pub fn decode_from_brr(encoded: &[u8]) -> Result<Vec<DecodedSample>, String> {
 	Ok(decoded_samples)
 }
 
-fn fill_slice_to_16(slice: &[i16]) -> DecodedBlockSamples {
-	let mut result_chunk = [0; 16];
-	for (i, entry) in result_chunk.iter_mut().enumerate() {
-		*entry = *slice.get(i).or_else(|| slice.last()).unwrap();
-	}
-	result_chunk
-}
-
 /// A 9-byte encoded BRR block.
 ///
 /// Each BRR block starts with a header byte followed by 8 sample bytes. Each sample byte in turn holds 2 4-bit samples.

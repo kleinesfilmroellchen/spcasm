@@ -159,11 +159,11 @@ impl Environment {
 
 		let lexed = lalrpop_adaptor::preprocess_token_stream(tokens);
 		let lexed = lalrpop_adaptor::LalrpopAdaptor::from(lexed);
-		let mut program = crate::asm::ProgramParser::new()
+		let program = crate::asm::ProgramParser::new()
 			.parse(this, source_code, lexed)
 			.map_err(|err| AssemblyError::from_lalrpop(err, source_code.clone()))?;
 
-		let mut rc_file = Arc::new(RefCell::new(AssemblyFile {
+		let rc_file = Arc::new(RefCell::new(AssemblyFile {
 			content:     program,
 			source_code: source_code.clone(),
 			parent:      Arc::downgrade(this),
@@ -294,19 +294,19 @@ impl AssemblyFile {
 
 				// Anything labeled with a user macro argument: This is always an error; we're not inside a user macro.
 				ProgramElement::Instruction(Instruction {
-					label: Some(ref mal @ Reference::MacroArgument { ref name, ref value, ref span, .. }),
+					label: Some(ref mal @ Reference::MacroArgument { ref span, .. }),
 					..
 				})
 				| ProgramElement::IncludeSource {
-					label: Some(ref mal @ Reference::MacroArgument { ref name, ref value, ref span, .. }),
+					label: Some(ref mal @ Reference::MacroArgument { ref span, .. }),
 					..
 				}
 				| ProgramElement::UserDefinedMacroCall {
-					label: Some(ref mal @ Reference::MacroArgument { ref name, ref value, ref span, .. }),
+					label: Some(ref mal @ Reference::MacroArgument { ref span, .. }),
 					..
 				}
 				| ProgramElement::Directive(Directive {
-					label: Some(ref mal @ Reference::MacroArgument { ref name, ref value, ref span, .. }),
+					label: Some(ref mal @ Reference::MacroArgument { ref span, .. }),
 					..
 				}) =>
 					return Err(AssemblyError::UsingMacroArgumentOutsideMacro {
@@ -337,7 +337,7 @@ impl AssemblyFile {
 	pub fn resolve_user_macro_arguments(&mut self) -> Result<(), Box<AssemblyError>> {
 		for element in &mut self.content {
 			if let ProgramElement::Directive(Directive {
-				value: DirectiveValue::UserDefinedMacro { ref arguments, body, name },
+				value: DirectiveValue::UserDefinedMacro { ref arguments, body, .. },
 				..
 			}) = element
 			{
@@ -390,14 +390,13 @@ impl AssemblyFile {
 					.add_element(element.clone())
 					.map_err(Self::to_asm_error(&instruction.span, &self.source_code))?,
 				ProgramElement::Directive(Directive { value: DirectiveValue::End, .. }) => break,
-				ProgramElement::Directive(directive @ Directive { span, label, .. }) => {
+				ProgramElement::Directive(directive @ Directive { span, .. }) => {
 					directive.perform_segment_operations_if_necessary(&mut segments, self.source_code.clone())?;
 					if directive.value.assembled_size() > 0 {
 						segments.add_element(element.clone()).map_err(Self::to_asm_error(span, &self.source_code))?;
 					}
 				},
-				ProgramElement::IncludeSource { label, span, .. }
-				| ProgramElement::UserDefinedMacroCall { label, span, .. } => {},
+				ProgramElement::IncludeSource { .. } | ProgramElement::UserDefinedMacroCall { .. } => {},
 			}
 		}
 
@@ -479,9 +478,8 @@ impl AssemblyFile {
 							}));
 						}
 					},
-					ProgramElement::Directive(directive @ Directive { span, label, .. }) => handle_label!(label),
-					ProgramElement::IncludeSource { label, span, .. }
-					| ProgramElement::UserDefinedMacroCall { label, span, .. } => panic!(
+					ProgramElement::Directive(Directive { label, .. }) => handle_label!(label),
+					ProgramElement::IncludeSource { .. } | ProgramElement::UserDefinedMacroCall { .. } => panic!(
 						"source includes and unresolved macro calls at reference optimization time, this is a bug"
 					),
 				}
@@ -495,9 +493,7 @@ impl AssemblyFile {
 		let mut address_offset = 0;
 		for (address, instruction_or_reference) in &mut referenced_objects {
 			*address += address_offset;
-			if let InstructionOrReference::Instruction { segment_start, index_in_segment, references, is_short } =
-				instruction_or_reference
-			{
+			if let InstructionOrReference::Instruction { is_short, .. } = instruction_or_reference {
 				address_offset -= 1;
 				*is_short = true;
 			}
@@ -531,16 +527,9 @@ impl AssemblyFile {
 				for (address, possible_referent) in &mut referenced_objects {
 					*address += address_offset;
 					match possible_referent {
-						InstructionOrReference::Instruction {
-							segment_start,
-							index_in_segment,
-							references,
-							is_short,
-						} if references.iter().any(|reference| reference == &moved_reference) => {
-							// println!(
-							// 	"enlarging instruction #{} (address {}) because reference {} is beyond the direct page",
-							// 	index_in_segment, address, moved_reference,
-							// );
+						InstructionOrReference::Instruction { references, is_short, .. }
+							if references.iter().any(|reference| reference == &moved_reference) =>
+						{
 							change = true;
 							*is_short = true;
 							address_offset += 1;
@@ -590,7 +579,7 @@ impl AssemblyFile {
 	pub fn resolve_source_includes(&mut self) -> Result<(), Box<AssemblyError>> {
 		let mut index = 0;
 		while index < self.content.len() {
-			let mut element = self.content[index].clone();
+			let element = self.content[index].clone();
 			if let ProgramElement::IncludeSource { ref file, label, span } = element {
 				let environment = self.parent.upgrade().expect("parent deleted while we're still parsing");
 				let file = resolve_file(&self.source_code, span, file)?.to_string_lossy().to_string();
@@ -601,12 +590,12 @@ impl AssemblyFile {
 						src: self.source_code.clone(),
 						location: span,
 					})?;
-				let mut child_include_path = &mut unsafe { Arc::get_mut_unchecked(&mut included_code) }.include_path;
+				let child_include_path = &mut unsafe { Arc::get_mut_unchecked(&mut included_code) }.include_path;
 				child_include_path.push(self.source_code.name.clone());
 				child_include_path.append(&mut self.source_code.include_path.clone());
 
 				let tokens = lex(included_code.clone())?;
-				let mut included_file = Environment::parse(&environment, tokens, &included_code)?;
+				let included_file = Environment::parse(&environment, tokens, &included_code)?;
 
 				included_file.borrow_mut().set_first_label(label);
 				self.content.splice(index ..= index, included_file.borrow().content.clone());
@@ -646,10 +635,9 @@ impl AssemblyFile {
 		let mut macro_end_stack = Vec::new();
 
 		while index < self.content.len() {
-			let mut element = &mut self.content[index];
+			let element = &mut self.content[index];
 
-			if let ProgramElement::UserDefinedMacroCall { macro_name, arguments: actual_arguments, span, label } =
-				element
+			if let ProgramElement::UserDefinedMacroCall { macro_name, arguments: actual_arguments, span, .. } = element
 			{
 				if macro_end_stack.len() > maximum_macro_expansion_depth {
 					return Err(AssemblyError::RecursiveMacroUse {
@@ -662,7 +650,7 @@ impl AssemblyFile {
 				}
 
 				let called_macro = user_macros.get(macro_name);
-				if let Some((span, DirectiveValue::UserDefinedMacro { name, arguments, body })) = called_macro {
+				if let Some((span, DirectiveValue::UserDefinedMacro { arguments, body, .. })) = called_macro {
 					let arguments = arguments.borrow();
 					let formal_arguments = match &(arguments).parameters {
 						MacroParameters::Formal(formal_arguments) => formal_arguments,
@@ -699,7 +687,7 @@ impl AssemblyFile {
 					// FIXME: Doesn't handle macro-internal references correctly; also no support for the \@ special
 					// label.
 					let mut inserted_body = body.clone();
-					for mut macro_element in &mut inserted_body {
+					for macro_element in &mut inserted_body {
 						macro_element.replace_macro_parent(actual_argument_parent.clone(), &self.source_code)?;
 					}
 

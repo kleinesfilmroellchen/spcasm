@@ -12,8 +12,8 @@ pub(super) fn assemble_incw_decw_instruction(
 	is_increment: bool,
 	target_address: AssemblyTimeValue,
 	instruction: &mut Instruction,
-) {
-	data.append_instruction_with_8_bit_operand(if is_increment { 0x3A } else { 0x1A }, target_address, instruction);
+) -> Result<(), Box<AssemblyError>> {
+	data.append_instruction_with_8_bit_operand(if is_increment { 0x3A } else { 0x1A }, target_address, instruction)
 }
 
 pub(super) fn assemble_add_sub_cmp_wide_instruction(
@@ -21,7 +21,7 @@ pub(super) fn assemble_add_sub_cmp_wide_instruction(
 	mnemonic: Mnemonic,
 	target_address: AssemblyTimeValue,
 	instruction: &mut Instruction,
-) {
+) -> Result<(), Box<AssemblyError>> {
 	data.append_instruction_with_8_bit_operand(
 		match mnemonic {
 			Mnemonic::Addw => 0x7A,
@@ -31,7 +31,7 @@ pub(super) fn assemble_add_sub_cmp_wide_instruction(
 		},
 		target_address,
 		instruction,
-	);
+	)
 }
 
 pub(super) fn assemble_mov_wide_instruction(
@@ -39,7 +39,7 @@ pub(super) fn assemble_mov_wide_instruction(
 	page_address: AssemblyTimeValue,
 	direction: &MovDirection,
 	instruction: &mut Instruction,
-) {
+) -> Result<(), Box<AssemblyError>> {
 	data.append_instruction_with_8_bit_operand(
 		match direction {
 			MovDirection::IntoYA => 0xBA,
@@ -47,5 +47,5 @@ pub(super) fn assemble_mov_wide_instruction(
 		},
 		page_address,
 		instruction,
-	);
+	)
 }

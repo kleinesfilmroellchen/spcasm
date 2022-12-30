@@ -58,8 +58,8 @@ pub(super) fn assemble_mov(
 	match target {
 		AddressingMode::Register(Register::A) => match source {
 			AddressingMode::Immediate(value) => data.append_instruction_with_8_bit_operand(0xE8, value, instruction)?,
-			AddressingMode::IndirectX => data.append_instruction(0xE6, instruction),
-			AddressingMode::IndirectXAutoIncrement => data.append_instruction(0xBF, instruction),
+			AddressingMode::IndirectX => data.append_instruction(0xE6, instruction)?,
+			AddressingMode::IndirectXAutoIncrement => data.append_instruction(0xBF, instruction)?,
 			AddressingMode::DirectPage(page_address) =>
 				data.append_instruction_with_8_bit_operand(0xE4, page_address, instruction)?,
 			AddressingMode::DirectPageXIndexed(page_base_address) =>
@@ -74,8 +74,8 @@ pub(super) fn assemble_mov(
 				data.append_instruction_with_8_bit_operand(0xE7, page_base_address, instruction)?,
 			AddressingMode::DirectPageIndirectYIndexed(page_base_address) =>
 				data.append_instruction_with_8_bit_operand(0xF7, page_base_address, instruction)?,
-			AddressingMode::Register(Register::X) => data.append_instruction(0x7D, instruction),
-			AddressingMode::Register(Register::Y) => data.append_instruction(0xDD, instruction),
+			AddressingMode::Register(Register::X) => data.append_instruction(0x7D, instruction)?,
+			AddressingMode::Register(Register::Y) => data.append_instruction(0xDD, instruction)?,
 			mode => return make_error(mode, false),
 		},
 		AddressingMode::Register(Register::X) => match source {
@@ -86,8 +86,8 @@ pub(super) fn assemble_mov(
 				data.append_instruction_with_8_bit_operand(0xF9, page_address, instruction)?,
 			AddressingMode::Address(address) =>
 				data.append_instruction_with_16_bit_operand(0xE9, address, instruction)?,
-			AddressingMode::Register(Register::A) => data.append_instruction(0x5D, instruction),
-			AddressingMode::Register(Register::SP) => data.append_instruction(0x9D, instruction),
+			AddressingMode::Register(Register::A) => data.append_instruction(0x5D, instruction)?,
+			AddressingMode::Register(Register::SP) => data.append_instruction(0x9D, instruction)?,
 			mode => return make_error(mode, false),
 		},
 		AddressingMode::Register(Register::Y) => match source {
@@ -98,12 +98,12 @@ pub(super) fn assemble_mov(
 				data.append_instruction_with_8_bit_operand(0xFB, page_address, instruction)?,
 			AddressingMode::Address(address) =>
 				data.append_instruction_with_16_bit_operand(0xEC, address, instruction)?,
-			AddressingMode::Register(Register::A) => data.append_instruction(0xFD, instruction),
+			AddressingMode::Register(Register::A) => data.append_instruction(0xFD, instruction)?,
 			mode => return make_error(mode, false),
 		},
 		AddressingMode::Register(Register::SP) =>
 			if source == AddressingMode::Register(Register::X) {
-				data.append_instruction(0xBD, instruction);
+				data.append_instruction(0xBD, instruction)?;
 			} else {
 				return Err(AssemblyError::InvalidAddressingModeCombination {
 					first_mode:  target.to_string(),
@@ -115,11 +115,11 @@ pub(super) fn assemble_mov(
 				.into());
 			},
 		AddressingMode::IndirectX => match source {
-			AddressingMode::Register(Register::A) => data.append_instruction(0xC6, instruction),
+			AddressingMode::Register(Register::A) => data.append_instruction(0xC6, instruction)?,
 			mode => return make_error(mode, false),
 		},
 		AddressingMode::IndirectXAutoIncrement => match source {
-			AddressingMode::Register(Register::A) => data.append_instruction(0xAF, instruction),
+			AddressingMode::Register(Register::A) => data.append_instruction(0xAF, instruction)?,
 			mode => return make_error(mode, false),
 		},
 		AddressingMode::DirectPage(page_address) => match source {
@@ -234,6 +234,5 @@ pub(super) fn assemble_push_pop(
 		},
 		instruction.label.clone(),
 		instruction.span,
-	);
-	Ok(())
+	)
 }

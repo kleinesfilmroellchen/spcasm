@@ -23,7 +23,7 @@ pub fn main() -> miette::Result<()> {
 	let (environment, assembled) =
 		run_assembler_on_file(&file_name.to_string_lossy(), std::sync::Arc::new(args.warning_flags))?;
 
-	if (args.dump_references) {
+	if args.dump_references {
 		dump_reference_tree(&environment.borrow().globals);
 	}
 

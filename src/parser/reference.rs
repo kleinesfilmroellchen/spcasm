@@ -102,7 +102,7 @@ impl MacroParentReplacable for Reference {
 					},
 				)
 			},
-			Self::MacroGlobal { span, .. } => Ok(()),
+			Self::MacroGlobal { .. } => Ok(()),
 		}
 	}
 }
@@ -142,7 +142,7 @@ impl Resolvable for Reference {
 		match self {
 			Self::Global(label) => label.borrow().is_resolved(),
 			Self::Local(label) => label.borrow().is_resolved(),
-			Self::MacroArgument { value: Some(resolved), .. } => true,
+			Self::MacroArgument { value: Some(_), .. } => true,
 			Self::MacroArgument { .. } | Self::MacroGlobal { .. } => false,
 		}
 	}
@@ -156,7 +156,7 @@ impl Resolvable for Reference {
 		match self {
 			Self::Global(label) => label.borrow_mut().resolve_to(location, usage_span, source_code),
 			Self::Local(label) => label.borrow_mut().resolve_to(location, usage_span, source_code),
-			Self::MacroArgument { name, value, span, .. } => {
+			Self::MacroArgument { value, .. } => {
 				*value = Some(Box::new(AssemblyTimeValue::Literal(location)));
 				Ok(())
 			},
@@ -211,8 +211,8 @@ impl Resolvable for GlobalLabel {
 	fn resolve_to(
 		&mut self,
 		location: MemoryAddress,
-		usage_span: SourceSpan,
-		source_code: Arc<AssemblyCode>,
+		_usage_span: SourceSpan,
+		_source_code: Arc<AssemblyCode>,
 	) -> Result<(), Box<AssemblyError>> {
 		self.location = Some(AssemblyTimeValue::Literal(location));
 		Ok(())
@@ -264,8 +264,8 @@ impl Resolvable for LocalLabel {
 	fn resolve_to(
 		&mut self,
 		location: MemoryAddress,
-		usage_span: SourceSpan,
-		source_code: Arc<AssemblyCode>,
+		_usage_span: SourceSpan,
+		_source_code: Arc<AssemblyCode>,
 	) -> Result<(), Box<AssemblyError>> {
 		self.location = Some(Box::new(AssemblyTimeValue::Literal(location)));
 		Ok(())
@@ -358,10 +358,10 @@ pub trait MacroParentReplacable {
 /// "copy" is preserved. Thereby, this function deduplicates local labels and ensures parent references.
 pub fn merge_local_into_parent(
 	mut local: Arc<RefCell<LocalLabel>>,
-	mut current_global_label: Option<Arc<RefCell<GlobalLabel>>>,
+	current_global_label: Option<Arc<RefCell<GlobalLabel>>>,
 	source_code: &Arc<AssemblyCode>,
 ) -> Result<Arc<RefCell<LocalLabel>>, Box<AssemblyError>> {
-	if let Some(mut actual_global_label) = current_global_label {
+	if let Some(actual_global_label) = current_global_label {
 		let mut mutable_global = actual_global_label.borrow_mut();
 		let reference_value = local.borrow().location.clone();
 		let reference_name = local.borrow().name.clone();

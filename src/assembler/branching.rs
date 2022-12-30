@@ -49,7 +49,7 @@ pub(super) fn assemble_branching_instruction(
 							location: instruction.span
 						}.into()),
 					} << 4,
-				instruction),
+				instruction)?,
 				// CBNE and DBNZ have the relative jump target in the source operand, and the target is the direct page
 				// address that's checked and/or decremented.
 				Mnemonic::Cbne | Mnemonic::Dbnz =>
@@ -61,7 +61,7 @@ pub(super) fn assemble_branching_instruction(
 								0x6E
 							},
 						instruction,
-						);
+						)?;
 
 						// First argument is the checked direct page address
 						match page_address_or_relative {
@@ -88,7 +88,7 @@ pub(super) fn assemble_branching_instruction(
 			},
 		AddressingMode::DirectPageXIndexed(page_address) =>
 			if let Some(AddressingMode::DirectPage(relative_source) | AddressingMode::Address(relative_source)) = source.clone() && mnemonic == Mnemonic::Cbne {
-				data.append_instruction(0xDE, instruction);
+				data.append_instruction(0xDE, instruction)?;
 				// First argument is the checked direct page address
 				match page_address {
 					AssemblyTimeValue::Literal(page_address) => data.append_8_bits(*page_address, None, instruction.span)?,
@@ -105,19 +105,20 @@ pub(super) fn assemble_branching_instruction(
 			},
 		AddressingMode::Register(Register::Y) =>
 			if let Some(AddressingMode::DirectPage(relative_jump_target)) = source && mnemonic == Mnemonic::Dbnz {
-				data.append_instruction_with_relative_reference(0xFE, relative_jump_target, instruction);
+				data.append_instruction_with_relative_reference(0xFE, relative_jump_target, instruction)?;
 			} else {
 				return make_target_error(vec![]);
 			},
 		AddressingMode::Address(jump_target) => {
 			data.append_instruction_with_16_bit_operand(match mnemonic {
-				Mnemonic::Jmp => 0x5F,
-				Mnemonic::Call => 0x3F,
-				_ => return make_target_error(vec![]),
-			}, jump_target.clone(), instruction
-		);},
+					Mnemonic::Jmp => 0x5F,
+					Mnemonic::Call => 0x3F,
+					_ => return make_target_error(vec![]),
+				}, jump_target.clone(), instruction
+			)?;
+		},
 		AddressingMode::XIndexed(address) | AddressingMode::DirectPageXIndexedIndirect(address) if mnemonic == Mnemonic::Jmp => {
-			data.append_instruction_with_16_bit_operand(0x1F, address.clone(), instruction);
+			data.append_instruction_with_16_bit_operand(0x1F, address.clone(), instruction)?;
 		},
 		AddressingMode::DirectPageBit(page_address, bit) | AddressingMode::AddressBit(page_address, bit) => {
 			let is_bbs = mnemonic == Mnemonic::Bbs;
@@ -141,7 +142,7 @@ pub(super) fn assemble_branching_instruction(
 				if is_bbs { 0x03 } else { 0x13 } | (bit << 5),
 				jump_target,
 				page_address.clone(), instruction
-			);
+			)?;
 		},
 		_ => return make_target_error(vec![]),
 	}

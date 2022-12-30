@@ -41,7 +41,7 @@ pub(super) fn assemble_bit_instructions(
 				if mnemonic == Mnemonic::Set1 { 0x02 } else { 0x12 } | (bit << 5),
 				page_address,
 				instruction,
-			);
+			)?;
 		},
 		AddressingMode::Address(address) => data.append_instruction_with_16_bit_operand(
 			match mnemonic {
@@ -84,7 +84,7 @@ pub(super) fn assemble_bit_instructions(
 					address.clone(),
 					*bit,
 					instruction,
-				);
+				)?;
 			},
 			_ => return make_error(true),
 		},
@@ -98,11 +98,11 @@ pub(super) fn assemble_bit_instructions(
 					}
 					.into());
 				} else {
-					data.append_instruction_with_16_bit_operand_and_bit_index(0xEA, address, bit, instruction);
+					data.append_instruction_with_16_bit_operand_and_bit_index(0xEA, address, bit, instruction)?;
 				},
 			Mnemonic::Mov1 =>
 				if matches!(source, Some(AddressingMode::CarryFlag)) {
-					data.append_instruction_with_16_bit_operand_and_bit_index(0xCA, address, bit, instruction);
+					data.append_instruction_with_16_bit_operand_and_bit_index(0xCA, address, bit, instruction)?;
 				} else {
 					return make_error(true);
 				},

@@ -110,7 +110,7 @@ fn packing(bencher: &mut Bencher) {
 #[test]
 fn encode_block_best() {
 	let block_1 = Block::from(data_block_1);
-	let (first, warm_up) = block_1.decode([0, 0]);
+	let (_, warm_up) = block_1.decode([0, 0]);
 	let next_block = Block::encode(warm_up, decoded_block_2.map(|s| s * 2), LoopEndFlags::Nothing);
 	let decoded_optimal_block_2 = next_block.decode(warm_up).0;
 	assert_eq!(decoded_optimal_block_2.map(|s| s / 2), decoded_block_2);
@@ -155,7 +155,7 @@ fn microbench_decode_block_filter_3(bencher: &mut Bencher) {
 fn short_sample_encode(bencher: &mut Bencher) {
 	use ::wav::read as wav_read;
 
-	let (_, mut data) = wav_read(&mut std::fs::File::open("examples/yoshi.wav").unwrap()).unwrap();
+	let (_, data) = wav_read(&mut std::fs::File::open("examples/yoshi.wav").unwrap()).unwrap();
 	let mut data = data.try_into_sixteen().expect("must be signed 16-bit WAV");
 	bencher.iter(|| encode_to_brr(&mut data, false, CompressionLevel::Max));
 }
@@ -166,7 +166,7 @@ fn short_sample_encode(bencher: &mut Bencher) {
 fn extremely_long_encode(bencher: &mut Bencher) {
 	use ::wav::read as wav_read;
 
-	let (_, mut data) = wav_read(&mut std::fs::File::open("examples/song.wav").unwrap()).unwrap();
+	let (_, data) = wav_read(&mut std::fs::File::open("examples/song.wav").unwrap()).unwrap();
 	let mut data = data.try_into_sixteen().expect("must be signed 16-bit WAV");
 	let now = std::time::Instant::now();
 	bencher.iter(|| encode_to_brr(&mut data, false, CompressionLevel::Max));

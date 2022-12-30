@@ -1,8 +1,7 @@
 //! ELF writing support
 #![allow(clippy::module_name_repetitions)]
 
-use std::fs::File;
-use std::io::{BufWriter, Write};
+use std::io::Write;
 
 use object::write::Object;
 

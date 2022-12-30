@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 use std::fmt::Display;
 use std::mem::Discriminant;
-use std::num::{ParseIntError, TryFromIntError};
+use std::num::ParseIntError;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
@@ -727,7 +727,7 @@ impl AssemblyError {
 					location: (start, end - start).into(),
 					src,
 				},
-			ParseError::UnrecognizedToken { token: (start, token, end), expected } => unreachable!(),
+			ParseError::UnrecognizedToken { .. } => unreachable!(),
 			ParseError::ExtraToken { token: (start, _, end) } =>
 				Self::DanglingTokens { location: (start, end - start).into(), src },
 			ParseError::User { error } => error,
@@ -746,7 +746,7 @@ impl AssemblyError {
 		Ok(())
 	}
 
-	pub(crate) fn from_number_error(value: TryFromIntError, location: SourceSpan, src: Arc<AssemblyCode>) -> Self {
+	pub(crate) fn from_number_error(location: SourceSpan, src: Arc<AssemblyCode>) -> Self {
 		// HACK: Create an integer parsing error that looks somewhat like the error which integer conversion would give.
 		Self::InvalidNumber {
 			error: format!("{}", usize::MAX as u128 + 1).parse::<usize>().unwrap_err(),

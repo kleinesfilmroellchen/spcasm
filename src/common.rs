@@ -6,7 +6,6 @@ use std::sync::Arc;
 pub use super::directive::Directive;
 pub use super::error::{AssemblyCode, AssemblyError};
 pub use super::parser::Environment;
-use crate::assembler::LabeledMemoryValue;
 use crate::cli::{default_backend_options, BackendOptions};
 use crate::parser::reference::GlobalLabel;
 use crate::parser::ProgramElement;
@@ -86,7 +85,7 @@ pub fn run_assembler_on_file(file_name: &str, options: Arc<dyn BackendOptions>) 
 /// # Errors
 /// Any assembler errors are propagated to the caller.
 pub fn run_assembler(source_code: &Arc<AssemblyCode>, options: Arc<dyn BackendOptions>) -> AssemblyResult {
-	let mut env = crate::Environment::new();
+	let env = crate::Environment::new();
 	env.borrow_mut().set_error_options(options.clone());
 	let tokens = crate::parser::lexer::lex(source_code.clone()).map_err(AssemblyError::from)?;
 	let program = crate::Environment::parse(&env, tokens, source_code).map_err(AssemblyError::from)?;
@@ -104,7 +103,7 @@ pub fn run_assembler_into_segments(
 	source_code: &Arc<AssemblyCode>,
 	options: Arc<dyn BackendOptions>,
 ) -> Result<(Segments<ProgramElement>, Segments<u8>), Box<AssemblyError>> {
-	let mut env = crate::Environment::new();
+	let env = crate::Environment::new();
 	env.borrow_mut().set_error_options(options.clone());
 	let tokens = crate::parser::lexer::lex(source_code.clone()).map_err(AssemblyError::from)?;
 	let program = crate::Environment::parse(&env, tokens, source_code).map_err(AssemblyError::from)?;

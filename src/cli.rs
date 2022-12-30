@@ -107,11 +107,11 @@ impl BackendOptions for DummyOptions {
 		// noop
 	}
 
-	fn is_error(&self, warning: &AssemblyError) -> bool {
+	fn is_error(&self, _warning: &AssemblyError) -> bool {
 		false
 	}
 
-	fn is_ignored(&self, warning: &AssemblyError) -> bool {
+	fn is_ignored(&self, _warning: &AssemblyError) -> bool {
 		false
 	}
 

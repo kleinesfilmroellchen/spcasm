@@ -93,13 +93,10 @@ pub fn lex(source_code: Arc<AssemblyCode>) -> Result<Vec<Token>, Box<AssemblyErr
 				tokens.push(Token::Number(number, (index, size).into()));
 				index += size;
 			},
-			'.' => if chars.peek().contains(&&'b') {
+			'.' if chars.peek().contains(&&'b') =>  {
 				chars.next();
 				index += 2;
 				tokens.push(Token::ExplicitDirectPage((index - 2, 2).into()));
-			} else {
-				tokens.push(parse_single_char_tokens(chr, index.into()));
-				index += 1;
 			},
 			'*' if chars.peek().contains(&&'*') => {
 				chars.next();
@@ -139,6 +136,7 @@ pub fn lex(source_code: Arc<AssemblyCode>) -> Result<Vec<Token>, Box<AssemblyErr
 			';' =>
 				if cfg!(test) && let Some(chr) = chars.peek() && chr == &'=' {
 					chars.next();
+					#[allow(unused)]
 					let start_index = index;
 					index += 2;
 					let mut comment_contents = String::new();

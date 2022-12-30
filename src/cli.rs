@@ -179,12 +179,6 @@ mod clap_dependent {
 		#[command(flatten)]
 		pub warning_flags: CliOptions,
 		/// Format to output to.
-		///
-		/// - elf: Output the binary data within a .data section of an ELF file.
-		///
-		/// - plain: Output just the binary data.
-		///
-		/// - hexdump: Dump hexadecimal representation in a pretty format like in a hex editor.
 		#[arg(default_value = "elf", long, short = 'f')]
 		pub output_format: OutputFormat,
 
@@ -197,11 +191,11 @@ mod clap_dependent {
 	#[derive(Clone, Copy, Debug, Eq, PartialEq, ValueEnum)]
 	#[repr(u8)]
 	pub enum OutputFormat {
-		/// ELF
+		/// Output the binary data within a .data section of an ELF file.
 		Elf,
-		/// Plain binary
+		/// Output just the binary data.
 		Plain,
-		/// Human-readable hex dump
+		/// Dump hexadecimal representation in a pretty format like in a hex editor.
 		HexDump,
 	}
 }

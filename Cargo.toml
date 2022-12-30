@@ -54,6 +54,11 @@ num-traits = "0.2"
 num-derive = "0.3"
 arrcat = "0.1"
 
+[dependencies.shadow-rs]
+version = "0.20"
+default-features = false
+features = ["git2"]
+
 [dev-dependencies]
 trycmd = { version = "0.14", default-features = false, features = [
 	"filesystem",
@@ -61,6 +66,11 @@ trycmd = { version = "0.14", default-features = false, features = [
 
 [build-dependencies]
 lalrpop = { version = "0.19", default-features = false }
+
+[build-dependencies.shadow-rs]
+version = "0.20"
+default-features = false
+features = ["git2"]
 
 [dependencies.miette]
 features = ["fancy-no-backtrace"]
@@ -70,7 +80,7 @@ version = "5"
 [dependencies.clap]
 version = "4"
 optional = true
-features = ["derive", "wrap_help"]
+features = ["derive", "wrap_help", "string"]
 
 [dependencies.spcasm_derive]
 path = "spcasm_derive"

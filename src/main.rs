@@ -21,8 +21,8 @@
 	drain_filter,
 	maybe_uninit_array_assume_init
 )]
-#![deny(missing_docs)]
-#![allow(non_upper_case_globals, unused, clippy::all, clippy::pedantic, clippy::nursery)]
+#![allow(non_upper_case_globals, unused)]
+#![deny(clippy::all, clippy::pedantic, clippy::nursery)]
 
 #[macro_use] extern crate lalrpop_util;
 
@@ -33,19 +33,26 @@ use std::io::Write;
 pub use common::*;
 pub use segments::Segments;
 
-pub mod assembler;
-pub mod brr;
-pub mod cli;
-mod common;
-mod default_hacks;
-mod directive;
+#[deny(missing_docs)] pub mod assembler;
+#[deny(missing_docs)] pub mod brr;
+#[deny(missing_docs)] pub mod cli;
+#[deny(missing_docs)] mod common;
+#[deny(missing_docs)] mod default_hacks;
+#[deny(missing_docs)] mod directive;
 #[cfg(feature = "binaries")]
+#[deny(missing_docs)]
 pub mod elf;
-mod error;
+#[deny(missing_docs)] mod error;
+#[deny(missing_docs)]
 mod lalrpop_adaptor;
-pub mod parser;
-mod segments;
-lalrpop_mod!(asm);
+#[deny(missing_docs)] pub mod parser;
+#[deny(missing_docs)] mod segments;
+lalrpop_mod!(
+	#[allow(clippy::all, clippy::pedantic, clippy::nursery, missing_docs)]
+	asm
+);
+
+shadow_rs::shadow!(buildinfo);
 
 #[cfg(feature = "binaries")]
 fn main() -> miette::Result<()> {

@@ -160,10 +160,12 @@ mod clap_dependent {
 	use clap::{Parser, ValueEnum};
 
 	use super::CliOptions;
+	use crate::buildinfo;
 
 	/// SPC700 assembler.
 	#[derive(Parser)]
-	#[command(version, about, long_about=None)]
+	#[command(version=
+		format!("{}\n{} {}, built {}", buildinfo::PKG_VERSION, buildinfo::RUST_VERSION, buildinfo::BUILD_TARGET, buildinfo::BUILD_TIME), about, long_about=None)]
 	pub(crate) struct SpcasmCli {
 		/// Assembly file to assemble.
 		#[arg()]

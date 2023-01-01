@@ -1,0 +1,8 @@
+org 0
+
+macro outer
+  mov a,#4
+  macro inner
+	nop
+  endmacro
+endmacro

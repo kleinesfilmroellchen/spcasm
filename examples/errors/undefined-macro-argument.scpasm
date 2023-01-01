@@ -1,0 +1,5 @@
+org 0
+
+macro my_macro(one)
+	mov a,#<two>
+endmacro

@@ -1,0 +1,7 @@
+org 0
+
+macro my_macro
+	\@ = $40
+endmacro
+
+%my_macro()

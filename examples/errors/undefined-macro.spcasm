@@ -1,0 +1,6 @@
+org 0
+
+macro does_ot_exist
+endmacro
+
+%does_not_exist()

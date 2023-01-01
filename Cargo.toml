@@ -49,7 +49,11 @@ binaries = ["dep:clap", "dep:object", "dep:shadow-rs"]
 expensive_tests = []
 
 [dependencies]
-object = { version = "0.30", features = ["write_core"], optional = true }
+object = { version = "0.30", features = [
+	"write_core",
+	"write_std",
+	"elf",
+], optional = true, default-features = false }
 thiserror = "1"
 lalrpop-util = "0.19"
 wav = "1"
@@ -62,7 +66,6 @@ lazy_static = { version = "1.4.0", features = ["spin_no_std"] }
 version = "0.20"
 optional = true
 default-features = false
-features = ["git2"]
 
 [dev-dependencies]
 trycmd = { version = "0.14", default-features = false, features = [
@@ -76,7 +79,6 @@ lalrpop = { version = "0.19", default-features = false }
 version = "0.20"
 optional = true
 default-features = false
-features = ["git2"]
 
 [dependencies.miette]
 features = ["fancy-no-backtrace"]

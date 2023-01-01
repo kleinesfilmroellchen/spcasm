@@ -233,7 +233,14 @@ Similar to [instruction::operand_not_allowed](#spcasminstructionoperandnotallowe
 #### spcasm::instruction::missing_second_operand
 
 ```
-
+  × `MOV` takes two operands
+   ╭─[examples\errors\missing-second-operand.spcasm:1:1]
+ 1 │ org 0
+ 2 │ mov a
+   · ──┬─
+   ·   ╰── Takes two operands
+   ╰────
+  help: Add any of the operands address, address+X, (direct_page)+Y, (X), direct_page+X, (direct_page+X), Y, direct_page, address+Y, X, #immediate, (X)+ to this instruction
 ```
 
 Similar to [instruction::missing_operand](#spcasminstructionmissingoperand). Some instructions require two operands, and not just one.
@@ -504,7 +511,16 @@ Note: This error is theoretical, macro arguments currently cause undefined refer
 #### spcasm::user_macro::assign_to_argument
 
 ```
-
+  × Assigning a value to the macro argument '<first>' is not possible
+   ╭─[examples\errors\assign-to-argument.spcasm:3:1]
+ 3 │ macro my_macro(first)
+ 4 │     <first> = $40
+   ·     ───┬──
+   ·        ╰── Assignment happens here
+ 5 │ endmacro
+   ╰────
+  help: Arguments of macros are given a value when the macro is called. Therefore, it does not make sense to assign them a value. If you need a
+        label with a specific value inside a macro, use a local label under the macro's special '\@' label instead
 ```
 
 Arguments to user-defined macros are specified with angle bracket syntax, like `<argument>`. When the macro is called, the arguments are replaced with the value given in the macro call. Therefore, it does not make sense to manually assign a specific value to the argument, like you can do with other kinds of labels. Instead, you can for example use local labels under the macro's special `\@` label.
@@ -520,7 +536,18 @@ The special macro label `\@` is only designed to be used as the label for a part
 #### spcasm::user_macro::incorrect_number_of_arguments
 
 ```
-
+  × Macro 'my_macro' takes 1 arguments, but 0 were supplied
+   ╭─[examples\errors\too-few-arguments.spcasm:2:1]
+ 2 │
+ 3 │ ╭─▶ macro my_macro(one)
+ 4 │ ├─▶ endmacro
+   · ╰──── 'my_macro' defined here with 1 arguments
+ 5 │
+ 6 │ ╭─▶ %my_macro()
+   · │─────┬─────
+   · │     ╰── In this macro call
+   ╰────
+  help: Remove arguments
 ```
 
 Any macro must be called exactly with the number of arguments that it was defined with. There are no variable arguments or default arguments in spcasm; you can define alternate differently-named versions of the same macro if you need such features.
@@ -528,7 +555,21 @@ Any macro must be called exactly with the number of arguments that it was define
 #### spcasm::user_macro::recursive_definition
 
 ```
-
+  × User macro 'inner' is defined inside another user macro
+   ╭─[examples\errors\recursive-definition.spcasm:2:1]
+ 2 │
+ 3 │ macro outer
+   ·       ──┬──
+   ·         ╰── Outer macro defined here
+ 4 │   mov a,#4
+ 5 │   macro inner
+ 6 │     nop
+   ·     ─┬─
+   ·      ╰── Inner macro defined here
+ 7 │   endmacro
+   ╰────
+  help: User-defined macros can only be defined at the top level of a file, as inner definition does not make sense. If you want to avoid name
+        collisions, use a more distinctive name.
 ```
 
 A user-defined macro cannot be defined within another user-defined macro. That simply makes no sense. A common reason as to why you would want to do that is to avoid name collisions. The only way to do this, however, is to choose a non-colliding name, for example by using C-style prefixes.
@@ -536,7 +577,16 @@ A user-defined macro cannot be defined within another user-defined macro. That s
 #### spcasm::user_macro::recursive_use
 
 ```
-
+  × Maximum recursion depth 1000 was exceeded while expanding user macro 'recursive'
+   ╭─[examples\errors\recursive-macro.spcasm:4:1]
+ 4 │   mov a,#4
+ 5 │   %recursive()
+   ·   ──────┬─────
+   ·         ╰── While trying to expand this macro
+ 6 │ endmacro
+   ╰────
+  help: This is most likely caused by an infinitely recursive macro definition. On the command line, use `--macro-recursion-limit` to increase
+        the limit.
 ```
 
 Macros may be called within other macros, but they must at some point fully resolve to non-macro data. This may not happen if the macro is self-recursive infinitely. Because the recursion is hard to detect in an abstract manner, spcasm employs a recursion depth limit that will stop expanding macros after some point. This limit is very large by default and should suffice for all reasonable situations. However, if you _really_ need to recurse more, and your recursion is in fact finite, you can change this limit on the command line with `--macro-recursion-limit`.
@@ -544,7 +594,14 @@ Macros may be called within other macros, but they must at some point fully reso
 #### spcasm::user_macro::undefined
 
 ```
-
+  × Macro 'does_not_exist' is not defined
+   ╭─[examples\errors\undefined-macro.spcasm:5:1]
+ 5 │
+ 6 │ %does_not_exist()
+   · ───────┬───────
+   ·        ╰── Macro used here
+   ╰────
+  help: The available macros are: 'does_ot_exist'.
 ```
 
 Evidently, a macro must be defined with the exact name of its usage. Note that spcasm does not require you to define a macro before using it, and it may also live in another source file which is included.
@@ -552,7 +609,15 @@ Evidently, a macro must be defined with the exact name of its usage. Note that s
 #### spcasm::user_macro::undefined_argument
 
 ```
-
+  × Macro argument 'two' has not been defined in this macro
+   ╭─[examples\errors\undefined-macro-argument.scpasm:3:1]
+ 3 │ macro my_macro(one)
+ 4 │     mov a,#<two>
+   ·            ──┬─
+   ·              ╰── Macro argument used here
+ 5 │ endmacro
+   ╰────
+  help: The available arguments are: 'one'. Did you misspell the macro argument's name?
 ```
 
 You can only use macro arguments of the current macro with the exact names that they were defined with. It is not possible to access arguments of macros that this macro is being called inside; in general the macro may be called from anywhere and if you need access to these arguments, you can pass them along from the outer to the inner macro via another argument. Remember that macro arguments are only a compile-time thing and incur no cost at runtime :).

@@ -8,4 +8,4 @@ While decently good, spcasm still sometimes suffers from incorrect source code i
 
 ## BRR encoding is slow!
 
-The BRR encoder benefits massively from Rust optimizations. An expected encode speed on modern hardware is only ~700KB/s unoptimized, but up to 50MB/s optimized. Run any BRR-related commands (benchmarks, tests, assembly that invokes the encoder a lot) under an optimized spcasm build. It is usually enough to compile spcasm in release mode by passing `--release` to any cargo command (build, run, test, ...)
+The BRR encoder benefits massively from Rust optimizations. An expected encode speed on modern hardware is only ~70KB/s unoptimized, but up to 1.3MB/s optimized. Run any BRR-related commands (benchmarks, tests, assembly that invokes the encoder a lot) under an optimized spcasm build. It is usually enough to compile spcasm in release mode by passing `--profile=spcasm-release` to any cargo command (build, run, test, ...)

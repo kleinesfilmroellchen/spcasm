@@ -16,18 +16,18 @@ spcasm is structured into a few related components:
 
 ## Toolchain and workflow
 
-spcasm is written in Rust (2021 edition). Due to the use of many (really cool!) unstable features, it can only be compiled with a Rust nightly compiler. The latest tested compiler version is nightly 1.65 on both Linux (gnu) and Windows (msvc).
+spcasm is written in Rust (2021 edition). Due to the use of many (really cool!) unstable features, it can only be compiled with a Rust nightly compiler. The minimum supported Rust version (MSRV) is nightly 1.68 on both Linux (gnu) and Windows (msvc).
 
 Because of `rust-toolchain.toml`, the nightly toolchain should automatically be selected if you run any rustup-based command (like `cargo` or `rustc`).
 
-The standard binary is the assembler `spcasm` itself. There is an additional binary target `brri`, an interactive BRR functionality explorer. Both require the `clap` feature.
+The standard binary is the assembler `spcasm` itself. There is an additional binary target `brr`, a BRR encoder and decoder with additional interactive functionality. Both require the `binaries` feature.
 
 Tests work through the normal rustc test harness, so they can be run with `cargo test` and `cargo bench`.
 
 The crate has the following features:
 
 - `expensive_tests`: Enable long-running tests. This is enabled by default, but disabled on CI as it wastes time there.
-- `binaries`: Enable the two binaries `spcasm` and `brri` and their specific dependencies. If you want to run non-CLI tests or use spcasm as a library, this is not necessary, therefore although it is a default feature, it can be disabled.
+- `binaries`: Enable the two binaries `spcasm` and `brr` and their specific dependencies. If you want to run non-CLI tests or use spcasm as a library, this is not necessary, therefore although it is a default feature, it can be disabled.
 
 If you want to create a release build, please compile with the `spcasm-release` profile; the standard `release` profile needs to be reserved for `wasm-pack` as it is too inflexible at the moment.
 
@@ -35,6 +35,23 @@ There's further ways of fiddling with the build config:
 
 - At substantial build time cost, you can enable "fat" LTO for the spcasm-release profile (in Cargo.toml) for additional ~500KiB of space savings in the binaries. This is only recommended for releases.
 - Uncommenting the `rustflags` line in `.cargo/config.toml` enables linking with [Mold](https://github.com/rui314/mold) on Linux (you might have to adjust the path; the committed path is known to work for Arch and Manjaro). This currently only saves 0.5s but hasn't been tested extensively; feel free to experiment.
+
+### Creating a release
+
+###### This documentation is both for transparency purposes and also to make sure that releases consistently contain correct files.
+
+- Make sure that the Rust compiler(s) are up-to-date and all (!) tests pass
+- Bump the spcasm version if that didn't happen before
+- Switch the `spcasm-release` profile to "fat" LTO temporarily
+- Clean any existing files for the release build, if necessary: `cargo clean --profile=spcasm-release`
+- Run a build on spcasm-release on both Windows and Linux: `cargo build --profile=spcasm-release`
+- Make sure that the four (!) binaries have correct build times and version numbers
+- Copy the four binaries into a temporary release folder named `spcasm-<version>`
+- Make sure the documentation is up-to-date, especially check the usage output
+- Run `mdbook build` (make sure to have the PDF backend installed!) and copy the generated PDF as "spcasm-manual.pdf" into the release folder
+- Copy the `include` folder into the release folder
+- Create a .zip archive (Linux binaries removed) and a .tar.gz archive (Windows binaries removed), and name them the same as the folder
+- Create a GitHub release and attach the two archives as well as all the four binaries individually
 
 ### `spcasm-web`
 

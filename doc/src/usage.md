@@ -2,8 +2,7 @@
 
 _To run spcasm from source, use `cargo r --` and provide your arguments after the two dashes._
 
-```
-A modern, user-friendly SPC700 assembler.
+```A modern, user-friendly SPC700 assembler.
 
 Usage: spcasm.exe [OPTIONS] <INPUT> [OUTPUT]
 
@@ -36,16 +35,14 @@ Options:
           [default: 1000]
 
   -f, --output-format <OUTPUT_FORMAT>
-          Format to output to.
-
-          - elf: Output the binary data within a .data section of an ELF file.
-
-          - plain: Output just the binary data.
-
-          - hexdump: Dump hexadecimal representation in a pretty format like in a hex editor.
+          Format to output to
 
           [default: elf]
-          [possible values: elf, plain, hex-dump]
+
+          Possible values:
+          - elf:      Output the binary data within a .data section of an ELF file
+          - plain:    Output just the binary data
+          - hex-dump: Dump hexadecimal representation in a pretty format like in a hex editor
 
   -d, --dump-references
           Dump all references and their final values / locations

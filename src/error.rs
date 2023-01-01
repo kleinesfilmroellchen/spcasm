@@ -373,24 +373,6 @@ pub enum AssemblyError {
 		location:   SourceSpan,
 	},
 
-	#[error("Invalid addressing mode `{mode}` as {} operand for `{mnemonic}`", if *.is_first_operand { "first" } else { "second" })]
-	#[diagnostic(
-		code(spcasm::invalid_addressing_mode),
-		severity(Error),
-		help("The instruction `{mnemonic}` accepts the modes {} here", 
-			.legal_modes.iter().map(|mode| format!("{}, ", mode)).collect::<String>().strip_suffix(", ").unwrap_or_default()),
-	)]
-	InvalidAddressingMode {
-		mode:             String,
-		is_first_operand: bool,
-		mnemonic:         Mnemonic,
-		legal_modes:      Vec<String>,
-		#[source_code]
-		src:              Arc<AssemblyCode>,
-		#[label("For this instruction")]
-		location:         SourceSpan,
-	},
-
 	#[error("Segment at {segment_start:04x} starts before the end of the previous one, which is {segment_end:04x}")]
 	#[diagnostic(code(spcasm::segment_mismatch), severity(Error))]
 	SegmentMismatch {
@@ -461,15 +443,38 @@ pub enum AssemblyError {
 		src:            Arc<AssemblyCode>,
 	},
 
-	#[error("Invalid addressing mode combination: `{first_mode}` with `{second_mode}` for `{mnemonic}`")]
-	#[diagnostic(code(spcasm::invalid_addressing_mode_combination), severity(Error))]
-	InvalidAddressingModeCombination {
-		first_mode:  String,
-		second_mode: String,
+	#[error("Invalid addressing mode `{mode}` as first operand for `{mnemonic}`")]
+	#[diagnostic(
+		code(spcasm::invalid_addressing_mode),
+		severity(Error),
+		help("The instruction `{mnemonic}` accepts the modes {} as first operands", 
+			.legal_modes.iter().map(|mode| format!("{}, ", mode)).collect::<String>().strip_suffix(", ").unwrap_or_default()),
+	)]
+	InvalidFirstAddressingMode {
+		mode:        String,
 		mnemonic:    Mnemonic,
+		legal_modes: Vec<String>,
 		#[source_code]
 		src:         Arc<AssemblyCode>,
-		#[label("Addressing mode invalid")]
+		#[label("For this instruction")]
+		location:    SourceSpan,
+	},
+
+	#[error("Invalid addressing mode `{mode}` as second operand for `{mnemonic}`")]
+	#[diagnostic(
+		code(spcasm::invalid_addressing_mode),
+		severity(Error),
+		help("The instruction `{mnemonic}`, with the first operand `{first_mode}`, accepts the modes {} as second operands", 
+			.legal_modes.iter().map(|mode| format!("{}, ", mode)).collect::<String>().strip_suffix(", ").unwrap_or_default()),
+	)]
+	InvalidSecondAddressingMode {
+		mode:        String,
+		mnemonic:    Mnemonic,
+		first_mode:  String,
+		legal_modes: Vec<String>,
+		#[source_code]
+		src:         Arc<AssemblyCode>,
+		#[label("For this instruction")]
 		location:    SourceSpan,
 	},
 
@@ -494,13 +499,35 @@ pub enum AssemblyError {
 	},
 
 	#[error("`{mnemonic}` takes at least one operand")]
-	#[diagnostic(code(spcasm::missing_operand), help("Add an operand to this instruction"), severity(Error))]
+	#[diagnostic(
+		code(spcasm::missing_operand),
+		help("Add any of the operands {} to this instruction",
+			.legal_modes.iter().map(|mode| format!("{}, ", mode)).collect::<String>().strip_suffix(", ").unwrap_or_default()),
+		severity(Error)
+	)]
 	MissingOperand {
-		mnemonic: Mnemonic,
+		mnemonic:          Mnemonic,
+		legal_modes:       Vec<String>,
 		#[label("Takes at least one operand")]
-		location: SourceSpan,
+		location:          SourceSpan,
 		#[source_code]
-		src:      Arc<AssemblyCode>,
+		src:               Arc<AssemblyCode>,
+	},
+
+	#[error("`{mnemonic}` takes two operands")]
+	#[diagnostic(
+		code(spcasm::missing_second_operand),
+		help("Add any of the operands {} to this instruction",
+			.legal_modes.iter().map(|mode| format!("{}, ", mode)).collect::<String>().strip_suffix(", ").unwrap_or_default()),
+		severity(Error)
+	)]
+	MissingSecondOperand {
+		mnemonic:    Mnemonic,
+		legal_modes: Vec<String>,
+		#[label("Takes two operands")]
+		location:    SourceSpan,
+		#[source_code]
+		src:         Arc<AssemblyCode>,
 	},
 
 	#[error("`{constant}` is not valid for {typename}")]

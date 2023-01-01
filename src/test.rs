@@ -80,7 +80,7 @@ fn test_file(file: &str) {
 				assert_eq!(
 					expected,
 					actual,
-					"In segment {}: Expected and actual assembly differ at byte {:04X}:\n\texpected: \
+					"In segment {:04X}: Expected and actual assembly differ at byte {:04X}:\n\texpected: \
 					 {:02X}\n\tactual:   {:02X}\nhint: the bytes before and after are:\n\t{}",
 					assembled_segment_start,
 					byte as MemoryAddress + assembled_segment_start,

@@ -221,7 +221,7 @@ impl MacroParentReplacable for Opcode {
 
 /// Instruction mnemonics of the SPC700.
 #[allow(missing_docs, clippy::use_self)]
-#[derive(Clone, Debug, Copy, Eq, PartialEq, Parse, VariantName)]
+#[derive(Clone, Debug, Copy, Eq, PartialEq, Hash, Parse, VariantName)]
 pub enum Mnemonic {
 	Mov,
 	Adc,
@@ -420,6 +420,30 @@ impl AddressingMode {
 		}
 	}
 
+	/// Return the bit index in this addressing mode, if there is any.
+	#[must_use]
+	pub const fn bit_index(&self) -> Option<u8> {
+		match self {
+			Self::Immediate(_)
+			| Self::IndirectX
+			| Self::IndirectY
+			| Self::IndirectXAutoIncrement
+			| Self::DirectPage(_)
+			| Self::DirectPageXIndexed(_)
+			| Self::DirectPageYIndexed(_)
+			| Self::Address(_)
+			| Self::XIndexed(_)
+			| Self::YIndexed(_)
+			| Self::DirectPageXIndexedIndirect(_)
+			| Self::CarryFlag
+			| Self::Register(_)
+			| Self::DirectPageIndirectYIndexed(_) => None,
+			Self::DirectPageBit(_, bit_index)
+			| Self::AddressBit(_, bit_index)
+			| Self::NegatedAddressBit(_, bit_index) => Some(*bit_index),
+		}
+	}
+
 	/// Try to coerce this addressing mode to direct page addressing if the internal number allows it.
 	#[must_use]
 	pub fn coerce_to_direct_page_addressing(self) -> Self {
@@ -536,6 +560,115 @@ impl Display for AddressingMode {
 			Self::AddressBit(address, bit) => format!("{:04X}.{:01}", address, bit),
 			Self::NegatedAddressBit(address, bit) => format!("/{:04X}.{:01}", address, bit),
 			Self::Register(register) => format!("{}", register),
+		})
+	}
+}
+
+/// The categories of addressing modes. This enum is mainly used for the main assembler lookup table to discern which
+/// opcode to use. It is mostly just a list of the variants of the `AddressingMode` sum type, but it also factors out
+/// all register addressing modes separately, as that is very important for opcode generation.
+#[derive(Clone, Copy, Debug, Eq, PartialEq, Hash)]
+pub enum AddressingModeCategory {
+	/// #immediate
+	Immediate,
+	/// (X)
+	IndirectX,
+	/// (Y)
+	IndirectY,
+	/// (X) with automatic X++
+	IndirectXAutoIncrement,
+	/// (dp)
+	DirectPage,
+	/// dp+X
+	DirectPageXIndexed,
+	/// dp+Y
+	DirectPageYIndexed,
+	/// abs
+	Address,
+	/// abs+X
+	XIndexed,
+	/// abs+Y
+	YIndexed,
+	/// (dp+X)
+	DirectPageXIndexedIndirect,
+	/// (dp)+Y
+	DirectPageIndirectYIndexed,
+	/// dp.bit
+	DirectPageBit,
+	/// abs.bit
+	AddressBit,
+	/// /abs.bit
+	NegatedAddressBit,
+	/// C
+	CarryFlag,
+	/// A
+	ARegister,
+	/// X
+	XRegister,
+	/// Y
+	YRegister,
+	/// YA
+	YARegister,
+	/// PSW
+	FlagsRegister,
+	/// SP
+	StackPointerRegister,
+}
+
+impl From<&AddressingMode> for AddressingModeCategory {
+	fn from(value: &AddressingMode) -> Self {
+		match value {
+			AddressingMode::Immediate(_) => Self::Immediate,
+			AddressingMode::IndirectX => Self::IndirectX,
+			AddressingMode::IndirectY => Self::IndirectY,
+			AddressingMode::IndirectXAutoIncrement => Self::IndirectXAutoIncrement,
+			AddressingMode::DirectPage(_) => Self::DirectPage,
+			AddressingMode::DirectPageXIndexed(_) => Self::DirectPageXIndexed,
+			AddressingMode::DirectPageYIndexed(_) => Self::DirectPageYIndexed,
+			AddressingMode::Address(_) => Self::Address,
+			AddressingMode::XIndexed(_) => Self::XIndexed,
+			AddressingMode::YIndexed(_) => Self::YIndexed,
+			AddressingMode::DirectPageXIndexedIndirect(_) => Self::DirectPageXIndexedIndirect,
+			AddressingMode::DirectPageIndirectYIndexed(_) => Self::DirectPageIndirectYIndexed,
+			AddressingMode::DirectPageBit(_, _) => Self::DirectPageBit,
+			AddressingMode::AddressBit(_, _) => Self::AddressBit,
+			AddressingMode::NegatedAddressBit(_, _) => Self::NegatedAddressBit,
+			AddressingMode::CarryFlag | AddressingMode::Register(Register::C) => Self::CarryFlag,
+			AddressingMode::Register(Register::A) => Self::ARegister,
+			AddressingMode::Register(Register::X) => Self::XRegister,
+			AddressingMode::Register(Register::Y) => Self::YRegister,
+			AddressingMode::Register(Register::YA) => Self::YARegister,
+			AddressingMode::Register(Register::SP) => Self::StackPointerRegister,
+			AddressingMode::Register(Register::PSW | Register::P) => Self::FlagsRegister,
+		}
+	}
+}
+
+impl Display for AddressingModeCategory {
+	fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), Error> {
+		f.pad(match self {
+			Self::Immediate => "#immediate",
+			Self::IndirectX => "(X)",
+			Self::IndirectY => "(Y)",
+			Self::CarryFlag => "C",
+			Self::IndirectXAutoIncrement => "(X)+",
+			Self::DirectPage => "direct_page",
+			Self::DirectPageXIndexed => "direct_page+X",
+			Self::DirectPageYIndexed => "direct_page+Y",
+			Self::DirectPageXIndexedIndirect => "(direct_page+X)",
+			Self::DirectPageIndirectYIndexed => "(direct_page)+Y",
+			Self::Address => "address",
+			Self::XIndexed => "address+X",
+			Self::YIndexed => "address+Y",
+			Self::DirectPageBit => "direct_page.bit",
+			Self::AddressBit => "address.bit",
+			Self::NegatedAddressBit => "/address.bit",
+			Self::ARegister => "A",
+			Self::XRegister => "X",
+			Self::YRegister => "Y",
+			Self::YARegister => "YA",
+			Self::FlagsRegister => "PSW",
+			Self::StackPointerRegister => "SP",
 		})
 	}
 }

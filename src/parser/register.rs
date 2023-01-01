@@ -19,7 +19,7 @@ pub enum Register {
 	Y,
 	/// Stack pointer.
 	SP,
-	/// Program status word (instruction pointer).
+	/// Program status word (flag register).
 	PSW,
 	/// Alternate form of PSW.
 	P,

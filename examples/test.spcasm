@@ -193,16 +193,16 @@ reltarget:    ; @ 01 62
 .subtarget:   ; @ 01 63
    das A ;= BE
 
-   bra $20       ;= 2F 20
+   bra $100       ;= 2F 9E
                ; label location is -4
-   beq reltarget ;= F0 FA
-   bne reltarget ;= D0 F8
-   bcs $25       ;= B0 25
-   bcc $26       ;= 90 26
-   bvs $27       ;= 70 27
-   bvc $28       ;= 50 28
-   bmi $29       ;= 30 29
-   bpl $2A       ;= 10 2A
+   beq reltarget    ;= F0 FA
+   bne reltarget    ;= D0 F8
+   bcs reltarget+2  ;= B0 F8
+   bcc reltarget+4  ;= 90 F8
+   bvs reltarget+6  ;= 70 F8
+   bvc reltarget+8  ;= 50 F8
+   bmi reltarget+10 ;= 30 F8
+   bpl reltarget+12 ;= 10 F8
    cbne $2B,$2C  ;= 2E 2B 2C
    cbne $2D+X,$2E;= DE 2D 2E
    dbnz $2F,$30  ;= 6E 2F 30

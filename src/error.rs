@@ -166,7 +166,7 @@ pub enum AssemblyError {
 
 	#[error("Legal architecture directive ignored")]
 	#[diagnostic(
-		code(spcasm::valid_arch_directive),
+		code(spcasm::arch::valid),
 		severity(Advice),
 		help(
 			"spcasm supports `arch` directives for compatibility with the Asar multi-architecture assembler. This \
@@ -182,7 +182,7 @@ pub enum AssemblyError {
 
 	#[error("Unknown architecture `{arch}` specified")]
 	#[diagnostic(
-		code(spcasm::invalid_arch_directive),
+		code(spcasm::arch::invalid),
 		severity(Error),
 		help(
 			"spcasm supports `arch` directives for compatibility with the Asar multi-architecture assembler. This \
@@ -200,7 +200,7 @@ pub enum AssemblyError {
 
 	#[error("Assigning a value to the macro argument '<{name}>' is not possible")]
 	#[diagnostic(
-		code(spcasm::assign_to_directive_argument),
+		code(spcasm::user_macro::assign_to_argument),
 		severity(Error),
 		help(
 			"Arguments of macros are given a value when the macro is called. Therefore, it does not make sense to \
@@ -218,7 +218,7 @@ pub enum AssemblyError {
 
 	#[error("Assigning a value to the special macro label '\\@' is not possible")]
 	#[diagnostic(
-		code(spcasm::assign_to_macro_global),
+		code(spcasm::user_macro::assign_to_global),
 		severity(Error),
 		help(
 			"The special macro label '\\@' can be used for creating a unique global label per user macro call. It can \
@@ -234,7 +234,7 @@ pub enum AssemblyError {
 	},
 
 	#[error("Using the user defined macro argument '<{name}>' outside a macro is not possible")]
-	#[diagnostic(code(spcasm::macro_argument_outside_macro), severity(Error))]
+	#[diagnostic(code(spcasm::user_macro::argument_outside_macro), severity(Error))]
 	UsingMacroArgumentOutsideMacro {
 		name:     String,
 		#[source_code]
@@ -245,7 +245,7 @@ pub enum AssemblyError {
 
 	#[error("User macro '{name}' is defined inside another user macro")]
 	#[diagnostic(
-		code(spcasm::recursive_macro_definition),
+		code(spcasm::user_macro::recursive_definition),
 		severity(Error),
 		help(
 			"User-defined macros can only be defined at the top level of a file, as inner definition does not make \
@@ -262,7 +262,7 @@ pub enum AssemblyError {
 
 	#[error("Maximum recursion depth {depth} was exceeded while expanding user macro '{name}'")]
 	#[diagnostic(
-		code(spcasm::recursive_macro_use),
+		code(spcasm::user_macro::recursive_use),
 		severity(Error),
 		help(
 			"This is most likely caused by an infinitely recursive macro definition. On the command line, use \
@@ -280,7 +280,7 @@ pub enum AssemblyError {
 
 	#[error("Macro argument '{name}' has not been defined in this macro")]
 	#[diagnostic(
-		code(spcasm::undefined_macro_argument),
+		code(spcasm::user_macro::undefined_argument),
 		severity(Error),
 		help("The available arguments are: {}. Did you misspell the macro argument's name?",
 			available_names.iter().map(|name| format!("'{}'", name)).collect::<Vec<_>>().join(", "))
@@ -296,7 +296,7 @@ pub enum AssemblyError {
 
 	#[error("Macro '{name}' is not defined")]
 	#[diagnostic(
-		code(spcasm::undefined_macro),
+		code(spcasm::user_macro::undefined),
 		severity(Error),
 		help("The available macros are: {}.",
 			available_macros.iter().map(|name| format!("'{}'", name)).collect::<Vec<_>>().join(", "))
@@ -312,7 +312,7 @@ pub enum AssemblyError {
 
 	#[error("Macro '{name}' takes {expected_number} arguments, but {actual_number} were supplied")]
 	#[diagnostic(
-		code(spcasm::incorrect_number_of_arguments),
+		code(spcasm::user_macro::incorrect_number_of_arguments),
 		severity(Error),
 		help("{} arguments", if expected_number < actual_number { "Add" } else { "Remove" })
 	)]
@@ -326,9 +326,8 @@ pub enum AssemblyError {
 		location:        SourceSpan,
 	},
 
-	//#region Semantic errors: detected while parsing or assembling
 	#[error("File \"{file_name}\" was not found")]
-	#[diagnostic(code(spcasm::file_not_found), severity(Error))]
+	#[diagnostic(code(spcasm::io::file_not_found), severity(Error))]
 	FileNotFound {
 		#[source]
 		os_error:  std::io::Error,
@@ -357,7 +356,7 @@ pub enum AssemblyError {
 
 	#[error("{error_text}")]
 	#[diagnostic(
-		code(spcasm::audio_processing_error),
+		code(spcasm::io::audio_processing_error),
 		severity(Error),
 		help(
 			"This error is caused by the malformed input audio file \"{file_name}\". If your audio player understands \
@@ -374,7 +373,7 @@ pub enum AssemblyError {
 	},
 
 	#[error("Segment at {segment_start:04x} starts before the end of the previous one, which is {segment_end:04x}")]
-	#[diagnostic(code(spcasm::segment_mismatch), severity(Error))]
+	#[diagnostic(code(spcasm::segment::mismatch), severity(Error))]
 	SegmentMismatch {
 		segment_start: MemoryAddress,
 		segment_end:   MemoryAddress,
@@ -386,7 +385,7 @@ pub enum AssemblyError {
 
 	#[error("There is no active segment here")]
 	#[diagnostic(
-		code(spcasm::missing_segment),
+		code(spcasm::segment::missing),
 		severity(Error),
 		help("Start a new segment with `org <memory address>`")
 	)]
@@ -399,7 +398,7 @@ pub enum AssemblyError {
 
 	#[error("There is no segment on the stack")]
 	#[diagnostic(
-		code(spcasm::empty_segment_stack),
+		code(spcasm::segment::empty_stack),
 		severity(Error),
 		help("Directives like `pullpc` require that you push a segment to the stack beforehand with `pushpc`.")
 	)]
@@ -412,7 +411,7 @@ pub enum AssemblyError {
 
 	#[error("Reference '{reference}' can not be resolved to a value")]
 	#[diagnostic(
-		code(spcasm::unresolved_reference),
+		code(spcasm::reference::unresolved),
 		severity(Error),
 		help(
 			"Any symbolic reference must be defined somewhere. Did you misspell the reference's name?\nThis error is \
@@ -432,7 +431,7 @@ pub enum AssemblyError {
 
 	#[error("Reference '\\@' can not be resolved to a value")]
 	#[diagnostic(
-		code(spcasm::unresolved_reference),
+		code(spcasm::reference::unresolved),
 		severity(Error),
 		help("The special macro global '\\@' is only usable inside user defined macros.")
 	)]
@@ -445,7 +444,7 @@ pub enum AssemblyError {
 
 	#[error("Invalid addressing mode `{mode}` as first operand for `{mnemonic}`")]
 	#[diagnostic(
-		code(spcasm::invalid_addressing_mode),
+		code(spcasm::instruction::invalid_addressing_mode),
 		severity(Error),
 		help("The instruction `{mnemonic}` accepts the modes {} as first operands", 
 			.legal_modes.iter().map(|mode| format!("{}, ", mode)).collect::<String>().strip_suffix(", ").unwrap_or_default()),
@@ -462,7 +461,7 @@ pub enum AssemblyError {
 
 	#[error("Invalid addressing mode `{mode}` as second operand for `{mnemonic}`")]
 	#[diagnostic(
-		code(spcasm::invalid_addressing_mode),
+		code(spcasm::instruction::invalid_addressing_mode),
 		severity(Error),
 		help("The instruction `{mnemonic}`, with the first operand `{first_mode}`, accepts the modes {} as second operands", 
 			.legal_modes.iter().map(|mode| format!("{}, ", mode)).collect::<String>().strip_suffix(", ").unwrap_or_default()),
@@ -479,7 +478,7 @@ pub enum AssemblyError {
 	},
 
 	#[error("Two operands are not allowed for `{mnemonic}`")]
-	#[diagnostic(code(spcasm::two_operands_not_allowed), help("Remove the second operand"), severity(Error))]
+	#[diagnostic(code(spcasm::instruction::two_operands_not_allowed), help("Remove the second operand"), severity(Error))]
 	TwoOperandsNotAllowed {
 		mnemonic: Mnemonic,
 		#[source_code]
@@ -489,7 +488,7 @@ pub enum AssemblyError {
 	},
 
 	#[error("`{mnemonic}` doesn't take any operands")]
-	#[diagnostic(code(spcasm::operand_not_allowed), help("Remove the operands of this instruction"), severity(Error))]
+	#[diagnostic(code(spcasm::instruction::operand_not_allowed), help("Remove the operands of this instruction"), severity(Error))]
 	OperandNotAllowed {
 		mnemonic: Mnemonic,
 		#[label("Takes 0 operands")]
@@ -500,7 +499,7 @@ pub enum AssemblyError {
 
 	#[error("`{mnemonic}` takes at least one operand")]
 	#[diagnostic(
-		code(spcasm::missing_operand),
+		code(spcasm::instruction::missing_operand),
 		help("Add any of the operands {} to this instruction",
 			.legal_modes.iter().map(|mode| format!("{}, ", mode)).collect::<String>().strip_suffix(", ").unwrap_or_default()),
 		severity(Error)
@@ -516,7 +515,7 @@ pub enum AssemblyError {
 
 	#[error("`{mnemonic}` takes two operands")]
 	#[diagnostic(
-		code(spcasm::missing_second_operand),
+		code(spcasm::instruction::missing_second_operand),
 		help("Add any of the operands {} to this instruction",
 			.legal_modes.iter().map(|mode| format!("{}, ", mode)).collect::<String>().strip_suffix(", ").unwrap_or_default()),
 		severity(Error)
@@ -531,7 +530,7 @@ pub enum AssemblyError {
 	},
 
 	#[error("`{constant}` is not valid for {typename}")]
-	#[diagnostic(code(spcasm::invalid_constant), help("Remove the operands of this instruction"), severity(Error))]
+	#[diagnostic(code(spcasm::instruction::invalid_constant), help("Remove the operands of this instruction"), severity(Error))]
 	InvalidConstant {
 		constant: String,
 		typename: String,
@@ -543,7 +542,7 @@ pub enum AssemblyError {
 
 	#[error("Invalid use of labels in an argument for `{directive}`")]
 	#[diagnostic(
-		code(spcasm::references_in_directive_argument),
+		code(spcasm::directive::references_as_argument),
 		help(
 			"Because the directive argument can determine a reference's position, resolving the argument value is not \
 			 generally possible. For this reason, references are not allowed to be used in a directive argument."
@@ -562,7 +561,7 @@ pub enum AssemblyError {
 
 	#[error("There is no global label defined before the local label '{local_label}'")]
 	#[diagnostic(
-		code(spcasm::missing_global),
+		code(spcasm::reference::missing_global),
 		help("Add a global label before defining this local label"),
 		severity(Error)
 	)]
@@ -576,7 +575,7 @@ pub enum AssemblyError {
 
 	#[error("{start} is greater than {end}")]
 	#[diagnostic(
-		code(spcasm::invalid_range),
+		code(spcasm::directive::invalid_range),
 		help("Switch the range limits around: `{end}-{start}`"),
 		severity(Error)
 	)]
@@ -590,7 +589,7 @@ pub enum AssemblyError {
 	},
 
 	#[error("The range {start}-{end} is out of bounds for the input file \"{file}\"")]
-	#[diagnostic(code(spcasm::range_out_of_bounds), help("The input's length is {file_len}"), severity(Error))]
+	#[diagnostic(code(spcasm::directive::range_out_of_bounds), help("The input's length is {file_len}"), severity(Error))]
 	RangeOutOfBounds {
 		start:    usize,
 		end:      usize,
@@ -711,7 +710,7 @@ pub enum AssemblyError {
 
 	#[error("This reference \"{name}\" has an 8-bit value, did you want to use it in direct page addressing?")]
 	#[diagnostic(
-		code(spcasm::non_direct_page_reference),
+		code(spcasm::reference::non_direct_page),
 		help("Use a forced direct page addressing mnemonic by suffixing `.b`"),
 		severity(Advice)
 	)]

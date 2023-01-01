@@ -650,7 +650,8 @@ impl AssemblyFile {
 				}
 
 				let called_macro = user_macros.get(macro_name);
-				if let Some((span, DirectiveValue::UserDefinedMacro { arguments, body, .. })) = called_macro {
+				if let Some((definition_span, DirectiveValue::UserDefinedMacro { arguments, body, .. })) = called_macro
+				{
 					let arguments = arguments.borrow();
 					let formal_arguments = match &(arguments).parameters {
 						MacroParameters::Formal(formal_arguments) => formal_arguments,
@@ -662,6 +663,7 @@ impl AssemblyFile {
 							expected_number: formal_arguments.len(),
 							actual_number:   actual_arguments.len(),
 							location:        *span,
+							definition:      *definition_span,
 							src:             self.source_code.clone(),
 						}
 						.into());
@@ -680,7 +682,7 @@ impl AssemblyFile {
 							name:            format!("{}_global_label_{}", macro_name, index),
 							locals:          HashMap::new(),
 							location:        None,
-							span:            *span,
+							span:            *definition_span,
 							used_as_address: false,
 						},
 					);

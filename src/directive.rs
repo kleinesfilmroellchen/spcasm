@@ -220,6 +220,7 @@ impl MacroParentReplacable for DirectiveValue {
 					body.first().map_or_else(|| (0, 0).into(), |p| *p.span()).into(),
 					body.last().map_or_else(|| (0, 0).into(), |p| *p.span()).into(),
 				),
+				outer:    replacement_parent.borrow().global_label().borrow().span,
 				src:      source_code.clone(),
 			}
 			.into()),

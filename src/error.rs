@@ -256,8 +256,10 @@ pub enum AssemblyError {
 		name:     String,
 		#[source_code]
 		src:      Arc<AssemblyCode>,
-		#[label("Defined here")]
+		#[label("Inner macro defined here")]
 		location: SourceSpan,
+		#[label("Outer macro defined here")]
+		outer:    SourceSpan,
 	},
 
 	#[error("Maximum recursion depth {depth} was exceeded while expanding user macro '{name}'")]
@@ -314,7 +316,7 @@ pub enum AssemblyError {
 	#[diagnostic(
 		code(spcasm::user_macro::incorrect_number_of_arguments),
 		severity(Error),
-		help("{} arguments", if expected_number < actual_number { "Add" } else { "Remove" })
+		help("{} arguments", if expected_number > actual_number { "Add" } else { "Remove" })
 	)]
 	IncorrectNumberOfMacroArguments {
 		name:            String,
@@ -324,6 +326,8 @@ pub enum AssemblyError {
 		src:             Arc<AssemblyCode>,
 		#[label("In this macro call")]
 		location:        SourceSpan,
+		#[label("'{name}' defined here with {expected_number} arguments")]
+		definition:      SourceSpan,
 	},
 
 	#[error("File \"{file_name}\" was not found")]
@@ -478,7 +482,11 @@ pub enum AssemblyError {
 	},
 
 	#[error("Two operands are not allowed for `{mnemonic}`")]
-	#[diagnostic(code(spcasm::instruction::two_operands_not_allowed), help("Remove the second operand"), severity(Error))]
+	#[diagnostic(
+		code(spcasm::instruction::two_operands_not_allowed),
+		help("Remove the second operand"),
+		severity(Error)
+	)]
 	TwoOperandsNotAllowed {
 		mnemonic: Mnemonic,
 		#[source_code]
@@ -488,7 +496,11 @@ pub enum AssemblyError {
 	},
 
 	#[error("`{mnemonic}` doesn't take any operands")]
-	#[diagnostic(code(spcasm::instruction::operand_not_allowed), help("Remove the operands of this instruction"), severity(Error))]
+	#[diagnostic(
+		code(spcasm::instruction::operand_not_allowed),
+		help("Remove the operands of this instruction"),
+		severity(Error)
+	)]
 	OperandNotAllowed {
 		mnemonic: Mnemonic,
 		#[label("Takes 0 operands")]
@@ -505,12 +517,12 @@ pub enum AssemblyError {
 		severity(Error)
 	)]
 	MissingOperand {
-		mnemonic:          Mnemonic,
-		legal_modes:       Vec<String>,
+		mnemonic:    Mnemonic,
+		legal_modes: Vec<String>,
 		#[label("Takes at least one operand")]
-		location:          SourceSpan,
+		location:    SourceSpan,
 		#[source_code]
-		src:               Arc<AssemblyCode>,
+		src:         Arc<AssemblyCode>,
 	},
 
 	#[error("`{mnemonic}` takes two operands")]
@@ -530,7 +542,11 @@ pub enum AssemblyError {
 	},
 
 	#[error("`{constant}` is not valid for {typename}")]
-	#[diagnostic(code(spcasm::instruction::invalid_constant), help("Remove the operands of this instruction"), severity(Error))]
+	#[diagnostic(
+		code(spcasm::instruction::invalid_constant),
+		help("Remove the operands of this instruction"),
+		severity(Error)
+	)]
 	InvalidConstant {
 		constant: String,
 		typename: String,
@@ -589,7 +605,11 @@ pub enum AssemblyError {
 	},
 
 	#[error("The range {start}-{end} is out of bounds for the input file \"{file}\"")]
-	#[diagnostic(code(spcasm::directive::range_out_of_bounds), help("The input's length is {file_len}"), severity(Error))]
+	#[diagnostic(
+		code(spcasm::directive::range_out_of_bounds),
+		help("The input's length is {file_len}"),
+		severity(Error)
+	)]
 	RangeOutOfBounds {
 		start:    usize,
 		end:      usize,

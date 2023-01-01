@@ -138,17 +138,18 @@ fn assemble_instruction(data: &mut AssembledData, instruction: &mut Instruction)
 			// doesn't do nonsensical things with its properties, such as the bit index or the value.
 
 			// Check that there is no second operand if we don't need one.
+			// However, we don't need to error out if we are missing a second operand, because that will be checked
+			// later.
 			if !matches!(
 				(&second_operand, first_operand_entry),
-				(Some(..), EntryOrSecondOperandTable::Table(..))
-					| (Some(AddressingMode::Register(Register::A)), EntryOrSecondOperandTable::ImplicitAEntry(..))
-					| (
-						None,
-						EntryOrSecondOperandTable::Entry(..)
-							| EntryOrSecondOperandTable::ImplicitAEntry(..)
-							| EntryOrSecondOperandTable::BitEntry(..)
-							| EntryOrSecondOperandTable::TcallEntry(..)
-					)
+				(
+					None,
+					EntryOrSecondOperandTable::Entry(..)
+						| EntryOrSecondOperandTable::ImplicitAEntry(..)
+						| EntryOrSecondOperandTable::BitEntry(..)
+						| EntryOrSecondOperandTable::TcallEntry(..)
+				) | (Some(AddressingMode::Register(Register::A)), EntryOrSecondOperandTable::ImplicitAEntry(..))
+					| (_, EntryOrSecondOperandTable::Table(..))
 			) {
 				return Err(AssemblyError::TwoOperandsNotAllowed {
 					mnemonic: *mnemonic,

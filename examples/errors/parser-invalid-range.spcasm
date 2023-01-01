@@ -1,1 +1,2 @@
+org 0
 incbin "../binary.bin":4-2

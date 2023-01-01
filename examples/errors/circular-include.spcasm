@@ -1,1 +1,3 @@
+org 0
+
 include "circularly-included.spcasm.noerror"

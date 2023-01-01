@@ -1,3 +1,4 @@
+org 0
 
 macro recursive
   mov a,#4

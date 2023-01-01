@@ -1,3 +1,5 @@
+org 0
+
 dp_label:
    nop       ; dummy
 

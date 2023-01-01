@@ -170,6 +170,18 @@ impl DirectiveValue {
 			Self::String { text, has_null_terminator } => text.len() + (usize::from(*has_null_terminator)),
 		}
 	}
+
+	/// Whether the directive needs to be in the segmented AST (false) or not (true).
+	pub const fn is_symbolic(&self) -> bool {
+		match self {
+			Self::Org(_) | Self::PushSection | Self::PopSection | Self::End | Self::UserDefinedMacro { .. } => true,
+			Self::Table { .. }
+			| Self::String { .. }
+			| Self::Brr(_)
+			| Self::Include { .. }
+			| Self::AssignReference { .. } => false,
+		}
+	}
 }
 
 impl MacroParentReplacable for DirectiveValue {

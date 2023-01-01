@@ -392,7 +392,7 @@ impl AssemblyFile {
 				ProgramElement::Directive(Directive { value: DirectiveValue::End, .. }) => break,
 				ProgramElement::Directive(directive @ Directive { span, .. }) => {
 					directive.perform_segment_operations_if_necessary(&mut segments, self.source_code.clone())?;
-					if directive.value.assembled_size() > 0 {
+					if !directive.value.is_symbolic() {
 						segments.add_element(element.clone()).map_err(Self::to_asm_error(span, &self.source_code))?;
 					}
 				},

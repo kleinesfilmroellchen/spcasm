@@ -1,6 +1,6 @@
 ```trycmd
 $ spcasm examples/test.spcasm
-spcasm::valid_arch_directive
+spcasm::arch::valid
 
   ☞ Legal architecture directive ignored
    ╭─[examples/test.spcasm:1:1]
@@ -26,7 +26,7 @@ $ spcasm -w all examples/test.spcasm
 ```trycmd
 $ spcasm -W all examples/test.spcasm
 ? failed
-Error: spcasm::valid_arch_directive
+Error: spcasm::arch::valid
 
   ☞ Legal architecture directive ignored
    ╭─[examples/test.spcasm:1:1]
@@ -45,8 +45,8 @@ Error: spcasm::valid_arch_directive
 ```
 
 ```trycmd
-$ spcasm -w file_not_found examples/test.spcasm
-spcasm::valid_arch_directive
+$ spcasm -w io::file_not_found examples/test.spcasm
+spcasm::arch::valid
 
   ☞ Legal architecture directive ignored
    ╭─[examples/test.spcasm:1:1]
@@ -65,8 +65,8 @@ spcasm::valid_arch_directive
 ```
 
 ```trycmd
-$ spcasm -w spcasm::file_not_found examples/test.spcasm
-spcasm::valid_arch_directive
+$ spcasm -w spcasm::io::file_not_found examples/test.spcasm
+spcasm::arch::valid
 
   ☞ Legal architecture directive ignored
    ╭─[examples/test.spcasm:1:1]

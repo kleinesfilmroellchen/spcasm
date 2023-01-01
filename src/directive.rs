@@ -52,7 +52,7 @@ impl Default for Directive {
 	fn default() -> Self {
 		// We use the table directive with no entries as default as that will do nothing.
 		Self {
-			value:          DirectiveValue::Table { values: Vec::new(), entry_size: 1 },
+			value:          DirectiveValue::Placeholder,
 			label:          None,
 			span:           (0, 0).into(),
 			expected_value: None,
@@ -119,6 +119,8 @@ impl Display for DirectiveSymbol {
 /// An assembly directive's value and relevant data.
 #[derive(Clone, Debug)]
 pub enum DirectiveValue {
+	/// A placeholder value, this is mostly auto-generated.
+	Placeholder,
 	/// org <memory address>
 	Org(MemoryAddress),
 	/// Various table directives, such as byte/db, word/dw, dl, dd, ascii(z), ...
@@ -162,6 +164,7 @@ impl DirectiveValue {
 			| Self::PopSection
 			| Self::UserDefinedMacro { .. }
 			| Self::AssignReference { .. }
+			| Self::Placeholder
 			| Self::Org(..) => 0,
 			Self::Table { values, entry_size } => values.len() * *entry_size as usize,
 			// Use a large assembled size as a signal that we don't know at this point. This will force any later
@@ -174,7 +177,12 @@ impl DirectiveValue {
 	/// Whether the directive needs to be in the segmented AST (false) or not (true).
 	pub const fn is_symbolic(&self) -> bool {
 		match self {
-			Self::Org(_) | Self::PushSection | Self::PopSection | Self::End | Self::UserDefinedMacro { .. } => true,
+			Self::Org(_)
+			| Self::Placeholder
+			| Self::PushSection
+			| Self::PopSection
+			| Self::End
+			| Self::UserDefinedMacro { .. } => true,
 			Self::Table { .. }
 			| Self::String { .. }
 			| Self::Brr(_)
@@ -201,6 +209,7 @@ impl MacroParentReplacable for DirectiveValue {
 			| Self::Include { .. }
 			| Self::End
 			| Self::PushSection
+			| Self::Placeholder
 			| Self::Brr(_)
 			| Self::PopSection
 			| Self::Org(_) => Ok(()),

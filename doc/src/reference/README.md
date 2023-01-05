@@ -31,11 +31,13 @@ The SPC700 has six registers, two of which can be paired into an additional 16-b
 - `YA` Pairing of Y (high bits) and A (low bits) into a 16-bit register.
 - `SP` 16-bit stack pointer register; upper 8 bits are fixed to 01 meaning the possible range of values is 0100-01FF.
 - `PC` 16-bit program counter or instruction pointer register.
-- `PSW` (alias: `P`) "program status word" 16-bit flag register. The contained flags are NOP-H-ZC (from high to low bit):
+- `PSW` (alias: `P`) "program status word" 8-bit flag register. The contained flags are NOPBHIZC (from high to low bit). Note that B and I are not used much in the S-SMP and some manuals indicate that they are initialized and/or frequently overwritten with garbage.
   - `N`: negative flag.
-  - `O`: arithmetic overflow flag.
+  - `V`: arithmetic overflow flag.
   - `P`: direct page flag, determines whether the direct page is the zero page or the one page.
+  - `B`: break flag. The purpose of this flag is unknown and because BRK is not useful on the S-SMP, it can be disregarded.
   - `H`: half carry flag, signals a carry from bit 3 which is a carry situation in binary coded decimal. Is also set on arithmetic overflow.
+  - `I`: Interrupt flag. The purpose of this flag is unknown, but since the S-SMP has no interrupt sources, it can be disregarded.
   - `Z`: zero flag.
   - `C`: carry flag (including shifts).
 
@@ -43,30 +45,62 @@ The SPC700 has six registers, two of which can be paired into an additional 16-b
 
 The SPC700 supports various addressing modes, though not all addressing modes are supported for all operands of instructions. The shorthands introduced here will also be used in the full instruction list. Note that in all cases, `$00` is a placeholder for an 8-bit value and `$0000` is a placeholder for a 16-bit value. The cases where these are ambiguous are explained further down with the instructions. The byte count is just the amount of bytes this addressing mode needs as an operand on its own; if there are two operands then the two byte counts need to be added.
 
-| Shorthand       | Alternative syntax(es) | Explanation                                                                                             | # bytes                          | Possible address range |
-| --------------- | ---------------------- | ------------------------------------------------------------------------------------------------------- | -------------------------------- | ---------------------- |
-| A/X/Y/SP/PSW/YA | P for PSW              | Register                                                                                                | 0                                | Depends on instruction |
-| #$00            |                        | 8-bit literal value                                                                                     | 1                                | N/A                    |
-| $00             |                        | Data at direct page address                                                                             | 1                                | Direct page            |
-| $00+X           |                        | Data at (direct page address + X): X-indexed direct page                                                | 1                                | Direct page            |
-| $00+Y           |                        | Y-indexed direct page                                                                                   | 1                                | Direct page            |
-| (X)             | [X]                    | Data at the direct page address stored in X: Indirect X                                                 | 0                                | Direct page            |
-| (X)+            | [X]+, [X+], (X+)       | Indirect X with auto-increment of X after the instruction executes                                      | 0                                | Direct page            |
-| (Y)             | [Y]                    | Indirect Y                                                                                              | 0                                | Direct page            |
-| ($00+X)         | [$00+X]                | Indirect X, but the result is used as an address again: X-indexed (double) indirect                     | 1                                | Direct page            |
-| ($00)+Y         | [$00]+Y                | Data at direct page address is added to Y, then this is used as an address: Indirect Y-indexed indirect | 1                                | Direct page            |
-| $0000           |                        | Data at address                                                                                         | 2                                | All                    |
-| $0000+X         |                        | X-indexed (any address)                                                                                 | 2                                | All                    |
-| $0000+Y         |                        | Y-indexed (any address)                                                                                 | 2                                | All                    |
-| ($0000+X)       |                        | X-indexed indirect (any address)                                                                        | 2                                | All                    |
-| $00.bit         |                        | Bit of data at direct page address                                                                      | 1 (bit is baked into the opcode) | Direct page            |
-| $0000.bit       |                        | Bit of data (any address)                                                                               | 2 (bit is baked into the opcode) | All                    |
-| /$0000.bit      | !$0000.bit             | Negated bit of data                                                                                     | 2 (bit is baked into the opcode) | All                    |
-| C               |                        | Carry flag                                                                                              | 0                                | N/A                    |
+| Shorthand       | Alternative syntax(es) | Explanation                                                                                             | # bytes                       | Possible address range |
+| --------------- | ---------------------- | ------------------------------------------------------------------------------------------------------- | ----------------------------- | ---------------------- |
+| A/X/Y/SP/PSW/YA | P for PSW              | Register                                                                                                | 0                             | Depends on instruction |
+| #$00            |                        | 8-bit literal value                                                                                     | 1                             | N/A                    |
+| $00             |                        | Data at direct page address                                                                             | 1                             | Direct page            |
+| $00+X           |                        | Data at (direct page address + X): X-indexed direct page                                                | 1                             | Direct page            |
+| $00+Y           |                        | Y-indexed direct page                                                                                   | 1                             | Direct page            |
+| (X)             | [X]                    | Data at the direct page address stored in X: Indirect X                                                 | 0                             | Direct page            |
+| (X)+            | [X]+, [X+], (X+)       | Indirect X with auto-increment of X after the instruction executes                                      | 0                             | Direct page            |
+| (Y)             | [Y]                    | Indirect Y                                                                                              | 0                             | Direct page            |
+| ($00+X)         | [$00+X]                | Indirect X, but the result is used as an address again: X-indexed (double) indirect                     | 1                             | Direct page            |
+| ($00)+Y         | [$00]+Y                | Data at direct page address is added to Y, then this is used as an address: Indirect Y-indexed indirect | 1                             | Direct page            |
+| $0000           |                        | Data at address                                                                                         | 2                             | All                    |
+| $0000+X         |                        | X-indexed (any address)                                                                                 | 2                             | All                    |
+| $0000+Y         |                        | Y-indexed (any address)                                                                                 | 2                             | All                    |
+| ($0000+X)       |                        | X-indexed indirect (any address)                                                                        | 2                             | All                    |
+| $00.bit         |                        | Bit of data at direct page address                                                                      | 1 (bit is baked into opcode)  | Direct page            |
+| $0000.bit       |                        | Bit of data (any address)                                                                               | 2 (bit is baked into address) | Up to 1FFF inclusive   |
+| /$0000.bit      | !$0000.bit             | Negated bit of data                                                                                     | 2 (bit is baked into address) | Up to 1FFF inclusive   |
+| n               |                        | index into $FFC0 call table                                                                             | 0 (baked into opcode)         | 4 bits (0-15)          |
+| C               |                        | Carry flag                                                                                              | 0                             | N/A                    |
+
+Apart from the addressable memory constraints outlined above, some instructions operate on memory locations which have some of their memory address fixed by hardware. This is documented with these specific instructions.
+
+## Instruction encoding details
+
+To program the SPC700, understanding what an addressing mode does and where it can be used is enough. This section will explain the surprising intricacies and complexities of encoding SPC700 instructions. This is the explanation I would have liked to have when I started creating spcasm, I hope it is helpful to anyone hand-verifying assembly, testing assemblers or disassembling SPC700 code.
+
+### Operand order
+
+The operand order in the assembler is target, source by convention. However, in machine code, the normal order is `opcode source target`, which is exactly reversed. This is not relevant often, as many instructions either only take one operand, or they take at least one operand that is encoded as part of the opcode, such as a register. _However_, the two-operand versions of the `BBS`, `BBC`, `CBNE`, and `DBNZ` instructions (apart from also partially being bit indexed instructions) take both a direct page address and a relative jump target. Here, the direct page address, the "target" in assembler syntax, is not the second, but the first machine operand. To give an example: **While `OR target, source` is encoded as `opcode source target`, `BBS dp.bit, rel` is encoded as `opcode dp rel`.** As far as I can tell, no other assembly reference documents this encoding "feature" properly.
+
+### Relative addresses
+
+All branch instructions take a relative address, as they are intended to jump forward or backward only a small amount and can therefore afford to only store one byte of signed offset to allow jumps by +127 or -128. Note that the jump is relative to the instruction _following the branch instruction_, as the program counter will already have incremented by the time the branch is taken. Therefore, for example, to unconditionally branch to the exact same instruction again (the most memory-efficient way of writing an infinite loop) the offset needs to be -2, or FE in hexadecimal. A branch offset of 0 will have no effect on instruction flow, as it points to the instruction after the branch.
+
+In practice, spcasm will automatically compute the correct offset necessary to perform a branch. You have to specify the _target address_ as usual, not the offset. Im most cases the target will be a label to branch to. Although it should not be necessary, with this knowledge, you can use assembly-time calculations to revert the relative computations and specify an exact offset.
+
+### Endianness and 16-bit instructions
+
+The SPC700 is a little endian architecture, meaning that the least-significant byte comes first in memory. This is not only relevant for instruction encoding of memory addresses which the user does not need to worry about, but also the behavior of the 16-bit instructions. Some of these instructions contain the suffix "W" for "wide", but plenty of control flow instructions also need to consider whole words of memory. Whenever they operate on the direct page, the specified memory address forms the lower byte, and the memory address after this forms the higher byte. Note: It is not known what happens if the second memory address would be outside the direct page. The pseudo-register YA is also used by these instructions, and here the A register forms the lower byte.
+
+### Bit indexing
+
+Some instructions provide bit indexing, where a single bit of a memory address is inspected or operated on. There are two different classes of bit indexing used by different instructions:
+
+- Direct page bit indexing: Used by `BBS`, `BBC`, `SET1`, `CLR1`, which operate on or inspect bits in the direct page. They encode the bit index within the opcode itself, so while the mnemonic and the bit index are usually written separately from each other, they are combined into the opcode byte and there are eight different opcodes for each of the mnemonics. Specifically, the bit index occupies the upper three bits of the opcode byte, and the lower five bits are determined by the mnemonic and can be found in the instruction reference.
+- General address bit indexing: Used by the other bit instructions `AND1`, `OR1`, `EOR1`, `NOT1`, `MOV1`. Here, the bit index is encoded in the upper three bits of the address itself. This is the reason that these instructions can only access memory up to 1FFF inclusive. Remember that because the SPC700 is little endian, the bit index is found in the third byte of the machine instruction, because the first byte is the opcode and the second byte is the low byte of the address.
+
+### `TCALL` encoding
+
+The `TCALL` instruction is similar to a direct page bit indexing instruction in that it encodes its parameter, the table index, into the opcode. However, the table index can range from 0 to 15, not just from 0 to 7. Therefore, `TCALL` uses the entire high nybble to store the table index.
 
 **This section is incomplete.**
 
-- [ ] Document all mnemonics spcasm recognizes and what they do.
+- [x] Document all mnemonics spcasm recognizes and what they do.
 - [x] Document all addressing modes and what they do.
 - [ ] Document expression syntax.
 - [ ] Document the reference system and its limitations.

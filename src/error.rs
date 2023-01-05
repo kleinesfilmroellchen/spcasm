@@ -198,6 +198,24 @@ pub enum AssemblyError {
 		location: SourceSpan,
 	},
 
+	#[error("`math pri` is not supported by spcasm")]
+	#[diagnostic(
+		code(spcasm::directive::math_pri_unsupported),
+		severity(Error),
+		help(
+			"This directive switches between normal operator precedence and \"dumb\" left-to-right precedence in the \
+			 Asar multi-architecture assembler. This feature is intended for xkas compatibility, but spcasm does not \
+			 consider this an important feature. Therefore, spcasm cannot switch math priority mode. Please check \
+			 your math expressions manually if you are using `math pri off`."
+		)
+	)]
+	MathPriForbidden {
+		#[source_code]
+		src:      Arc<AssemblyCode>,
+		#[label("`math pri` directive")]
+		location: SourceSpan,
+	},
+
 	#[error("Assigning a value to the macro argument '<{name}>' is not possible")]
 	#[diagnostic(
 		code(spcasm::user_macro::assign_to_argument),

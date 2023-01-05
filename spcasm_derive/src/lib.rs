@@ -19,7 +19,8 @@ pub fn parse_macro_derive(input: TokenStream) -> TokenStream {
 				.variants
 				.iter()
 				.map(|variant| match variant.fields {
-					syn::Fields::Unit => (variant.ident.clone(), format!("{}", variant.ident).to_lowercase()),
+					syn::Fields::Unit =>
+						(variant.ident.clone(), format!("{}", variant.ident).to_lowercase().replace('_', " ")),
 					_ => panic!(
 						"Parse cannot be derived for enums containing non-unit variants; variant {} is not a unit.",
 						variant.to_token_stream()

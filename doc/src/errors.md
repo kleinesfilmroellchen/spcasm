@@ -106,6 +106,24 @@ This category contains directive-related errors.
 
 For range specifications, like when including binary files, the Asar style range syntax is a `start-end` format. Obviously, the start then needs to be before (or the same as) the end. Often you just accidentally swapped these limits.
 
+#### spcasm::math_pri_unsupported
+
+```
+  × `math pri` is not supported by spcasm
+   ╭─[examples\errors\math-pri.spcasm:1:1]
+ 1 │
+ 2 │ math pri off
+   · ──┬─
+   ·   ╰── `math pri` directive
+   ╰────
+  help: This directive switches between normal operator precedence and "dumb" left-to-right precedence in the Asar multi-architecture assembler. This feature is intended for xkas compatibility, but spcasm does not consider this an important feature. Therefore, spcasm cannot switch math priority mode. Please check your math expressions manually if you are using `math pri off`.
+```
+
+`math pri` is a directive that Asar supports for xkas compatibility. By default, Asar operates in left-to-right math priority like xkas, and proper priority can be enabled with `math pri on`. spcasm does not have this feature, however, to allow easier switching over to spcasm, the directive is detected and an error is reported. There are two courses of action:
+
+- If your assembly entirely or mostly uses `math pri on`, you can just remove the directive, as spcasm uses proper math priority like Asar with `math pri on`.
+- If your assembly entirely or mostly uses `math pri off`, you can bracket your math expressions manually to emulate the left-to-right precedence behavior of xkas. Then, remove the directive.
+
 #### spcasm::directive::range_out_of_bounds
 
 ```

@@ -91,6 +91,7 @@ pub enum DirectiveSymbol {
 	Arch,
 	Macro,
 	EndMacro,
+	Math,
 }
 
 impl Display for DirectiveSymbol {
@@ -112,6 +113,7 @@ impl Display for DirectiveSymbol {
 			Self::Arch => "arch",
 			Self::Macro => "macro",
 			Self::EndMacro => "endmacro",
+			Self::Math => "math",
 		})
 	}
 }

@@ -96,7 +96,7 @@ Mnemonic: (Mnemonic, bool, SourceSpan) = {
 	<mnemonic:"mnemonic"> <b:".b"> => (mnemonic.0, true, source_range(mnemonic.1.into(), b.into())),
 };
 
-Directive: Directive = {	
+Directive: Directive = {
 	<data_directive:TableDirective> <numbers:AssemblyTimeValueList> => Directive {
 		value: DirectiveValue::Table {
 			values: numbers,
@@ -170,6 +170,12 @@ Directive: Directive = {
 		span: <>,
 		label: None,
 		expected_value: None,
+	},
+	<math:"math"> ("identifier")* =>? {
+		Err(AssemblyError::MathPriForbidden {
+			src: source_code.clone(),
+			location: math,
+		}).map_err(|error| ParseError::User { error })
 	},
 	ArchDirective,
 	LabelAssignment,
@@ -413,6 +419,7 @@ extern {
 		"arch" => Token::Directive(DirectiveSymbol::Arch, <SourceSpan>),
 		"macro" => Token::Directive(DirectiveSymbol::Macro, <SourceSpan>),
 		"endmacro" => Token::Directive(DirectiveSymbol::EndMacro, <SourceSpan>),
+		"math" => Token::Directive(DirectiveSymbol::Math, <SourceSpan>),
 		"number" => Token::Number(<i64>, <SourceSpan>),
 		"string" => Token::String(<Vec<u8>>, <SourceSpan>),
 		"#" => Token::Hash(<SourceOffset>),

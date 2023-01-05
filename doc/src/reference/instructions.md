@@ -1,5 +1,8 @@
 # Instructions
 
+* auto-gen TOC;
+{:toc}
+
 All SPC700 instructions have the form `MNEMONIC TARGET,SOURCE`. The addressable memory range and flags set depend on the exact opcode. When flags are not given, the instruction does not set any flags but might inspect them.
 
 All opcodes are given in hexadecimal; other numbers are decimal.

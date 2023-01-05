@@ -54,6 +54,16 @@ jobs:
         with:
           owner: rust-lang
           name: mdBook
+      - name: Install mdbook-linkcheck
+        uses: extractions/setup-crate@v1
+        with:
+          owner: Michael-F-Bryan
+          name: mdbook-linkcheck
+      - name: Install mdbook-toc
+        uses: extractions/setup-crate@v1
+          owner: badboy
+          name: mdbook-toc
+
       - name: Move README to doc folder
         run: chmod +x doc/copy-readme-for-gh-pages.sh && doc/copy-readme-for-gh-pages.sh
       - name: Build documentation

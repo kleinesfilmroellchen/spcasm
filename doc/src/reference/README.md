@@ -98,10 +98,123 @@ Some instructions provide bit indexing, where a single bit of a memory address i
 
 The `TCALL` instruction is similar to a direct page bit indexing instruction in that it encodes its parameter, the table index, into the opcode. However, the table index can range from 0 to 15, not just from 0 to 7. Therefore, `TCALL` uses the entire high nybble to store the table index.
 
+## Values and expressions
+
+In spcasm, it is possible to run math at assembly time, which is especially useful for reference-dependent calculations. Math expressions can be used in place of most numbers; in fact numeric literal syntax will also be discussed here.
+
+Some values need to be resolvable early on or have additional restrictions. For example, many directives do not accept references in their values, as this can create unsolvable reference resolution problems. spcasm will never silently accept forbidden values in these cases, so you will always get an error and can look up the specifics in the [error reference](../errors.md).
+
+Note that while numbers can be larger than 8 or 16 bits, even if just in intermediary steps (e.g. before a division), spcasm internally uses 64-bit integers and depending on your system sometimes also 32-bit integers later on.
+
+Numeric literals are given in decimal by default. The prefix for hexadecimal literals is `$`, the prefix for binary literals is `%`.
+
+```asm
+; These are all equivalent:
+byte 40
+byte $28
+byte %101000
+```
+
+Math expression syntax is similar to C-like programming languages. Note that as opposed to Asar, **spcasm does not have a legacy priority mode. The `math pri` directive is detected and causes an error**. All spcasm expressions follow mathematical order of operations and all operations except for exponentiation are left-associative. The following list of available operations is sorted by priority, with the least strongly binding operation first.
+
+- `|` Logical bitwise or
+- `&` Logical bitwise and
+- `^` Logical bitwise exclusive or
+- `<<` Logical left shift, `>>` Arithmetic (sign-extending) right shift
+- `+` Addition, `-` subtraction
+- `*` multiplication, `/` integer division, `%` modulus (remainder of integer division)
+- `**` exponentiation
+- `+` Unary plus without effect, `-` unary negation, `~` logical not (all bits inverted)
+- `()` parenthesizing sub-expressions
+- a literal number
+- a reference or a macro parameter
+
+```asm
+; Results are given in hex:
+80 / 10         ; 08
++(80 / 10) + 5  ; 0D
+80 / 10 + 5     ; 0D
+80 / (10 + 5)   ; 05
++(80 / 10) +X   ; This is also an x-indexed addressing mode despite the '+'
+40 - 30 - 10    ; 00
+$10 * 3         ; 30
+72 % 7          ; 02
+1 << 4          ; 10
+8 >> 2          ; 02
+$ff & %11       ; 03
+$0F | $f0       ; FF
+~%10110010      ; 4D
+$9f ^ $78 ^ $9F ; 78
+6 ** 3          ; D8
+```
+
+Note that using parentheses might in some instances confuse spcasm over whether you are trying to use an indirect addressing mode with an instruction, or whether you are trying to create a math expression. To force anything into indirect addressing, use square brackets `[]` instead of round parentheses. To force anything into a math expression, use round parentheses and a prefixed `+` unary operation that is a no-op and mainly exists for exactly this purpose.
+
+Depending on what the number is to be used for, it may be truncated to 8 bits, 16 bits, or treated as an address and used to compute a relative offset.
+
+For the purposes of boolean expressions, such as assembly-time conditionals, all values except 0 are treated as true and 0 itself is treated as false.
+
+## Labels and references
+
+Especially for control flow, but also for naming memory locations or defining constants, spcasm has a rich reference system. (See [Terminology](../terminology.md) if you want to know what difference there is between labels and references.)
+
+To label any memory location, use the name of the label followed by a colon:
+
+```asm
+entry:
+
+  mov a, #7
+  mov x, 3
+
+important_data: db 0
+
+important_word: word $8076
+```
+
+Currently you cannot have two labels pointing to the same memory location with this syntax, but it is possible to assign one label the value of another label (see below).
+
+The label created in the above example is global. Such labels are available everywhere and across files, macro calls, etc. To avoid name collisions with common label names such as `loop`, `end`, `error` etc., you can use local labels by preceding the label name with a dot `.`. Local labels are only visible between their parent global label (the previous global label) and the next global label. Therefore, there must be a global label defined before you can define the first local label.
+
+```asm
+fill_with_a:
+    mov y, 10
+  .loop:
+    mov $3040+y, a
+    dbnz y, .loop
+    mov a, #0
+    ret
+
+fill_with_x:
+    push a
+    mov a, x
+    mov y, 10
+  .loop:             ; This does not collide with the first .loop above
+    mov $3040+y, a
+    dbnz y, .loop
+    pop a
+    ret
+```
+
+It is also possible to define a reference to a fixed value, or one computed from other references, etc. For this, a simple assignment syntax is supported:
+
+```asm
+; In general:
+reference = expression
+
+; Examples:
+entry_2 = entry_1           ; Make two code labels coincide
+important_variable = $50ff
+loop_cycles = $32 >> 7
+```
+
+These labels always have to be global; local labels are specifically intended for code labeling and jump targets.
+
+When assigning references in this way, take care to not create a cyclic dependency. Such dependencies will be caught by spcasm in form of an unresolved reference error after the reference resolution limit was reached.
+
 **This section is incomplete.**
 
 - [x] Document all mnemonics spcasm recognizes and what they do.
 - [x] Document all addressing modes and what they do.
-- [ ] Document expression syntax.
-- [ ] Document the reference system and its limitations.
+- [x] Document expression syntax.
+- [x] Document the reference system and its limitations.
 - [ ] Document all directives and what they do.

@@ -61,6 +61,7 @@ jobs:
           name: mdbook-linkcheck
       - name: Install mdbook-toc
         uses: extractions/setup-crate@v1
+        with:
           owner: badboy
           name: mdbook-toc
 

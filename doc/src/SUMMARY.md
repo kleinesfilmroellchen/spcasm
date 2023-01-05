@@ -8,5 +8,5 @@
 	- [Troubleshooting](troubleshooting.md)
 - [Assembler reference](reference/README.md)
 	- [Instructions](reference/instructions.md)
-	- [Directives]()
+	- [Directives](reference/directives.md)
 - [Development](dev/README.md)

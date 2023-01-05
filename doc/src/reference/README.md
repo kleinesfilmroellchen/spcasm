@@ -213,11 +213,3 @@ loop_cycles = $32 >> 7
 These labels always have to be global; local labels are specifically intended for code labeling and jump targets.
 
 When assigning references in this way, take care to not create a cyclic dependency. Such dependencies will be caught by spcasm in form of an unresolved reference error after the reference resolution limit was reached.
-
-**This section is incomplete.**
-
-- [x] Document all mnemonics spcasm recognizes and what they do.
-- [x] Document all addressing modes and what they do.
-- [x] Document expression syntax.
-- [x] Document the reference system and its limitations.
-- [ ] Document all directives and what they do.

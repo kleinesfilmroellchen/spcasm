@@ -18,6 +18,8 @@ jobs:
         uses: actions-rs/toolchain@v1
         with:
           toolchain: nightly
+      - name: Output Rust version to file
+        run: cargo --version > rust-version
       - uses: actions/cache@v3
         with:
           path: |
@@ -26,7 +28,7 @@ jobs:
             ~/.cargo/registry/cache/
             ~/.cargo/git/db/
             target/
-          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}-${{ hashFiles('rust-version') }}
         # The binary build adds > 40 dependencies, so we would like to avoid it, but some integration tests depend on it.
         # Therefore, we first run a faster build that will report almost all errors immediately and cancel the CI run.
       - name: Build

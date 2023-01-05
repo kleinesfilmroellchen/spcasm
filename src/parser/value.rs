@@ -126,11 +126,43 @@ impl AssemblyTimeValue {
 	/// collapsed and resolved as far as possible.
 	#[must_use]
 	pub fn try_resolve(self) -> Self {
+		self.try_resolve_impl(Vec::new())
+	}
+
+	/// The implementation for ``try_resolve``. This function keeps track of which references have been tried to be
+	/// resolved already to prevent infinite recursion.
+	#[must_use]
+	pub fn try_resolve_impl(self, resolution_attempts: Vec<&Reference>) -> Self {
 		match self {
-			Self::Reference(Reference::Global(global)) if let Some(memory_location) = global.clone().borrow().location.clone() => memory_location.try_resolve(),
-			Self::Reference(Reference::Local(local)) if let Some(memory_location) = local.clone().borrow().location.clone() => memory_location.try_resolve(),
-			Self::Reference(Reference::MacroArgument { value: Some(memory_location) , .. }) => memory_location.try_resolve(),
-			Self::UnaryOperation(number, operator) => match number.try_resolve() {
+			Self::Reference(ref reference @ Reference::Global(ref global)) if let Some(memory_location) = global.clone().borrow().location.clone() => {
+				// Recursive reference definition, we need to abort.
+				if resolution_attempts.contains(&reference) {
+					self
+				} else {
+					let mut attempts_with_this = resolution_attempts;
+					attempts_with_this.push(reference);
+					memory_location.try_resolve_impl(attempts_with_this)
+				}
+			},
+			Self::Reference(ref reference @ Reference::Local(ref local)) if let Some(memory_location) = local.clone().borrow().location.clone() => {
+				if resolution_attempts.contains(&reference) {
+					self
+				} else {
+					let mut attempts_with_this = resolution_attempts;
+					attempts_with_this.push(reference);
+					memory_location.try_resolve_impl(attempts_with_this)
+				}
+			},
+			Self::Reference(ref reference @ Reference::MacroArgument { value: Some(ref memory_location) , .. }) => {
+				if resolution_attempts.contains(&reference) {
+					self
+				} else {
+					let mut attempts_with_this = resolution_attempts;
+					attempts_with_this.push(reference);
+					memory_location.clone().try_resolve_impl(attempts_with_this)
+				}
+			},
+			Self::UnaryOperation(number, operator) => match number.try_resolve_impl(resolution_attempts) {
 				Self::Literal(value) => Self::Literal(operator.execute(value)),
 				resolved => Self::UnaryOperation(Box::new(resolved), operator),
 			},

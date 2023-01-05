@@ -9,14 +9,15 @@
 				"args": [
 					"build",
 					"--bin=spcasm",
-					"--package=spcasm"
 				],
 				"filter": {
 					"name": "spcasm",
 					"kind": "bin"
 				}
 			},
-			"args": ["examples/test.spcasm", "target/test"],
+			"args": [
+				"examples/test.spcasm"
+			],
 			"cwd": "${workspaceFolder}"
 		},
 		{

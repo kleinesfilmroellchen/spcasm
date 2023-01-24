@@ -87,8 +87,8 @@ spcasm::arch::valid
 ```trycmd
 $ spcasm -w definitely_does_not_exist examples/test.spcasm
 ? failed
-error: Invalid value 'definitely_does_not_exist' for '--ignore <IGNORE>': invalid error code
+error: invalid value 'definitely_does_not_exist' for '--ignore <IGNORE>': invalid error code
 
-For more information try '--help'
+For more information, try '--help'.
 
 ```

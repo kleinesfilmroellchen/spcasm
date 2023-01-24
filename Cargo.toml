@@ -86,7 +86,7 @@ version = "5"
 
 # Only compile clap for the CLIs.
 [dependencies.clap]
-version = "4"
+version = "4.1"
 optional = true
 features = ["derive", "wrap_help", "string"]
 

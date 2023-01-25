@@ -65,8 +65,8 @@ fn assemble_to_data(
 		data.segments.new_segment(*segment_start);
 		for program_element in segment_content {
 			match program_element {
-				ProgramElement::Instruction(instruction) => assemble_instruction(&mut data, instruction)?,
-				ProgramElement::Directive(directive) => assemble_directive(&mut data, directive)?,
+				ProgramElement::Instruction(instruction) => data.assemble_instruction(instruction)?,
+				ProgramElement::Directive(directive) => data.assemble_directive(directive)?,
 				ProgramElement::IncludeSource { .. } =>
 					unreachable!("there should not be any remaining unincluded source code at assembly time"),
 				ProgramElement::UserDefinedMacroCall { .. } =>
@@ -86,281 +86,6 @@ fn assemble_to_data(
 		pass_count += 1;
 	}
 	Ok(data)
-}
-
-/// Assemble a single instruction. This function uses the codegen table `table::assembly_table`.
-#[allow(clippy::unnecessary_wraps, clippy::too_many_lines)]
-fn assemble_instruction(data: &mut AssembledData, instruction: &mut Instruction) -> Result<(), Box<AssemblyError>> {
-	// Because the actions always expect to get a value, we need a fallback dummy value if there is none in the
-	// addressing mode. This is fine, since we control the codegen table and we can make sure that we never use a value
-	// where there is none in the operand.
-	const dummy_value: AssemblyTimeValue = AssemblyTimeValue::Literal(0);
-
-	let Instruction { label, opcode: Opcode { first_operand, mnemonic, second_operand, .. }, span, .. } = instruction;
-
-	// Retrieve the table entry for the mnemonic.
-	let mnemonic_entry = assembly_table
-		.get(mnemonic)
-		.unwrap_or_else(|| panic!("No codegen entries for mnemonic {}, this is a bug", mnemonic));
-
-	match mnemonic_entry {
-		EntryOrFirstOperandTable::Entry(opcode) =>
-			if first_operand.is_some() || second_operand.is_some() {
-				Err(AssemblyError::OperandNotAllowed {
-					mnemonic: *mnemonic,
-					location: *span,
-					src:      data.source_code.clone(),
-				}
-				.into())
-			} else {
-				data.append_8_bits(MemoryAddress::from(*opcode), label.clone(), *span)
-			},
-		EntryOrFirstOperandTable::Table(first_operand_table) => {
-			let legal_modes: Vec<_> = first_operand_table.keys().map(AddressingModeCategory::to_string).collect();
-			let first_operand = first_operand.as_ref().ok_or_else(|| AssemblyError::MissingOperand {
-				mnemonic:    *mnemonic,
-				legal_modes: legal_modes.clone(),
-				location:    *span,
-				src:         data.source_code.clone(),
-			})?;
-
-			// Retrieve the table entry for the first operand.
-			let first_operand_entry = first_operand_table.get(&first_operand.into()).ok_or_else(|| {
-				AssemblyError::InvalidFirstAddressingMode {
-					mode: first_operand.to_string(),
-					mnemonic: *mnemonic,
-					legal_modes,
-					src: data.source_code.clone(),
-					location: *span,
-				}
-			})?;
-			// At this point, we have fully checked the first operand's correctness and can assume that the table
-			// doesn't do nonsensical things with its properties, such as the bit index or the value.
-
-			// Check that there is no second operand if we don't need one.
-			// However, we don't need to error out if we are missing a second operand, because that will be checked
-			// later.
-			if !matches!(
-				(&second_operand, first_operand_entry),
-				(
-					None,
-					EntryOrSecondOperandTable::Entry(..)
-						| EntryOrSecondOperandTable::ImplicitAEntry(..)
-						| EntryOrSecondOperandTable::BitEntry(..)
-						| EntryOrSecondOperandTable::TcallEntry(..)
-				) | (Some(AddressingMode::Register(Register::A)), EntryOrSecondOperandTable::ImplicitAEntry(..))
-					| (_, EntryOrSecondOperandTable::Table(..))
-			) {
-				return Err(AssemblyError::TwoOperandsNotAllowed {
-					mnemonic: *mnemonic,
-					src:      data.source_code.clone(),
-					location: *span,
-				}
-				.into());
-			}
-
-			match first_operand_entry {
-				EntryOrSecondOperandTable::Entry(opcode, action)
-				| EntryOrSecondOperandTable::ImplicitAEntry(opcode, action) => {
-					data.append_8_bits(MemoryAddress::from(*opcode), label.clone(), *span)?;
-					action(
-						data,
-						*span,
-						first_operand.number_ref().unwrap_or(&dummy_value),
-						first_operand.bit_index().unwrap_or_default(),
-					)
-				},
-				EntryOrSecondOperandTable::BitEntry(opcode, action) => {
-					data.append_unresolved_opcode_with_bit_index(
-						AssemblyTimeValue::Literal(MemoryAddress::from(*opcode)),
-						first_operand.bit_index().unwrap_or_default(),
-						label.clone(),
-						*span,
-					)?;
-					action(
-						data,
-						*span,
-						first_operand.number_ref().unwrap_or(&dummy_value),
-						first_operand.bit_index().unwrap_or_default(),
-					)
-				},
-				EntryOrSecondOperandTable::TcallEntry(opcode) => data.append_8_bits_unresolved(
-					// Synthesize the operation `opcode | ((operand & 0x0F) << 4)` which is exactly how TCALL works.
-					AssemblyTimeValue::BinaryOperation(
-						AssemblyTimeValue::Literal(MemoryAddress::from(*opcode)).into(),
-						AssemblyTimeValue::BinaryOperation(
-							AssemblyTimeValue::BinaryOperation(
-								first_operand.number().unwrap_or_else(|| dummy_value.clone()).into(),
-								AssemblyTimeValue::Literal(0x0F).into(),
-								BinaryOperator::And,
-							)
-							.into(),
-							AssemblyTimeValue::Literal(4).into(),
-							BinaryOperator::LeftShift,
-						)
-						.into(),
-						BinaryOperator::Or,
-					),
-					0,
-					label.clone(),
-					*span,
-				),
-				EntryOrSecondOperandTable::Table(second_operand_table) => {
-					let legal_modes: Vec<_> =
-						second_operand_table.keys().map(AddressingModeCategory::to_string).collect();
-					let second_operand =
-						second_operand.as_ref().ok_or_else(|| AssemblyError::MissingSecondOperand {
-							mnemonic:    *mnemonic,
-							location:    *span,
-							legal_modes: legal_modes.clone(),
-							src:         data.source_code.clone(),
-						})?;
-
-					let second_operand_entry = second_operand_table.get(&second_operand.into()).ok_or_else(|| {
-						AssemblyError::InvalidSecondAddressingMode {
-							mode: second_operand.to_string(),
-							mnemonic: *mnemonic,
-							first_mode: first_operand.to_string(),
-							legal_modes,
-							src: data.source_code.clone(),
-							location: *span,
-						}
-					})?;
-
-					let bit_index =
-						first_operand.bit_index().or_else(|| second_operand.bit_index()).unwrap_or_default();
-
-					match second_operand_entry {
-						TwoOperandEntry::Entry(opcode, action) => {
-							data.append(*opcode, label.clone(), *span)?;
-							action(
-								data,
-								*span,
-								first_operand.number_ref().unwrap_or(&dummy_value),
-								second_operand.number_ref().unwrap_or(&dummy_value),
-								bit_index,
-							)
-						},
-						TwoOperandEntry::BitEntry(opcode, action) => {
-							data.append_unresolved_opcode_with_bit_index(
-								AssemblyTimeValue::Literal(MemoryAddress::from(*opcode)),
-								bit_index,
-								label.clone(),
-								*span,
-							)?;
-							action(
-								data,
-								*span,
-								first_operand.number_ref().unwrap_or(&dummy_value),
-								second_operand.number_ref().unwrap_or(&dummy_value),
-								bit_index,
-							)
-						},
-					}
-				},
-			}
-		},
-	}
-}
-
-#[allow(clippy::unnecessary_wraps)]
-fn assemble_directive(data: &mut AssembledData, directive: &mut Directive) -> Result<(), Box<AssemblyError>> {
-	directive.perform_segment_operations_if_necessary(&mut data.segments, data.source_code.clone())?;
-	match directive.value {
-		DirectiveValue::Table { entry_size, ref values } => {
-			let mut reference = directive.label.clone();
-			for value in values {
-				match entry_size {
-					1 => data.append_8_bits_unresolved(value.clone(), 0, reference, directive.span)?,
-					2 => data.append_16_bits_unresolved(value.clone(), reference, directive.span)?,
-					3 | 4 => unimplemented!(),
-					_ => unreachable!(),
-				}
-				reference = None;
-			}
-		},
-		DirectiveValue::Brr(ref file_name) => {
-			// Resolve the audio file's path relative to the source file.
-			let actual_path = resolve_file(&data.source_code, directive.span, file_name)?;
-			let file = File::open(actual_path).map_err(|os_error| AssemblyError::FileNotFound {
-				os_error,
-				file_name: file_name.clone(),
-				src: data.source_code.clone(),
-				location: directive.span,
-			})?;
-			let mut sample_data =
-				wav::read_wav_for_brr(file).map_err(|error_text| AssemblyError::AudioProcessingError {
-					error_text,
-					file_name: file_name.clone(),
-					src: data.source_code.clone(),
-					location: directive.span,
-				})?;
-			let encoded = brr::encode_to_brr(&mut sample_data, false, brr::CompressionLevel::Max);
-
-			data.append_bytes(encoded, &directive.label, directive.span)?;
-		},
-		DirectiveValue::String { ref text, has_null_terminator } => {
-			let mut is_first = true;
-			for chr in text {
-				data.append(*chr, if is_first { directive.label.clone() } else { None }, directive.span)?;
-				is_first = false;
-			}
-			if has_null_terminator {
-				data.append(0, if is_first { directive.label.clone() } else { None }, directive.span)?;
-			}
-		},
-		DirectiveValue::AssignReference { ref mut reference, ref value } => match reference {
-			Reference::Local(reference) => {
-				reference.borrow_mut().location = Some(Box::new(value.clone().try_resolve()));
-			},
-			Reference::Global(ref mut global) => {
-				global.borrow_mut().location = Some(value.clone().try_resolve());
-			},
-			Reference::MacroArgument { span, name, .. } =>
-				return Err(AssemblyError::AssigningToMacroArgument {
-					name:     (*name).to_string(),
-					src:      data.source_code.clone(),
-					location: *span,
-				}
-				.into()),
-			Reference::MacroGlobal { span, .. } =>
-				return Err(AssemblyError::AssigningToMacroGlobal {
-					src:      data.source_code.clone(),
-					location: *span,
-				}
-				.into()),
-		},
-		DirectiveValue::Include { ref file, range } => {
-			let binary_file = resolve_file(&data.source_code, directive.span, file)?;
-			let mut binary_data = std::fs::read(binary_file).map_err(|os_error| AssemblyError::FileNotFound {
-				os_error,
-				file_name: file.clone(),
-				src: data.source_code.clone(),
-				location: directive.span,
-			})?;
-			if let Some(range) = range {
-				let max_number_of_bytes = binary_data.len().saturating_sub(range.offset());
-				binary_data = binary_data
-					.get(range.offset() .. range.offset().saturating_add(range.len()).min(max_number_of_bytes))
-					.ok_or(AssemblyError::RangeOutOfBounds {
-						start:    range.offset(),
-						end:      range.offset() + range.len(),
-						file:     file.clone(),
-						file_len: binary_data.len(),
-						src:      data.source_code.clone(),
-						location: directive.span,
-					})?
-					.to_vec();
-			}
-
-			data.append_bytes(binary_data, &directive.label, directive.span)?;
-		},
-		DirectiveValue::End => {
-			data.should_stop = true;
-		},
-		_ => {},
-	}
-	Ok(())
 }
 
 pub(crate) fn resolve_file(
@@ -563,6 +288,285 @@ impl AssembledData {
 	/// errors.
 	pub fn report_or_throw(&self, error: AssemblyError) -> Result<(), Box<AssemblyError>> {
 		error.report_or_throw(&*self.options)
+	}
+
+	/// Assemble a single assembler directive into this assembly data.
+	#[allow(clippy::unnecessary_wraps)]
+	pub fn assemble_directive(&mut self, directive: &mut Directive) -> Result<(), Box<AssemblyError>> {
+		directive.perform_segment_operations_if_necessary(&mut self.segments, self.source_code.clone())?;
+		match directive.value {
+			DirectiveValue::Table { entry_size, ref values } => {
+				let mut reference = directive.label.clone();
+				for value in values {
+					match entry_size {
+						1 => self.append_8_bits_unresolved(value.clone(), 0, reference, directive.span)?,
+						2 => self.append_16_bits_unresolved(value.clone(), reference, directive.span)?,
+						3 | 4 => unimplemented!(),
+						_ => unreachable!(),
+					}
+					reference = None;
+				}
+			},
+			DirectiveValue::Brr(ref file_name) => {
+				// Resolve the audio file's path relative to the source file.
+				let actual_path = resolve_file(&self.source_code, directive.span, file_name)?;
+				let file = File::open(actual_path).map_err(|os_error| AssemblyError::FileNotFound {
+					os_error,
+					file_name: file_name.clone(),
+					src: self.source_code.clone(),
+					location: directive.span,
+				})?;
+				let mut sample_data =
+					wav::read_wav_for_brr(file).map_err(|error_text| AssemblyError::AudioProcessingError {
+						error_text,
+						file_name: file_name.clone(),
+						src: self.source_code.clone(),
+						location: directive.span,
+					})?;
+				let encoded = brr::encode_to_brr(&mut sample_data, false, brr::CompressionLevel::Max);
+
+				self.append_bytes(encoded, &directive.label, directive.span)?;
+			},
+			DirectiveValue::String { ref text, has_null_terminator } => {
+				let mut is_first = true;
+				for chr in text {
+					self.append(*chr, if is_first { directive.label.clone() } else { None }, directive.span)?;
+					is_first = false;
+				}
+				if has_null_terminator {
+					self.append(0, if is_first { directive.label.clone() } else { None }, directive.span)?;
+				}
+			},
+			DirectiveValue::AssignReference { ref mut reference, ref value } => match reference {
+				Reference::Local(reference) => {
+					reference.borrow_mut().location = Some(Box::new(value.clone().try_resolve()));
+				},
+				Reference::Global(ref mut global) => {
+					global.borrow_mut().location = Some(value.clone().try_resolve());
+				},
+				Reference::MacroArgument { span, name, .. } =>
+					return Err(AssemblyError::AssigningToMacroArgument {
+						name:     (*name).to_string(),
+						src:      self.source_code.clone(),
+						location: *span,
+					}
+					.into()),
+				Reference::MacroGlobal { span, .. } =>
+					return Err(AssemblyError::AssigningToMacroGlobal {
+						src:      self.source_code.clone(),
+						location: *span,
+					}
+					.into()),
+			},
+			DirectiveValue::Include { ref file, range } => {
+				let binary_file = resolve_file(&self.source_code, directive.span, file)?;
+				let mut binary_data = std::fs::read(binary_file).map_err(|os_error| AssemblyError::FileNotFound {
+					os_error,
+					file_name: file.clone(),
+					src: self.source_code.clone(),
+					location: directive.span,
+				})?;
+				if let Some(range) = range {
+					let max_number_of_bytes = binary_data.len().saturating_sub(range.offset());
+					binary_data = binary_data
+						.get(range.offset() .. range.offset().saturating_add(range.len()).min(max_number_of_bytes))
+						.ok_or(AssemblyError::RangeOutOfBounds {
+							start:    range.offset(),
+							end:      range.offset() + range.len(),
+							file:     file.clone(),
+							file_len: binary_data.len(),
+							src:      self.source_code.clone(),
+							location: directive.span,
+						})?
+						.to_vec();
+				}
+
+				self.append_bytes(binary_data, &directive.label, directive.span)?;
+			},
+			DirectiveValue::End => {
+				self.should_stop = true;
+			},
+			_ => {},
+		}
+		Ok(())
+	}
+
+	/// Assemble a single instruction. This function uses the codegen table `table::assembly_table`.
+	#[allow(clippy::unnecessary_wraps, clippy::too_many_lines)]
+	fn assemble_instruction(&mut self, instruction: &mut Instruction) -> Result<(), Box<AssemblyError>> {
+		// Because the actions always expect to get a value, we need a fallback dummy value if there is none in the
+		// addressing mode. This is fine, since we control the codegen table and we can make sure that we never use a
+		// value where there is none in the operand.
+		const dummy_value: AssemblyTimeValue = AssemblyTimeValue::Literal(0);
+
+		let Instruction { label, opcode: Opcode { first_operand, mnemonic, second_operand, .. }, span, .. } =
+			instruction;
+
+		// Retrieve the table entry for the mnemonic.
+		let mnemonic_entry = assembly_table
+			.get(mnemonic)
+			.unwrap_or_else(|| panic!("No codegen entries for mnemonic {}, this is a bug", mnemonic));
+
+		match mnemonic_entry {
+			EntryOrFirstOperandTable::Entry(opcode) =>
+				if first_operand.is_some() || second_operand.is_some() {
+					Err(AssemblyError::OperandNotAllowed {
+						mnemonic: *mnemonic,
+						location: *span,
+						src:      self.source_code.clone(),
+					}
+					.into())
+				} else {
+					self.append_8_bits(MemoryAddress::from(*opcode), label.clone(), *span)
+				},
+			EntryOrFirstOperandTable::Table(first_operand_table) => {
+				let legal_modes: Vec<_> = first_operand_table.keys().map(AddressingModeCategory::to_string).collect();
+				let first_operand = first_operand.as_ref().ok_or_else(|| AssemblyError::MissingOperand {
+					mnemonic:    *mnemonic,
+					legal_modes: legal_modes.clone(),
+					location:    *span,
+					src:         self.source_code.clone(),
+				})?;
+
+				// Retrieve the table entry for the first operand.
+				let first_operand_entry = first_operand_table.get(&first_operand.into()).ok_or_else(|| {
+					AssemblyError::InvalidFirstAddressingMode {
+						mode: first_operand.to_string(),
+						mnemonic: *mnemonic,
+						legal_modes,
+						src: self.source_code.clone(),
+						location: *span,
+					}
+				})?;
+				// At this point, we have fully checked the first operand's correctness and can assume that the table
+				// doesn't do nonsensical things with its properties, such as the bit index or the value.
+
+				// Check that there is no second operand if we don't need one.
+				// However, we don't need to error out if we are missing a second operand, because that will be checked
+				// later.
+				if !matches!(
+					(&second_operand, first_operand_entry),
+					(
+						None,
+						EntryOrSecondOperandTable::Entry(..)
+							| EntryOrSecondOperandTable::ImplicitAEntry(..)
+							| EntryOrSecondOperandTable::BitEntry(..)
+							| EntryOrSecondOperandTable::TcallEntry(..)
+					) | (Some(AddressingMode::Register(Register::A)), EntryOrSecondOperandTable::ImplicitAEntry(..))
+						| (_, EntryOrSecondOperandTable::Table(..))
+				) {
+					return Err(AssemblyError::TwoOperandsNotAllowed {
+						mnemonic: *mnemonic,
+						src:      self.source_code.clone(),
+						location: *span,
+					}
+					.into());
+				}
+
+				match first_operand_entry {
+					EntryOrSecondOperandTable::Entry(opcode, action)
+					| EntryOrSecondOperandTable::ImplicitAEntry(opcode, action) => {
+						self.append_8_bits(MemoryAddress::from(*opcode), label.clone(), *span)?;
+						action(
+							self,
+							*span,
+							first_operand.number_ref().unwrap_or(&dummy_value),
+							first_operand.bit_index().unwrap_or_default(),
+						)
+					},
+					EntryOrSecondOperandTable::BitEntry(opcode, action) => {
+						self.append_unresolved_opcode_with_bit_index(
+							AssemblyTimeValue::Literal(MemoryAddress::from(*opcode)),
+							first_operand.bit_index().unwrap_or_default(),
+							label.clone(),
+							*span,
+						)?;
+						action(
+							self,
+							*span,
+							first_operand.number_ref().unwrap_or(&dummy_value),
+							first_operand.bit_index().unwrap_or_default(),
+						)
+					},
+					EntryOrSecondOperandTable::TcallEntry(opcode) => self.append_8_bits_unresolved(
+						// Synthesize the operation `opcode | ((operand & 0x0F) << 4)` which is exactly how TCALL
+						// works.
+						AssemblyTimeValue::BinaryOperation(
+							AssemblyTimeValue::Literal(MemoryAddress::from(*opcode)).into(),
+							AssemblyTimeValue::BinaryOperation(
+								AssemblyTimeValue::BinaryOperation(
+									first_operand.number().unwrap_or_else(|| dummy_value.clone()).into(),
+									AssemblyTimeValue::Literal(0x0F).into(),
+									BinaryOperator::And,
+								)
+								.into(),
+								AssemblyTimeValue::Literal(4).into(),
+								BinaryOperator::LeftShift,
+							)
+							.into(),
+							BinaryOperator::Or,
+						),
+						0,
+						label.clone(),
+						*span,
+					),
+					EntryOrSecondOperandTable::Table(second_operand_table) => {
+						let legal_modes: Vec<_> =
+							second_operand_table.keys().map(AddressingModeCategory::to_string).collect();
+						let second_operand =
+							second_operand.as_ref().ok_or_else(|| AssemblyError::MissingSecondOperand {
+								mnemonic:    *mnemonic,
+								location:    *span,
+								legal_modes: legal_modes.clone(),
+								src:         self.source_code.clone(),
+							})?;
+
+						let second_operand_entry =
+							second_operand_table.get(&second_operand.into()).ok_or_else(|| {
+								AssemblyError::InvalidSecondAddressingMode {
+									mode: second_operand.to_string(),
+									mnemonic: *mnemonic,
+									first_mode: first_operand.to_string(),
+									legal_modes,
+									src: self.source_code.clone(),
+									location: *span,
+								}
+							})?;
+
+						let bit_index =
+							first_operand.bit_index().or_else(|| second_operand.bit_index()).unwrap_or_default();
+
+						match second_operand_entry {
+							TwoOperandEntry::Entry(opcode, action) => {
+								self.append(*opcode, label.clone(), *span)?;
+								action(
+									self,
+									*span,
+									first_operand.number_ref().unwrap_or(&dummy_value),
+									second_operand.number_ref().unwrap_or(&dummy_value),
+									bit_index,
+								)
+							},
+							TwoOperandEntry::BitEntry(opcode, action) => {
+								self.append_unresolved_opcode_with_bit_index(
+									AssemblyTimeValue::Literal(MemoryAddress::from(*opcode)),
+									bit_index,
+									label.clone(),
+									*span,
+								)?;
+								action(
+									self,
+									*span,
+									first_operand.number_ref().unwrap_or(&dummy_value),
+									second_operand.number_ref().unwrap_or(&dummy_value),
+									bit_index,
+								)
+							},
+						}
+					},
+				}
+			},
+		}
 	}
 
 	/// Appends an 8-bit value to the current segment. The given number is truncated to 8 bits.

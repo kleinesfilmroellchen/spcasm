@@ -10,7 +10,8 @@ use super::register::Register;
 use super::token::Token;
 use super::Parse;
 use crate::directive::DirectiveSymbol;
-use crate::error::{AssemblyCode, AssemblyError};
+use crate::error::AssemblyError;
+use crate::AssemblyCode;
 
 /// Lex the given assembly into a list of tokens.
 /// # Errors

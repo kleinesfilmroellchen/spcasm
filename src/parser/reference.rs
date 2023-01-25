@@ -9,7 +9,8 @@ use miette::SourceSpan;
 
 use super::instruction::MemoryAddress;
 use super::AssemblyTimeValue;
-use crate::error::{AssemblyCode, AssemblyError};
+use crate::error::AssemblyError;
+use crate::AssemblyCode;
 
 pub trait Resolvable {
 	/// Whether this reference has already been resolved to a memory location.

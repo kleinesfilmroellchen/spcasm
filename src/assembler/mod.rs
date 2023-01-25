@@ -11,12 +11,12 @@ use miette::{Result, SourceSpan};
 use crate::brr::{self, wav};
 use crate::cli::{default_backend_options, BackendOptions};
 use crate::directive::DirectiveValue;
-use crate::error::{AssemblyCode, AssemblyError};
+use crate::error::AssemblyError;
 use crate::parser::instruction::{AddressingMode, AddressingModeCategory, Instruction, MemoryAddress, Opcode};
 use crate::parser::reference::{Reference, Resolvable};
 use crate::parser::value::BinaryOperator;
 use crate::parser::{AssemblyTimeValue, ProgramElement, Register};
-use crate::{pretty_hex, Directive, Segments};
+use crate::{pretty_hex, AssemblyCode, Directive, Segments};
 
 mod table;
 pub use table::assembly_table;

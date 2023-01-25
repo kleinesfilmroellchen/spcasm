@@ -35,7 +35,7 @@ pub fn parse_macro_derive(input: TokenStream) -> TokenStream {
 				#[automatically_derived]
 				#[allow(missing_docs)]
 				impl crate::parser::Parse for #name {
-					fn parse(value: &str, location: miette::SourceSpan, src: std::sync::Arc<crate::error::AssemblyCode>) -> Result<Self, Box<crate::error::AssemblyError>> {
+					fn parse(value: &str, location: miette::SourceSpan, src: std::sync::Arc<crate::AssemblyCode>) -> Result<Self, Box<crate::error::AssemblyError>> {
 						Ok(match value {
 							#( #variant_strings => Self::#variant_identifiers, )*
 							_ => return Err(crate::error::AssemblyError::InvalidConstant { constant: value.to_owned(), typename: #name_string.to_owned(), location, src }.into()),

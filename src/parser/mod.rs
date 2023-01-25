@@ -14,9 +14,9 @@ use self::reference::{GlobalLabel, MacroParameters, MacroParent, MacroParentRepl
 use crate::assembler::resolve_file;
 use crate::cli::{default_backend_options, BackendOptions};
 use crate::directive::DirectiveValue;
-use crate::error::{AssemblyCode, AssemblyError};
+use crate::error::AssemblyError;
 use crate::parser::instruction::MemoryAddress;
-use crate::{lalrpop_adaptor, Directive, Segments};
+use crate::{lalrpop_adaptor, AssemblyCode, Directive, Segments};
 
 pub mod instruction;
 pub mod lexer;

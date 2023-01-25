@@ -31,6 +31,7 @@
 #[allow(clippy::wildcard_imports)]
 pub use common::*;
 pub use segments::Segments;
+pub use source::AssemblyCode;
 
 /// Just like -Werror on C(++) compilers, make ALL THE WARNINGS INTO ERRORS!
 #[macro_export]
@@ -53,6 +54,7 @@ w_error!(mod error);
 w_error!(mod lalrpop_adaptor);
 w_error!(pub mod parser);
 w_error!(mod segments);
+w_error!(mod source);
 
 lalrpop_mod!(
 	#[allow(missing_docs, unused, clippy::all, clippy::pedantic, clippy::nursery)]

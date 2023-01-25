@@ -10,7 +10,8 @@ use miette::SourceSpan;
 
 use super::instruction::MemoryAddress;
 use super::reference::{self, GlobalLabel, MacroParentReplacable, Reference};
-use crate::error::{AssemblyCode, AssemblyError};
+use crate::error::AssemblyError;
+use crate::AssemblyCode;
 
 /// Any numeric value that can be calculated at assembly time.
 #[derive(Clone, Debug, PartialEq)]

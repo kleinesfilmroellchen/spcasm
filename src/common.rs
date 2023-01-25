@@ -4,12 +4,12 @@ use std::cmp::min;
 use std::sync::Arc;
 
 pub use super::directive::Directive;
-pub use super::error::{AssemblyCode, AssemblyError};
+pub use super::error::AssemblyError;
 pub use super::parser::Environment;
 use crate::cli::{default_backend_options, BackendOptions};
 use crate::parser::reference::GlobalLabel;
 use crate::parser::ProgramElement;
-use crate::Segments;
+use crate::{AssemblyCode, Segments};
 
 /// Assembler result type.
 pub type AssemblyResult = miette::Result<(std::sync::Arc<std::cell::RefCell<Environment>>, Vec<u8>)>;

@@ -11,9 +11,9 @@ use spcasm_derive::{Parse, VariantName};
 
 use super::reference::{self, GlobalLabel, MacroParentReplacable, Reference};
 use super::register::Register;
-use crate::error::{AssemblyCode, AssemblyError};
+use crate::error::AssemblyError;
 use crate::parser::AssemblyTimeValue;
-use crate::VariantName;
+use crate::{AssemblyCode, VariantName};
 
 /// Types for representing data and memory addresses (this is overkill).
 pub type MemoryAddress = i64;

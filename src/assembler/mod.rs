@@ -291,6 +291,9 @@ impl AssembledData {
 	}
 
 	/// Assemble a single assembler directive into this assembly data.
+	///
+	/// # Errors
+	/// Any error caused by the directive assembly process is returned.
 	#[allow(clippy::unnecessary_wraps)]
 	pub fn assemble_directive(&mut self, directive: &mut Directive) -> Result<(), Box<AssemblyError>> {
 		directive.perform_segment_operations_if_necessary(&mut self.segments, self.source_code.clone())?;

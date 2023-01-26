@@ -10,54 +10,53 @@ use crate::{pretty_hex, Segments};
 
 #[bench]
 fn all_opcodes(bencher: &mut Bencher) {
-	bencher.iter(|| test_file("examples/test.spcasm"));
+	bencher.iter(|| test_file("tests/opcodes.s"));
 }
 
 #[test]
 fn boot_rom() {
-	test_file("examples/bootrom.spcasm");
+	test_file("include/bootrom.s");
 }
 
 #[test]
-fn parser() {
-	test_file("examples/parse.spcasm");
-}
-
-#[test]
-fn references() {
-	test_file("examples/references.spcasm");
-}
-
-#[bench]
-fn source_include(bencher: &mut Bencher) {
-	bencher.iter(|| test_file("examples/multifile.spcasm"));
-}
-
-#[bench]
-fn binary_include(bencher: &mut Bencher) {
-	bencher.iter(|| test_file("examples/include.spcasm"));
+fn assembler() {
+	let sources = std::fs::read_dir("tests").unwrap();
+	for source in sources {
+		let source = source.unwrap().path();
+		let source = &*source.to_string_lossy();
+		if source.ends_with(".spcasmtest") {
+			println!("assembling {} ...", source);
+			test_file(source);
+		} else {
+			println!("skipping file {} (not a test)", source);
+		}
+	}
 }
 
 #[test]
 fn errors() {
-	let error_sources = std::fs::read_dir("examples/errors").unwrap();
+	let error_sources = std::fs::read_dir("tests/errors").unwrap();
 	for error_source in error_sources {
 		let error_source = error_source.unwrap().path();
 		let error_source = &*error_source.to_string_lossy();
-		let result = super::run_assembler_with_default_options(error_source);
-		println!("running {}...\n{:?}", error_source, result);
-		assert!(result.is_err());
+		if error_source.ends_with(".spcasmtest") {
+			let result = super::run_assembler_with_default_options(error_source);
+			println!("checking {} for errors ...\n{:?}", error_source, result);
+			assert!(result.is_err());
+		} else {
+			println!("skipping file {} (not an error test)", error_source);
+		}
 	}
 }
 
 #[bench]
 fn brr_integration(bencher: &mut Bencher) {
-	bencher.iter(|| test_file("examples/brr.spcasm"));
+	bencher.iter(|| test_file("tests/brr.spcasmtest"));
 }
 
 #[test]
 fn cli() {
-	trycmd::TestCases::new().case("examples/cli/*.trycmd");
+	trycmd::TestCases::new().case("tests/cli/*.trycmd");
 }
 
 fn test_file(file: &str) {

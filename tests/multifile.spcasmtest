@@ -1,0 +1,7 @@
+org 0
+
+mov a,#collection_label
+
+collection_label:
+include "included/collection.s"
+include "library.s"

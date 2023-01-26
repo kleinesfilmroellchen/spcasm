@@ -1,9 +1,9 @@
 ```trycmd
-$ spcasm examples/test.spcasm
+$ spcasm tests/opcodes.s
 spcasm::arch::valid
 
   ☞ Legal architecture directive ignored
-   ╭─[examples/test.spcasm:1:1]
+   ╭─[tests/opcodes.s:1:1]
  1 │ arch spc700-raw
    · ───────┬───────
    ·        ╰── `arch` directive
@@ -19,17 +19,17 @@ spcasm::arch::valid
 ```
 
 ```trycmd
-$ spcasm -w all examples/test.spcasm
+$ spcasm -w all tests/opcodes.s
 
 ```
 
 ```trycmd
-$ spcasm -W all examples/test.spcasm
+$ spcasm -W all tests/opcodes.s
 ? failed
 Error: spcasm::arch::valid
 
   ☞ Legal architecture directive ignored
-   ╭─[examples/test.spcasm:1:1]
+   ╭─[tests/opcodes.s:1:1]
  1 │ arch spc700-raw
    · ───────┬───────
    ·        ╰── `arch` directive
@@ -45,11 +45,11 @@ Error: spcasm::arch::valid
 ```
 
 ```trycmd
-$ spcasm -w io::file_not_found examples/test.spcasm
+$ spcasm -w io::file_not_found tests/opcodes.s
 spcasm::arch::valid
 
   ☞ Legal architecture directive ignored
-   ╭─[examples/test.spcasm:1:1]
+   ╭─[tests/opcodes.s:1:1]
  1 │ arch spc700-raw
    · ───────┬───────
    ·        ╰── `arch` directive
@@ -65,11 +65,11 @@ spcasm::arch::valid
 ```
 
 ```trycmd
-$ spcasm -w spcasm::io::file_not_found examples/test.spcasm
+$ spcasm -w spcasm::io::file_not_found tests/opcodes.s
 spcasm::arch::valid
 
   ☞ Legal architecture directive ignored
-   ╭─[examples/test.spcasm:1:1]
+   ╭─[tests/opcodes.s:1:1]
  1 │ arch spc700-raw
    · ───────┬───────
    ·        ╰── `arch` directive
@@ -85,7 +85,7 @@ spcasm::arch::valid
 ```
 
 ```trycmd
-$ spcasm -w definitely_does_not_exist examples/test.spcasm
+$ spcasm -w definitely_does_not_exist tests/opcodes.s
 ? failed
 error: invalid value 'definitely_does_not_exist' for '--ignore <IGNORE>': invalid error code
 

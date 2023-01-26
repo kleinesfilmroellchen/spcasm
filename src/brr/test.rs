@@ -155,7 +155,7 @@ fn microbench_decode_block_filter_3(bencher: &mut Bencher) {
 fn short_sample_encode(bencher: &mut Bencher) {
 	use ::wav::read as wav_read;
 
-	let (_, data) = wav_read(&mut std::fs::File::open("examples/yoshi.wav").unwrap()).unwrap();
+	let (_, data) = wav_read(&mut std::fs::File::open("tests/yoshi.wav").unwrap()).unwrap();
 	let mut data = data.try_into_sixteen().expect("must be signed 16-bit WAV");
 	bencher.iter(|| encode_to_brr(&mut data, false, CompressionLevel::Max));
 }

@@ -1,3 +1,4 @@
+org 0
 
 ; Basic macro
 macro do_nothing

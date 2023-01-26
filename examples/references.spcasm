@@ -4,9 +4,9 @@ zero:
 nop ;= 00
 
 .local_cool = $aa
-coolvalue = $bb
+coolvalue = $bbdd
 
-mov x,coolvalue ;= F8 BB
+mov x,coolvalue ;= E9 DD BB
 mov x,zero ;= F8 00
 mov x,.local_cool ;= F8 AA
 
@@ -15,3 +15,18 @@ nop ;= 00
 .local_cool = $cc
 
 mov x,.local_cool ;= F8 CC
+
+mov a,edge_of_direct_page ;= E4 FF
+mov a,indirect_edge_of_direct_page ;= E4 FF
+indirect_edge_of_direct_page = edge_of_direct_page
+
+mov a,out_of_direct_page ;= E5 00 01
+mov a,out_of_direct_page ;= E5 00 01
+
+org $ff
+; should not be moved out of direct page since it's in a new segment
+edge_of_direct_page:
+	db $aa
+out_of_direct_page: ;@ $100
+	db $bb
+	mov a,edge_of_direct_page ;= E4 FF

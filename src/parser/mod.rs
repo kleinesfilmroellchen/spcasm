@@ -363,8 +363,8 @@ impl AssemblyFile {
 				} else {
 					AddressingMode::coerce_to_direct_page_addressing
 				};
-				*first_operand = first_operand.clone().map(coercion_function);
-				*second_operand = second_operand.clone().map(coercion_function);
+				*first_operand = first_operand.clone().map(AddressingMode::optimize_numbers).map(coercion_function);
+				*second_operand = second_operand.clone().map(AddressingMode::optimize_numbers).map(coercion_function);
 			}
 		}
 	}
@@ -423,7 +423,6 @@ impl AssemblyFile {
 		#[derive(Debug)]
 		enum InstructionOrReference {
 			Instruction {
-				segment_start:    MemoryAddress,
 				/// The index is required to recover the actual instruction and modify it later on. It is purely
 				/// symbolic and has nothing to do with the instruction's address.
 				index_in_segment: usize,
@@ -432,33 +431,47 @@ impl AssemblyFile {
 				is_short:         bool,
 			},
 			Reference {
-				reference:                      Reference,
-				known_to_be_ouside_direct_page: bool,
+				reference:                       Reference,
+				known_to_be_outside_direct_page: bool,
 			},
+		}
+
+		#[derive(Debug)]
+		struct ReferencedObject {
+			// Currently expected address of this referenced object.
+			address:       MemoryAddress,
+			/// Start address of the segment this referenced object is within.
+			segment_start: MemoryAddress,
+			object:        InstructionOrReference,
 		}
 
 		let max_coercion_passes =
 			self.parent.upgrade().expect("parent disappeared").borrow().options.maximum_reference_resolution_passes();
 
 		// 1. (collect relevant objects)
-		let mut referenced_objects = Vec::<(MemoryAddress, InstructionOrReference)>::new();
+		let mut referenced_objects = Vec::<ReferencedObject>::new();
 
 		for (segment_start, segment_contents) in &segments.segments {
 			for (index_in_segment, (element, offset)) in segment_contents
 				.iter()
-				.scan(0.into(), |offset, element| {
+				.scan(0.into(), |offset: &mut MemoryAddress, element| {
+					let return_value = Some((element, *offset));
 					*offset += element.assembled_size() as MemoryAddress;
-					Some((element, *offset))
+					return_value
 				})
 				.enumerate()
 			{
 				macro_rules! handle_label {
 					($label:expr) => {
 						if let Some(label) = $label {
-							referenced_objects.push((offset, InstructionOrReference::Reference {
-								reference:                      label.clone(),
-								known_to_be_ouside_direct_page: false,
-							}));
+							referenced_objects.push(ReferencedObject {
+								address:       offset + *segment_start,
+								segment_start: *segment_start,
+								object:        InstructionOrReference::Reference {
+									reference:                       label.clone(),
+									known_to_be_outside_direct_page: false,
+								},
+							});
 						}
 					};
 				}
@@ -470,12 +483,15 @@ impl AssemblyFile {
 						if opcode.has_long_address()
 							&& !references.is_empty() && opcode.can_use_direct_page_addressing()
 						{
-							referenced_objects.push((offset, InstructionOrReference::Instruction {
+							referenced_objects.push(ReferencedObject {
+								address:       offset + *segment_start,
 								segment_start: *segment_start,
-								index_in_segment,
-								references: references.into_iter().cloned().collect(),
-								is_short: false,
-							}));
+								object:        InstructionOrReference::Instruction {
+									index_in_segment,
+									references: references.into_iter().cloned().collect(),
+									is_short: false,
+								},
+							});
 						}
 					},
 					ProgramElement::Directive(Directive { label, .. }) => handle_label!(label),
@@ -491,12 +507,18 @@ impl AssemblyFile {
 		// FIXME: This will move objects in later segments even though they should not be influenced; the segment start
 		// position is independent of the size (change) of previous instructions.
 		let mut address_offset = 0;
-		for (address, instruction_or_reference) in &mut referenced_objects {
+		let mut last_segment = None;
+		for ReferencedObject { address, segment_start, object } in &mut referenced_objects {
+			// New segment started, let's reset the address offset since segments don't influence each other.
+			if let Some(last_segment) = last_segment && *segment_start != last_segment {
+				address_offset = 0;
+			}
 			*address += address_offset;
-			if let InstructionOrReference::Instruction { is_short, .. } = instruction_or_reference {
+			if let InstructionOrReference::Instruction { is_short, .. } = object {
 				address_offset -= 1;
 				*is_short = true;
 			}
+			last_segment = Some(*segment_start);
 		}
 
 		let mut iteration = 1;
@@ -509,11 +531,11 @@ impl AssemblyFile {
 			// back to anything in referenced_objects (even though we intentionally copy the references we need)
 			let references_outside_direct_page = referenced_objects
 				.iter_mut()
-				.filter_map(|(address, object)| match object {
-					InstructionOrReference::Reference { reference, known_to_be_ouside_direct_page }
-						if known_to_be_ouside_direct_page == &false =>
+				.filter_map(|ReferencedObject { address, object, .. }| match object {
+					InstructionOrReference::Reference { reference, known_to_be_outside_direct_page }
+						if known_to_be_outside_direct_page == &false =>
 						if *address > 0xFF {
-							*known_to_be_ouside_direct_page = true;
+							*known_to_be_outside_direct_page = true;
 							Some(reference.clone())
 						} else {
 							None
@@ -523,19 +545,24 @@ impl AssemblyFile {
 				.collect::<Vec<_>>();
 
 			let mut address_offset = 0;
+			let mut last_segment = None;
 			for moved_reference in references_outside_direct_page {
-				for (address, possible_referent) in &mut referenced_objects {
+				for ReferencedObject { address, object: possible_referent, segment_start } in &mut referenced_objects {
+					if let Some(last_segment) = last_segment && *segment_start != last_segment {
+						address_offset = 0;
+					}
 					*address += address_offset;
 					match possible_referent {
 						InstructionOrReference::Instruction { references, is_short, .. }
 							if references.iter().any(|reference| reference == &moved_reference) =>
 						{
 							change = true;
-							*is_short = true;
+							*is_short = false;
 							address_offset += 1;
 						},
 						_ => {},
 					}
+					last_segment = Some(*segment_start);
 				}
 			}
 
@@ -543,11 +570,12 @@ impl AssemblyFile {
 		}
 
 		// 4.
-		for (segment_start, index_in_segment) in referenced_objects.iter().filter_map(|(_, object)| match object {
-			InstructionOrReference::Instruction { segment_start, index_in_segment, is_short: true, .. } =>
-				Some((*segment_start, *index_in_segment)),
-			_ => None,
-		}) {
+		for (segment_start, index_in_segment) in
+			referenced_objects.iter().filter_map(|ReferencedObject { segment_start, object, .. }| match object {
+				InstructionOrReference::Instruction { index_in_segment, is_short: true, .. } =>
+					Some((*segment_start, *index_in_segment)),
+				_ => None,
+			}) {
 			let instruction_segment = segments.segments.get_mut(&segment_start).unwrap();
 			if let ProgramElement::Instruction(instruction) = &mut instruction_segment[index_in_segment] {
 				if let Some(op) = instruction.opcode.first_operand.as_mut() {

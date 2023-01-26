@@ -474,6 +474,28 @@ impl AddressingMode {
 		}
 	}
 
+	/// Optimize any numbers in this addressing mode as far as possible, including the removal of references. This
+	/// simplifies and improves later optimization steps.
+	#[must_use]
+	pub fn optimize_numbers(self) -> Self {
+		match self {
+			Self::Immediate(number) => Self::Immediate(number.try_resolve()),
+			Self::DirectPage(number) => Self::DirectPage(number.try_resolve()),
+			Self::DirectPageXIndexed(number) => Self::DirectPageXIndexed(number.try_resolve()),
+			Self::DirectPageYIndexed(number) => Self::DirectPageYIndexed(number.try_resolve()),
+			Self::Address(number) => Self::Address(number.try_resolve()),
+			Self::XIndexed(number) => Self::XIndexed(number.try_resolve()),
+			Self::YIndexed(number) => Self::YIndexed(number.try_resolve()),
+			Self::DirectPageXIndexedIndirect(number) => Self::DirectPageXIndexedIndirect(number.try_resolve()),
+			Self::DirectPageIndirectYIndexed(number) => Self::DirectPageIndirectYIndexed(number.try_resolve()),
+			Self::DirectPageBit(number, bit) => Self::DirectPageBit(number.try_resolve(), bit),
+			Self::AddressBit(number, bit) => Self::AddressBit(number.try_resolve(), bit),
+			Self::NegatedAddressBit(number, bit) => Self::NegatedAddressBit(number.try_resolve(), bit),
+			Self::Register(_) | Self::IndirectY | Self::IndirectX | Self::IndirectXAutoIncrement | Self::CarryFlag =>
+				self,
+		}
+	}
+
 	/// Returns the assembled size of this addressing mode. This size is always added to the instruction using the
 	/// addressing mode.
 	#[allow(clippy::missing_const_for_fn)]

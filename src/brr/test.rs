@@ -166,7 +166,7 @@ fn short_sample_encode(bencher: &mut Bencher) {
 fn extremely_long_encode(bencher: &mut Bencher) {
 	use ::wav::read as wav_read;
 
-	let (_, data) = wav_read(&mut std::fs::File::open("examples/song.wav").unwrap()).unwrap();
+	let (_, data) = wav_read(&mut std::fs::File::open("tests/song.wav").unwrap()).unwrap();
 	let mut data = data.try_into_sixteen().expect("must be signed 16-bit WAV");
 	let now = std::time::Instant::now();
 	bencher.iter(|| encode_to_brr(&mut data, false, CompressionLevel::Max));

@@ -1013,7 +1013,7 @@ checksum = "485e65c1203eb37244465e857d15a26d3a85a5410648ccb53b18bd44cb3a7336"
 
 [[package]]
 name = "spcasm"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "arrcat",
  "clap",

@@ -413,30 +413,29 @@ impl AssemblyFile {
 	/// General hint: Calculate new reference positions by subtracting from every reference's position the number of
 	/// dp-coerced instructions.
 	/// 2. Assume all references lie in the direct page; i.e. the instructions can shrink by 1 byte.
-	/// 3. Repeatedly find references that do not lie in the direct page anymore, and update instructions and
-	/// positions. Repeat until no changes happen or the reference resolution limit is reached.
+	/// 3. Repeatedly find references (or reference-based calculations) that do not lie in the direct page anymore, and
+	/// update instructions and positions. Repeat until no changes happen or the reference resolution limit is reached.
 	/// 4. Modify instructions accordingly
 	#[allow(clippy::too_many_lines)]
 	fn optimize_direct_page_labels(&self, segments: &mut Segments<ProgramElement>) {
 		/// Do the more complex direct page coercing with references. We only consider references in the direct page if
 		/// they are in the *zero page*. If that is a problem, forcing to direct page addressing is always possible.
-		#[derive(Debug)]
+		#[derive(Debug, Clone)]
 		enum InstructionOrReference {
 			Instruction {
 				/// The index is required to recover the actual instruction and modify it later on. It is purely
 				/// symbolic and has nothing to do with the instruction's address.
 				index_in_segment: usize,
-				references:       Vec<Reference>,
+				// Each reference also stores the exact calculation that it is used in. Even if the reference itself is
+				// in the direct page, the calculated location may not be!
+				references:       Vec<(Reference, AssemblyTimeValue)>,
 				// Whether this instruction is (now) short, i.e. in direct page mode.
 				is_short:         bool,
 			},
-			Reference {
-				reference:                       Reference,
-				known_to_be_outside_direct_page: bool,
-			},
+			Reference(Reference),
 		}
 
-		#[derive(Debug)]
+		#[derive(Debug, Clone)]
 		struct ReferencedObject {
 			// Currently expected address of this referenced object.
 			address:       MemoryAddress,
@@ -467,10 +466,7 @@ impl AssemblyFile {
 							referenced_objects.push(ReferencedObject {
 								address:       offset + *segment_start,
 								segment_start: *segment_start,
-								object:        InstructionOrReference::Reference {
-									reference:                       label.clone(),
-									known_to_be_outside_direct_page: false,
-								},
+								object:        InstructionOrReference::Reference(label.clone()),
 							});
 						}
 					};
@@ -479,7 +475,7 @@ impl AssemblyFile {
 				match element {
 					ProgramElement::Instruction(Instruction { label, opcode, .. }) => {
 						handle_label!(label);
-						let references = opcode.references();
+						let references = opcode.references_and_calculations();
 						if opcode.has_long_address()
 							&& !references.is_empty() && opcode.can_use_direct_page_addressing()
 						{
@@ -488,7 +484,10 @@ impl AssemblyFile {
 								segment_start: *segment_start,
 								object:        InstructionOrReference::Instruction {
 									index_in_segment,
-									references: references.into_iter().cloned().collect(),
+									references: references
+										.into_iter()
+										.map(|(reference, value)| (reference.clone(), value.clone()))
+										.collect(),
 									is_short: false,
 								},
 							});
@@ -527,43 +526,45 @@ impl AssemblyFile {
 		while change && iteration <= max_coercion_passes {
 			change = false;
 
-			// We can't keep this as an iterator because the borrow checker doesn't understand that we're not referring
-			// back to anything in referenced_objects (even though we intentionally copy the references we need)
-			let references_outside_direct_page = referenced_objects
-				.iter_mut()
-				.filter_map(|ReferencedObject { address, object, .. }| match object {
-					InstructionOrReference::Reference { reference, known_to_be_outside_direct_page }
-						if known_to_be_outside_direct_page == &false =>
-						if *address > 0xFF {
-							*known_to_be_outside_direct_page = true;
-							Some(reference.clone())
-						} else {
-							None
-						},
+			let all_references = referenced_objects
+				.iter()
+				.filter_map(|object @ ReferencedObject { object: candidate, .. }| match candidate {
+					InstructionOrReference::Reference(_) => Some(object),
 					_ => None,
 				})
+				.cloned()
 				.collect::<Vec<_>>();
+			let find_value_for_reference = |queried_reference| {
+				for ReferencedObject { address, object, .. } in &all_references {
+					if let InstructionOrReference::Reference(candidate) = object && candidate == &queried_reference {
+						return Some(*address);
+					}
+				}
+				None
+			};
 
 			let mut address_offset = 0;
 			let mut last_segment = None;
-			for moved_reference in references_outside_direct_page {
-				for ReferencedObject { address, object: possible_referent, segment_start } in &mut referenced_objects {
-					if let Some(last_segment) = last_segment && *segment_start != last_segment {
-						address_offset = 0;
-					}
-					*address += address_offset;
-					match possible_referent {
-						InstructionOrReference::Instruction { references, is_short, .. }
-							if references.iter().any(|reference| reference == &moved_reference) =>
-						{
-							change = true;
-							*is_short = false;
-							address_offset += 1;
-						},
-						_ => {},
-					}
-					last_segment = Some(*segment_start);
+			for ReferencedObject { address, object, segment_start } in &mut referenced_objects {
+				if let Some(last_segment) = last_segment && *segment_start != last_segment {
+					address_offset = 0;
 				}
+				*address += address_offset;
+				match object {
+					InstructionOrReference::Instruction { references, is_short, .. }
+						if references.iter().any(|(_, value)| {
+							// Usefully, if the resolver can't help with some of the references, we just fall back to
+							// long addressing mode automatically.
+							matches!(value.value_using_resolver(&find_value_for_reference), Some(0x100 ..) | None)
+						}) =>
+					{
+						change = true;
+						*is_short = false;
+						address_offset += 1;
+					},
+					_ => {},
+				}
+				last_segment = Some(*segment_start);
 			}
 
 			iteration += 1;

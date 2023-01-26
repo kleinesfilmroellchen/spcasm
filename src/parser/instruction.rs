@@ -197,10 +197,40 @@ impl Opcode {
 		))
 	}
 
-	/// Return all references that this opcode points to.
-	pub fn references(&self) -> Vec<&Reference> {
-		let mut references = self.first_operand.as_ref().map(AddressingMode::references).unwrap_or_default();
-		let mut more_references = self.second_operand.as_ref().map(AddressingMode::references).unwrap_or_default();
+	/// Return all references that this opcode points to, and the corresponding assembly time calculations.
+	pub fn references_and_calculations(&self) -> Vec<(&Reference, &AssemblyTimeValue)> {
+		let mut references = self
+			.first_operand
+			.as_ref()
+			.map(|first_operand| {
+				first_operand
+					.references()
+					.into_iter()
+					.map(|reference| {
+						(
+							reference,
+							first_operand.number_ref().expect("if references exist on first operand, so must an assembly time value"),
+						)
+					})
+					.collect::<Vec<_>>()
+			})
+			.unwrap_or_default();
+		let mut more_references = self
+			.second_operand
+			.as_ref()
+			.map(|second_operand| {
+				second_operand
+					.references()
+					.into_iter()
+					.map(|reference| {
+						(
+							reference,
+							second_operand.number_ref().expect("if references exist on second operand, so must an assembly time value"),
+						)
+					})
+					.collect::<Vec<_>>()
+			})
+			.unwrap_or_default();
 		references.append(&mut more_references);
 		references
 	}

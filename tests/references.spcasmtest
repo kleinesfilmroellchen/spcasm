@@ -21,7 +21,9 @@ mov a,indirect_edge_of_direct_page ;= E4 FF
 indirect_edge_of_direct_page = edge_of_direct_page
 
 mov a,out_of_direct_page ;= E5 00 01
-mov a,out_of_direct_page ;= E5 00 01
+mov a,edge_of_direct_page+1 ;= E5 00 01
+mov a,+(edge_of_direct_page+1)/2 ;= E4 80
+mov a,out_of_direct_page -1 ;= E4 FF
 
 org $ff
 ; should not be moved out of direct page since it's in a new segment

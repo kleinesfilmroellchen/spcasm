@@ -174,6 +174,30 @@ impl AssemblyTimeValue {
 			Self::Literal(..) | Self::Reference(Reference::Local(..) | Reference::Global(..) | Reference::MacroArgument { value: None, .. } | Reference::MacroGlobal { .. }) => self,
 		}
 	}
+
+	/// Resolve this value while using a provided resolver function to obtain preliminary values for unresolved
+	/// references. If the resolver function can't do that, then we cannot determine a value either.
+	pub fn value_using_resolver<'s, 'f>(
+		&'s self,
+		resolver: &'f impl Fn(Reference) -> Option<MemoryAddress>,
+	) -> Option<MemoryAddress> {
+		// TODO: figure out how to share this code with try_value (function APIs and assumptions are currently
+		// fundamentally incompatible)
+		match self {
+			Self::Literal(value) => Some(*value),
+			Self::Reference(ref reference) => match reference {
+				Reference::Global(global_label) if let Some(ref value) = global_label.borrow().location => value.value_using_resolver(resolver),
+				Reference::Local(local) if let Some(ref value) = local.borrow().location => value.value_using_resolver(resolver),
+				Reference::Local(_) => resolver(reference.clone()),
+				Reference::Global(_) => resolver(reference.clone()),
+				Reference::MacroGlobal { .. } |
+				Reference::MacroArgument{value: None, ..} => resolver(reference.clone()),
+				Reference::MacroArgument{value: Some(value), ..} => value.value_using_resolver(resolver),
+			},
+			Self::UnaryOperation(number, operator) => number.value_using_resolver(resolver).and_then(|value| Some(operator.execute(value))),
+			Self::BinaryOperation(lhs, rhs, operator) => lhs.value_using_resolver(resolver).and_then(|lhs|rhs.value_using_resolver(resolver).and_then(|rhs| Some(operator.execute(lhs, rhs)))),
+		}
+	}
 }
 
 impl MacroParentReplacable for AssemblyTimeValue {

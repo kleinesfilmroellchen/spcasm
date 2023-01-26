@@ -198,6 +198,7 @@ impl Opcode {
 	}
 
 	/// Return all references that this opcode points to, and the corresponding assembly time calculations.
+	#[must_use]
 	pub fn references_and_calculations(&self) -> Vec<(&Reference, &AssemblyTimeValue)> {
 		let mut references = self
 			.first_operand
@@ -209,7 +210,9 @@ impl Opcode {
 					.map(|reference| {
 						(
 							reference,
-							first_operand.number_ref().expect("if references exist on first operand, so must an assembly time value"),
+							first_operand
+								.number_ref()
+								.expect("if references exist on first operand, so must an assembly time value"),
 						)
 					})
 					.collect::<Vec<_>>()
@@ -225,7 +228,9 @@ impl Opcode {
 					.map(|reference| {
 						(
 							reference,
-							second_operand.number_ref().expect("if references exist on second operand, so must an assembly time value"),
+							second_operand
+								.number_ref()
+								.expect("if references exist on second operand, so must an assembly time value"),
 						)
 					})
 					.collect::<Vec<_>>()

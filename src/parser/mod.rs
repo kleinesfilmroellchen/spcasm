@@ -528,9 +528,8 @@ impl AssemblyFile {
 
 			let all_references = referenced_objects
 				.iter()
-				.filter_map(|object @ ReferencedObject { object: candidate, .. }| match candidate {
-					InstructionOrReference::Reference(_) => Some(object),
-					_ => None,
+				.filter(|ReferencedObject { object: candidate, .. }| {
+					matches!(candidate, InstructionOrReference::Reference(_))
 				})
 				.cloned()
 				.collect::<Vec<_>>();

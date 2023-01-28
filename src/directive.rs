@@ -134,7 +134,16 @@ pub enum DirectiveValue {
 		entry_size: u8,
 	},
 	/// brr <file name>
-	Brr(String),
+	Brr {
+		/// Path to the WAV source file.
+		file:      String,
+		/// The range of samples to include.
+		range:     Option<SourceSpan>,
+		/// Whether to automatically trim silence at the beginning and end of the sample (after cutting the range)
+		auto_trim: bool,
+		/// Whether to add the sample to the sample directory (not currently implemented)
+		directory: bool,
+	},
 	/// ascii(z) <string>
 	String { text: Vec<u8>, has_null_terminator: bool },
 	/// <reference> = <value>
@@ -171,7 +180,7 @@ impl DirectiveValue {
 			Self::Table { values, entry_size } => values.len() * *entry_size as usize,
 			// Use a large assembled size as a signal that we don't know at this point. This will force any later
 			// reference out of the direct page, which will always yield correct behavior.
-			Self::Include { .. } | Self::Brr(..) => 65536,
+			Self::Include { .. } | Self::Brr { .. } => 65536,
 			Self::String { text, has_null_terminator } => text.len() + (usize::from(*has_null_terminator)),
 		}
 	}
@@ -187,7 +196,7 @@ impl DirectiveValue {
 			| Self::UserDefinedMacro { .. } => true,
 			Self::Table { .. }
 			| Self::String { .. }
-			| Self::Brr(_)
+			| Self::Brr { .. }
 			| Self::Include { .. }
 			| Self::AssignReference { .. } => false,
 		}
@@ -212,7 +221,7 @@ impl MacroParentReplacable for DirectiveValue {
 			| Self::End
 			| Self::PushSection
 			| Self::Placeholder
-			| Self::Brr(_)
+			| Self::Brr { .. }
 			| Self::PopSection
 			| Self::Org(_) => Ok(()),
 			Self::AssignReference { value, .. } => value.replace_macro_parent(replacement_parent, source_code),

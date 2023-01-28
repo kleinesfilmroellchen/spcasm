@@ -2,3 +2,6 @@ org 0
 
 ; Encodes the Yoshi mount sound as a BRR sample and dumps that to the current memory location. How cool is that?
 brr "yoshi.wav"
+
+; Apply automatic trimming to remove ~2000 samples of silence.
+brr "yoshi.wav": 0-7121 autotrim nodirectory

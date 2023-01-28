@@ -821,3 +821,35 @@ pub fn source_range(start: SpanOrOffset, end: SpanOrOffset) -> SourceSpan {
 	let end: SourceSpan = end.into();
 	(start.offset(), end.offset() + end.len() - start.offset()).into()
 }
+
+/// Apply the given list of options to a BRR directive, and report errors if necessary. This function is called from
+/// parser generator action code.
+/// 
+/// # Errors
+/// An invalid option was provided.
+pub fn apply_brr_options(
+	directive_location: SourceSpan,
+	source_code: &Arc<AssemblyCode>,
+	mut value: DirectiveValue,
+	options: Vec<(String, SourceSpan)>,
+) -> Result<DirectiveValue, AssemblyError> {
+	match &mut value {
+		DirectiveValue::Brr { auto_trim, directory, .. } => {
+			for (option, option_location) in options {
+				match &*option {
+					"nodirectory" => *directory = false,
+					"autotrim" => *auto_trim = true,
+					_ =>
+						return Err(AssemblyError::InvalidBrrOption {
+							directive_location,
+							option_location,
+							option: option.clone(),
+							src: source_code.clone(),
+						}),
+				}
+			}
+			Ok(value)
+		},
+		_ => unreachable!(),
+	}
+}

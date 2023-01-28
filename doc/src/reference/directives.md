@@ -14,6 +14,7 @@ include "library.s"
 ```
 
 The path is always relative to the location of the source file that the directive is called within. Some things to note about including source files and working with many-file projects:
+
 - The include procedure is not entirely a dumb include. The other file must be at least parsable on its own. You cannot, for example, create partial macros where two files have only the beginning or the end of a macro definition.
 - Any file may be included multiple times, but circular includes are forbidden. For example, it is very useful to include a list of variable location definitions multiple times in multiple source files.
 
@@ -66,6 +67,17 @@ brr "my_sound.wav"
 ```
 
 As with `incbin`, the data from the file-relative include path is placed at the current location. The only supported file format is standard uncompressed WAV. You cannot currently change which part of the file is used; the entire file will always be compressed and included. spcasm's BRR encoder will always run at maximum optimization settings, brute-forcing all possible settings for all BRR blocks. For BRR data fitting within the 64KB address space, this is not a problem, as the BRR encoder can encode 64KB worth of BRR data in less than 200ms on a release build of spcasm.
+
+The `brr` directive accepts several optional extra parameters:
+
+```asm
+brr "filename" [range] [options...]
+```
+
+The range syntax is identical to the syntax used by the [`incbin`](#incbin) directive. It specifies the range of samples that should be compressed to BRR (not the range of final BRR data!). The options are a list of identifiers that change the behavior of the BRR processing in various ways. Currently, these are supported:
+
+- `autotrim`: Turn on automatic sample trimming. Many samples contain "DC silence", i.e. a constant sample value over a long period of time, at the beginning and/or end of a file. DC silence is often a side effect of imprecise trimming of audio clips and has no effect on the sound, as it is per definition silent. However, DC silence takes up valuable storage space and should therefore be removed wherever possible. Therefore, to allow you to be a bit more sloppy when trimming the input files, spcasm can detect pure DC silence at the beginning and end of a sample and remove it. Note that this removal of unnecessary silence will happen after the clip was trimmed with the range specification, so you can use the two features in combination to first select the relevant sample in a longer file, and then trim silence from it with `autotrim`.
+- `nodirectory`: This is a forward-compatibility option that currently does nothing. In the future it will exclude this BRR sample from auto-generated sample directories.
 
 ## `end`
 

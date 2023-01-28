@@ -92,6 +92,21 @@ See [arch::valid](#spcasmarchvalid); when compiling files originally targeted at
 
 This category contains directive-related errors.
 
+#### spcasm::directive::invalid_brr_option
+
+```
+  × Invalid BRR option `wrongoption`
+   ╭─[tests\errors\invalid-brr-option.spcasmtest:1:1]
+ 1 │ brr "../song.wav" wrongoption
+   · ────────┬──────── ─────┬─────
+   ·         │              ╰── Invalid option specified here
+   ·         ╰── `brr` directive defined here
+   ╰────
+  help: The valid options are `nodirectory`, `autotrim`
+```
+
+The `brr` directive accepts some options as identifiers, but the one you used was not one of them. Refer to the [`brr` directive documentation](reference/directives.md#brr) to learn more about supported options.
+
 #### spcasm::directive::invalid_range
 
 ```

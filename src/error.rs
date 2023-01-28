@@ -503,6 +503,21 @@ pub enum AssemblyError {
 		#[label("Out of bounds range defined here")]
 		location: SourceSpan,
 	},
+	#[error("Invalid BRR option `{option}`")]
+	#[diagnostic(
+		code(spcasm::directive::invalid_brr_option),
+		help("The valid options are `nodirectory`, `autotrim`"),
+		severity(Error)
+	)]
+	InvalidBrrOption {
+		option:             String,
+		#[source_code]
+		src:                Arc<AssemblyCode>,
+		#[label("`brr` directive defined here")]
+		directive_location: SourceSpan,
+		#[label("Invalid option specified here")]
+		option_location:    SourceSpan,
+	},
 
 	#[error("Expected {expected}")]
 	#[diagnostic(code(spcasm::syntax::expected_token), severity(Error))]

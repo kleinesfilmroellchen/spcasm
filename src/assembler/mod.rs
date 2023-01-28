@@ -1,14 +1,12 @@
 //! Assembler/codegen
 #![allow(clippy::cast_possible_truncation, clippy::cast_sign_loss, clippy::wildcard_imports)]
 
-use std::fs::File;
 use std::io::ErrorKind;
 use std::path::PathBuf;
 use std::sync::Arc;
 
 use miette::{Result, SourceSpan};
 
-use crate::brr::{self, wav};
 use crate::cli::{default_backend_options, BackendOptions};
 use crate::directive::DirectiveValue;
 use crate::error::AssemblyError;
@@ -17,6 +15,8 @@ use crate::parser::reference::{Reference, Resolvable};
 use crate::parser::value::BinaryOperator;
 use crate::parser::{AssemblyTimeValue, ProgramElement, Register};
 use crate::{pretty_hex, AssemblyCode, Directive, Segments};
+
+mod directive;
 
 mod table;
 pub use table::assembly_table;
@@ -310,26 +310,8 @@ impl AssembledData {
 					reference = None;
 				}
 			},
-			DirectiveValue::Brr(ref file_name) => {
-				// Resolve the audio file's path relative to the source file.
-				let actual_path = resolve_file(&self.source_code, directive.span, file_name)?;
-				let file = File::open(actual_path).map_err(|os_error| AssemblyError::FileNotFound {
-					os_error,
-					file_name: file_name.clone(),
-					src: self.source_code.clone(),
-					location: directive.span,
-				})?;
-				let mut sample_data =
-					wav::read_wav_for_brr(file).map_err(|error_text| AssemblyError::AudioProcessingError {
-						error_text,
-						file_name: file_name.clone(),
-						src: self.source_code.clone(),
-						location: directive.span,
-					})?;
-				let encoded = brr::encode_to_brr(&mut sample_data, false, brr::CompressionLevel::Max);
-
-				self.append_bytes(encoded, &directive.label, directive.span)?;
-			},
+			DirectiveValue::Brr { ref file, range, auto_trim, directory } =>
+				self.assemble_brr(directive, file, range, auto_trim, directory)?,
 			DirectiveValue::String { ref text, has_null_terminator } => {
 				let mut is_first = true;
 				for chr in text {
@@ -369,21 +351,8 @@ impl AssembledData {
 					src: self.source_code.clone(),
 					location: directive.span,
 				})?;
-				if let Some(range) = range {
-					let max_number_of_bytes = binary_data.len().saturating_sub(range.offset());
-					binary_data = binary_data
-						.get(range.offset() .. range.offset().saturating_add(range.len()).min(max_number_of_bytes))
-						.ok_or(AssemblyError::RangeOutOfBounds {
-							start:    range.offset(),
-							end:      range.offset() + range.len(),
-							file:     file.clone(),
-							file_len: binary_data.len(),
-							src:      self.source_code.clone(),
-							location: directive.span,
-						})?
-						.to_vec();
-				}
 
+				binary_data = self.slice_data_if_necessary(file, directive.span, binary_data, range)?;
 				self.append_bytes(binary_data, &directive.label, directive.span)?;
 			},
 			DirectiveValue::End => {

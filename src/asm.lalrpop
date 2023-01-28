@@ -18,6 +18,7 @@ use crate::parser::{
 	reference::{Reference, LocalLabel, MacroParent},
 	try_make_direct_page_addressing_mode,
 	source_range,
+	apply_brr_options,
 	program::ProgramElement,
 };
 use crate::directive::{DirectiveSymbol, Directive, DirectiveValue};
@@ -126,12 +127,18 @@ Directive: Directive = {
 		label: None,
 		expected_value: None,
 	}),
-	<directive:"brr"> <filename:"string"> => Directive {
-		value: DirectiveValue::Brr(String::from_utf8_lossy(&filename.0).into_owned()),
+	<directive:"brr"> <filename:"string"> <range:InclusionRange?> <options:IdentifierOptions> =>? Ok(Directive {
+		value: apply_brr_options(source_range(directive.into(), filename.1.into()), source_code,
+			DirectiveValue::Brr {
+				file: String::from_utf8_lossy(&filename.0).into_owned(),
+				range,
+				auto_trim: false,
+				directory: true,
+			}, options)?,
 		span: source_range(directive.into(), filename.1.into()),
 		label: None,
 		expected_value: None,
-	},
+	}),
 	<directive:"ascii"> <text:"string"> => Directive {
 		value: DirectiveValue::String { text: text.0, has_null_terminator: false },
 		span: source_range(directive.into(), text.1.into()),
@@ -190,6 +197,8 @@ TableDirective: (DirectiveSymbol, SourceSpan) = {
 	"dl" => (DirectiveSymbol::Dl, <>),
 	"dd" => (DirectiveSymbol::Dd, <>),
 };
+
+IdentifierOptions = "identifier"*;
 
 ArchDirective: Directive = <directive:"arch"> <arch:"identifier"> =>? {
 	let architecture = arch.0;

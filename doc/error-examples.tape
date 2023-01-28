@@ -8,13 +8,19 @@ Set Width 1200
 Set Height 2000
 
 Hide
-Type "export PATH=$PATH:target/debug/"
+Type "export PATH=${PATH}:target/debug/"
 Enter
 Type "clear"
 Enter
 Show
 
-Type "spcasm examples/test.spcasm"
+Type "spcasm tests/opcodes.s"
+
+Sleep 500ms
+Enter
+Sleep 2s
+
+Type "spcasm tests/errors/circular-include.spcasmtest"
 
 Sleep 500ms
 Enter
@@ -25,25 +31,25 @@ Type "clear"
 Enter
 Show
 
-Type "spcasm examples/errors/circular-include.spcasm"
+Type "spcasm tests/errors/range-out-of-bounds.spcasmtest"
 
 Sleep 500ms
 Enter
 Sleep 2s
 
-Type "spcasm examples/errors/range-out-of-bounds.spcasm"
+Type "spcasm tests/errors/parser-bit-index.spcasmtest"
 
 Sleep 500ms
 Enter
 Sleep 2s
 
-Type "spcasm examples/errors/parser-bit-index.spcasm"
+Type "spcasm tests/errors/unresolved-label.spcasmtest"
 
 Sleep 500ms
 Enter
 Sleep 2s
 
-Type "spcasm examples/errors/unresolved-label.spcasm"
+Type "spcasm tests/errors/addressing-combination.spcasmtest"
 
 Sleep 500ms
 Enter

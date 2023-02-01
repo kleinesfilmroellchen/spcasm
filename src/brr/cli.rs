@@ -115,6 +115,17 @@ enum Command {
 			             of 32kHz, matching the SNES DSP."
 		)]
 		output: Option<PathBuf>,
+		#[arg(
+			long,
+			short,
+			required = false,
+			help = "Emulate hardware filtering",
+			long_help = "Emulate the hardware Gaussian filter. This filter is applied by S-SMP sample playback \
+			             hardware after decoding for a good-enough pitch shift, but it applies even if the pitch is \
+			             not shifted. The emulation helps recover audio data the way it would have been heard on \
+			             original hardware."
+		)]
+		filter: bool,
 	},
 }
 
@@ -237,10 +248,10 @@ fn main() {
 				std::process::exit(1);
 			});
 		},
-		Command::Decode { input, output } => {
+		Command::Decode { input, output, filter } => {
 			let output = output.unwrap_or_else(|| input.with_extension("wav"));
 			let mut encoded = Vec::new();
-			let samples = File::open(input)
+			let mut samples = File::open(input)
 				.and_then(|mut input_file| input_file.read_to_end(&mut encoded))
 				.map_err(|err| err.to_string())
 				.and_then(|_| decode_from_brr(&encoded))
@@ -248,6 +259,11 @@ fn main() {
 					eprintln!("error: {}", error);
 					std::process::exit(1);
 				});
+
+			if filter {
+				dsp::apply_hardware_gauss_filter(&mut samples);
+			}
+
 			let header = ::wav::Header::new(WAV_FORMAT_PCM, 1, 32_000, 16);
 
 			let mut output_file =

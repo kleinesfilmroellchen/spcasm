@@ -14,6 +14,7 @@ use num_traits::FromPrimitive;
 
 #[cfg(test)] mod test;
 
+pub mod dsp;
 pub mod wav;
 
 /// Only the lower 4 bits are used.

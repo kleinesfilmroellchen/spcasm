@@ -133,7 +133,7 @@ The `decode` subcommand:
 ```
 Decode a BRR file into a WAV file
 
-Usage: brr.exe decode <INPUT> [OUTPUT]
+Usage: brr.exe decode [OPTIONS] <INPUT> [OUTPUT]
 
 Arguments:
   <INPUT>
@@ -143,8 +143,11 @@ Arguments:
           Output WAV file to write. The format is always mono 16-bit signed integer with a sample rate of 32kHz, matching the SNES DSP.
 
 Options:
+  -f, --filter
+          Emulate the hardware Gaussian filter. This filter is applied by S-SMP sample playback hardware after decoding for a good-enough pitch shift, but it applies even if the pitch is not shifted. The emulation helps recover audio data the way it would have been heard on original hardware.
+
   -h, --help
-          Print help information (use `-h` for a summary)
+          Print help (see a summary with '-h')
 ```
 
 The `encode` subcommand:

@@ -61,8 +61,8 @@ pub fn apply_treble_boost_filter(samples: &[DecodedSample]) -> Vec<DecodedSample
 						.rev()
 						.map(|k| {
 							coefficients[k].mul_add(
-								f64::from(*samples.get(i + k).unwrap_or(last_sample)),
-								coefficients[k] * f64::from(*samples.get(i - k).unwrap_or(first_sample)),
+								f64::from(*samples.get(i.saturating_add(k)).unwrap_or(last_sample)),
+								coefficients[k] * f64::from(*samples.get(i.saturating_sub(k)).unwrap_or(first_sample)),
 							)
 						})
 						.sum::<f64>(),

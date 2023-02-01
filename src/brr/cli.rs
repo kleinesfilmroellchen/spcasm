@@ -100,6 +100,17 @@ enum Command {
 			long_help = "Compression level to use; higher levels mean better audio fidelity. 0: Only use filter 0, 1: Use all filters with non-wrapping optimal shift, 2: Use all filters with optimal shift."
 		)]
 		compression: CompressionLevel,
+		#[arg(
+			long,
+			short,
+			required = false,
+			help = "Boost treble for accurate audio reproduction",
+			long_help = "The hardware Gaussian filter of the S-SMP intended for better pitch shifting always has the \
+			             effect of a low-pass filter on the input sample. To counteract this, brr can apply an \
+			             inverse treble boost filter to the sample before encoding, which will make the output sound \
+			             more accurate to the original sample."
+		)]
+		filter:      bool,
 	},
 
 	#[command(about = "Decode a BRR file into a WAV file")]
@@ -217,7 +228,7 @@ fn main() {
 			let (decoded, _) = block.decode(warm_up);
 			println!("Decoded samples: {:?}", decoded);
 		},
-		Command::Encode { input, output, compression } => {
+		Command::Encode { input, output, compression, filter } => {
 			let output = output.unwrap_or_else(|| input.with_extension("brr"));
 			let mut samples = File::open(input)
 				.map_err(|err| err.to_string())
@@ -228,6 +239,9 @@ fn main() {
 				});
 
 			let start = std::time::Instant::now();
+			if filter {
+				samples = dsp::apply_treble_boost_filter(&samples);
+			}
 			let encoded = encode_to_brr(&mut samples, false, compression);
 			let duration = start.elapsed();
 			if arguments.verbose {

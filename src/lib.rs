@@ -2,14 +2,12 @@
 //!
 //! spcasm is both a library and two binaries: spcasm and brr.
 
-#![allow(stable_features)]
 #![feature(
 	test,
 	result_flattening,
 	is_some_and,
 	iterator_try_collect,
 	if_let_guard,
-	int_log,
 	get_mut_unchecked,
 	iter_intersperse,
 	const_option_ext,

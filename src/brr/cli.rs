@@ -7,7 +7,7 @@ use std::io::{Read, Write};
 use std::path::PathBuf;
 
 use ::wav::WAV_FORMAT_PCM;
-use clap::{Parser, Subcommand};
+use clap::{Parser, Subcommand, ValueEnum};
 use num_traits::cast::FromPrimitive;
 #[allow(clippy::wildcard_imports)]
 use spcasm::brr::*;
@@ -104,13 +104,13 @@ enum Command {
 			long,
 			short,
 			required = false,
-			help = "Boost treble for accurate audio reproduction",
+			help = "Filter audio before encoding",
 			long_help = "The hardware Gaussian filter of the S-SMP intended for better pitch shifting always has the \
-			             effect of a low-pass filter on the input sample. To counteract this, brr can apply an \
-			             inverse treble boost filter to the sample before encoding, which will make the output sound \
-			             more accurate to the original sample."
+			             effect of a low-pass filter on the input sample. To counteract this, brr can apply various \
+			             pre-emphasis filters on the audio before encoding. If you enable, but do not select a \
+			             filter, 'treble' is used."
 		)]
-		filter:      bool,
+		filter:      Option<Option<PreEmphasisFilter>>,
 	},
 
 	#[command(about = "Decode a BRR file into a WAV file")]
@@ -138,6 +138,14 @@ enum Command {
 		)]
 		filter: bool,
 	},
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq, ValueEnum)]
+enum PreEmphasisFilter {
+	/// A precise treble filter that inverts the hardware Gaussian filter exactly.
+	Treble,
+	/// BRRTools' treble filter, which is slightly imprecise, but provided for compatibility purposes.
+	Brrtools,
 }
 
 /// Parse an i16 while intentionally allowing wrapping and hex numbers.
@@ -239,9 +247,11 @@ fn main() {
 				});
 
 			let start = std::time::Instant::now();
-			if filter {
-				samples = dsp::apply_treble_boost_filter(&samples);
-			}
+			samples = match filter.map(|filter_option| filter_option.unwrap_or(PreEmphasisFilter::Treble)) {
+				Some(PreEmphasisFilter::Brrtools) => dsp::apply_brrtools_treble_boost_filter(&samples),
+				Some(PreEmphasisFilter::Treble) => dsp::apply_precise_treble_boost_filter(&samples),
+				None => samples,
+			};
 			let encoded = encode_to_brr(&mut samples, false, compression);
 			let duration = start.elapsed();
 			if arguments.verbose {

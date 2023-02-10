@@ -110,7 +110,8 @@ enum Command {
 			             pre-emphasis filters on the audio before encoding. If you enable, but do not select a \
 			             filter, 'treble' is used."
 		)]
-		filter:      Option<Option<PreEmphasisFilter>>,
+		#[allow(clippy::option_option)] // intentional
+		filter: Option<Option<PreEmphasisFilter>>,
 	},
 
 	#[command(about = "Decode a BRR file into a WAV file")]

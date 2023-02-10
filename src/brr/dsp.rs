@@ -9,17 +9,17 @@ use super::DecodedSample;
 ///
 /// [^license]: BRRTools does not have a proper OSS license, the author states in the README that "This is freeware, feel
 /// free to redistribute/improve but DON'T CLAIM IT IS YOUR OWN WORK THANK YOU".
-#[allow(clippy::doc_markdown)]
+#[allow(clippy::doc_markdown, clippy::missing_panics_doc, clippy::cast_lossless)]
 pub fn apply_hardware_gauss_filter(samples: &mut [DecodedSample]) {
 	if samples.len() >= 2 {
 		let mut previous = (372i32 + 1304)
-			.overflowing_mul(samples[0] as i32)
+			.overflowing_mul(i32::from(samples[0]))
 			.0
-			.overflowing_add(372i32.overflowing_mul(samples[1] as i32).0)
+			.overflowing_add(372i32.overflowing_mul(i32::from(samples[1])).0)
 			.0;
 		for i in 1 .. samples.len() - 1 {
 			let next = 372i32
-				.overflowing_mul((samples[i - 1] as i32).overflowing_add(samples[i + 1].into()).0)
+				.overflowing_mul((i32::from(samples[i - 1])).overflowing_add(samples[i + 1].into()).0)
 				.0
 				.overflowing_add(1304i32.overflowing_mul(samples[i].into()).0)
 				.0;
@@ -43,6 +43,7 @@ pub fn apply_hardware_gauss_filter(samples: &mut [DecodedSample]) {
 ///
 /// [^license]: BRRTools does not have a proper OSS license, the author states in the README that "This is freeware, feel
 /// free to redistribute/improve but DON'T CLAIM IT IS YOUR OWN WORK THANK YOU".
+#[must_use]
 #[allow(clippy::doc_markdown)]
 pub fn apply_brrtools_treble_boost_filter(samples: &[DecodedSample]) -> Vec<DecodedSample> {
 	// "Tepples' coefficient multiplied by 0.6 to avoid overflow in most cases"
@@ -52,6 +53,7 @@ pub fn apply_brrtools_treble_boost_filter(samples: &[DecodedSample]) -> Vec<Deco
 }
 
 /// Applies a treble boost filter which exactly reverses the Gaussian interpolation of the hardware BRR decoder.
+#[must_use]
 pub fn apply_precise_treble_boost_filter(samples: &[DecodedSample]) -> Vec<DecodedSample> {
 	const filter: [f64; 12] = [
 		1.91237, -0.59909, 0.18768, -0.05879, 0.01842, -0.00577, 0.00181, -0.00057, 0.00018, -0.00006, 0.00002,
@@ -64,6 +66,8 @@ pub fn apply_precise_treble_boost_filter(samples: &[DecodedSample]) -> Vec<Decod
 /// provides one half of the filter coefficients; it is mirrored and used for lookahead the same as for lookback. For
 /// example, the third coefficient is both used for `x[i-3]` as well as `x[i+3]` when processing sample number `i`. The
 /// zeroth filter coefficient is applied to the sample `x[i]` itself and not involved in mirroring.
+#[must_use]
+#[allow(clippy::missing_panics_doc, clippy::range_minus_one)]
 pub fn apply_fir_filter<const lookback: usize>(
 	filter: [f64; lookback],
 	samples: &[DecodedSample],

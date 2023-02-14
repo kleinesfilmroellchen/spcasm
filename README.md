@@ -25,7 +25,7 @@ This is a normal Rust project without special dependencies. Use `cargo` for buil
 $ spcasm --help
 A modern, user-friendly SPC700 assembler.
 
-Usage: spcasm.exe [OPTIONS] <INPUT> [OUTPUT]
+Usage: spcasm[EXE] [OPTIONS] <INPUT> [OUTPUT]
 
 Arguments:
   <INPUT>

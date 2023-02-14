@@ -55,8 +55,8 @@ data                     0013
 reltarget                015E
   .subtarget             015F
 another_global           0189
-  .subtarget             018A
   .selftarget            018E
+  .subtarget             018A
 global_selftarget        0190
 
 ```

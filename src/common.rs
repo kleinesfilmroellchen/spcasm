@@ -47,7 +47,9 @@ pub fn dump_reference_tree(global_references: &[Arc<std::cell::RefCell<GlobalLab
 			.map_or_else(|| "(unknown)".to_string(), |location| format!("{:04X}", location));
 
 		println!("{:<20} {:>8}", global.name, label_text);
-		for local in global.locals.values() {
+		let mut locals = global.locals.values().collect::<Vec<_>>();
+		locals.sort_by_cached_key(|label| label.borrow().name.clone());
+		for local in locals {
 			let local = local.borrow();
 			let label_text = local
 				.location

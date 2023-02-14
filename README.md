@@ -21,7 +21,8 @@ This is a normal Rust project without special dependencies. Use `cargo` for buil
 
 ## Usage
 
-```
+```trycmd
+$ spcasm --help
 A modern, user-friendly SPC700 assembler.
 
 Usage: spcasm.exe [OPTIONS] <INPUT> [OUTPUT]
@@ -42,35 +43,41 @@ Options:
 
   -l, --reference-pass-limit <REFERENCE_PASS_LIMIT>
           Limit for the number of reference resolution passes spcasm will perform.
-
-          Usually 2-3 passes are enough and very high pass numbers often indicate infinite loops. If this number of passes is exceeded during reference resolution, spcasm will report unresolved references as normal.
-
+          
+          Usually 2-3 passes are enough and very high pass numbers often indicate infinite loops. If
+          this number of passes is exceeded during reference resolution, spcasm will report
+          unresolved references as normal.
+          
           [default: 10]
 
   -r, --macro-recursion-limit <MACRO_RECURSION_LIMIT>
           Limit for the number of recursive macro calls allowed by spcasm.
-
-          Increase this limit carefully; very high recursion amounts are usually caused by infinitely recursive macros. Any recursion exceeding this value will cause a specific error.
-
+          
+          Increase this limit carefully; very high recursion amounts are usually caused by
+          infinitely recursive macros. Any recursion exceeding this value will cause a specific
+          error.
+          
           [default: 1000]
 
   -f, --output-format <OUTPUT_FORMAT>
-          Format to output to.
-
-          - elf: Output the binary data within a .data section of an ELF file.
-
-          - plain: Output just the binary data.
-
-          - hexdump: Dump hexadecimal representation in a pretty format like in a hex editor.
-
+          Format to output to
+          
           [default: elf]
-          [possible values: elf, plain, hex-dump]
+
+          Possible values:
+          - elf:      Output the binary data within a .data section of an ELF file
+          - plain:    Output just the binary data
+          - hex-dump: Dump hexadecimal representation in a pretty format like in a hex editor
+
+  -d, --dump-references
+          Dump all references and their final values / locations
 
   -h, --help
-          Print help information (use `-h` for a summary)
+          Print help (see a summary with '-h')
 
   -V, --version
-          Print version information
+          Print version
+
 ```
 
 spcasm follows the mnemonic conventions from [this APU manual](https://web.archive.org/web/20060208001231/http://www.alpha-ii.com/snesmusic/files/spc700_apu_manual.txt). The directive and macro syntax is a subset of the [VASM oldstyle syntax](http://sun.hasenbraten.de/vasm/release/vasm_6.html#Oldstyle-Syntax-Module) and also supports some [Asar](https://github.com/RPGHacker/asar) features. If you're missing one of the features of vasm or Asar, it is probably appreciated in spcasm!

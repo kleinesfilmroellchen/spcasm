@@ -62,6 +62,7 @@ fn spcasm_cli() {
 #[test]
 fn documented_cli()  {
 	trycmd::TestCases::new().case("doc/src/usage.md");	
+	trycmd::TestCases::new().case("README.md");	
 }
 
 fn test_file(file: &str) {

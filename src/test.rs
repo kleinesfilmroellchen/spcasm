@@ -55,8 +55,13 @@ fn brr_integration(bencher: &mut Bencher) {
 }
 
 #[test]
-fn cli() {
+fn spcasm_cli() {
 	trycmd::TestCases::new().case("tests/cli/*.trycmd");
+}
+
+#[test]
+fn documented_cli()  {
+	trycmd::TestCases::new().case("doc/src/usage.md");	
 }
 
 fn test_file(file: &str) {

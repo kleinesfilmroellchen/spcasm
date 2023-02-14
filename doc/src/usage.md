@@ -2,7 +2,9 @@
 
 _To run spcasm from source, use `cargo r --` and provide your arguments after the two dashes._
 
-```A modern, user-friendly SPC700 assembler.
+```trycmd
+$ spcasm --help
+A modern, user-friendly SPC700 assembler.
 
 Usage: spcasm.exe [OPTIONS] <INPUT> [OUTPUT]
 
@@ -22,21 +24,25 @@ Options:
 
   -l, --reference-pass-limit <REFERENCE_PASS_LIMIT>
           Limit for the number of reference resolution passes spcasm will perform.
-
-          Usually 2-3 passes are enough and very high pass numbers often indicate infinite loops. If this number of passes is exceeded during reference resolution, spcasm will report unresolved references as normal.
-
+          
+          Usually 2-3 passes are enough and very high pass numbers often indicate infinite loops. If
+          this number of passes is exceeded during reference resolution, spcasm will report
+          unresolved references as normal.
+          
           [default: 10]
 
   -r, --macro-recursion-limit <MACRO_RECURSION_LIMIT>
           Limit for the number of recursive macro calls allowed by spcasm.
-
-          Increase this limit carefully; very high recursion amounts are usually caused by infinitely recursive macros. Any recursion exceeding this value will cause a specific error.
-
+          
+          Increase this limit carefully; very high recursion amounts are usually caused by
+          infinitely recursive macros. Any recursion exceeding this value will cause a specific
+          error.
+          
           [default: 1000]
 
   -f, --output-format <OUTPUT_FORMAT>
           Format to output to
-
+          
           [default: elf]
 
           Possible values:
@@ -48,10 +54,11 @@ Options:
           Dump all references and their final values / locations
 
   -h, --help
-          Print help information (use `-h` for a summary)
+          Print help (see a summary with '-h')
 
   -V, --version
-          Print version information
+          Print version
+
 ```
 
 spcasm will read the assembly file INPUT and assemble it into a contiguous binary. This binary represents the SPC700's memory space.
@@ -72,7 +79,8 @@ spcasm uses some terminology which might be unfamiliar to you if you haven't wri
 
 You can use the `brr` binary (`cargo r --profile=spcasm-release --bin=brr --`) for using and testing the BRR encoder and decoder directly.
 
-```
+```trycmd
+$ brr --help
 Bit Rate Reduced (BRR) / SNES ADPCM tools
 
 Usage: brr.exe [OPTIONS] <COMMAND>
@@ -86,14 +94,18 @@ Commands:
 
 Options:
   -v, --verbose  Print detailed information even for non-interactive commands
-  -h, --help     Print help information
-  -V, --version  Print version information
+  -h, --help     Print help
+  -V, --version  Print version
+
 ```
 
 The `encode-block` subcommand:
 
-```
-Encode a single block of samples. Displays various information about the encoding process, including how accurately the data compresses under various filter modes. This command is intended for interactive experimenting with BRR encoding.
+```trycmd
+$ brr encode-block --help
+Encode a single block of samples. Displays various information about the encoding process, including
+how accurately the data compresses under various filter modes. This command is intended for
+interactive experimenting with BRR encoding.
 
 Usage: brr.exe encode-block [OPTIONS] [SAMPLES] [SAMPLES] [SAMPLES] [SAMPLES] [SAMPLES] [SAMPLES] [SAMPLES] [SAMPLES] [SAMPLES] [SAMPLES] [SAMPLES] [SAMPLES] [SAMPLES] [SAMPLES] [SAMPLES] [SAMPLES]...
 
@@ -103,34 +115,42 @@ Arguments:
 
 Options:
   -w, --warm-up <WARM_UP> <WARM_UP>
-          Override the previous samples to use for encoding. There must be exactly two of these, otherwise the previous samples are assumed to be zero.
+          Override the previous samples to use for encoding. There must be exactly two of these,
+          otherwise the previous samples are assumed to be zero.
 
   -h, --help
-          Print help information (use `-h` for a summary)
+          Print help (see a summary with '-h')
+
 ```
 
 The `decode-block` subcommand:
 
-```
-Decode a single block of samples. Displays various information about the decoding process. This command is intended for interactive experimenting with BRR decoding.
+```trycmd
+$ brr decode-block --help
+Decode a single block of samples. Displays various information about the decoding process. This
+command is intended for interactive experimenting with BRR decoding.
 
 Usage: brr.exe decode-block [OPTIONS] [BLOCK] [BLOCK] [BLOCK] [BLOCK] [BLOCK] [BLOCK] [BLOCK] [BLOCK] [BLOCK]...
 
 Arguments:
   [BLOCK] [BLOCK] [BLOCK] [BLOCK] [BLOCK] [BLOCK] [BLOCK] [BLOCK] [BLOCK]...
-          The BRR-encoded block to decode, given in its individual bytes. There must be exactly nine bytes.
+          The BRR-encoded block to decode, given in its individual bytes. There must be exactly nine
+          bytes.
 
 Options:
   -w, --warm-up <WARM_UP> <WARM_UP>
-          Set the previous two decoded samples, 16-bit signed integers. There must be exactly two of these, otherwise the previous samples are assumed to be zero.
+          Set the previous two decoded samples, 16-bit signed integers. There must be exactly two of
+          these, otherwise the previous samples are assumed to be zero.
 
   -h, --help
-          Print help information (use `-h` for a summary)
+          Print help (see a summary with '-h')
+
 ```
 
 The `decode` subcommand:
 
-```
+```trycmd
+$ brr decode --help
 Decode a BRR file into a WAV file
 
 Usage: brr.exe decode [OPTIONS] <INPUT> [OUTPUT]
@@ -140,36 +160,60 @@ Arguments:
           The BRR file to decode. Only raw BRR files are supported right now.
 
   [OUTPUT]
-          Output WAV file to write. The format is always mono 16-bit signed integer with a sample rate of 32kHz, matching the SNES DSP.
+          Output WAV file to write. The format is always mono 16-bit signed integer with a sample
+          rate of 32kHz, matching the SNES DSP.
 
 Options:
   -f, --filter
-          Emulate the hardware Gaussian filter. This filter is applied by S-SMP sample playback hardware after decoding for a good-enough pitch shift, but it applies even if the pitch is not shifted. The emulation helps recover audio data the way it would have been heard on original hardware.
+          Emulate the hardware Gaussian filter. This filter is applied by S-SMP sample playback
+          hardware after decoding for a good-enough pitch shift, but it applies even if the pitch is
+          not shifted. The emulation helps recover audio data the way it would have been heard on
+          original hardware.
 
   -h, --help
           Print help (see a summary with '-h')
+
 ```
 
 The `encode` subcommand:
 
-```
+```trycmd
+$ brr encode --help
 Encode a WAV file into a BRR file
 
 Usage: brr.exe encode [OPTIONS] <INPUT> [OUTPUT]
 
 Arguments:
   <INPUT>
-          The WAV file to encode. Only uncompressed WAV (integer or float) is supported. Sample rate is not converted, so in order for audio to not be pitch-shifted, the          input has to be at 32kHz, matching the SNES DSP sample rate.
+          The WAV file to encode. Only uncompressed WAV (integer or float) is supported. Sample rate
+          is not converted, so in order for audio to not be pitch-shifted, the input has to be at
+          32kHz, matching the SNES DSP sample rate.
 
   [OUTPUT]
-          Output BRR file to write. By default, a file with the same name but a `.brr` extension is used as output.
+          Output BRR file to write. By default, a file with the same name but a `.brr` extension is
+          used as output.
 
 Options:
   -c, --compression <COMPRESSION>
-          Compression level to use; higher levels mean better audio fidelity. 0: Only use filter 0, 1: Use all filters with non-wrapping optimal shift, 2: Use all filters with optimal shift.
-
+          Compression level to use; higher levels mean better audio fidelity. 0: Only use filter 0,
+          1: Use all filters with non-wrapping optimal shift, 2: Use all filters with optimal shift.
+          
           [default: 2]
 
+  -f, --filter [<FILTER>]
+          The hardware Gaussian filter of the S-SMP intended for better pitch shifting always has
+          the effect of a low-pass filter on the input sample. To counteract this, brr can apply
+          various pre-emphasis filters on the audio before encoding. If you enable, but do not
+          select a filter, 'treble' is used.
+
+          Possible values:
+          - treble:
+            A precise treble filter that inverts the hardware Gaussian filter exactly
+          - brrtools:
+            BRRTools' treble filter, which is slightly imprecise, but provided for compatibility
+            purposes
+
   -h, --help
-          Print help information (use `-h` for a summary)
+          Print help (see a summary with '-h')
+
 ```

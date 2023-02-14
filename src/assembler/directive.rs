@@ -6,9 +6,106 @@ use miette::SourceSpan;
 
 use super::{resolve_file, AssembledData};
 use crate::brr::wav;
+use crate::directive::DirectiveValue;
+use crate::parser::reference::Reference;
 use crate::{brr, AssemblyError, Directive};
 
 impl AssembledData {
+	/// Assemble a single assembler directive into this assembly data.
+	///
+	/// # Errors
+	/// Any error caused by the directive assembly process is returned.
+	#[allow(clippy::unnecessary_wraps)]
+	pub fn assemble_directive(&mut self, directive: &mut Directive) -> Result<(), Box<AssemblyError>> {
+		directive.perform_segment_operations_if_necessary(&mut self.segments, self.source_code.clone())?;
+		match directive.value {
+			DirectiveValue::Table { entry_size, ref values } => {
+				let mut reference = directive.label.clone();
+				for value in values {
+					match entry_size {
+						1 => self.append_8_bits_unresolved(value.clone(), 0, reference, directive.span)?,
+						2 => self.append_16_bits_unresolved(value.clone(), reference, directive.span)?,
+						3 | 4 => unimplemented!(),
+						_ => unreachable!(),
+					}
+					reference = None;
+				}
+			},
+			DirectiveValue::Brr { ref file, range, auto_trim, directory } =>
+				self.assemble_brr(directive, file, range, auto_trim, directory)?,
+			DirectiveValue::String { ref text, has_null_terminator } => {
+				let mut is_first = true;
+				for chr in text {
+					self.append(*chr, if is_first { directive.label.clone() } else { None }, directive.span)?;
+					is_first = false;
+				}
+				if has_null_terminator {
+					self.append(0, if is_first { directive.label.clone() } else { None }, directive.span)?;
+				}
+			},
+			DirectiveValue::AssignReference { ref mut reference, ref value } => match reference {
+				Reference::Local(reference) => {
+					reference.borrow_mut().location = Some(Box::new(value.clone().try_resolve()));
+				},
+				Reference::Global(ref mut global) => {
+					global.borrow_mut().location = Some(value.clone().try_resolve());
+				},
+				Reference::MacroArgument { span, name, .. } =>
+					return Err(AssemblyError::AssigningToMacroArgument {
+						name:     (*name).to_string(),
+						src:      self.source_code.clone(),
+						location: *span,
+					}
+					.into()),
+				Reference::MacroGlobal { span, .. } =>
+					return Err(AssemblyError::AssigningToMacroGlobal {
+						src:      self.source_code.clone(),
+						location: *span,
+					}
+					.into()),
+			},
+			DirectiveValue::Include { ref file, range } => {
+				let binary_file = resolve_file(&self.source_code, directive.span, file)?;
+				let mut binary_data = std::fs::read(binary_file).map_err(|os_error| AssemblyError::FileNotFound {
+					os_error,
+					file_name: file.to_owned(),
+					src: self.source_code.clone(),
+					location: directive.span,
+				})?;
+
+				binary_data = self.slice_data_if_necessary(file, directive.span, binary_data, range)?;
+				self.append_bytes(binary_data, &directive.label, directive.span)?;
+			},
+			DirectiveValue::End => {
+				self.should_stop = true;
+			},
+			DirectiveValue::SampleTable { auto_align } => {
+				let current_address = self.segments.current_location().map_err(|_| AssemblyError::MissingSegment {
+					location: directive.span,
+					src:      self.source_code.clone(),
+				})?;
+				if auto_align {
+					if current_address & 0xff != 0 {
+						let target_address = (current_address + 0x100) & !0xff;
+						let missing_bytes = target_address - current_address;
+						let space = std::iter::repeat(0).take(missing_bytes as usize).collect();
+						self.append_bytes(space, &None, directive.span)?;
+					}
+				} else if current_address & 0xff != 0 {
+					return Err(AssemblyError::UnalignedSampleTable {
+						memory_address: current_address,
+						location:       directive.span,
+						src:            self.source_code.clone(),
+					}
+					.into());
+				}
+				self.assemble_sample_table(&directive.label, directive.span)?;
+			},
+			_ => {},
+		}
+		Ok(())
+	}
+
 	pub(super) fn assemble_brr(
 		&mut self,
 		directive: &Directive,

@@ -35,11 +35,19 @@ impl Directive {
 		segments: &mut Segments<Contained>,
 		source_code: Arc<AssemblyCode>,
 	) -> Result<(), Box<AssemblyError>> {
-		match self.value {
+		match &self.value {
 			DirectiveValue::PopSection => segments.pop_segment(),
 			DirectiveValue::PushSection => segments.push_segment(),
 			DirectiveValue::Org(address) => {
-				segments.new_segment(address);
+				segments.new_segment(*address);
+				Ok(())
+			},
+			DirectiveValue::Brr { directory: true, .. } => {
+				segments.sample_table.add_sample(AssemblyTimeValue::Reference(
+					self.label
+						.clone()
+						.expect("all BRR samples in directories should have a label *automatically added*"),
+				));
 				Ok(())
 			},
 			_ => Ok(()),
@@ -83,6 +91,7 @@ pub enum DirectiveSymbol {
 	Ascii,
 	Asciiz,
 	Brr,
+	SampleTable,
 	Incbin,
 	Include,
 	End,
@@ -105,6 +114,7 @@ impl Display for DirectiveSymbol {
 			Self::Ascii => "ascii",
 			Self::Asciiz => "asciiz",
 			Self::Brr => "brr",
+			Self::SampleTable => "sampletable",
 			Self::Incbin => "incbin",
 			Self::Include => "include",
 			Self::End => "end",
@@ -144,6 +154,11 @@ pub enum DirectiveValue {
 		/// Whether to add the sample to the sample directory (not currently implemented)
 		directory: bool,
 	},
+	/// sampletable
+	SampleTable {
+		/// Whether to automatically align the sample table or throw an error.
+		auto_align: bool,
+	},
 	/// ascii(z) <string>
 	String { text: Vec<u8>, has_null_terminator: bool },
 	/// <reference> = <value>
@@ -180,7 +195,7 @@ impl DirectiveValue {
 			Self::Table { values, entry_size } => values.len() * *entry_size as usize,
 			// Use a large assembled size as a signal that we don't know at this point. This will force any later
 			// reference out of the direct page, which will always yield correct behavior.
-			Self::Include { .. } | Self::Brr { .. } => 65536,
+			Self::Include { .. } | Self::Brr { .. } | Self::SampleTable { .. } => 65536,
 			Self::String { text, has_null_terminator } => text.len() + (usize::from(*has_null_terminator)),
 		}
 	}
@@ -197,6 +212,7 @@ impl DirectiveValue {
 			Self::Table { .. }
 			| Self::String { .. }
 			| Self::Brr { .. }
+			| Self::SampleTable { .. }
 			| Self::Include { .. }
 			| Self::AssignReference { .. } => false,
 		}
@@ -222,6 +238,7 @@ impl MacroParentReplacable for DirectiveValue {
 			| Self::PushSection
 			| Self::Placeholder
 			| Self::Brr { .. }
+			| Self::SampleTable { .. }
 			| Self::PopSection
 			| Self::Org(_) => Ok(()),
 			Self::AssignReference { value, .. } => value.replace_macro_parent(replacement_parent, source_code),

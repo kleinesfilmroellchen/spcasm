@@ -1,7 +1,7 @@
 # Directives
 
-* auto-gen TOC;
-{:toc}
+- auto-gen TOC;
+  {:toc}
 
 Directives, also [sometimes called "macros"](../terminology.md#macro) in other assemblers, direct the assembler to perform some sort of action that is not "assemble this instruction". Most directives are self-contained, some however create certain kinds of blocks.
 
@@ -77,7 +77,25 @@ brr "filename" [range] [options...]
 The range syntax is identical to the syntax used by the [`incbin`](#incbin) directive. It specifies the range of samples that should be compressed to BRR (not the range of final BRR data!). The options are a list of identifiers that change the behavior of the BRR processing in various ways. Currently, these are supported:
 
 - `autotrim`: Turn on automatic sample trimming. Many samples contain "DC silence", i.e. a constant sample value over a long period of time, at the beginning and/or end of a file. DC silence is often a side effect of imprecise trimming of audio clips and has no effect on the sound, as it is per definition silent. However, DC silence takes up valuable storage space and should therefore be removed wherever possible. Therefore, to allow you to be a bit more sloppy when trimming the input files, spcasm can detect pure DC silence at the beginning and end of a sample and remove it. Note that this removal of unnecessary silence will happen after the clip was trimmed with the range specification, so you can use the two features in combination to first select the relevant sample in a longer file, and then trim silence from it with `autotrim`.
-- `nodirectory`: This is a forward-compatibility option that currently does nothing. In the future it will exclude this BRR sample from auto-generated sample directories.
+- `nodirectory`: Exclude this BRR sample from the automatically generated sample table.
+
+### `sampletable`
+
+The `sampletable` directive auto-generates the hardware sample table (or "directory") which the DSP needs to find BRR samples in memory. The details of the table's layout and how to set its location are beyond the scope of this documentation, but suffice it to say that you still need to point the DSP at your table via the `DIR` hardware register. The table is automatically aligned to a page boundary if necessary, because the hardware requires this.
+
+All BRR samples without the `nodirectory` option are automatically part of this table. You can use this directive multiple times to create multiple copies of the identical table. The BRR samples are added in the order they appear in the assembly code, and in the future there will also be a way of obtaining their position at compile time.
+
+The `sampletable` directive accepts several optional extra parameters:
+
+```asm
+sampletable [options...]
+```
+
+The options are a list of identifiers like with `brr`. Currently, these options are supported:
+
+- `noalign`: Prevent automatic alignment of the sample table to a page boundary. This is required for hardware, so spcasm does it by default, but if you want to be very careful about your memory usage, you can disable it. spcasm will still check your table's position and might issue an error.
+
+In general, `sampletable` provides sane and easy defaults for quickly generating a sample table. If you have more specific needs, like overlapping samples, specific sample orderings, overlong or misaligned tables, you should manually specify the sample table(s) instead.
 
 ## `end`
 

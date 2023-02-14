@@ -19,6 +19,7 @@ use crate::parser::{
 	try_make_direct_page_addressing_mode,
 	source_range,
 	apply_brr_options,
+	apply_sample_table_options,
 	program::ProgramElement,
 };
 use crate::directive::{DirectiveSymbol, Directive, DirectiveValue};
@@ -136,6 +137,15 @@ Directive: Directive = {
 				directory: true,
 			}, options)?,
 		span: source_range(directive.into(), filename.1.into()),
+		label: None,
+		expected_value: None,
+	}),
+	<directive:"sampletable"> <options:IdentifierOptions> =>? Ok(Directive {
+		value: apply_sample_table_options(directive.into(), source_code,
+			DirectiveValue::SampleTable {
+				auto_align: true,
+			}, options)?,
+		span: directive.into(),
 		label: None,
 		expected_value: None,
 	}),
@@ -423,6 +433,7 @@ extern {
 		"include" => Token::Directive(DirectiveSymbol::Include, <SourceSpan>),
 		"end" => Token::Directive(DirectiveSymbol::End, <SourceSpan>),
 		"brr" => Token::Directive(DirectiveSymbol::Brr, <SourceSpan>),
+		"sampletable" => Token::Directive(DirectiveSymbol::SampleTable, <SourceSpan>),
 		"pushpc" => Token::Directive(DirectiveSymbol::Pushpc, <SourceSpan>),
 		"pullpc" => Token::Directive(DirectiveSymbol::Pullpc, <SourceSpan>),
 		"arch" => Token::Directive(DirectiveSymbol::Arch, <SourceSpan>),

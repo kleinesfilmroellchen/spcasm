@@ -376,24 +376,48 @@ impl AssemblyFile {
 		|_| AssemblyError::MissingSegment { location: *span, src: source_code.clone() }.into()
 	}
 
-	/// Tries to coerce instructions into direct page mode if the associated reference is in the direct
-	/// page. This involves some complex computation because changing the addressing mode of an instruction changes its
-	/// size, shifting around later labels and possibly shifting them in or out of the direct page. The algorithm
-	/// implemented here is not optimal (from the similarity to linker relocation relaxation problems, it seems like the
-	/// optimal algorithm must solve some NP-hard graph theory problem) and it also never executes more passes than the
-	/// number of reference resolution passes for safety.
+	/// Splits the AST into segments which (still) contain ``ProgramElements``. This is an initial step in laying out
+	/// segments and their contents, and also helps to catch user segmenting errors early.
 	pub fn split_into_segments(&self) -> Result<Segments<ProgramElement>, Box<AssemblyError>> {
 		let mut segments = Segments::default();
-		for element in &self.content {
+		let mut brr_label_number = 0;
+		for mut element in self.content.iter().cloned() {
 			match element {
 				ProgramElement::Instruction(instruction) => segments
-					.add_element(element.clone())
+					.add_element(ProgramElement::Instruction(instruction.clone()))
 					.map_err(Self::to_asm_error(&instruction.span, &self.source_code))?,
 				ProgramElement::Directive(Directive { value: DirectiveValue::End, .. }) => break,
-				ProgramElement::Directive(directive @ Directive { span, .. }) => {
+				ProgramElement::Directive(ref mut directive @ Directive { .. }) => {
+					// All BRR directives that go into the BRR sample directory need a label, so we add a unique label
+					// while we're here.
+					if matches!(
+						(&directive.value, &directive.label),
+						(DirectiveValue::Brr { directory: true, .. }, None)
+					) {
+						let new_brr_label = Arc::new(RefCell::new(GlobalLabel {
+							name:            format!("brr_sample_{}", brr_label_number),
+							location:        None,
+							locals:          HashMap::new(),
+							span:            directive.span,
+							used_as_address: true,
+						}));
+						brr_label_number += 1;
+
+						self.parent
+							.upgrade()
+							.ok_or_else(|| panic!("parent disappeared"))
+							.unwrap()
+							.borrow_mut()
+							.globals
+							.push(new_brr_label.clone());
+						directive.label = Some(Reference::Global(new_brr_label.clone()));
+					}
+
 					directive.perform_segment_operations_if_necessary(&mut segments, self.source_code.clone())?;
 					if !directive.value.is_symbolic() {
-						segments.add_element(element.clone()).map_err(Self::to_asm_error(span, &self.source_code))?;
+						segments
+							.add_element(ProgramElement::Directive(directive.clone()))
+							.map_err(Self::to_asm_error(&directive.span, &self.source_code))?;
 					}
 				},
 				ProgramElement::IncludeSource { .. } | ProgramElement::UserDefinedMacroCall { .. } => {},
@@ -824,7 +848,7 @@ pub fn source_range(start: SpanOrOffset, end: SpanOrOffset) -> SourceSpan {
 
 /// Apply the given list of options to a BRR directive, and report errors if necessary. This function is called from
 /// parser generator action code.
-/// 
+///
 /// # Errors
 /// An invalid option was provided.
 pub fn apply_brr_options(
@@ -840,10 +864,44 @@ pub fn apply_brr_options(
 					"nodirectory" => *directory = false,
 					"autotrim" => *auto_trim = true,
 					_ =>
-						return Err(AssemblyError::InvalidBrrOption {
+						return Err(AssemblyError::InvalidDirectiveOption {
 							directive_location,
 							option_location,
 							option: option.clone(),
+							directive: "brr".to_owned(),
+							valid_options: vec!["nodirectory".to_owned(), "autotrim".to_owned()],
+							src: source_code.clone(),
+						}),
+				}
+			}
+			Ok(value)
+		},
+		_ => unreachable!(),
+	}
+}
+/// Apply the given list of options to a sample table directive, and report errors if necessary. This function is called
+/// from parser generator action code.
+///
+/// # Errors
+/// An invalid option was provided.
+pub fn apply_sample_table_options(
+	directive_location: SourceSpan,
+	source_code: &Arc<AssemblyCode>,
+	mut value: DirectiveValue,
+	options: Vec<(String, SourceSpan)>,
+) -> Result<DirectiveValue, AssemblyError> {
+	match &mut value {
+		DirectiveValue::SampleTable { auto_align } => {
+			for (option, option_location) in options {
+				match &*option {
+					"noalign" => *auto_align = false,
+					_ =>
+						return Err(AssemblyError::InvalidDirectiveOption {
+							directive_location,
+							option_location,
+							option: option.clone(),
+							directive: "sampletable".to_owned(),
+							valid_options: vec!["noalign".to_owned()],
 							src: source_code.clone(),
 						}),
 				}

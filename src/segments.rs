@@ -4,6 +4,7 @@
 
 use std::collections::BTreeMap;
 
+use crate::assembler::sample_table::SampleTable;
 use crate::parser::instruction::MemoryAddress;
 
 /// Handles segments within the final assembled binary. The type of data contained within each segment is the generic
@@ -18,6 +19,8 @@ pub struct Segments<Contained> {
 	pub current_segment_start: Option<MemoryAddress>,
 	/// The stack of saved segments, manipulated with pushpc/pullpc.
 	pub segment_stack:         Vec<MemoryAddress>,
+	/// Current contents of the BRR sample table.
+	pub sample_table:          SampleTable,
 }
 
 #[allow(clippy::result_unit_err)]
@@ -98,6 +101,7 @@ impl<Contained> Segments<Contained> {
 		Ok(Segments::<Output> {
 			current_segment_start: self.current_segment_start,
 			segment_stack:         self.segment_stack,
+			sample_table:          self.sample_table,
 			segments:              self
 				.segments
 				.into_iter()
@@ -129,6 +133,7 @@ impl<Contained> Default for Segments<Contained> {
 			segments:              BTreeMap::default(),
 			current_segment_start: None,
 			segment_stack:         Vec::default(),
+			sample_table:          SampleTable::default(),
 		}
 	}
 }

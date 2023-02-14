@@ -8,17 +8,17 @@ use std::sync::Arc;
 use miette::{Result, SourceSpan};
 
 use crate::cli::{default_backend_options, BackendOptions};
-use crate::directive::DirectiveValue;
 use crate::error::AssemblyError;
 use crate::parser::instruction::{AddressingMode, AddressingModeCategory, Instruction, MemoryAddress, Opcode};
 use crate::parser::reference::{Reference, Resolvable};
 use crate::parser::value::BinaryOperator;
 use crate::parser::{AssemblyTimeValue, ProgramElement, Register};
-use crate::{pretty_hex, AssemblyCode, Directive, Segments};
+use crate::{pretty_hex, AssemblyCode, Segments};
 
 mod directive;
-
+pub mod sample_table;
 mod table;
+
 pub use table::assembly_table;
 use table::{EntryOrFirstOperandTable, EntryOrSecondOperandTable, TwoOperandEntry};
 
@@ -60,6 +60,7 @@ fn assemble_to_data(
 	let mut data = AssembledData::new(source_code.clone());
 	let maximum_reference_resolution_passes = options.maximum_reference_resolution_passes();
 	data.set_error_options(options);
+	data.segments.sample_table = segments.sample_table.clone();
 
 	for (segment_start, segment_content) in &mut segments.segments {
 		data.segments.new_segment(*segment_start);
@@ -288,79 +289,6 @@ impl AssembledData {
 	/// errors.
 	pub fn report_or_throw(&self, error: AssemblyError) -> Result<(), Box<AssemblyError>> {
 		error.report_or_throw(&*self.options)
-	}
-
-	/// Assemble a single assembler directive into this assembly data.
-	///
-	/// # Errors
-	/// Any error caused by the directive assembly process is returned.
-	#[allow(clippy::unnecessary_wraps)]
-	pub fn assemble_directive(&mut self, directive: &mut Directive) -> Result<(), Box<AssemblyError>> {
-		directive.perform_segment_operations_if_necessary(&mut self.segments, self.source_code.clone())?;
-		match directive.value {
-			DirectiveValue::Table { entry_size, ref values } => {
-				let mut reference = directive.label.clone();
-				for value in values {
-					match entry_size {
-						1 => self.append_8_bits_unresolved(value.clone(), 0, reference, directive.span)?,
-						2 => self.append_16_bits_unresolved(value.clone(), reference, directive.span)?,
-						3 | 4 => unimplemented!(),
-						_ => unreachable!(),
-					}
-					reference = None;
-				}
-			},
-			DirectiveValue::Brr { ref file, range, auto_trim, directory } =>
-				self.assemble_brr(directive, file, range, auto_trim, directory)?,
-			DirectiveValue::String { ref text, has_null_terminator } => {
-				let mut is_first = true;
-				for chr in text {
-					self.append(*chr, if is_first { directive.label.clone() } else { None }, directive.span)?;
-					is_first = false;
-				}
-				if has_null_terminator {
-					self.append(0, if is_first { directive.label.clone() } else { None }, directive.span)?;
-				}
-			},
-			DirectiveValue::AssignReference { ref mut reference, ref value } => match reference {
-				Reference::Local(reference) => {
-					reference.borrow_mut().location = Some(Box::new(value.clone().try_resolve()));
-				},
-				Reference::Global(ref mut global) => {
-					global.borrow_mut().location = Some(value.clone().try_resolve());
-				},
-				Reference::MacroArgument { span, name, .. } =>
-					return Err(AssemblyError::AssigningToMacroArgument {
-						name:     (*name).to_string(),
-						src:      self.source_code.clone(),
-						location: *span,
-					}
-					.into()),
-				Reference::MacroGlobal { span, .. } =>
-					return Err(AssemblyError::AssigningToMacroGlobal {
-						src:      self.source_code.clone(),
-						location: *span,
-					}
-					.into()),
-			},
-			DirectiveValue::Include { ref file, range } => {
-				let binary_file = resolve_file(&self.source_code, directive.span, file)?;
-				let mut binary_data = std::fs::read(binary_file).map_err(|os_error| AssemblyError::FileNotFound {
-					os_error,
-					file_name: file.clone(),
-					src: self.source_code.clone(),
-					location: directive.span,
-				})?;
-
-				binary_data = self.slice_data_if_necessary(file, directive.span, binary_data, range)?;
-				self.append_bytes(binary_data, &directive.label, directive.span)?;
-			},
-			DirectiveValue::End => {
-				self.should_stop = true;
-			},
-			_ => {},
-		}
-		Ok(())
 	}
 
 	/// Assemble a single instruction. This function uses the codegen table `table::assembly_table`.

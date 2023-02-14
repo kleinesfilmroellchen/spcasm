@@ -34,7 +34,7 @@ The SPC700 has six registers, two of which can be paired into an additional 16-b
 - `YA` Pairing of Y (high bits) and A (low bits) into a 16-bit register.
 - `SP` 16-bit stack pointer register; upper 8 bits are fixed to 01 meaning the possible range of values is 0100-01FF.
 - `PC` 16-bit program counter or instruction pointer register.
-- `PSW` (alias: `P`) "program status word" 8-bit flag register. The contained flags are NOPBHIZC (from high to low bit). Note that B and I are not used much in the S-SMP and some manuals indicate that they are initialized and/or frequently overwritten with garbage.
+- `PSW` (alias: `P`) "program status word" 8-bit flag register. The contained flags are NVPBHIZC (from high to low bit). Note that B and I are not used much in the S-SMP and some manuals indicate that they are initialized and/or frequently overwritten with garbage.
   - `N`: negative flag.
   - `V`: arithmetic overflow flag.
   - `P`: direct page flag, determines whether the direct page is the zero page or the one page.

@@ -1,6 +1,8 @@
 extern crate lalrpop;
 
 fn main() {
+	// Make Cargo rebuild when the parser generator input file changes.
+	println!("cargo:rerun-if-changed=src/asm.lalrpop");
 	lalrpop::process_root().unwrap();
 
 	#[cfg(feature = "binaries")]

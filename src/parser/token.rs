@@ -1,15 +1,12 @@
 //! The Token struct.
 
 use std::fmt::Display;
-use std::sync::Arc;
 
 use miette::{SourceOffset, SourceSpan};
 
 use crate::directive::DirectiveSymbol;
-use crate::error::AssemblyError;
 use crate::parser::instruction::Mnemonic;
 use crate::parser::Register;
-use crate::AssemblyCode;
 
 /// Assembly language tokens.
 #[derive(Debug, Clone)]
@@ -105,6 +102,16 @@ impl PartialEq for Token {
 			| (Self::Plus(..), Self::Plus(..))
 			| (Self::Equals(..), Self::Equals(..))
 			| (Self::Minus(..), Self::Minus(..))
+			| (Self::Ampersand(..), Self::Ampersand(..))
+			| (Self::Caret(..), Self::Caret(..))
+			| (Self::CloseAngleBracket(..), Self::CloseAngleBracket(..))
+			| (Self::OpenAngleBracket(..), Self::OpenAngleBracket(..))
+			| (Self::DoubleOpenAngleBracket(..), Self::DoubleOpenAngleBracket(..))
+			| (Self::DoubleCloseAngleBracket(..), Self::DoubleCloseAngleBracket(..))
+			| (Self::Percent(..), Self::Percent(..))
+			| (Self::Pipe(..), Self::Pipe(..))
+			| (Self::Tilde(..), Self::Tilde(..))
+			| (Self::DoubleStar(..), Self::DoubleStar(..))
 			| (Self::RangeMinus(..), Self::RangeMinus(..))
 			| (Self::Slash(..), Self::Slash(..))
 			| (Self::Star(..), Self::Star(..))
@@ -121,70 +128,6 @@ impl PartialEq for Token {
 
 #[allow(clippy::match_same_arms, clippy::missing_const_for_fn)]
 impl Token {
-	/// Returns this token if it matches the given type. For all tokens that contain data, this data is ignored.
-	///
-	/// # Errors
-	/// If the token doesn't match, an "Expected XYZ" error string is returned.
-	pub fn expect(self, type_: &Self, src: Arc<AssemblyCode>) -> Result<Self, Box<AssemblyError>> {
-		if self.equals_type(type_) {
-			Ok(self)
-		} else {
-			Err(AssemblyError::ExpectedToken {
-				expected: self.clone().into(),
-				actual: type_.clone(),
-				location: self.source_span(),
-				src,
-			}
-			.into())
-		}
-	}
-
-	/// Checks whether the two tokens equal in type. For the most part, this ignores token-internal data, especially
-	/// source spans. It does however consider register and directive enum types, as those are finite unlike identifier
-	/// strings.
-	#[must_use]
-	pub fn equals_type(&self, other: &Self) -> bool {
-		match (self, other) {
-			(Self::Identifier(..), Self::Identifier(..))
-			| (Self::Directive(..), Self::Directive(..))
-			| (Self::Number(..), Self::Number(..))
-			| (Self::Colon(..), Self::Colon(..))
-			| (Self::OpenParenthesis(..), Self::OpenParenthesis(..))
-			| (Self::CloseParenthesis(..), Self::CloseParenthesis(..))
-			| (Self::OpenIndexingParenthesis(..), Self::OpenIndexingParenthesis(..))
-			| (Self::CloseIndexingParenthesis(..), Self::CloseIndexingParenthesis(..))
-			| (Self::Hash(..), Self::Hash(..))
-			| (Self::Plus(..), Self::Plus(..))
-			| (Self::Star(..), Self::Star(..))
-			| (Self::String(..), Self::String(..))
-			| (Self::Minus(..), Self::Minus(..))
-			| (Self::RangeMinus(..), Self::RangeMinus(..))
-			| (Self::Slash(..), Self::Slash(..))
-			| (Self::Newline(..), Self::Newline(..))
-			| (Self::Comma(..), Self::Comma(..))
-			| (Self::ExplicitDirectPage(..), Self::ExplicitDirectPage(..))
-			| (Self::OpenAngleBracket(..), Self::OpenAngleBracket(..))
-			| (Self::CloseAngleBracket(..), Self::CloseAngleBracket(..))
-			| (Self::Percent(..), Self::Percent(..))
-			| (Self::Equals(..), Self::Equals(..))
-			| (Self::Ampersand(..), Self::Ampersand(..))
-			| (Self::Pipe(..), Self::Pipe(..))
-			| (Self::Tilde(..), Self::Tilde(..))
-			| (Self::Caret(..), Self::Caret(..))
-			| (Self::DoubleStar(..), Self::DoubleStar(..))
-			| (Self::DoubleCloseAngleBracket(..), Self::DoubleCloseAngleBracket(..))
-			| (Self::DoubleOpenAngleBracket(..), Self::DoubleOpenAngleBracket(..))
-			| (Self::Period(..), Self::Period(..)) => true,
-			(Self::Register(first, ..), Self::Register(second, ..)) => first == second,
-			(Self::PlusRegister(first, ..), Self::PlusRegister(second, ..)) => first == second,
-			(Self::Mnemonic(first, ..), Self::Mnemonic(second, ..)) => first == second,
-			// #[cfg(test)]
-			(Self::TestComment(..), Self::TestComment(..)) => true,
-			(Self::Mnemonic(..) | Self::Register(..) | Self::PlusRegister(..), _) => false,
-			_ => false,
-		}
-	}
-
 	/// Returns the source span where this token is located in the file.
 	#[must_use]
 	pub fn source_span(&self) -> SourceSpan {

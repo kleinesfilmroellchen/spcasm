@@ -1,0 +1,2 @@
+org 0
+mov a,~does_not_exist

@@ -1,0 +1,62 @@
+```trycmd
+$ spcasm -w all -d -f hex-dump tests/opcodes.s -
+start                    0000
+data                     0013
+reltarget                015E
+  .subtarget             015F
+another_global           0189
+  .subtarget             018A
+  .selftarget            018E
+global_selftarget        0190
+ E8 10 E6 BF E4 32 F4 A1 E5 02 45 F5 20 33 F6 00
+ FF E7 40 F7 20 CD 60 F8 9A F9 2E E9 00 2F 8D 0F
+ EB 48 FB 01 EC 00 21 E8 13 E4 13 F4 13 F6 13 00
+ E7 13 F7 13 CD 13 F8 13 8D 13 EB 13 C6 AF C4 50
+ D4 11 C5 90 22 D5 94 22 D6 95 22 C7 98 D7 F7 D8
+ 1E D9 17 C9 00 1E CB 1A DB 18 CC 00 1F 7D DD 5D
+ FD 9D BD FA 2D A3 8F 09 88 88 04 86 84 60 94 61
+ 85 86 80 95 87 80 96 88 80 87 62 97 63 99 89 71
+ 70 98 0D 73 A8 04 A6 A4 60 B4 61 A5 86 80 B5 87
+ 80 B6 88 80 A7 62 B7 63 B9 A9 71 70 B8 0D 73 28
+ 04 26 24 60 34 61 25 86 80 35 87 80 36 88 80 27
+ 62 37 63 39 29 71 70 38 0D 73 08 04 06 04 60 14
+ 61 05 86 80 15 87 80 16 88 80 07 62 17 63 19 09
+ 71 70 18 0D 73 48 04 46 44 60 54 61 45 86 80 55
+ 87 80 56 88 80 47 62 57 63 59 49 71 70 58 0D 73
+ 68 04 66 64 60 74 61 65 86 80 75 87 80 76 88 80
+ 67 62 77 63 79 69 71 70 78 0D 73 C8 76 3E 74 1E
+ 00 75 AD 76 7E 74 5E 00 75 BC AB 01 BB 02 AC 04
+ 03 3D FC 9C 8B 01 9B 02 8C 04 03 1D DC 1C 0B 05
+ 1B 06 CC 08 07 5C 4B 05 5B 06 4C 08 07 3C 2B 05
+ 3B 06 2C 08 07 7C 6B 05 7B 06 6C 08 07 9F BA 09
+ DA 0A 3A 0B 1A 0C 7A 0D 9A 0E 5A 0F CF 9E DF BE
+ 2F 9E F0 FA D0 F8 B0 F8 90 F8 70 F8 50 F8 30 F8
+ 10 F8 2E 2B 2C DE 2D 2E 6E 2F 30 FE 31 5F 22 21
+ 1F 24 23 5F 5F 01 5F 5E 01 00 00 5F 8A 01 D0 FE
+ D0 FE 03 13 F9 23 30 F9 43 30 F9 63 30 F9 83 30
+ F9 A3 30 F9 C3 30 F9 E3 30 F9 13 00 05 33 31 05
+ 53 31 05 73 31 05 93 31 05 B3 31 05 D3 31 05 F3
+ 31 05 3F 60 50 4F 02 51 81 F1 0F 6F 7F 2D 4D 6D
+ 0D AE CE EE 8E A2 50 F2 51 0E 60 50 4E 11 10 4A
+ 10 10 6A 20 70 0A 30 F0 2A 40 D0 8A 70 50 EA 80
+ B0 AA 90 90 CA A0 30 60 80 ED E0 20 40 A0 C0 00
+ EF FF
+
+```
+
+```trycmd
+$ spcasm -w all -f elf tests/opcodes.s
+```
+
+```trycmd
+$ spcasm -w all -d -f plain tests/opcodes.s
+start                    0000
+data                     0013
+reltarget                015E
+  .subtarget             015F
+another_global           0189
+  .subtarget             018A
+  .selftarget            018E
+global_selftarget        0190
+
+```

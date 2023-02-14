@@ -1,0 +1,4 @@
+org 0
+global_label:
+
+mov a,.local_that_is_missing

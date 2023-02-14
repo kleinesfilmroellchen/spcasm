@@ -1,7 +1,6 @@
 //! Assembler/codegen
 #![allow(clippy::cast_possible_truncation, clippy::cast_sign_loss, clippy::wildcard_imports)]
 
-use std::io::ErrorKind;
 use std::path::PathBuf;
 use std::sync::Arc;
 
@@ -89,22 +88,13 @@ fn assemble_to_data(
 	Ok(data)
 }
 
-pub(crate) fn resolve_file(
-	source_code: &Arc<AssemblyCode>,
-	span: SourceSpan,
-	target_file: &str,
-) -> Result<PathBuf, Box<AssemblyError>> {
-	source_code.name.clone().parent().map(|directory| directory.to_owned().join(target_file)).ok_or_else(|| {
-		{
-			AssemblyError::FileNotFound {
-				os_error:  std::io::Error::new(ErrorKind::NotFound, "no parent directory for source file"),
-				file_name: source_code.file_name(),
-				src:       source_code.clone(),
-				location:  span,
-			}
-		}
-		.into()
-	})
+pub(crate) fn resolve_file(source_code: &Arc<AssemblyCode>, target_file: &str) -> PathBuf {
+	source_code
+		.name
+		.clone()
+		.parent()
+		.map(|directory| directory.to_owned().join(target_file))
+		.expect("file path was root, this makes no sense")
 }
 
 /// Data in memory while we still need to resolve references.
@@ -662,12 +652,7 @@ impl AssembledData {
 					.and_then(|resolved_reference| {
 						had_modifications |= true;
 						match *resolved_reference {
-							Reference::Global(ref mut global) => global.borrow_mut().resolve_to(
-								memory_address,
-								datum.instruction_location,
-								self.source_code.clone(),
-							),
-							Reference::Local(ref mut local) => local.borrow_mut().resolve_to(
+							Reference::Global(..) | Reference::Local(..) => resolved_reference.resolve_to(
 								memory_address,
 								datum.instruction_location,
 								self.source_code.clone(),

@@ -31,8 +31,8 @@ impl AssembledData {
 					reference = None;
 				}
 			},
-			DirectiveValue::Brr { ref file, range, auto_trim, directory } =>
-				self.assemble_brr(directive, file, range, auto_trim, directory)?,
+			DirectiveValue::Brr { ref file, range, auto_trim, .. } =>
+				self.assemble_brr(directive, file, range, auto_trim)?,
 			DirectiveValue::String { ref text, has_null_terminator } => {
 				let mut is_first = true;
 				for chr in text {
@@ -65,7 +65,7 @@ impl AssembledData {
 					.into()),
 			},
 			DirectiveValue::Include { ref file, range } => {
-				let binary_file = resolve_file(&self.source_code, directive.span, file)?;
+				let binary_file = resolve_file(&self.source_code, file);
 				let mut binary_data = std::fs::read(binary_file).map_err(|os_error| AssemblyError::FileNotFound {
 					os_error,
 					file_name: file.clone(),
@@ -112,10 +112,9 @@ impl AssembledData {
 		file_name: &str,
 		range: Option<SourceSpan>,
 		auto_trim: bool,
-		#[allow(unused)] directory: bool,
 	) -> Result<(), Box<AssemblyError>> {
 		// Resolve the audio file's path relative to the source file.
-		let actual_path = resolve_file(&self.source_code, directive.span, file_name)?;
+		let actual_path = resolve_file(&self.source_code, file_name);
 		let file = File::open(actual_path).map_err(|os_error| AssemblyError::FileNotFound {
 			os_error,
 			file_name: file_name.to_string(),

@@ -175,14 +175,8 @@ fn main() {
 
 	match arguments.command {
 		Command::EncodeBlock { samples, warm_up } => {
-			let warm_up: [i16; 2] = warm_up.unwrap_or_else(|| vec![0, 0]).try_into().unwrap_or_else(|_| {
-				eprintln!("error: you must provide exactly 2 warm-up samples");
-				std::process::exit(1);
-			});
-			let samples: DecodedBlockSamples = samples.try_into().unwrap_or_else(|_| {
-				eprintln!("error: you must provide exactly 16 unencoded samples");
-				std::process::exit(1);
-			});
+			let warm_up: [i16; 2] = warm_up.unwrap_or_else(|| vec![0, 0]).try_into().expect("unreachable");
+			let samples: DecodedBlockSamples = samples.try_into().expect("unreachable");
 			println!("Encoding {:?} as BRR block. Warm-up: {:?}", samples, warm_up);
 			for filter in LPCFilter::all_filters() {
 				println!("filter {}:", filter);
@@ -208,14 +202,8 @@ fn main() {
 			);
 		},
 		Command::DecodeBlock { block, warm_up } => {
-			let warm_up = warm_up.unwrap_or_else(|| vec![0, 0]).try_into().unwrap_or_else(|_| {
-				eprintln!("error: you must provide exactly 2 warm-up samples");
-				std::process::exit(1);
-			});
-			let raw_block: [u8; 9] = block.try_into().unwrap_or_else(|_| {
-				eprintln!("error: you must provide exactly 16 unencoded samples");
-				std::process::exit(1);
-			});
+			let warm_up = warm_up.unwrap_or_else(|| vec![0, 0]).try_into().expect("unreachable");
+			let raw_block: [u8; 9] = block.try_into().expect("unreachable");
 			println!("Decoding BRR block {:X?}:", raw_block);
 			let block = Block::from(raw_block);
 			println!(

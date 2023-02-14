@@ -233,16 +233,6 @@ pub struct LocalLabel {
 	pub parent:   Weak<RefCell<GlobalLabel>>,
 }
 
-impl LocalLabel {
-	pub fn new(name: String, span: SourceSpan, parent: &Arc<RefCell<GlobalLabel>>) -> Self {
-		Self { name, span, location: None, parent: Arc::downgrade(parent) }
-	}
-
-	pub fn strong_parent(&self) -> Arc<RefCell<GlobalLabel>> {
-		self.parent.upgrade().expect("Parent deleted before reference resolution finished")
-	}
-}
-
 impl MacroParentReplacable for LocalLabel {
 	fn replace_macro_parent(
 		&mut self,

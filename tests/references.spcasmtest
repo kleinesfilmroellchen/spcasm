@@ -14,7 +14,11 @@ later_on:
 nop ;= 00
 .local_cool = $cc
 
+.nonassigned_local:
+	nop
+
 mov x,.local_cool ;= F8 CC
+mov a,~.nonassigned_local -7
 
 mov a,edge_of_direct_page ;= E4 FF
 mov a,indirect_edge_of_direct_page ;= E4 FF
@@ -24,6 +28,7 @@ mov a,out_of_direct_page ;= E5 00 01
 mov a,edge_of_direct_page+1 ;= E5 00 01
 mov a,+(edge_of_direct_page+1)/2 ;= E4 80
 mov a,out_of_direct_page -1 ;= E4 FF
+mov a,-out_of_direct_page
 
 org $ff
 ; should not be moved out of direct page since it's in a new segment

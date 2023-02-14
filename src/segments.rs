@@ -56,14 +56,6 @@ impl<Contained> Segments<Contained> {
 		self
 	}
 
-	/// Returns an immutable reference to the data of the current segment.
-	/// # Errors
-	/// If this assembly data doesn't have a started segment yet.
-	#[inline]
-	pub fn current_segment(&self) -> Result<&Vec<Contained>, ()> {
-		Ok(&self.segments[&self.current_segment_start.ok_or(())?])
-	}
-
 	/// Returns the current memory location where data is written to.
 	/// # Errors
 	/// If this assembly data doesn't have a started segment yet.
@@ -110,20 +102,6 @@ impl<Contained> Segments<Contained> {
 				})
 				.try_collect()?,
 		})
-	}
-}
-
-#[allow(clippy::result_unit_err)]
-impl Segments<MemoryAddress> {
-	/// Returns the address we're currently at within the active segment. This assumes that the segment is a list of
-	/// sizes for assembled elements, such as instructions.
-	///
-	/// # Errors
-	/// If there is no current segment.
-	pub fn current_address_within_segment(&self) -> Result<MemoryAddress, ()> {
-		let assembled_size_within_segment = self.current_segment()?.iter().sum::<MemoryAddress>();
-		let start = self.current_segment_start.ok_or(())?;
-		Ok(assembled_size_within_segment + start)
 	}
 }
 

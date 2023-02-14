@@ -10,6 +10,7 @@ use test::Bencher;
 use super::{
 	encode_to_brr, Block, CompressionLevel, DecodedBlockSamples, Header, LPCFilter, LoopEndFlags, WarmUpSamples,
 };
+use crate::brr::decode_from_brr;
 
 const zero_warmup: WarmUpSamples = [0, 0];
 
@@ -158,6 +159,23 @@ fn short_sample_encode(bencher: &mut Bencher) {
 	let (_, data) = wav_read(&mut std::fs::File::open("tests/yoshi.wav").unwrap()).unwrap();
 	let mut data = data.try_into_sixteen().expect("must be signed 16-bit WAV");
 	bencher.iter(|| encode_to_brr(&mut data, false, CompressionLevel::Max));
+}
+
+#[test]
+fn different_compression_levels() {
+	use ::wav::read as wav_read;
+
+	let (_, data) = wav_read(&mut std::fs::File::open("tests/yoshi.wav").unwrap()).unwrap();
+	let mut data = data.try_into_sixteen().expect("must be signed 16-bit WAV");
+	let estimated = encode_to_brr(&mut data, false, CompressionLevel::EstimateShift);
+	let _ = decode_from_brr(&estimated);
+	let bad = encode_to_brr(&mut data, false, CompressionLevel::OnlyFilterZero);
+	let _ = decode_from_brr(&bad);
+}
+
+#[test]
+fn encode_empty() {
+	assert!(encode_to_brr(&mut Vec::new(), false, CompressionLevel::Max).is_empty());
 }
 
 #[cfg(feature = "expensive_tests")]

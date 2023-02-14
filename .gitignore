@@ -16,3 +16,6 @@
 
 *.webm
 out.gif
+
+tests/yoshi.brr
+tests/yoshi-test-generated.wav

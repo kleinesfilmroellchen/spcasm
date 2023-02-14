@@ -1,0 +1,5 @@
+org $56
+db $aa
+
+sampletable noalign
+brr "../yoshi.wav": 0-20

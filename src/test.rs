@@ -6,7 +6,7 @@ use test::Bencher;
 use crate::cli::default_backend_options;
 use crate::parser::instruction::MemoryAddress;
 use crate::parser::ProgramElement;
-use crate::{pretty_hex, Segments};
+use crate::{dump_reference_tree, pretty_hex, Segments};
 
 #[bench]
 fn all_opcodes(bencher: &mut Bencher) {
@@ -41,6 +41,10 @@ fn errors() {
 		let error_source = &*error_source.to_string_lossy();
 		if error_source.ends_with(".spcasmtest") {
 			let result = super::run_assembler_with_default_options(error_source);
+			let _ = super::run_assembler_into_segments(
+				&crate::AssemblyCode::from_file_or_assembly_error(error_source).unwrap(),
+				default_backend_options(),
+			);
 			println!("checking {} for errors ...\n{:?}", error_source, result);
 			assert!(result.is_err());
 		} else {
@@ -55,7 +59,7 @@ fn brr_integration(bencher: &mut Bencher) {
 }
 
 #[test]
-fn spcasm_cli() {
+fn clis() {
 	trycmd::TestCases::new().case("tests/cli/*.trycmd");
 }
 
@@ -71,6 +75,10 @@ fn test_file(file: &str) {
 		default_backend_options(),
 	)
 	.unwrap();
+	let (environment, _) = super::run_assembler_with_default_options(file).unwrap();
+
+	dump_reference_tree(&environment.borrow().globals);
+
 	let expected_binary = assemble_expected_binary(parsed);
 	for ((parsed_segment_start, expected_segment), (assembled_segment_start, assembled)) in
 		expected_binary.segments.iter().zip(assembled.segments.iter())
@@ -120,4 +128,122 @@ fn assemble_expected_binary(instructions: Segments<ProgramElement>) -> Segments<
 			)
 		})
 		.unwrap() // safe because we can never fail in the mapper function
+}
+
+#[test]
+fn coverage() {
+	use std::collections::HashMap;
+
+	use crate::default_hacks::FakeDefaultForIgnoredValues;
+	use crate::parser::value::BinaryOperator;
+	use crate::parser::Token;
+
+	<i64 as FakeDefaultForIgnoredValues>::default();
+	miette::SourceSpan::default();
+	std::io::Error::default();
+	std::num::ParseIntError::default();
+	crate::parser::Token::default();
+	crate::directive::DirectiveSymbol::default();
+	crate::parser::instruction::Mnemonic::default();
+	crate::error::TokenOrString::default();
+
+	let code = crate::AssemblyCode::new("\r\n", "hello".to_owned()).clone();
+	println!("{:?}", code);
+	assert!(crate::AssemblyCode::from_file_or_assembly_error("does-not-exist").is_err());
+	assert!(crate::AssemblyCode::from_file_or_assembly_error("/does-not-exist").is_err());
+	let _ = crate::AssemblyCode::file_name_for(std::path::Path::new("C:/Some/Totally/Nonexistent/Path"));
+
+	let _ = format!(
+		"{:X}, {:X}, {1:?}",
+		crate::parser::AssemblyTimeValue::from(34),
+		crate::parser::AssemblyTimeValue::BinaryOperation(Box::new(32.into()), Box::new(7.into()), BinaryOperator::And,),
+	);
+
+	let local = crate::parser::reference::Reference::Local(std::sync::Arc::new(
+		crate::parser::reference::LocalLabel {
+			location: None,
+			name:     "example".to_owned(),
+			span:     (0, 0).into(),
+			parent:   std::sync::Weak::new(),
+		}
+		.into(),
+	));
+	let global = crate::parser::reference::Reference::Global(std::sync::Arc::new(
+		crate::parser::reference::GlobalLabel {
+			locals:          HashMap::new(),
+			location:        None,
+			name:            "example".to_owned(),
+			used_as_address: true,
+			span:            (0, 0).into(),
+		}
+		.into(),
+	));
+
+	format!("{}, {}, {0:?}, {1:?}", global, local);
+
+	for operator in [
+		BinaryOperator::Add,
+		BinaryOperator::And,
+		BinaryOperator::Divide,
+		BinaryOperator::Exponentiation,
+		BinaryOperator::LeftShift,
+		BinaryOperator::RightShift,
+		BinaryOperator::Modulus,
+		BinaryOperator::Multiply,
+		BinaryOperator::Or,
+		BinaryOperator::RightShift,
+		BinaryOperator::Subtract,
+		BinaryOperator::Xor,
+	] {
+		let _ = format!(
+			"{:X}",
+			crate::parser::AssemblyTimeValue::BinaryOperation(
+				Box::new(crate::parser::AssemblyTimeValue::Reference(local.clone())),
+				Box::new(crate::parser::AssemblyTimeValue::Reference(global.clone())),
+				operator,
+			),
+		);
+	}
+
+	assert_eq!(crate::parser::AssemblyTimeValue::from(34), crate::parser::AssemblyTimeValue::from(34));
+
+	for token in [
+		Token::Ampersand(0.into()),
+		Token::Caret(0.into()),
+		Token::CloseAngleBracket(0.into()),
+		Token::CloseIndexingParenthesis(0.into()),
+		Token::OpenIndexingParenthesis(0.into()),
+		Token::OpenAngleBracket(0.into()),
+		Token::OpenParenthesis(0.into()),
+		Token::CloseParenthesis(0.into()),
+		Token::Comma(0.into()),
+		Token::Colon(0.into()),
+		Token::DoubleCloseAngleBracket(0.into()),
+		Token::DoubleOpenAngleBracket(0.into()),
+		Token::DoubleStar(0.into()),
+		Token::Directive(crate::directive::DirectiveSymbol::Arch, 0.into()),
+		Token::Equals(0.into()),
+		Token::ExplicitDirectPage(0.into()),
+		Token::Hash(0.into()),
+		Token::Identifier("something".to_owned(), 0.into()),
+		Token::Minus(0.into()),
+		Token::Newline(0.into()),
+		Token::Mnemonic(crate::parser::instruction::Mnemonic::Adc, 0.into()),
+		Token::Percent(0.into()),
+		Token::Period(0.into()),
+		Token::Pipe(0.into()),
+		Token::Plus(0.into()),
+		Token::PlusRegister(crate::parser::Register::A, 0.into()),
+		Token::Slash(0.into()),
+		Token::Star(0.into()),
+		Token::String(Vec::new(), 0.into()),
+		Token::TestComment(Vec::new(), 0.into()),
+		Token::Tilde(0.into()),
+		Token::Number(0, 0.into()),
+		Token::Register(crate::parser::Register::X, 0.into()),
+	] {
+		assert_eq!(token, token);
+		assert_ne!(token, Token::TestComment(vec![5, 6, 7], 0.into()));
+		let _ = format!("{0} {0:?}", token);
+	}
 }

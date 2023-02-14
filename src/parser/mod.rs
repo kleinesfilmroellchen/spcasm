@@ -634,7 +634,7 @@ impl AssemblyFile {
 			let element = self.content[index].clone();
 			if let ProgramElement::IncludeSource { ref file, label, span } = element {
 				let environment = self.parent.upgrade().expect("parent deleted while we're still parsing");
-				let file = resolve_file(&self.source_code, span, file)?.to_string_lossy().to_string();
+				let file = resolve_file(&self.source_code, file).to_string_lossy().to_string();
 				let mut included_code =
 					AssemblyCode::from_file(&file).map_err(|os_error| AssemblyError::FileNotFound {
 						os_error,

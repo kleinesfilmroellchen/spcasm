@@ -40,7 +40,6 @@ impl AssembledData {
 	///
 	/// # Errors
 	/// If the sample table is too large or a section is missing, an error is returned.
-	#[allow(unused)]
 	pub(super) fn assemble_sample_table(
 		&mut self,
 		reference: &Option<Reference>,

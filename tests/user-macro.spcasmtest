@@ -3,13 +3,20 @@ org 0
 ; Basic macro
 macro do_nothing
   nop
+  mov a,loop
+  nested_global = loop
 endmacro
 
 ; Macro with argument and simple recursion
 macro do_stuff(first, second)
-  mov a,<first>
+  mov a,<first>-7
   %do_nothing()
-  mov x,<second>
+  %has_argument(<first>)
+  mov x,~<second>
+endmacro
+
+macro has_argument(arg)
+  mov a,<arg>
 endmacro
 
 ; Calling macros

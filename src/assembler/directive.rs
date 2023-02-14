@@ -68,7 +68,7 @@ impl AssembledData {
 				let binary_file = resolve_file(&self.source_code, directive.span, file)?;
 				let mut binary_data = std::fs::read(binary_file).map_err(|os_error| AssemblyError::FileNotFound {
 					os_error,
-					file_name: file.to_owned(),
+					file_name: file.clone(),
 					src: self.source_code.clone(),
 					location: directive.span,
 				})?;

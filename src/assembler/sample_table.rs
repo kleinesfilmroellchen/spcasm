@@ -56,7 +56,7 @@ impl AssembledData {
 		}
 		// FIXME: Borrow checker doesn't realize that a cloning iterator is not interfering with the later mutable
 		// borrow.
-		let iter = self.segments.sample_table.entries.iter().cloned().collect::<Vec<_>>();
+		let iter = self.segments.sample_table.entries.clone();
 		for entry in iter {
 			let start_address = entry.start_address.clone().try_resolve();
 			self.append_16_bits_unresolved(start_address.clone(), reference.clone(), span)?;

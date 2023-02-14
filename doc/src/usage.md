@@ -6,7 +6,7 @@ _To run spcasm from source, use `cargo r --` and provide your arguments after th
 $ spcasm --help
 A modern, user-friendly SPC700 assembler.
 
-Usage: spcasm.exe [OPTIONS] <INPUT> [OUTPUT]
+Usage: spcasm[EXE] [OPTIONS] <INPUT> [OUTPUT]
 
 Arguments:
   <INPUT>
@@ -83,7 +83,7 @@ You can use the `brr` binary (`cargo r --profile=spcasm-release --bin=brr --`) f
 $ brr --help
 Bit Rate Reduced (BRR) / SNES ADPCM tools
 
-Usage: brr.exe [OPTIONS] <COMMAND>
+Usage: brr[EXE] [OPTIONS] <COMMAND>
 
 Commands:
   encode-block  Encode a single block of samples
@@ -107,7 +107,7 @@ Encode a single block of samples. Displays various information about the encodin
 how accurately the data compresses under various filter modes. This command is intended for
 interactive experimenting with BRR encoding.
 
-Usage: brr.exe encode-block [OPTIONS] [SAMPLES] [SAMPLES] [SAMPLES] [SAMPLES] [SAMPLES] [SAMPLES] [SAMPLES] [SAMPLES] [SAMPLES] [SAMPLES] [SAMPLES] [SAMPLES] [SAMPLES] [SAMPLES] [SAMPLES] [SAMPLES]...
+Usage: brr[EXE] encode-block [OPTIONS] [SAMPLES] [SAMPLES] [SAMPLES] [SAMPLES] [SAMPLES] [SAMPLES] [SAMPLES] [SAMPLES] [SAMPLES] [SAMPLES] [SAMPLES] [SAMPLES] [SAMPLES] [SAMPLES] [SAMPLES] [SAMPLES]...
 
 Arguments:
   [SAMPLES] [SAMPLES] [SAMPLES] [SAMPLES] [SAMPLES] [SAMPLES] [SAMPLES] [SAMPLES] [SAMPLES] [SAMPLES] [SAMPLES] [SAMPLES] [SAMPLES] [SAMPLES] [SAMPLES] [SAMPLES]...
@@ -130,7 +130,7 @@ $ brr decode-block --help
 Decode a single block of samples. Displays various information about the decoding process. This
 command is intended for interactive experimenting with BRR decoding.
 
-Usage: brr.exe decode-block [OPTIONS] [BLOCK] [BLOCK] [BLOCK] [BLOCK] [BLOCK] [BLOCK] [BLOCK] [BLOCK] [BLOCK]...
+Usage: brr[EXE] decode-block [OPTIONS] [BLOCK] [BLOCK] [BLOCK] [BLOCK] [BLOCK] [BLOCK] [BLOCK] [BLOCK] [BLOCK]...
 
 Arguments:
   [BLOCK] [BLOCK] [BLOCK] [BLOCK] [BLOCK] [BLOCK] [BLOCK] [BLOCK] [BLOCK]...
@@ -153,7 +153,7 @@ The `decode` subcommand:
 $ brr decode --help
 Decode a BRR file into a WAV file
 
-Usage: brr.exe decode [OPTIONS] <INPUT> [OUTPUT]
+Usage: brr[EXE] decode [OPTIONS] <INPUT> [OUTPUT]
 
 Arguments:
   <INPUT>
@@ -181,7 +181,7 @@ The `encode` subcommand:
 $ brr encode --help
 Encode a WAV file into a BRR file
 
-Usage: brr.exe encode [OPTIONS] <INPUT> [OUTPUT]
+Usage: brr[EXE] encode [OPTIONS] <INPUT> [OUTPUT]
 
 Arguments:
   <INPUT>

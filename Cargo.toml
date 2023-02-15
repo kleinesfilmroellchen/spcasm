@@ -14,7 +14,7 @@ categories = [
 	"multimedia::audio",
 ]
 authors = ["kleines Filmröllchen <filmroellchen@serenityos.org>"]
-version = "0.1.1"
+version = "0.2.0"
 license-file = "LICENSE"
 
 edition = "2021"

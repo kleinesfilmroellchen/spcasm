@@ -113,10 +113,10 @@ impl Environment {
 		self.files
 			.get(&source_code.name)
 			// Keep around a tuple with the original Arc so we can return it at the end.
-			.map(|file| file.try_borrow().map(|maybe_file| (file, maybe_file)))
+			.map(|file| file.try_borrow().map(|borrowed_file| (file, borrowed_file)))
 			.transpose()
 			.map(|maybe_file| {
-				maybe_file.filter(|(_, file)| *file.source_code == **source_code).map(|(file, _)| file.clone())
+				maybe_file.map(|(file, _)| file.clone())
 			})
 			.map_err(|_| AssemblyError::IncludeCycle {
 				cycle_trigger_file: source_code.file_name(),
@@ -146,14 +146,14 @@ impl Environment {
 			// I'm not sure whether this can happen in the first place given that find_file_by_source can't borrow such
 			// a file and therefore won't return it, but let's better be safe than sorry.
 			return if already_parsed_file.try_borrow().is_ok_and(|file| file.has_unresolved_source_includes()) {
-				Ok(already_parsed_file)
-			} else {
 				Err(AssemblyError::IncludeCycle {
 					cycle_trigger_file: source_code.file_name(),
 					src:                source_code.clone(),
 					include:            (0, 0).into(),
 				}
 				.into())
+			} else {
+				Ok(already_parsed_file)
 			};
 		}
 

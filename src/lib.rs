@@ -16,6 +16,7 @@
 	option_result_contains,
 	slice_as_chunks,
 	exact_size_is_empty,
+	result_option_inspect,
 	maybe_uninit_uninit_array,
 	const_trait_impl,
 	drain_filter,

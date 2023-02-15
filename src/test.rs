@@ -246,4 +246,22 @@ fn coverage() {
 		assert_ne!(token, Token::TestComment(vec![5, 6, 7], 0.into()));
 		let _ = format!("{0} {0:?}", token);
 	}
+
+	assert_eq!(crate::parser::LabelUsageKind::AsAddress, crate::parser::LabelUsageKind::AsAddress);
+	let _ = format!(
+		"{:?} {:?} {:?} {:?} {:?} {:?} {:?}",
+		crate::Environment::new(),
+		crate::parser::LabelUsageKind::AsAddress.clone(),
+		crate::parser::AssemblyFile {
+			content:     Vec::new(),
+			parent:      std::sync::Weak::new(),
+			source_code: code.into(),
+		},
+		crate::assembler::sample_table::SampleTable::default(),
+		crate::assembler::sample_table::SampleTable::default()
+			== crate::assembler::sample_table::SampleTable::default(),
+		crate::assembler::sample_table::SampleEntry { start_address: 0.into() }.clone(),
+		crate::assembler::sample_table::SampleEntry { start_address: 0.into() }.clone()
+			== crate::assembler::sample_table::SampleEntry { start_address: 0.into() }.clone(),
+	);
 }

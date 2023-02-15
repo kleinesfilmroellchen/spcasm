@@ -45,7 +45,7 @@ impl AssembledData {
 			},
 			DirectiveValue::AssignReference { ref mut reference, ref value } => match reference {
 				Reference::Local(reference) => {
-					reference.borrow_mut().location = Some(Box::new(value.clone().try_resolve()));
+					reference.borrow_mut().location = Some(value.clone().try_resolve());
 				},
 				Reference::Global(ref mut global) => {
 					global.borrow_mut().location = Some(value.clone().try_resolve());

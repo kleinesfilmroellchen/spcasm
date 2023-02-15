@@ -75,14 +75,6 @@ impl AssemblyTimeValue {
 		}
 	}
 
-	/// Extracts the concrete value.
-	/// # Panics
-	/// If the reference was not yet resolved, this function panics as it assumes that that has already happened.
-	#[must_use]
-	pub fn value(&self) -> MemoryAddress {
-		self.try_value((0, 0).into(), Arc::default()).unwrap()
-	}
-
 	/// Extracts the concrete value, if possible.
 	/// # Errors
 	/// If the value cannot be resolved.
@@ -91,36 +83,19 @@ impl AssemblyTimeValue {
 		location: SourceSpan,
 		source_code: Arc<AssemblyCode>,
 	) -> Result<MemoryAddress, Box<AssemblyError>> {
-		Ok(match self {
-			Self::Literal(value) => *value,
-			// necessary because matching through an Rc is not possible right now (would be super dope though).
-			Self::Reference(ref reference) => match reference {
-				Reference::Global(global_label) if let Some(ref value) = global_label.borrow().location => value.value(),
-				Reference::Local(local) if let Some(ref value) = local.borrow().location => value.value(),
-				Reference::Local(local) => return Err(AssemblyError::UnresolvedReference {
-					reference: reference.to_string(),
-					reference_location: Some(local.borrow().span),
-					usage_location: location,
-					src: source_code
-				}.into()),
-				Reference::Global(global) => return Err(AssemblyError::UnresolvedReference {
-					reference: reference.to_string(),
-					reference_location: Some(global.borrow().span),
-					usage_location: location,
-					src: source_code
-				}.into()),
-				Reference::MacroGlobal { span, .. } |
-				Reference::MacroArgument{value: None, span, ..} => return Err(AssemblyError::UnresolvedReference {
-					reference: reference.to_string(),
-					reference_location: None,
-					usage_location: *span,
-					src: source_code
-				}.into()),
-				Reference::MacroArgument{value: Some(value), ..} => value.try_value(location, source_code)?,
-			},
-			Self::UnaryOperation(number, operator) => operator.execute(number.try_value(location, source_code)?),
-			Self::BinaryOperation(lhs, rhs, operator) => operator.execute(lhs.try_value(location, source_code.clone())?, rhs.try_value(location, source_code)?),
-		})
+		let possibly_resolved = self.clone().try_resolve();
+		if let Self::Literal(value) = possibly_resolved {
+			Ok(value)
+		} else {
+			let first_reference = self.first_reference().expect("unresolved value without a reference");
+			Err(AssemblyError::UnresolvedReference {
+				reference:          first_reference.to_string(),
+				reference_location: Some(first_reference.source_span()),
+				usage_location:     location,
+				src:                source_code,
+			}
+			.into())
+		}
 	}
 
 	/// Try to resolve this value down to a literal. Even if that's not entirely possible, sub-expressions are
@@ -250,25 +225,10 @@ impl UpperHex for AssemblyTimeValue {
 		};
 
 		match self {
-			Self::Reference(Reference::Global(ref unresolved_reference)) => {
-				let unresolved_reference = unresolved_reference.borrow();
-				match unresolved_reference.location {
-					Some(ref numeric_address) => write_correctly("$", f, numeric_address),
-					None => write!(f, "{}", unresolved_reference.name),
-				}
+			Self::Reference(reference) => match reference.location() {
+				Some(ref numeric_address) => write_correctly("$", f, numeric_address),
+				None => write!(f, "{}", reference),
 			},
-			Self::Reference(Reference::Local(ref local)) => {
-				let local = local.borrow();
-				match &local.location {
-					Some(numeric_address) => f.pad(&format!("{:0X}", **numeric_address)),
-					None => write!(f, "{}", local.name),
-				}
-			},
-			Self::Reference(Reference::MacroArgument { value, name, .. }) => match value {
-				Some(numeric_address) => f.pad(&format!("{:0X}", **numeric_address)),
-				None => write!(f, "{}", name),
-			},
-			Self::Reference(Reference::MacroGlobal { .. }) => f.write_str("\\@"),
 			Self::Literal(numeric_address) => {
 				f.write_char('$')?;
 				fmt::UpperHex::fmt(numeric_address, f)

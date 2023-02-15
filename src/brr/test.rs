@@ -7,6 +7,7 @@
 extern crate test;
 use test::Bencher;
 
+use super::wav::read_wav_for_brr;
 use super::{
 	encode_to_brr, Block, CompressionLevel, DecodedBlockSamples, Header, LPCFilter, LoopEndFlags, WarmUpSamples,
 };
@@ -178,7 +179,16 @@ fn encode_empty() {
 	assert!(encode_to_brr(&mut Vec::new(), false, CompressionLevel::Max).is_empty());
 }
 
-#[cfg(feature = "expensive_tests")]
+#[test]
+fn wav_sample_formats() {
+	let _ = read_wav_for_brr(std::fs::File::open("tests/yoshi.wav").unwrap()).unwrap();
+	let _ = read_wav_for_brr(std::fs::File::open("tests/yoshi-8.wav").unwrap()).unwrap();
+	let _ = read_wav_for_brr(std::fs::File::open("tests/yoshi-24.wav").unwrap()).unwrap();
+	let _ = read_wav_for_brr(std::fs::File::open("tests/yoshi-f32.wav").unwrap()).unwrap();
+	let _ = read_wav_for_brr(std::fs::File::open("tests/yoshi-stereo.wav").unwrap()).unwrap();
+}
+
+#[cfg(not(debug_assertions))]
 #[bench]
 #[allow(clippy::cast_precision_loss)]
 fn extremely_long_encode(bencher: &mut Bencher) {

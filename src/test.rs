@@ -178,8 +178,22 @@ fn coverage() {
 		}
 		.into(),
 	));
+	let macro_parent = crate::parser::reference::MacroParent::new_formal(None, (0, 0).into());
+	let macro_parameter = crate::parser::reference::Reference::MacroArgument {
+		name:         "test".to_string(),
+		value:        None,
+		span:         (0, 0).into(),
+		macro_parent: macro_parent.clone(),
+	};
 
-	format!("{}, {}, {0:?}, {1:?}", global, local);
+	format!("{}, {}, {}, {0:?}, {1:?}, {2:?}, {3:?}", global, local, macro_parameter, macro_parent);
+	let mut resolved_global = global.clone();
+	resolved_global.set_location(7.into());
+	let mut resolved_local = local.clone();
+	resolved_local.set_location(8.into());
+	let mut resolved_macro_parameter = macro_parameter.clone();
+	resolved_macro_parameter.set_location(9.into());
+	format!("{}, {}, {}", resolved_global, resolved_local, resolved_macro_parameter);
 
 	for operator in [
 		BinaryOperator::Add,
@@ -264,4 +278,18 @@ fn coverage() {
 		crate::assembler::sample_table::SampleEntry { start_address: 0.into() }.clone()
 			== crate::assembler::sample_table::SampleEntry { start_address: 0.into() }.clone(),
 	);
+
+	assert_eq!(crate::parser::ProgramElement::Directive(crate::Directive::default()).span(), &(0, 0).into());
+	let macro_call = crate::parser::ProgramElement::UserDefinedMacroCall {
+		macro_name: "".into(),
+		arguments:  Vec::new(),
+		span:       (0, 5).into(),
+		label:      None,
+	};
+	let include_source =
+		crate::parser::ProgramElement::IncludeSource { file: "".into(), span: (0, 0).into(), label: None };
+	format!("{:?} {:?}", macro_call, include_source);
+	assert_eq!(macro_call.span(), &(0, 5).into());
+	assert_eq!(macro_call.assembled_size(), 0);
+	assert_eq!(include_source.assembled_size(), 0);
 }

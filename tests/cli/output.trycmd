@@ -45,11 +45,11 @@ global_selftarget        0190
 ```
 
 ```trycmd
-$ spcasm -w all -f elf tests/opcodes.s
+$ spcasm -w all -f elf tests/opcodes.s tests/test-output
 ```
 
 ```trycmd
-$ spcasm -w all -d -f plain tests/opcodes.s
+$ spcasm -w all -d -f plain tests/opcodes.s tests/test-output
 start                    0000
 data                     0013
 reltarget                015E

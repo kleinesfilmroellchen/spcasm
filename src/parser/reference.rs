@@ -63,9 +63,18 @@ impl Reference {
 	pub fn set_location(&mut self, location: AssemblyTimeValue) {
 		match self {
 			Self::Global(global) => global.borrow_mut().location = Some(location),
-			Self::Local(local) => local.borrow_mut().location = Some(Box::new(location)),
+			Self::Local(local) => local.borrow_mut().location = Some(location),
 			// noop on macro arguments
 			Self::MacroArgument { .. } | Self::MacroGlobal { .. } => {},
+		}
+	}
+
+	pub fn location(&self) -> Option<AssemblyTimeValue> {
+		match self {
+			Self::Global(global) => global.borrow().location.clone(),
+			Self::Local(local) => local.borrow().location.clone(),
+			Self::MacroArgument { value, .. } => value.clone().map(|boxed| *boxed),
+			Self::MacroGlobal { .. } => None,
 		}
 	}
 }
@@ -226,7 +235,7 @@ pub struct LocalLabel {
 	/// User-given reference name.
 	pub name:     String,
 	/// Resolved memory location of the reference, if any.
-	pub location: Option<Box<AssemblyTimeValue>>,
+	pub location: Option<AssemblyTimeValue>,
 	/// Source code location where this reference is defined.
 	pub span:     SourceSpan,
 	/// The parent label that this local label is contained within.
@@ -258,7 +267,7 @@ impl Resolvable for LocalLabel {
 		_usage_span: SourceSpan,
 		_source_code: Arc<AssemblyCode>,
 	) -> Result<(), Box<AssemblyError>> {
-		self.location = Some(Box::new(AssemblyTimeValue::Literal(location)));
+		self.location = Some(AssemblyTimeValue::Literal(location));
 		Ok(())
 	}
 }

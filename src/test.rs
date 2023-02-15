@@ -69,6 +69,11 @@ fn documented_cli() {
 	trycmd::TestCases::new().case("README.md");
 }
 
+#[test]
+fn documented_errors() {
+	trycmd::TestCases::new().case("doc/src/errors.md");
+}
+
 fn test_file(file: &str) {
 	let (parsed, assembled) = super::run_assembler_into_segments(
 		&crate::AssemblyCode::from_file_or_assembly_error(file).unwrap(),

@@ -310,7 +310,9 @@ impl AssembledData {
 					self.append_8_bits(MemoryAddress::from(*opcode), label.clone(), *span)
 				},
 			EntryOrFirstOperandTable::Table(first_operand_table) => {
-				let legal_modes: Vec<_> = first_operand_table.keys().map(AddressingModeCategory::to_string).collect();
+				let mut legal_modes: Vec<_> =
+					first_operand_table.keys().map(AddressingModeCategory::to_string).collect();
+				legal_modes.sort();
 				let first_operand = first_operand.as_ref().ok_or_else(|| AssemblyError::MissingOperand {
 					mnemonic:    *mnemonic,
 					legal_modes: legal_modes.clone(),
@@ -401,8 +403,9 @@ impl AssembledData {
 						*span,
 					),
 					EntryOrSecondOperandTable::Table(second_operand_table) => {
-						let legal_modes: Vec<_> =
+						let mut legal_modes: Vec<_> =
 							second_operand_table.keys().map(AddressingModeCategory::to_string).collect();
+						legal_modes.sort();
 						let second_operand =
 							second_operand.as_ref().ok_or_else(|| AssemblyError::MissingSecondOperand {
 								mnemonic:    *mnemonic,

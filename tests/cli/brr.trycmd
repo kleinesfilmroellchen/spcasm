@@ -484,7 +484,7 @@ Encoded 1036 blocks (0: 1034, 1: 2, 2: 0, 3: 0)
 ```
 
 ```trycmd
-$ brr encode tests/yoshi.wav -f brrtools
+$ brr encode tests/yoshi.wav -f brrtools --loop-point 400
 Encoded 1036 blocks (0: 1034, 1: 2, 2: 0, 3: 0)
 
 ```

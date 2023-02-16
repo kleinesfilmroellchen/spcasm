@@ -213,6 +213,10 @@ Options:
             BRRTools' treble filter, which is slightly imprecise, but provided for compatibility
             purposes
 
+  -l, --loop-point <LOOP_POINT>
+          Set the sample's loop point. The ending block has its flags set to signal a looping
+          sample, and the loop start block uses filter 0 to prevent glitches.
+
   -h, --help
           Print help (see a summary with '-h')
 

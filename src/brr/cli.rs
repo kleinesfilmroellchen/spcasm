@@ -112,6 +112,15 @@ enum Command {
 		)]
 		#[allow(clippy::option_option)] // intentional
 		filter: Option<Option<PreEmphasisFilter>>,
+		#[arg(
+			long,
+			short,
+			required = false,
+			help = "Loop point",
+			long_help = "Set the sample's loop point. The ending block has its flags set to signal a looping sample, \
+			             and the loop start block uses filter 0 to prevent glitches."
+		)]
+		loop_point:  Option<usize>,
 	},
 
 	#[command(about = "Decode a BRR file into a WAV file")]
@@ -225,7 +234,7 @@ fn main() {
 			let (decoded, _) = block.decode(warm_up);
 			println!("Decoded samples: {:?}", decoded);
 		},
-		Command::Encode { input, output, compression, filter } => {
+		Command::Encode { input, output, compression, filter, loop_point } => {
 			let output = output.unwrap_or_else(|| input.with_extension("brr"));
 			let mut samples = File::open(input)
 				.map_err(|err| err.to_string())
@@ -241,14 +250,22 @@ fn main() {
 				Some(PreEmphasisFilter::Treble) => dsp::apply_precise_treble_boost_filter(&samples),
 				None => samples,
 			};
-			let encoded = encode_to_brr(&mut samples, false, compression);
+			let encoded = encode_to_brr(&mut samples, loop_point, compression);
 			let duration = start.elapsed();
 			if arguments.verbose {
-				println!(
+				print!(
 					"Encoded {} samples to {} bytes BRR in {} μs.",
 					samples.len(),
 					encoded.len(),
 					duration.as_micros(),
+				);
+				loop_point.map_or_else(
+					|| {
+						println!();
+					},
+					|loop_point| {
+						println!(" Loop point: {}", loop_point & !0b1111);
+					},
 				);
 			}
 			let mut output_file =

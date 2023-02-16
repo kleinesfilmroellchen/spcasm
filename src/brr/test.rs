@@ -159,7 +159,7 @@ fn short_sample_encode(bencher: &mut Bencher) {
 
 	let (_, data) = wav_read(&mut std::fs::File::open("tests/yoshi.wav").unwrap()).unwrap();
 	let mut data = data.try_into_sixteen().expect("must be signed 16-bit WAV");
-	bencher.iter(|| encode_to_brr(&mut data, false, CompressionLevel::Max));
+	bencher.iter(|| encode_to_brr(&mut data, None, CompressionLevel::Max));
 }
 
 #[test]
@@ -168,15 +168,15 @@ fn different_compression_levels() {
 
 	let (_, data) = wav_read(&mut std::fs::File::open("tests/yoshi.wav").unwrap()).unwrap();
 	let mut data = data.try_into_sixteen().expect("must be signed 16-bit WAV");
-	let estimated = encode_to_brr(&mut data, false, CompressionLevel::EstimateShift);
+	let estimated = encode_to_brr(&mut data, None, CompressionLevel::EstimateShift);
 	let _ = decode_from_brr(&estimated);
-	let bad = encode_to_brr(&mut data, false, CompressionLevel::OnlyFilterZero);
+	let bad = encode_to_brr(&mut data, None, CompressionLevel::OnlyFilterZero);
 	let _ = decode_from_brr(&bad);
 }
 
 #[test]
 fn encode_empty() {
-	assert!(encode_to_brr(&mut Vec::new(), false, CompressionLevel::Max).is_empty());
+	assert!(encode_to_brr(&mut Vec::new(), None, CompressionLevel::Max).is_empty());
 }
 
 #[test]

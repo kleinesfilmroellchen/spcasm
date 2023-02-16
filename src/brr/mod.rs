@@ -57,10 +57,14 @@ impl CompressionLevel {
 /// Encode the given 16-bit samples as BRR samples. The data may be padded via repetition to fit a multiple of 16; if
 /// you don't want this to happen, provide a multiple of 16 samples.
 ///
-/// TODO: We don't know about the loop point, so we can't set that block to use filter 0.
+/// Set the loop point to None if the sample is not looped.
 #[must_use]
 #[allow(clippy::module_name_repetitions)]
-pub fn encode_to_brr(samples: &mut Vec<DecodedSample>, is_loop: bool, compression: CompressionLevel) -> Vec<u8> {
+pub fn encode_to_brr(
+	samples: &mut Vec<DecodedSample>,
+	loop_point: Option<usize>,
+	compression: CompressionLevel,
+) -> Vec<u8> {
 	if samples.is_empty() {
 		return Vec::new();
 	}
@@ -90,6 +94,7 @@ pub fn encode_to_brr(samples: &mut Vec<DecodedSample>, is_loop: bool, compressio
 
 	let mut sample_chunks = sample_chunks.to_vec();
 	let first_chunk = sample_chunks.remove(0);
+	let chunk_count = sample_chunks.len();
 
 	// Determine whether the first chunk is also the last; i.e. there are exactly 16 samples.
 	let first_block_is_end = sample_chunks.len() == 1;
@@ -102,12 +107,19 @@ pub fn encode_to_brr(samples: &mut Vec<DecodedSample>, is_loop: bool, compressio
 		[0, 0],
 		first_chunk,
 		LPCFilter::Zero,
-		LoopEndFlags::new(first_block_is_end, first_block_is_end && is_loop),
+		LoopEndFlags::new(first_block_is_end, first_block_is_end && loop_point.is_some()),
 	);
 	result.extend_from_slice(&<[u8; 9]>::from(first_block_data));
 	let mut warm_up: WarmUpSamples = [first_chunk[first_chunk.len() - 1], first_chunk[first_chunk.len() - 2]];
-	for chunk in sample_chunks {
-		let block_data = main_block_encoder(warm_up, chunk, LoopEndFlags::Nothing);
+	for (i, chunk) in sample_chunks.into_iter().enumerate() {
+		let flags =
+			if i == chunk_count - 1 { LoopEndFlags::new(true, loop_point.is_some()) } else { LoopEndFlags::Nothing };
+
+		let block_data = if let Some(point) = loop_point && ((point & !0b1111) == i * 16) {
+			Block::encode_with_filter_0_good_shift(warm_up, chunk, flags)
+		} else {
+			main_block_encoder(warm_up, chunk, flags)
+		};
 
 		#[cfg(debug_assertions)]
 		{

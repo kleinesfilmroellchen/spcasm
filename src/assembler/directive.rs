@@ -146,7 +146,7 @@ impl AssembledData {
 			println!("Auto trim reduced size from {} to {} samples", initial_size, sample_data.len());
 		}
 
-		let encoded = brr::encode_to_brr(&mut sample_data, false, brr::CompressionLevel::Max);
+		let encoded = brr::encode_to_brr(&mut sample_data, None, brr::CompressionLevel::Max);
 
 		self.append_bytes(encoded, &directive.label, directive.span)
 	}

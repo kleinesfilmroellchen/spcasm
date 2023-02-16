@@ -228,7 +228,9 @@ fn main() {
 				block
 					.encoded_samples
 					.iter()
-					.map(|sample| String::from(std::string::String::from(format!("{:01X}", sample).chars().last().unwrap())))
+					.map(|sample| String::from(std::string::String::from(
+						format!("{:01X}", sample).chars().last().unwrap()
+					)))
 					.collect::<Vec<_>>()
 					.join(" "),
 			);

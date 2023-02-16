@@ -45,8 +45,8 @@ pub fn dump_reference_tree(global_references: &[Arc<std::cell::RefCell<GlobalLab
 		let label_text = global
 			.location
 			.as_ref()
-			.and_then(|location| location.try_value(global.span, Arc::new(AssemblyCode::new("", String::new()))).ok())
-			.map_or_else(|| "(unknown)".to_string().into(), |location| format!("{:04X}", location));
+			.and_then(|location| location.try_value(global.span, Arc::new(AssemblyCode::new("", &String::new()))).ok())
+			.map_or_else(|| "(unknown)".to_string(), |location| format!("{:04X}", location));
 
 		println!("{:<20} {:>8}", global.name, label_text);
 		let mut locals = global.locals.values().collect::<Vec<_>>();
@@ -57,9 +57,9 @@ pub fn dump_reference_tree(global_references: &[Arc<std::cell::RefCell<GlobalLab
 				.location
 				.as_ref()
 				.and_then(|location| {
-					location.try_value(local.span, Arc::new(AssemblyCode::new("", String::new()))).ok()
+					location.try_value(local.span, Arc::new(AssemblyCode::new("", &String::new()))).ok()
 				})
-				.map_or_else(|| "(unknown)".to_string().into(), |location| format!("{:04X}", location));
+				.map_or_else(|| "(unknown)".to_string(), |location| format!("{:04X}", location));
 
 			println!("  .{:<17} {:>8}", local.name, label_text);
 		}

@@ -154,7 +154,7 @@ fn coverage() {
 	crate::parser::instruction::Mnemonic::default();
 	crate::error::TokenOrString::default();
 
-	let code = crate::AssemblyCode::new("\r\n", "hello".into()).clone();
+	let code = crate::AssemblyCode::new("\r\n", &"hello".into()).clone();
 	println!("{:?}", code);
 	assert!(crate::AssemblyCode::from_file_or_assembly_error("does-not-exist").is_err());
 	assert!(crate::AssemblyCode::from_file_or_assembly_error("/does-not-exist").is_err());

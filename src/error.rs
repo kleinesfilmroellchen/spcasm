@@ -232,7 +232,7 @@ pub enum AssemblyError {
 		code(spcasm::include_cycle),
 		severity(Error),
 		help(
-			"The file \"{cycle_trigger_file}\" was included:\n{}", src.include_path.iter().map(|path| format!("from {}", AssemblyCode::file_name_for(path))).intersperse("\n".to_string().into()).collect::<String>()
+			"The file \"{cycle_trigger_file}\" was included:\n{}", src.include_path.iter().map(|path| format!("from {}", AssemblyCode::file_name_for(path))).intersperse("\n".to_string()).collect::<String>()
 		)
 	)]
 	IncludeCycle {

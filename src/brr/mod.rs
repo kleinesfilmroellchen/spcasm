@@ -11,6 +11,8 @@ use std::convert::TryInto;
 
 use num_derive::FromPrimitive;
 use num_traits::FromPrimitive;
+#[allow(unused)]
+use smartstring::alias::String;
 
 #[cfg(test)] mod test;
 
@@ -153,7 +155,7 @@ pub fn encode_to_brr(
 pub fn decode_from_brr(encoded: &[u8]) -> Result<Vec<DecodedSample>, String> {
 	let (blocks, remainder) = encoded.as_chunks();
 	if !remainder.is_empty() {
-		return Err(format!("Cut off BRR block (size {}) at the end of the stream", remainder.len()));
+		return Err(format!("Cut off BRR block (size {}) at the end of the stream", remainder.len()).into());
 	}
 
 	let mut decoded_samples = Vec::with_capacity(blocks.len() * 16);

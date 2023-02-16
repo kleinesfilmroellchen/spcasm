@@ -8,6 +8,9 @@
 use std::num::ParseIntError;
 use std::sync::Arc;
 
+#[allow(unused)]
+use smartstring::alias::String;
+
 use crate::directive::DirectiveSymbol;
 use crate::error::TokenOrString;
 use crate::parser::instruction::Mnemonic;

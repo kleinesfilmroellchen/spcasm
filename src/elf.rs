@@ -4,6 +4,8 @@
 use std::io::Write;
 
 use object::write::Object;
+#[allow(unused)]
+use smartstring::alias::String;
 
 /// Write the assembled data to a bare-bones ELF file.
 /// # Errors

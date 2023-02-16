@@ -1,5 +1,8 @@
 //! Signal Processing Utilities for BRR.
 
+#[allow(unused)]
+use smartstring::alias::String;
+
 use super::DecodedSample;
 
 /// Applies the Gaussian lowpass filter of the S-SMP BRR hardware decoder to accurately emulate what digital audio

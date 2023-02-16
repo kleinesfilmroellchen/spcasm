@@ -4,6 +4,9 @@
 
 use std::collections::BTreeMap;
 
+#[allow(unused)]
+use smartstring::alias::String;
+
 use crate::assembler::sample_table::SampleTable;
 use crate::parser::instruction::MemoryAddress;
 

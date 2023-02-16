@@ -2,6 +2,8 @@
 
 use std::fs::File;
 
+#[allow(unused)]
+use smartstring::alias::String;
 use wav::{read as wav_read, BitDepth};
 
 use super::DecodedSample;
@@ -14,7 +16,7 @@ const i24max: f64 = (0xff_ffff - 1) as f64;
 /// # Errors
 /// Any errors from the WAV support library are passed on, as well as some custom errors.
 pub fn read_wav_for_brr(mut file: File) -> Result<Vec<DecodedSample>, String> {
-	let (header, data) = wav_read(&mut file).map_err(|err| err.to_string())?;
+	let (header, data) = wav_read(&mut file).map_err(|err| String::from(err.to_string()))?;
 	convert_sample_format(data, header.channel_count)
 }
 
@@ -43,7 +45,7 @@ fn convert_bit_depth_to_16_bits(source_data: BitDepth) -> Result<Vec<i16>, Strin
 			Ok(s24bit.into_iter().map(|sample| (f64::from(sample) / i24max * f64::from(i16::MAX)) as i16).collect()),
 		BitDepth::ThirtyTwoFloat(f32bit) =>
 			Ok(f32bit.into_iter().map(|sample| (sample * f32::from(i16::MAX)) as i16).collect()),
-		BitDepth::Empty => Err("Empty audio file".to_owned()),
+		BitDepth::Empty => Err("Empty audio file".to_owned().into()),
 	}
 }
 

@@ -6,6 +6,8 @@
 use std::collections::HashMap;
 
 use miette::SourceSpan;
+#[allow(unused)]
+use smartstring::alias::String;
 
 use super::AssembledData;
 use crate::parser::instruction::{AddressingModeCategory, Mnemonic};

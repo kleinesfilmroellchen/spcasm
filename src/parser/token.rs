@@ -3,6 +3,8 @@
 use std::fmt::Display;
 
 use miette::{SourceOffset, SourceSpan};
+#[allow(unused)]
+use smartstring::alias::String;
 
 use crate::directive::DirectiveSymbol;
 use crate::parser::instruction::Mnemonic;

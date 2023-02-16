@@ -7,6 +7,8 @@ use std::result::Result;
 use std::sync::{Arc, Weak};
 
 use miette::{SourceOffset, SourceSpan};
+#[allow(unused)]
+use smartstring::alias::String;
 
 use self::instruction::{AddressingMode, Instruction, Opcode};
 use self::lexer::lex;
@@ -209,7 +211,7 @@ impl Environment {
 			matching_reference.clone()
 		} else {
 			let new_reference = Arc::new(RefCell::new(GlobalLabel {
-				name: name.to_owned(),
+				name: name.into(),
 				location: None,
 				span,
 				used_as_address: usage_kind == LabelUsageKind::AsAddress,
@@ -310,7 +312,7 @@ impl AssemblyFile {
 					..
 				}) =>
 					return Err(AssemblyError::UsingMacroArgumentOutsideMacro {
-						name:     mal.to_string(),
+						name:     mal.to_string().into(),
 						src:      self.source_code.clone(),
 						location: *span,
 					}
@@ -395,7 +397,7 @@ impl AssemblyFile {
 						(DirectiveValue::Brr { directory: true, .. }, None)
 					) {
 						let new_brr_label = Arc::new(RefCell::new(GlobalLabel {
-							name:            format!("brr_sample_{}", brr_label_number),
+							name:            format!("brr_sample_{}", brr_label_number).into(),
 							location:        None,
 							locals:          HashMap::new(),
 							span:            directive.span,
@@ -634,7 +636,7 @@ impl AssemblyFile {
 			let element = self.content[index].clone();
 			if let ProgramElement::IncludeSource { ref file, label, span } = element {
 				let environment = self.parent.upgrade().expect("parent deleted while we're still parsing");
-				let file = resolve_file(&self.source_code, file).to_string_lossy().to_string();
+				let file: String = resolve_file(&self.source_code, file).to_string_lossy().into();
 				let mut included_code =
 					AssemblyCode::from_file(&file).map_err(|os_error| AssemblyError::FileNotFound {
 						os_error,
@@ -731,7 +733,7 @@ impl AssemblyFile {
 						GlobalLabel {
 							// We use a unique reference name just to make sure that we don't combine different
 							// references accidentally.
-							name:            format!("{}_global_label_{}", macro_name, index),
+							name:            format!("{}_global_label_{}", macro_name, index).into(),
 							locals:          HashMap::new(),
 							location:        None,
 							span:            *definition_span,
@@ -868,8 +870,8 @@ pub fn apply_brr_options(
 							directive_location,
 							option_location,
 							option: option.clone(),
-							directive: "brr".to_owned(),
-							valid_options: vec!["nodirectory".to_owned(), "autotrim".to_owned()],
+							directive: "brr".into(),
+							valid_options: vec!["nodirectory".into(), "autotrim".into()],
 							src: source_code.clone(),
 						}),
 				}
@@ -900,8 +902,8 @@ pub fn apply_sample_table_options(
 							directive_location,
 							option_location,
 							option: option.clone(),
-							directive: "sampletable".to_owned(),
-							valid_options: vec!["noalign".to_owned()],
+							directive: "sampletable".to_owned().into(),
+							valid_options: vec!["noalign".to_owned().into()],
 							src: source_code.clone(),
 						}),
 				}

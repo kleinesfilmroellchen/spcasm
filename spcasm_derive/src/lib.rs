@@ -1,6 +1,9 @@
 #![deny(clippy::all, clippy::pedantic, clippy::nursery)]
 #![allow(missing_docs, clippy::missing_panics_doc)]
 
+#[allow(unused)]
+use smartstring::alias::String;
+
 extern crate proc_macro;
 
 use proc_macro::TokenStream;
@@ -26,10 +29,10 @@ pub fn parse_macro_derive(input: TokenStream) -> TokenStream {
 						variant.to_token_stream()
 					),
 				})
-				.collect::<Vec<(syn::Ident, String)>>();
+				.collect::<Vec<(syn::Ident, std::string::String)>>();
 			let variant_identifiers = variant_identifiers_and_strings.iter().map(|(identifier, _)| identifier);
 			let variant_strings =
-				variant_identifiers_and_strings.iter().map(|(_, string)| string).collect::<Vec<&String>>();
+				variant_identifiers_and_strings.iter().map(|(_, string)| string.to_string()).collect::<Vec<std::string::String>>();
 
 			quote! {
 				#[automatically_derived]
@@ -38,7 +41,7 @@ pub fn parse_macro_derive(input: TokenStream) -> TokenStream {
 					fn parse(value: &str, location: miette::SourceSpan, src: std::sync::Arc<crate::AssemblyCode>) -> Result<Self, Box<crate::error::AssemblyError>> {
 						Ok(match value {
 							#( #variant_strings => Self::#variant_identifiers, )*
-							_ => return Err(crate::error::AssemblyError::InvalidConstant { constant: value.to_owned(), typename: #name_string.to_owned(), location, src }.into()),
+							_ => return Err(crate::error::AssemblyError::InvalidConstant { constant: value.into(), typename: #name_string.into(), location, src }.into()),
 						})
 					}
 
@@ -69,7 +72,7 @@ pub fn error_codes_derive(input: TokenStream) -> TokenStream {
 				.map(|variant| {
 					(variant.ident.clone(), format!("{}", variant.ident).to_lowercase(), variant.fields.clone())
 				})
-				.collect::<Vec<(syn::Ident, String, syn::Fields)>>();
+				.collect::<Vec<(syn::Ident, std::string::String, syn::Fields)>>();
 			let variant_identifiers = variant_identifiers_and_strings.iter().map(|(identifier, _, _)| identifier);
 			let variant_fields = variant_identifiers_and_strings
 				.iter()
@@ -85,12 +88,12 @@ pub fn error_codes_derive(input: TokenStream) -> TokenStream {
 				#[automatically_derived]
 				#[allow(missing_docs)]
 				impl crate::error::ErrorCodes for #name {
-					fn all_codes() -> std::collections::HashMap<std::mem::Discriminant<crate::error::AssemblyError>, String> {
+					fn all_codes() -> std::collections::HashMap<std::mem::Discriminant<crate::error::AssemblyError>, smartstring::alias::String> {
 						let mut map = std::collections::HashMap::new();
 						#( let error_instance = &Self::#variant_identifiers {
 								#variant_fields
 							};
-							map.insert(std::mem::discriminant(error_instance), error_instance.code().expect("error must have a code").to_string()); )*
+							map.insert(std::mem::discriminant(error_instance), error_instance.code().expect("error must have a code").to_string().into()); )*
 						return map;
 					}
 				}

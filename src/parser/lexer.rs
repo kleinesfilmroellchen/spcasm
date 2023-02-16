@@ -4,6 +4,8 @@ use std::iter::Peekable;
 use std::sync::Arc;
 
 use miette::SourceOffset;
+#[allow(unused)]
+use smartstring::alias::String;
 
 use super::instruction::{MemoryAddress, Mnemonic};
 use super::register::Register;
@@ -192,7 +194,7 @@ fn next_number(
 	start_index: usize,
 	source_code: Arc<AssemblyCode>,
 ) -> Result<(i64, usize), Box<AssemblyError>> {
-	let mut number_chars = first_char.map_or_else(String::default, String::from);
+	let mut number_chars: String = first_char.map_or_else(std::string::String::default, std::string::String::from).into();
 	while let Some(chr) = chars.peek() && chr.is_alphanumeric() {
 		number_chars.push(chars.next().unwrap());
 	}

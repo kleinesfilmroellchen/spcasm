@@ -6,6 +6,8 @@ use std::fmt::Display;
 use std::sync::{Arc, Weak};
 
 use miette::SourceSpan;
+#[allow(unused)]
+use smartstring::alias::String;
 
 use super::instruction::MemoryAddress;
 use super::AssemblyTimeValue;
@@ -98,7 +100,7 @@ impl MacroParentReplacable for Reference {
 							Ok(())
 						} else {
 							Err(AssemblyError::UnknownMacroArgument {
-								name:            (*name).to_string(),
+								name:            (*name).to_string().into(),
 								available_names: parameters.argument_names(),
 								location:        *span,
 								src:             source_code.clone(),
@@ -121,9 +123,9 @@ impl Display for Reference {
 	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
 		write!(f, "{}", match self {
 			Self::Global(global) => global.borrow().name.clone(),
-			Self::Local(local) => format!(".{}", local.borrow().name),
-			Self::MacroArgument { name, .. } => format!("<{}>", name),
-			Self::MacroGlobal { .. } => "\\@".to_string(),
+			Self::Local(local) => format!(".{}", local.borrow().name).into(),
+			Self::MacroArgument { name, .. } => format!("<{}>", name).into(),
+			Self::MacroGlobal { .. } => "\\@".to_string().into(),
 		})
 	}
 }

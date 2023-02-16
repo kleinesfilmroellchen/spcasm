@@ -3,6 +3,9 @@
 use std::cmp::min;
 use std::sync::Arc;
 
+#[allow(unused)]
+use smartstring::alias::String;
+
 pub use super::directive::Directive;
 pub use super::error::AssemblyError;
 pub use super::parser::Environment;
@@ -19,12 +22,11 @@ pub type AssemblyResult = miette::Result<(std::sync::Arc<std::cell::RefCell<Envi
 pub fn pretty_hex(bytes: &[u8], emphasis: Option<usize>) -> String {
 	let mut string = String::new();
 	// need approximately high nibble + low nibble + ' ' per byte
-	string.reserve(bytes.len() * 3 + emphasis.map(|_| 2).unwrap_or_default());
 	let mut index = 0;
 	while index * 16 < bytes.len() {
 		let section = &bytes[index * 16 .. min((index + 1) * 16, bytes.len())];
 		for (column, byte) in section.iter().enumerate() {
-			string += & if let Some(emphasis) = emphasis && index * 16 + column == emphasis {
+			string = string + if let Some(emphasis) = emphasis && index * 16 + column == emphasis {
 				format!(" [{:02X}]", byte)
 			} else {
 				format!(" {:02X}", byte)
@@ -44,7 +46,7 @@ pub fn dump_reference_tree(global_references: &[Arc<std::cell::RefCell<GlobalLab
 			.location
 			.as_ref()
 			.and_then(|location| location.try_value(global.span, Arc::new(AssemblyCode::new("", String::new()))).ok())
-			.map_or_else(|| "(unknown)".to_string(), |location| format!("{:04X}", location));
+			.map_or_else(|| "(unknown)".to_string().into(), |location| format!("{:04X}", location));
 
 		println!("{:<20} {:>8}", global.name, label_text);
 		let mut locals = global.locals.values().collect::<Vec<_>>();
@@ -57,7 +59,7 @@ pub fn dump_reference_tree(global_references: &[Arc<std::cell::RefCell<GlobalLab
 				.and_then(|location| {
 					location.try_value(local.span, Arc::new(AssemblyCode::new("", String::new()))).ok()
 				})
-				.map_or_else(|| "(unknown)".to_string(), |location| format!("{:04X}", location));
+				.map_or_else(|| "(unknown)".to_string().into(), |location| format!("{:04X}", location));
 
 			println!("  .{:<17} {:>8}", local.name, label_text);
 		}

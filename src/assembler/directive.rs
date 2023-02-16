@@ -3,6 +3,8 @@
 use std::fs::File;
 
 use miette::SourceSpan;
+#[allow(unused)]
+use smartstring::alias::String;
 
 use super::{resolve_file, AssembledData};
 use crate::brr::wav;
@@ -52,7 +54,7 @@ impl AssembledData {
 				},
 				Reference::MacroArgument { span, name, .. } =>
 					return Err(AssemblyError::AssigningToMacroArgument {
-						name:     (*name).to_string(),
+						name:     (*name).to_string().into(),
 						src:      self.source_code.clone(),
 						location: *span,
 					}
@@ -117,14 +119,14 @@ impl AssembledData {
 		let actual_path = resolve_file(&self.source_code, file_name);
 		let file = File::open(actual_path).map_err(|os_error| AssemblyError::FileNotFound {
 			os_error,
-			file_name: file_name.to_string(),
+			file_name: file_name.to_string().into(),
 			src: self.source_code.clone(),
 			location: directive.span,
 		})?;
 		let mut sample_data =
 			wav::read_wav_for_brr(file).map_err(|error_text| AssemblyError::AudioProcessingError {
 				error_text,
-				file_name: file_name.to_string(),
+				file_name: file_name.to_string().into(),
 				src: self.source_code.clone(),
 				location: directive.span,
 			})?;
@@ -171,7 +173,7 @@ impl AssembledData {
 				.ok_or(AssemblyError::RangeOutOfBounds {
 					start:    range.offset(),
 					end:      range.offset() + range.len(),
-					file:     file.to_string(),
+					file:     file.to_string().into(),
 					file_len: data.len(),
 					src:      self.source_code.clone(),
 					location: source_span,

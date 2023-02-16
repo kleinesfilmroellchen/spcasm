@@ -4,6 +4,8 @@ use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
 use miette::{MietteError, MietteSpanContents, SourceCode, SourceSpan, SpanContents};
+#[allow(unused)]
+use smartstring::alias::String;
 
 use crate::AssemblyError;
 
@@ -40,10 +42,10 @@ impl AssemblyCode {
 		Self::from_file(file_name).map_err(|os_error| {
 			AssemblyError::FileNotFound {
 				os_error,
-				file_name: file_name.to_string(),
+				file_name: file_name.to_string().into(),
 				src: std::sync::Arc::new(Self {
 					name: std::path::PathBuf::from("<<arguments>>"),
-					text: file_name.to_string(),
+					text: file_name.to_string().into(),
 					..Default::default()
 				}),
 				location: (0, file_name.len()).into(),
@@ -58,7 +60,7 @@ impl AssemblyCode {
 	pub fn new(text: &str, name: String) -> Self {
 		Self {
 			text:         text.chars().filter(|c| c != &'\r').collect(),
-			name:         PathBuf::from(name),
+			name:         PathBuf::from(name.to_string()),
 			include_path: Vec::new(),
 		}
 	}
@@ -90,9 +92,9 @@ impl AssemblyCode {
 	pub fn file_name_for(path: &Path) -> String {
 		let cwd = uniform_canonicalize(&PathBuf::from(".")).unwrap();
 		if path.starts_with(&cwd) {
-			path.strip_prefix(cwd).unwrap().to_string_lossy().to_string()
+			path.strip_prefix(cwd).unwrap().to_string_lossy().to_string().into()
 		} else {
-			path.as_os_str().to_string_lossy().to_string()
+			path.as_os_str().to_string_lossy().to_string().into()
 		}
 	}
 }
@@ -131,7 +133,7 @@ impl SourceCode for AssemblyCode {
 	) -> Result<Box<dyn SpanContents<'a> + 'a>, MietteError> {
 		let result = self.text.read_span(span, context_lines_before, context_lines_after)?;
 		let retval = Box::new(MietteSpanContents::new_named(
-			self.file_name(),
+			self.file_name().into(),
 			result.data(),
 			*result.span(),
 			result.line(),

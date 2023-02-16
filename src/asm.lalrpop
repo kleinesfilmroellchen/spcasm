@@ -4,6 +4,8 @@
 use miette::{SourceOffset, SourceSpan};
 use lalrpop_util::ParseError;
 
+use smartstring::alias::String;
+
 use std::sync::{Weak, Arc};
 use std::cell::RefCell;
 
@@ -37,7 +39,7 @@ InstructionOrDirective: ProgramElement = {
 	InstructionWithTestComment => ProgramElement::Instruction(<>),
 	DirectiveWithTestComment => ProgramElement::Directive(<>),
 	<directive:"include"> <file:"string"> => ProgramElement::IncludeSource {
-		file: String::from_utf8_lossy(&file.0).to_string(),
+		file: std::string::String::from_utf8_lossy(&file.0).into(),
 		span: source_range(directive.into(), file.1.into()),
 		label: None,
 	},
@@ -131,7 +133,7 @@ Directive: Directive = {
 	<directive:"brr"> <filename:"string"> <range:InclusionRange?> <options:IdentifierOptions> =>? Ok(Directive {
 		value: apply_brr_options(source_range(directive.into(), filename.1.into()), source_code,
 			DirectiveValue::Brr {
-				file: String::from_utf8_lossy(&filename.0).into_owned(),
+				file: std::string::String::from_utf8_lossy(&filename.0).into(),
 				range,
 				auto_trim: false,
 				directory: true,
@@ -163,7 +165,7 @@ Directive: Directive = {
 	},
 	<directive:"incbin"> <text:"string"> <range:InclusionRange?> => Directive {
 		value: DirectiveValue::Include {
-			file: String::from_utf8_lossy(&text.0).into_owned(),
+			file: std::string::String::from_utf8_lossy(&text.0).into(),
 			range,
 		},
 		span: source_range(directive.into(), text.1.into()),

@@ -2,6 +2,9 @@
 
 use std::vec::IntoIter;
 
+#[allow(unused)]
+use smartstring::alias::String;
+
 use crate::error::AssemblyError;
 use crate::parser::{source_range, Register, Token};
 

@@ -6,6 +6,8 @@ use std::fmt::Display;
 use std::sync::Arc;
 
 use miette::SourceSpan;
+#[allow(unused)]
+use smartstring::alias::String;
 use spcasm_derive::Parse;
 
 use crate::parser::instruction::MemoryAddress;
@@ -243,7 +245,7 @@ impl MacroParentReplacable for DirectiveValue {
 			| Self::Org(_) => Ok(()),
 			Self::AssignReference { value, .. } => value.replace_macro_parent(replacement_parent, source_code),
 			Self::UserDefinedMacro { name, body, .. } => Err(AssemblyError::RecursiveMacroDefinition {
-				name:     (*name).to_string(),
+				name:     (*name).to_string().into(),
 				location: source_range(
 					body.first().map_or_else(|| (0, 0).into(), |p| *p.span()).into(),
 					body.last().map_or_else(|| (0, 0).into(), |p| *p.span()).into(),

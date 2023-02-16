@@ -8,6 +8,8 @@ use std::sync::Arc;
 use clap::Args;
 #[cfg(feature = "binaries")]
 use miette::Diagnostic;
+#[allow(unused)]
+use smartstring::alias::String;
 
 use crate::error::{AssemblyError, ErrorCodes};
 
@@ -138,7 +140,7 @@ impl From<Discriminant<AssemblyError>> for ErrorCodeSpec {
 const error_prefix: &str = "spcasm::";
 
 impl FromStr for ErrorCodeSpec {
-	type Err = String;
+	type Err = std::string::String;
 
 	fn from_str(string_code: &str) -> Result<Self, Self::Err> {
 		let code_map = AssemblyError::all_codes();
@@ -150,7 +152,7 @@ impl FromStr for ErrorCodeSpec {
 					|| (!string_code.starts_with(error_prefix) && value.get(error_prefix.len()..).is_some_and(|latter_part| latter_part == string_code))
 			})
 			.map(|(key, _)| *key)
-			.ok_or_else(|| "invalid error code".to_string())?;
+			.ok_or_else(|| String::from("invalid error code"))?;
 
 		Ok(discriminant.into())
 	}

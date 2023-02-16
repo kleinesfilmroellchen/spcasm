@@ -3,7 +3,10 @@
 use std::fs::File;
 use std::io::Write;
 
-use crate::{cli, elf, dump_reference_tree, run_assembler_on_file};
+#[allow(unused)]
+use smartstring::alias::String;
+
+use crate::{cli, dump_reference_tree, elf, run_assembler_on_file};
 
 pub fn main() -> miette::Result<()> {
 	use clap::Parser;

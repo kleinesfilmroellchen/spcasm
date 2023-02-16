@@ -114,7 +114,7 @@ pub fn on_assembly_change(options: JsValue) {
 	// Decode other entities
 	let code_text = decode_html_entities(&code_text);
 
-	let source = Arc::new(AssemblyCode::new(&code_text, "<<input>>".to_owned()));
+	let source = Arc::new(AssemblyCode::new(&code_text, "<<input>>".into()));
 
 	let start_time = js_sys::Date::now();
 	let assembler_result = run_assembler(&source, Arc::new(options));

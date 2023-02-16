@@ -6,6 +6,8 @@ use std::sync::Arc;
 
 use lalrpop_util::ParseError;
 use miette::{Diagnostic, SourceSpan};
+#[allow(unused)]
+use smartstring::alias::String;
 use spcasm_derive::ErrorCodes;
 use thiserror::Error;
 
@@ -230,7 +232,7 @@ pub enum AssemblyError {
 		code(spcasm::include_cycle),
 		severity(Error),
 		help(
-			"The file \"{cycle_trigger_file}\" was included:\n{}", src.include_path.iter().map(|path| format!("from {}", AssemblyCode::file_name_for(path))).intersperse("\n".to_string()).collect::<String>()
+			"The file \"{cycle_trigger_file}\" was included:\n{}", src.include_path.iter().map(|path| format!("from {}", AssemblyCode::file_name_for(path))).intersperse("\n".to_string().into()).collect::<String>()
 		)
 	)]
 	IncludeCycle {
@@ -688,13 +690,13 @@ impl AssemblyError {
 				src,
 			},
 			ParseError::UnrecognizedEOF { location, expected } => Self::UnexpectedEndOfTokens {
-				expected: expected.into_iter().map(TokenOrString::String).collect(),
+				expected: expected.into_iter().map(TokenOrString::from).collect(),
 				location: (location, 1).into(),
 				src,
 			},
 			ParseError::UnrecognizedToken { token: (start, token, end), expected } if expected.len() > 1 =>
 				Self::ExpectedTokens {
-					expected: expected.into_iter().map(TokenOrString::String).collect(),
+					expected: expected.into_iter().map(TokenOrString::from).collect(),
 					actual: token,
 					location: (start, end - start).into(),
 					src,
@@ -751,8 +753,14 @@ impl Display for TokenOrString {
 	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> Result<(), std::fmt::Error> {
 		write!(f, "{}", match self {
 			Self::Token(token) => format!("{}", token),
-			Self::String(string) => string.clone(),
+			Self::String(string) => string.clone().into(),
 		})
+	}
+}
+
+impl From<std::string::String> for TokenOrString {
+	fn from(string: std::string::String) -> Self {
+		Self::String(string.into())
 	}
 }
 
@@ -764,7 +772,7 @@ impl From<String> for TokenOrString {
 
 impl From<&str> for TokenOrString {
 	fn from(string: &str) -> Self {
-		Self::String(string.to_owned())
+		Self::String(string.into())
 	}
 }
 

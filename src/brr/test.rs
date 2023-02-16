@@ -5,6 +5,8 @@
 #![allow(overflowing_literals)]
 
 extern crate test;
+#[allow(unused)]
+use smartstring::alias::String;
 use test::Bencher;
 
 use super::wav::read_wav_for_brr;

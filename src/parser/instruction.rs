@@ -7,6 +7,8 @@ use std::result::Result;
 use std::sync::Arc;
 
 use miette::SourceSpan;
+#[allow(unused)]
+use smartstring::alias::String;
 use spcasm_derive::{Parse, VariantName};
 
 use super::reference::{self, GlobalLabel, MacroParentReplacable, Reference};

@@ -9,6 +9,8 @@ use std::path::PathBuf;
 use ::wav::WAV_FORMAT_PCM;
 use clap::{Parser, Subcommand, ValueEnum};
 use num_traits::cast::FromPrimitive;
+#[allow(unused)]
+use smartstring::alias::String;
 #[allow(clippy::wildcard_imports)]
 use spcasm::brr::*;
 
@@ -92,7 +94,7 @@ enum Command {
 		)]
 		output:      Option<PathBuf>,
 		#[arg(
-			value_parser = |string: &str| string.parse().map_err(|err: std::num::ParseIntError| err.to_string()).and_then(|int| CompressionLevel::from_u8(int).ok_or("compression level out of range".to_string())),
+			value_parser = |string: &str| string.parse().map_err(|err: std::num::ParseIntError| err.to_string().into()).and_then(|int| CompressionLevel::from_u8(int).ok_or("compression level out of range".to_string())),
 			default_value = "2",
 			long,
 			short,
@@ -160,7 +162,7 @@ enum PreEmphasisFilter {
 
 /// Parse an i16 while intentionally allowing wrapping and hex numbers.
 #[allow(clippy::cast_possible_truncation, clippy::cast_possible_wrap)] // this is very intentional!
-fn from_lenient_i16(string: &str) -> Result<i16, String> {
+fn from_lenient_i16(string: &str) -> Result<i16, std::string::String> {
 	string
 		.parse::<i32>()
 		.map(|int| int as i16)
@@ -226,7 +228,7 @@ fn main() {
 				block
 					.encoded_samples
 					.iter()
-					.map(|sample| String::from(format!("{:01X}", sample).chars().last().unwrap()))
+					.map(|sample| String::from(std::string::String::from(format!("{:01X}", sample).chars().last().unwrap())))
 					.collect::<Vec<_>>()
 					.join(" "),
 			);
@@ -237,7 +239,7 @@ fn main() {
 		Command::Encode { input, output, compression, filter, loop_point } => {
 			let output = output.unwrap_or_else(|| input.with_extension("brr"));
 			let mut samples = File::open(input)
-				.map_err(|err| err.to_string())
+				.map_err(|err| err.to_string().into())
 				.and_then(wav::read_wav_for_brr)
 				.unwrap_or_else(|error| {
 					eprintln!("error: {}", error);
@@ -283,7 +285,7 @@ fn main() {
 			let mut encoded = Vec::new();
 			let mut samples = File::open(input)
 				.and_then(|mut input_file| input_file.read_to_end(&mut encoded))
-				.map_err(|err| err.to_string())
+				.map_err(|err| err.to_string().into())
 				.and_then(|_| decode_from_brr(&encoded))
 				.unwrap_or_else(|error| {
 					eprintln!("error: {}", error);

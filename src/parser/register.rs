@@ -4,6 +4,8 @@
 
 use std::fmt::Display;
 
+#[allow(unused)]
+use smartstring::alias::String;
 use spcasm_derive::{Parse, VariantName};
 
 use crate::VariantName;

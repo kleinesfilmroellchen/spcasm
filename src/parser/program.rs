@@ -4,6 +4,8 @@ use std::cell::RefCell;
 use std::sync::Arc;
 
 use miette::SourceSpan;
+#[allow(unused)]
+use smartstring::alias::String;
 
 use super::instruction::Instruction;
 use super::reference::{MacroParent, MacroParentReplacable, Reference};

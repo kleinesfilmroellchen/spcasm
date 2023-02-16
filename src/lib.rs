@@ -24,6 +24,9 @@
 )]
 #![allow(non_upper_case_globals)]
 
+#[allow(unused)]
+use smartstring::alias::String;
+
 #[macro_use] extern crate lalrpop_util;
 #[macro_use] extern crate lazy_static;
 

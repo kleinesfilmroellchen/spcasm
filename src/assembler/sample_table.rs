@@ -1,6 +1,8 @@
 //! BRR sample table infrastructure.
 
 use miette::SourceSpan;
+#[allow(unused)]
+use smartstring::alias::String;
 
 use super::AssembledData;
 use crate::parser::reference::Reference;

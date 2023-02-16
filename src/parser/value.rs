@@ -7,6 +7,8 @@ use std::result::Result;
 use std::sync::Arc;
 
 use miette::SourceSpan;
+#[allow(unused)]
+use smartstring::alias::String;
 
 use super::instruction::MemoryAddress;
 use super::reference::{self, GlobalLabel, MacroParentReplacable, Reference};
@@ -89,7 +91,7 @@ impl AssemblyTimeValue {
 		} else {
 			let first_reference = self.first_reference().expect("unresolved value without a reference");
 			Err(AssemblyError::UnresolvedReference {
-				reference:          first_reference.to_string(),
+				reference:          first_reference.to_string().into(),
 				reference_location: Some(first_reference.source_span()),
 				usage_location:     location,
 				src:                source_code,

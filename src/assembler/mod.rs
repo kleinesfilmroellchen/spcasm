@@ -5,10 +5,12 @@ use std::path::PathBuf;
 use std::sync::Arc;
 
 use miette::{Result, SourceSpan};
+#[allow(unused)]
+use smartstring::alias::String;
 
 use crate::cli::{default_backend_options, BackendOptions};
 use crate::error::AssemblyError;
-use crate::parser::instruction::{AddressingMode, AddressingModeCategory, Instruction, MemoryAddress, Opcode};
+use crate::parser::instruction::{AddressingMode, Instruction, MemoryAddress, Opcode};
 use crate::parser::reference::{Reference, Resolvable};
 use crate::parser::value::BinaryOperator;
 use crate::parser::{AssemblyTimeValue, ProgramElement, Register};
@@ -138,7 +140,7 @@ impl LabeledMemoryValue {
 					.first_reference()
 					.expect("AssemblyTimeValue resolution failure was not caused by reference; this is a bug!");
 				AssemblyError::UnresolvedReference {
-					reference:          first_reference.to_string(),
+					reference:          first_reference.to_string().into(),
 					reference_location: Some(first_reference.source_span()),
 					usage_location:     self.instruction_location,
 					src:                src.clone(),
@@ -310,8 +312,7 @@ impl AssembledData {
 					self.append_8_bits(MemoryAddress::from(*opcode), label.clone(), *span)
 				},
 			EntryOrFirstOperandTable::Table(first_operand_table) => {
-				let mut legal_modes: Vec<_> =
-					first_operand_table.keys().map(AddressingModeCategory::to_string).collect();
+				let mut legal_modes: Vec<_> = first_operand_table.keys().map(|f| f.to_string().into()).collect();
 				legal_modes.sort();
 				let first_operand = first_operand.as_ref().ok_or_else(|| AssemblyError::MissingOperand {
 					mnemonic:    *mnemonic,
@@ -323,7 +324,7 @@ impl AssembledData {
 				// Retrieve the table entry for the first operand.
 				let first_operand_entry = first_operand_table.get(&first_operand.into()).ok_or_else(|| {
 					AssemblyError::InvalidFirstAddressingMode {
-						mode: first_operand.to_string(),
+						mode: first_operand.to_string().into(),
 						mnemonic: *mnemonic,
 						legal_modes,
 						src: self.source_code.clone(),
@@ -404,7 +405,7 @@ impl AssembledData {
 					),
 					EntryOrSecondOperandTable::Table(second_operand_table) => {
 						let mut legal_modes: Vec<_> =
-							second_operand_table.keys().map(AddressingModeCategory::to_string).collect();
+							second_operand_table.keys().map(|f| f.to_string().into()).collect();
 						legal_modes.sort();
 						let second_operand =
 							second_operand.as_ref().ok_or_else(|| AssemblyError::MissingSecondOperand {
@@ -417,9 +418,9 @@ impl AssembledData {
 						let second_operand_entry =
 							second_operand_table.get(&second_operand.into()).ok_or_else(|| {
 								AssemblyError::InvalidSecondAddressingMode {
-									mode: second_operand.to_string(),
+									mode: second_operand.to_string().into(),
 									mnemonic: *mnemonic,
-									first_mode: first_operand.to_string(),
+									first_mode: first_operand.to_string().into(),
 									legal_modes,
 									src: self.source_code.clone(),
 									location: *span,
@@ -663,7 +664,7 @@ impl AssembledData {
 							Reference::MacroArgument { value: Some(_), .. } => Ok(()),
 							Reference::MacroArgument { value: None, span, .. } =>
 								Err(AssemblyError::UnresolvedReference {
-									reference:          resolved_reference.to_string(),
+									reference:          resolved_reference.to_string().into(),
 									reference_location: None,
 									usage_location:     span,
 									src:                self.source_code.clone(),

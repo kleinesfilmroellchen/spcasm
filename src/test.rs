@@ -1,6 +1,8 @@
 extern crate test;
 use std::cmp::min;
 
+#[allow(unused)]
+use smartstring::alias::String;
 use test::Bencher;
 
 use crate::cli::default_backend_options;
@@ -152,7 +154,7 @@ fn coverage() {
 	crate::parser::instruction::Mnemonic::default();
 	crate::error::TokenOrString::default();
 
-	let code = crate::AssemblyCode::new("\r\n", "hello".to_owned()).clone();
+	let code = crate::AssemblyCode::new("\r\n", "hello".into()).clone();
 	println!("{:?}", code);
 	assert!(crate::AssemblyCode::from_file_or_assembly_error("does-not-exist").is_err());
 	assert!(crate::AssemblyCode::from_file_or_assembly_error("/does-not-exist").is_err());
@@ -167,7 +169,7 @@ fn coverage() {
 	let local = crate::parser::reference::Reference::Local(std::sync::Arc::new(
 		crate::parser::reference::LocalLabel {
 			location: None,
-			name:     "example".to_owned(),
+			name:     "example".into(),
 			span:     (0, 0).into(),
 			parent:   std::sync::Weak::new(),
 		}
@@ -177,7 +179,7 @@ fn coverage() {
 		crate::parser::reference::GlobalLabel {
 			locals:          HashMap::new(),
 			location:        None,
-			name:            "example".to_owned(),
+			name:            "example".into(),
 			used_as_address: true,
 			span:            (0, 0).into(),
 		}
@@ -185,7 +187,7 @@ fn coverage() {
 	));
 	let macro_parent = crate::parser::reference::MacroParent::new_formal(None, (0, 0).into());
 	let macro_parameter = crate::parser::reference::Reference::MacroArgument {
-		name:         "test".to_string(),
+		name:         "test".into(),
 		value:        None,
 		span:         (0, 0).into(),
 		macro_parent: macro_parent.clone(),
@@ -244,7 +246,7 @@ fn coverage() {
 		Token::Equals(0.into()),
 		Token::ExplicitDirectPage(0.into()),
 		Token::Hash(0.into()),
-		Token::Identifier("something".to_owned(), 0.into()),
+		Token::Identifier("something".into(), 0.into()),
 		Token::Minus(0.into()),
 		Token::Newline(0.into()),
 		Token::Mnemonic(crate::parser::instruction::Mnemonic::Adc, 0.into()),

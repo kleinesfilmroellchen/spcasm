@@ -5,10 +5,10 @@
   "main": "index.js",
   "scripts": {
     "build": "webpack --config webpack.config.js",
-    "start": "webpack-dev-server"
+    "start": "webpack-dev-server --config webpack.config.js"
   },
   "dependencies": {
-    "spcasm-web-wasm": "file:../pkg"
+    "spcasm-web": "file:../pkg"
   },
   "devDependencies": {
     "copy-webpack-plugin": "^5.0.0",

@@ -1,6 +1,6 @@
 "use strict";
 
-import * as spcasm from "spcasm-web-wasm";
+import * as spcasm from "spcasm-web";
 
 // Creates an options object from the UI input.
 function createOptions() {

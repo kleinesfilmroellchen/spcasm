@@ -368,9 +368,13 @@ pub fn merge_local_into_parent(
 		let reference_value = local.borrow().location.clone();
 		let reference_name = local.borrow().name.clone();
 
-		local = mutable_global.locals.entry(reference_name).or_insert_with(|| local).clone();
+		// Only assign the parent if there is none at the moment.
+		if local.borrow_mut().parent.upgrade().is_none() {
+			local = mutable_global.locals.entry(reference_name).or_insert_with(|| local).clone();
+			let mut mutable_local = local.borrow_mut();
+			mutable_local.parent = Arc::downgrade(&actual_global_label);
+		}
 		let mut mutable_local = local.borrow_mut();
-		mutable_local.parent = Arc::downgrade(&actual_global_label);
 		mutable_local.location = mutable_local.location.clone().or(reference_value);
 		drop(mutable_local);
 		Ok(local)

@@ -8,7 +8,7 @@ use miette::SourceSpan;
 use smartstring::alias::String;
 
 use super::instruction::Instruction;
-use super::reference::{MacroParent, MacroParentReplacable, Reference};
+use super::reference::{merge_local_into_parent, MacroParent, MacroParentReplacable, Reference};
 use super::{AssemblyTimeValue, Directive};
 use crate::parser::source_range;
 use crate::{AssemblyCode, AssemblyError};
@@ -66,23 +66,42 @@ impl ProgramElement {
 		self
 	}
 
-	/// Set the label on this program element, returning itself.
-	#[allow(clippy::missing_const_for_fn)] // false positive
+	/// Set the labels on this program element, returning itself.
+	#[allow(clippy::missing_panics_doc)]
 	#[must_use]
-	pub fn set_label(self, label: Option<Reference>) -> Self {
+	pub fn set_labels(self, mut labels: Vec<Reference>, source_code: &Arc<AssemblyCode>) -> Self {
+		// Preserve the label hierarchy correctly.
+		let mut current_global = None;
+		let mut last_label = if labels.is_empty() { None } else { Some(labels.remove(labels.len() - 1)) };
+		for mut label in labels {
+			// The unwrap cannot fail since that would mean that we never entered the loop.
+			label.set_location(AssemblyTimeValue::Reference(last_label.clone().unwrap()));
+			match label {
+				Reference::Global(ref global) => current_global = Some(global.clone()),
+				Reference::Local(ref local) =>
+					if current_global.is_some() {
+						merge_local_into_parent(local.clone(), current_global.clone(), source_code).unwrap();
+					},
+				_ => (),
+			}
+		}
+		if let (Some(global), Some(Reference::Local(ref mut local))) = (current_global, &mut last_label) {
+			*local = merge_local_into_parent(local.clone(), Some(global), source_code).unwrap();
+		}
+
 		match self {
 			Self::Directive(mut directive) => {
-				directive.label = directive.label.or(label);
+				directive.label = directive.label.or(last_label);
 				Self::Directive(directive)
 			},
 			Self::Instruction(mut instruction) => {
-				instruction.label = instruction.label.or(label);
+				instruction.label = instruction.label.or(last_label);
 				Self::Instruction(instruction)
 			},
 			Self::IncludeSource { file, span, label: original_label } =>
-				Self::IncludeSource { file, span, label: original_label.or(label) },
+				Self::IncludeSource { file, span, label: original_label.or(last_label) },
 			Self::UserDefinedMacroCall { span, arguments, macro_name, label: original_label } =>
-				Self::UserDefinedMacroCall { span, arguments, macro_name, label: original_label.or(label) },
+				Self::UserDefinedMacroCall { span, arguments, macro_name, label: original_label.or(last_label) },
 		}
 	}
 

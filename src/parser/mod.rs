@@ -237,33 +237,29 @@ impl AssemblyFile {
 		for element in &mut self.content {
 			// First match for reference resolution in instruction position
 			match element {
-				// Macro labeled with local label
+				// Directive labeled with local label
 				ProgramElement::Directive(Directive {
 					value, label: Some(Reference::Local(ref mut local)), ..
 				}) => {
-					if let DirectiveValue::AssignReference { reference: Reference::Local(assigned_local), .. } = value {
-						*assigned_local = reference::merge_local_into_parent(
-							assigned_local.clone(),
-							current_global_label.clone(),
-							&self.source_code,
-						)?;
-					}
+					value.set_global_label(&current_global_label, &self.source_code);
 					*local = reference::merge_local_into_parent(
 						local.clone(),
 						current_global_label.clone(),
 						&self.source_code,
 					)?;
 				},
-				// Macro labeled with global label
+				// Directive labeled with global label
 				ProgramElement::Directive(Directive { label: Some(Reference::Global(ref global)), value, .. }) => {
 					current_global_label = Some(global.clone());
-					if let DirectiveValue::AssignReference { reference: Reference::Local(local), .. } = value {
-						*local = reference::merge_local_into_parent(
-							local.clone(),
-							current_global_label.clone(),
-							&self.source_code,
-						)?;
-					}
+					value.set_global_label(&current_global_label, &self.source_code);
+				},
+
+				ProgramElement::Directive(Directive {
+					label: None | Some(Reference::MacroGlobal { .. }),
+					value,
+					..
+				}) => {
+					value.set_global_label(&current_global_label, &self.source_code);
 				},
 
 				// Anything else labeled with global label - we need to update the current global
@@ -273,11 +269,7 @@ impl AssemblyFile {
 					current_global_label = Some(global.clone()),
 
 				// Anything labeled with local label: fill in the reference and merge local label.
-				ProgramElement::Directive(Directive {
-					value: DirectiveValue::AssignReference { reference: Reference::Local(ref mut local), .. },
-					..
-				})
-				| ProgramElement::Instruction(Instruction { label: Some(Reference::Local(ref mut local)), .. })
+				ProgramElement::Instruction(Instruction { label: Some(Reference::Local(ref mut local)), .. })
 				| ProgramElement::UserDefinedMacroCall { label: Some(Reference::Local(ref mut local)), .. }
 				| ProgramElement::IncludeSource { label: Some(Reference::Local(ref mut local)), .. } =>
 					*local = reference::merge_local_into_parent(
@@ -291,8 +283,7 @@ impl AssemblyFile {
 					label: None | Some(Reference::MacroGlobal { .. }), ..
 				})
 				| ProgramElement::IncludeSource { label: None | Some(Reference::MacroGlobal { .. }), .. }
-				| ProgramElement::UserDefinedMacroCall { label: None | Some(Reference::MacroGlobal { .. }), .. }
-				| ProgramElement::Directive(Directive { label: None | Some(Reference::MacroGlobal { .. }), .. }) => (),
+				| ProgramElement::UserDefinedMacroCall { label: None | Some(Reference::MacroGlobal { .. }), .. } => (),
 
 				// Anything labeled with a user macro argument: This is always an error; we're not inside a user macro.
 				ProgramElement::Instruction(Instruction {
@@ -529,8 +520,6 @@ impl AssemblyFile {
 
 		// 2. (assume direct page references everywhere)
 		// Store by how much later objects need to be offset forwards.
-		// FIXME: This will move objects in later segments even though they should not be influenced; the segment start
-		// position is independent of the size (change) of previous instructions.
 		let mut address_offset = 0;
 		let mut last_segment = None;
 		for ReferencedObject { address, segment_start, object } in &mut referenced_objects {
@@ -617,7 +606,7 @@ impl AssemblyFile {
 	/// Sets the first label in this file if a label was given.
 	pub fn set_first_label(&mut self, reference: Option<Reference>) {
 		if let Some(first) = self.content.get_mut(0) {
-			*first = first.clone().set_label(reference);
+			*first = first.clone().set_labels(reference.into_iter().collect(), &self.source_code);
 		}
 	}
 

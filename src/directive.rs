@@ -11,8 +11,8 @@ use smartstring::alias::String;
 use spcasm_derive::Parse;
 
 use crate::parser::instruction::MemoryAddress;
-use crate::parser::reference::{MacroParent, MacroParentReplacable, Reference};
-use crate::parser::{source_range, AssemblyTimeValue, ProgramElement};
+use crate::parser::reference::{GlobalLabel, MacroParent, MacroParentReplacable, Reference};
+use crate::parser::{self, source_range, AssemblyTimeValue, ProgramElement};
 use crate::{AssemblyCode, AssemblyError, Segments};
 
 /// An assembly directive, often confusingly referred to as a "macro". spcasm uses the term "macro" to specifically mean
@@ -217,6 +217,39 @@ impl DirectiveValue {
 			| Self::SampleTable { .. }
 			| Self::Include { .. }
 			| Self::AssignReference { .. } => false,
+		}
+	}
+
+	/// Set this global label as the parent for all the unresolved local labels.
+	pub fn set_global_label(&mut self, label: &Option<Arc<RefCell<GlobalLabel>>>, source_code: &Arc<AssemblyCode>) {
+		if let Some(label) = label {
+			match self {
+				Self::Table { values, .. } =>
+					for value in values.iter_mut() {
+						value.set_global_label(label);
+					},
+				Self::AssignReference { reference, value } => {
+					if let Reference::Local(assigned_local) = reference {
+						*assigned_local = parser::reference::merge_local_into_parent(
+							assigned_local.clone(),
+							Some(label.clone()),
+							source_code,
+						)
+						.unwrap();
+					}
+					value.set_global_label(label);
+				},
+				Self::UserDefinedMacro { .. } // TODO: Multi-labeled instructions in user defined macros will probably not work correctly!
+				| Self::Include { .. }
+				| Self::SampleTable { .. }
+				| Self::Brr { .. }
+				| Self::String { .. }
+				| Self::Placeholder
+				| Self::End
+				| Self::PushSection
+				| Self::PopSection
+				| Self::Org(_) => {},
+			}
 		}
 	}
 }

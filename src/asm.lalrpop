@@ -32,8 +32,9 @@ grammar<'env, 'src>(environment: &'env Arc<RefCell<Environment>>, source_code: &
 
 pub Program: Vec<ProgramElement> = "\n"* <line:( <Line> )*> => line;
 
-Line: ProgramElement = <label:( <LabelForInstruction> "\n"* )?> <element:InstructionOrDirective> <newlines:("\n"+)> => 
-	element.set_label(label).extend_span(newlines[0].into());
+Line: ProgramElement = <labels:MultipleLabelsForInstruction?> <element:InstructionOrDirective> <newlines:("\n"+)> => {
+	element.set_labels(labels.into_iter().flatten().collect(), source_code).extend_span(newlines[0].into())
+};
 
 InstructionOrDirective: ProgramElement = {
 	InstructionWithTestComment => ProgramElement::Instruction(<>),
@@ -279,8 +280,12 @@ InclusionRange: SourceSpan = {
 	},
 };
 
+// Required for ambiguity resolution purposes.
+#[inline]
+MultipleLabelsForInstruction: Vec<Reference> = LabelForInstruction+;
+
 LabelForInstruction: Reference = {
-	"." <identifier:"identifier"> ":" => Reference::Local(
+	"." <identifier:"identifier"> ":" "\n"* => Reference::Local(
 		// Create a new local label that might be merged in the future.
 		Arc::new(RefCell::new(LocalLabel {
 			name: identifier.0.clone(),
@@ -290,7 +295,7 @@ LabelForInstruction: Reference = {
 			parent: Weak::new(),
 		}))
 	),
-	<identifier:"identifier"> ":" => Reference::Global(environment.borrow_mut().get_global_label(&identifier.0, identifier.1, LabelUsageKind::AsDefinition)),
+	<identifier:"identifier"> ":" "\n"* => Reference::Global(environment.borrow_mut().get_global_label(&identifier.0, identifier.1, LabelUsageKind::AsDefinition)),
 };
 
 Reference: Reference = {

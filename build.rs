@@ -3,7 +3,7 @@ extern crate lalrpop;
 fn main() {
 	// Make Cargo rebuild when the parser generator input file changes.
 	println!("cargo:rerun-if-changed=src/asm.lalrpop");
-	lalrpop::process_root().unwrap();
+	lalrpop::Configuration::new().use_cargo_dir_conventions().process_file("src/asm.lalrpop").unwrap();
 
 	#[cfg(feature = "binaries")]
 	{

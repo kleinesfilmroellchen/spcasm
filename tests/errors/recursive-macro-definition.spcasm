@@ -1,0 +1,7 @@
+
+macro something
+  mov a,#4
+  macro something_else
+	mov x,#4
+  endmacro
+endmacro

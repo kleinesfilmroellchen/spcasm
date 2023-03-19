@@ -1,0 +1,9 @@
+
+macro has_argument(macro_argument)
+  mov x,<macro_argument>
+endmacro
+
+label:
+  mov x,#6
+
+<macro_argument> = 8

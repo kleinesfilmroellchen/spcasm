@@ -1,0 +1,6 @@
+macro blah(is_defined)
+	mov a,<is_not_defined>
+endmacro
+
+org 0
+%blah(1)

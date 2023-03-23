@@ -72,10 +72,8 @@ impl ProgramElement {
 	pub fn set_labels(self, mut labels: Vec<Reference>, source_code: &Arc<AssemblyCode>) -> Self {
 		// Preserve the label hierarchy correctly.
 		let mut current_global = None;
-		let mut last_label = if labels.is_empty() { None } else { Some(labels.remove(labels.len() - 1)) };
-		for mut label in labels {
-			// The unwrap cannot fail since that would mean that we never entered the loop.
-			label.set_location(AssemblyTimeValue::Reference(last_label.clone().unwrap()));
+		// First: Assign all local labels to their preceding global label, and find the last global label, if any.
+		for label in &mut labels {
 			match label {
 				Reference::Global(ref global) => current_global = Some(global.clone()),
 				Reference::Local(ref local) =>
@@ -85,23 +83,30 @@ impl ProgramElement {
 				_ => (),
 			}
 		}
-		if let (Some(global), Some(Reference::Local(ref mut local))) = (current_global, &mut last_label) {
-			*local = merge_local_into_parent(local.clone(), Some(global), source_code).unwrap();
+		// If there was no global label, we only have locals. Use the last local as the reference for everyone else.
+		let mut master_label = current_global.map(Reference::Global).or_else(|| labels.pop());
+		if let Some(ref mut master_label) = master_label {
+			for mut label in labels {
+				if label != *master_label {
+					label.set_location(AssemblyTimeValue::Reference(master_label.clone()));
+				}
+			}
 		}
 
+		// Assign the master label to this program element.
 		match self {
 			Self::Directive(mut directive) => {
-				directive.label = directive.label.or(last_label);
+				directive.label = directive.label.or(master_label);
 				Self::Directive(directive)
 			},
 			Self::Instruction(mut instruction) => {
-				instruction.label = instruction.label.or(last_label);
+				instruction.label = instruction.label.or(master_label);
 				Self::Instruction(instruction)
 			},
 			Self::IncludeSource { file, span, label: original_label } =>
-				Self::IncludeSource { file, span, label: original_label.or(last_label) },
+				Self::IncludeSource { file, span, label: original_label.or(master_label) },
 			Self::UserDefinedMacroCall { span, arguments, macro_name, label: original_label } =>
-				Self::UserDefinedMacroCall { span, arguments, macro_name, label: original_label.or(last_label) },
+				Self::UserDefinedMacroCall { span, arguments, macro_name, label: original_label.or(master_label) },
 		}
 	}
 

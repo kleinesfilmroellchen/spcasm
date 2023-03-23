@@ -43,9 +43,9 @@ org $3000
 
 overlapping_global_label:
 second_overlapping_global_label:
-; .overlapping_local_label:
+.overlapping_local_label:
 nop
 
 dw overlapping_global_label ;= 00 30
 dw second_overlapping_global_label ;= 00 30
-; dw .overlapping_local_label ;= 00 30
+dw .overlapping_local_label ;= 00 30

@@ -185,9 +185,16 @@ mod clap_dependent {
 		#[arg(default_value = "elf", long, short = 'f')]
 		pub output_format: OutputFormat,
 
-		/// Dump all references and their final values / locations
+		/// Dump all references and their final values / locations.
 		#[arg(long, short = 'd')]
 		pub dump_references: bool,
+		/// Dump the program's abstract syntax tree. This is a debugging feature and most likely not useful to the end
+		/// user.
+		///
+		/// WARNING: This option will, in specific circumstances, loop forever trying to print recursive data
+		/// structures. This can happen on well-formed programs.
+		#[arg(long, short = 'a')]
+		pub dump_ast:        bool,
 	}
 
 	/// Format to output to; see `SpcasmCli`.

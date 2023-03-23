@@ -66,6 +66,12 @@ pub fn dump_reference_tree(global_references: &[Arc<std::cell::RefCell<GlobalLab
 	}
 }
 
+/// Dumps the program AST (abstract syntax tree) for debugging purposes.
+pub fn dump_ast(ast: &Vec<ProgramElement>) {
+	// TODO: Don't print so much irrelevant information.
+	println!("{:#?}", ast);
+}
+
 /// Run the assembler on a single file. No errors options are provided; this is mainly intended for non-clap builds
 /// where that has no effect anyways.
 ///

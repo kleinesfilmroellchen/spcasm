@@ -6,7 +6,7 @@ use std::io::Write;
 #[allow(unused)]
 use smartstring::alias::String;
 
-use crate::{cli, dump_reference_tree, elf, run_assembler_on_file};
+use crate::{cli, dump_ast, dump_reference_tree, elf, run_assembler, AssemblyCode, AssemblyError};
 
 pub fn main() -> miette::Result<()> {
 	use clap::Parser;
@@ -23,11 +23,16 @@ pub fn main() -> miette::Result<()> {
 	args.warning_flags.expand_all();
 	let file_name = args.input;
 
-	let (environment, assembled) =
-		run_assembler_on_file(&file_name.to_string_lossy(), std::sync::Arc::new(args.warning_flags))?;
+	let options = std::sync::Arc::new(args.warning_flags);
+	let code = AssemblyCode::from_file_or_assembly_error(&file_name.to_string_lossy()).map_err(AssemblyError::from)?;
+	let (environment, assembled) = run_assembler(&code, options)?;
 
 	if args.dump_references {
 		dump_reference_tree(&environment.borrow().globals);
+	}
+
+	if args.dump_ast {
+		dump_ast(&environment.borrow().files.get(&code.name).unwrap().borrow().content);
 	}
 
 	if let Some(outfile) = args.output {

@@ -53,6 +53,13 @@ Options:
   -d, --dump-references
           Dump all references and their final values / locations
 
+  -a, --dump-ast
+          Dump the program's abstract syntax tree. This is a debugging feature and most likely not
+          useful to the end user.
+          
+          WARNING: This option will, in specific circumstances, loop forever trying to print
+          recursive data structures. This can happen on well-formed programs.
+
   -h, --help
           Print help (see a summary with '-h')
 

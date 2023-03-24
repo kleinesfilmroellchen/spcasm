@@ -1,1 +1,3 @@
 *.spcasm linguist-language=Assembly
+*.spcasmtest linguist-language=Assembly
+*.spcasmtest.noerror linguist-language=Assembly

@@ -2,10 +2,14 @@
 #![allow(clippy::module_name_repetitions)]
 
 use std::cell::RefCell;
+use std::collections::HashMap;
 use std::fmt::Display;
+use std::hash::Hash;
 use std::sync::Arc;
 
 use miette::SourceSpan;
+use num_derive::ToPrimitive;
+use num_traits::ToPrimitive;
 #[allow(unused)]
 use smartstring::alias::String;
 use spcasm_derive::Parse;
@@ -52,6 +56,7 @@ impl Directive {
 				));
 				Ok(())
 			},
+			DirectiveValue::SetDirectiveParameters { .. } => todo!(),
 			_ => Ok(()),
 		}
 		.map_err(|_| AssemblyError::NoSegmentOnStack { location: self.span, src: source_code }.into())
@@ -103,6 +108,16 @@ pub enum DirectiveSymbol {
 	Macro,
 	EndMacro,
 	Math,
+	Fill,
+	FillByte,
+	FillWord,
+	FillLong,
+	FillDWord,
+	Pad,
+	PadByte,
+	PadWord,
+	PadLong,
+	PadDWord,
 }
 
 impl Display for DirectiveSymbol {
@@ -126,6 +141,16 @@ impl Display for DirectiveSymbol {
 			Self::Macro => "macro",
 			Self::EndMacro => "endmacro",
 			Self::Math => "math",
+			Self::Fill => "fill",
+			Self::FillByte => "fillbyte",
+			Self::FillWord => "fillword",
+			Self::FillLong => "filllong",
+			Self::FillDWord => "filldword",
+			Self::Pad => "pad",
+			Self::PadByte => "padbyte",
+			Self::PadWord => "padword",
+			Self::PadLong => "padlong",
+			Self::PadDWord => "paddword",
 		})
 	}
 }
@@ -175,9 +200,21 @@ pub enum DirectiveValue {
 	PopSection,
 	/// macro
 	UserDefinedMacro { name: String, arguments: Arc<RefCell<MacroParent>>, body: Vec<ProgramElement> },
+	/// A variety of global parameters are changed with this directive.
+	SetDirectiveParameters(HashMap<DirectiveParameter, AssemblyTimeValue>),
+	/// fill, pad
+	Fill {
+		/// The exact fill operation to be performed.
+		operation: FillOperation,
+		/// The value to fill with, populated from a global directive parameter.
+		value:     Option<AssemblyTimeValue>,
+	},
 }
 
 impl DirectiveValue {
+	/// A large assembled size constant which effectively disables all optimizations.
+	const large_assembled_size: usize = u16::MAX as usize;
+
 	/// Returns the final size of this directive once assembled. Note that:
 	/// - some directives are purely symbolic and will not (directly) impact the size of the assembly, at least not
 	///   here, and
@@ -193,12 +230,19 @@ impl DirectiveValue {
 			| Self::UserDefinedMacro { .. }
 			| Self::AssignReference { .. }
 			| Self::Placeholder
+			| Self::SetDirectiveParameters { .. }
 			| Self::Org(..) => 0,
 			Self::Table { values, entry_size } => values.len() * *entry_size as usize,
+			Self::String { text, has_null_terminator } => text.len() + (usize::from(*has_null_terminator)),
+			Self::Fill { operation: FillOperation::FillAmount, value } => value
+				.clone()
+				.and_then(|value| value.value_using_resolver(&|_| None))
+				.unwrap_or((Self::large_assembled_size).try_into().unwrap())
+				as usize,
 			// Use a large assembled size as a signal that we don't know at this point. This will force any later
 			// reference out of the direct page, which will always yield correct behavior.
-			Self::Include { .. } | Self::Brr { .. } | Self::SampleTable { .. } => 65536,
-			Self::String { text, has_null_terminator } => text.len() + (usize::from(*has_null_terminator)),
+			Self::Include { .. } | Self::Brr { .. } | Self::SampleTable { .. } | Self::Fill { .. } =>
+				Self::large_assembled_size,
 		}
 	}
 
@@ -208,12 +252,14 @@ impl DirectiveValue {
 			Self::Org(_)
 			| Self::Placeholder
 			| Self::PushSection
+			| Self::SetDirectiveParameters { .. }
 			| Self::PopSection
 			| Self::End
 			| Self::UserDefinedMacro { .. } => true,
 			Self::Table { .. }
 			| Self::String { .. }
 			| Self::Brr { .. }
+			| Self::Fill { .. }
 			| Self::SampleTable { .. }
 			| Self::Include { .. }
 			| Self::AssignReference { .. } => false,
@@ -244,6 +290,8 @@ impl DirectiveValue {
 				| Self::SampleTable { .. }
 				| Self::Brr { .. }
 				| Self::String { .. }
+				| Self::SetDirectiveParameters { .. }
+				| Self::Fill { .. }
 				| Self::Placeholder
 				| Self::End
 				| Self::PushSection
@@ -274,6 +322,8 @@ impl MacroParentReplacable for DirectiveValue {
 			| Self::Placeholder
 			| Self::Brr { .. }
 			| Self::SampleTable { .. }
+			| Self::SetDirectiveParameters { .. }
+			| Self::Fill { .. }
 			| Self::PopSection
 			| Self::Org(_) => Ok(()),
 			Self::AssignReference { value, .. } => value.replace_macro_parent(replacement_parent, source_code),
@@ -289,4 +339,33 @@ impl MacroParentReplacable for DirectiveValue {
 			.into()),
 		}
 	}
+}
+
+/// Global directive parameters. Many Asar-derived directives use global parameters which are set via a separate
+/// directive. This enum lists all of the supported parameter kinds.
+#[derive(Copy, Clone, Debug, Eq, PartialEq, ToPrimitive)]
+#[repr(u8)]
+pub enum DirectiveParameter {
+	FillValue,
+	PadValue,
+	FillSize,
+	PadSize,
+}
+
+// Special perfect hash for DirectiveParameters.
+impl Hash for DirectiveParameter {
+	fn hash<H: ~const std::hash::Hasher>(&self, state: &mut H) {
+		state.write_u8(self.to_u8().expect("unreachable"));
+	}
+}
+
+/// Exact fill operation that should be performed by a fill-like directive.
+#[derive(Clone, Debug, PartialEq)]
+pub enum FillOperation {
+	/// fill align
+	FillToAlignment { offset: Option<AssemblyTimeValue> },
+	/// pad
+	FillToAddress,
+	/// fill
+	FillAmount,
 }

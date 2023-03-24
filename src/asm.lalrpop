@@ -8,9 +8,10 @@ use smartstring::alias::String;
 
 use std::sync::{Weak, Arc};
 use std::cell::RefCell;
+use std::collections::HashMap;
 
 use crate::parser::{
-	instruction::{Instruction, Mnemonic, AddressingMode, Opcode},
+	instruction::{Instruction, Mnemonic, AddressingMode, Opcode, MemoryAddress},
 	Environment,
 	AssemblyTimeValue,
 	value::{UnaryOperator, BinaryOperator},
@@ -24,7 +25,7 @@ use crate::parser::{
 	apply_sample_table_options,
 	program::ProgramElement,
 };
-use crate::directive::{DirectiveSymbol, Directive, DirectiveValue};
+use crate::directive::{DirectiveSymbol, Directive, DirectiveValue, DirectiveParameter, FillOperation};
 use crate::error::AssemblyError;
 use crate::AssemblyCode;
 
@@ -198,6 +199,20 @@ Directive: Directive = {
 		}).map_err(|error| ParseError::User { error })
 	},
 	ArchDirective,
+	FillAlignDirective,
+	FillAmountDirective,
+	<value_directive:FillOrPadValueDirective> <fill_value:AssemblyTimeValue> => Directive {
+		value: DirectiveValue::SetDirectiveParameters ({
+			let mut parameters = HashMap::with_capacity(2);
+			let (value_parameter, size_parameter, size, _) = value_directive;
+			parameters.insert(value_parameter, fill_value);
+			parameters.insert(size_parameter, AssemblyTimeValue::Literal(size as MemoryAddress));
+			parameters
+		}),
+		span: value_directive.3,
+		label: None,
+		expected_value: None,
+	},
 	LabelAssignment,
 	UserDefinedMacro,
 };
@@ -209,6 +224,18 @@ TableDirective: (DirectiveSymbol, SourceSpan) = {
 	"word" => (DirectiveSymbol::Dw, <>),
 	"dl" => (DirectiveSymbol::Dl, <>),
 	"dd" => (DirectiveSymbol::Dd, <>),
+};
+
+/// First parameter is the value parameter, second parameter is the size parameter.
+FillOrPadValueDirective: (DirectiveParameter, DirectiveParameter, u8, SourceSpan) = {
+	"fillbyte" => (DirectiveParameter::FillValue, DirectiveParameter::FillSize, 1, <>),
+	"fillword" => (DirectiveParameter::FillValue, DirectiveParameter::FillSize, 2, <>),
+	"filllong" => (DirectiveParameter::FillValue, DirectiveParameter::FillSize, 3, <>),
+	"filldword" => (DirectiveParameter::FillValue, DirectiveParameter::FillSize, 4, <>),
+	"padbyte" => (DirectiveParameter::PadValue, DirectiveParameter::PadSize, 1, <>),
+	"padword" => (DirectiveParameter::PadValue, DirectiveParameter::PadSize, 2, <>),
+	"padlong" => (DirectiveParameter::PadValue, DirectiveParameter::PadSize, 3, <>),
+	"paddword" => (DirectiveParameter::PadValue, DirectiveParameter::PadSize, 4, <>),
 };
 
 IdentifierOptions = "identifier"*;
@@ -229,14 +256,42 @@ ArchDirective: Directive = <directive:"arch"> <arch:"identifier"> =>? {
 	}
 };
 
+FillAlignDirective: Directive = <directive:"fill"> <align_keyword:"align"> <alignment:AssemblyTimeValue> <offset:OffsetSpecifier?> => {
+	let location = source_range(directive.into(), offset.clone().map(|o| o.1.into()).unwrap_or(align_keyword.into()));
+	Directive {
+		value: DirectiveValue::Fill {
+			operation: FillOperation::FillToAlignment {
+				offset: offset.map(|offset| offset.0),
+			},
+			value: None,
+		},
+		span: location,
+		label: None,
+		expected_value: None,
+	}
+};
+
+FillAmountDirective: Directive = <directive:"fill"> <amount:AssemblyTimeValue> => Directive {
+	value: DirectiveValue::Fill {
+		operation: FillOperation::FillAmount,
+		value: None,
+	},
+	span: directive,
+	label: None,
+	expected_value: None,
+};
+
+OffsetSpecifier: (AssemblyTimeValue, SourceSpan) = <offset_keyword:"offset"> <offset:AssemblyTimeValue> =>
+	(offset, offset_keyword.into());
+
 UserDefinedMacro: Directive = <start:"macro"> <name:"identifier"> <arguments:UserDefinedMacroArguments?> "\n" <body:Program> <end:"endmacro"> => Directive {
 	value: DirectiveValue::UserDefinedMacro {
 		name: name.0,
 		arguments: MacroParent::new_formal(arguments, name.1),
 		body,
 	},
-	span: source_range(start.into(), end.into()),
-	label: None,
+	span:           source_range(start.into(), end.into()),
+	label:          None,
 	expected_value: None,
 };
 
@@ -444,6 +499,18 @@ extern {
 		"pushpc" => Token::Directive(DirectiveSymbol::Pushpc, <SourceSpan>),
 		"pullpc" => Token::Directive(DirectiveSymbol::Pullpc, <SourceSpan>),
 		"arch" => Token::Directive(DirectiveSymbol::Arch, <SourceSpan>),
+		"offset" => Token::SpecialIdentifier("offset", <SourceSpan>),
+		"align" => Token::SpecialIdentifier("align", <SourceSpan>),
+		"fill" => Token::Directive(DirectiveSymbol::Fill, <SourceSpan>),
+		"fillbyte" => Token::Directive(DirectiveSymbol::FillByte, <SourceSpan>),
+		"fillword" => Token::Directive(DirectiveSymbol::FillWord, <SourceSpan>),
+		"filllong" => Token::Directive(DirectiveSymbol::FillLong, <SourceSpan>),
+		"filldword" => Token::Directive(DirectiveSymbol::FillDWord, <SourceSpan>),
+		"pad" => Token::Directive(DirectiveSymbol::Pad, <SourceSpan>),
+		"padbyte" => Token::Directive(DirectiveSymbol::PadByte, <SourceSpan>),
+		"padword" => Token::Directive(DirectiveSymbol::PadWord, <SourceSpan>),
+		"padlong" => Token::Directive(DirectiveSymbol::PadLong, <SourceSpan>),
+		"paddword" => Token::Directive(DirectiveSymbol::PadDWord, <SourceSpan>),
 		"macro" => Token::Directive(DirectiveSymbol::Macro, <SourceSpan>),
 		"endmacro" => Token::Directive(DirectiveSymbol::EndMacro, <SourceSpan>),
 		"math" => Token::Directive(DirectiveSymbol::Math, <SourceSpan>),

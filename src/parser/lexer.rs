@@ -83,8 +83,10 @@ pub fn lex(source_code: Arc<AssemblyCode>) -> Result<Vec<Token>, Box<AssemblyErr
 				let identifier = next_identifier(&mut chars, chr);
 				index += identifier.len();
 				let identifier_span =  (start_index, identifier.len()).into();
-				tokens.push(Register::parse(&identifier.to_lowercase(), identifier_span, source_code.clone())
-								.map(|value| Token::Register(value, identifier_span))
+				tokens.push(Token::parse_special_identifier(&identifier.to_lowercase(), identifier_span, source_code.clone())
+									.map(|value| Token::SpecialIdentifier(value, identifier_span))
+								.or_else(|_| Register::parse(&identifier.to_lowercase(), identifier_span, source_code.clone())
+									.map(|value| Token::Register(value, identifier_span)))
 								.or_else(|_| DirectiveSymbol::parse(&identifier.to_lowercase(), identifier_span, source_code.clone())
 									.map(|value| Token::Directive(value, identifier_span)))
 								.or_else(|_| Mnemonic::parse(&identifier.to_lowercase(), identifier_span, source_code.clone())
@@ -194,7 +196,8 @@ fn next_number(
 	start_index: usize,
 	source_code: Arc<AssemblyCode>,
 ) -> Result<(i64, usize), Box<AssemblyError>> {
-	let mut number_chars: String = first_char.map_or_else(std::string::String::default, std::string::String::from).into();
+	let mut number_chars: String =
+		first_char.map_or_else(std::string::String::default, std::string::String::from).into();
 	while let Some(chr) = chars.peek() && chr.is_alphanumeric() {
 		number_chars.push(chars.next().unwrap());
 	}

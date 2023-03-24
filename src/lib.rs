@@ -20,6 +20,7 @@
 	maybe_uninit_uninit_array,
 	const_trait_impl,
 	drain_filter,
+	extend_one,
 	maybe_uninit_array_assume_init
 )]
 #![allow(non_upper_case_globals)]

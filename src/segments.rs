@@ -2,18 +2,20 @@
 //!
 //! This lives in a separate module because both semantic analysis and assembler need to consider segments.
 
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, HashMap};
 
 #[allow(unused)]
 use smartstring::alias::String;
 
 use crate::assembler::sample_table::SampleTable;
+use crate::directive::DirectiveParameter;
 use crate::parser::instruction::MemoryAddress;
+use crate::parser::AssemblyTimeValue;
 
-/// Handles segments within the final assembled binary. The type of data contained within each segment is the generic
+/// Handles binary segments and assembler state. The type of data contained within each segment is the generic
 /// parameter; the assembler uses memory values and other analysis passes use other kinds of information per assembled
 /// element. Segments provide the datastructure representation of the segment state that the user can manipulate via
-/// various segment-related directives.
+/// various segment-related directives. Segments also contain other global state which is modified via directives.
 #[derive(Debug, Clone)]
 pub struct Segments<Contained> {
 	/// The data segments. These are checked later when being combined into one.
@@ -24,6 +26,8 @@ pub struct Segments<Contained> {
 	pub segment_stack:         Vec<MemoryAddress>,
 	/// Current contents of the BRR sample table.
 	pub sample_table:          SampleTable,
+	/// Current state of the directive parameters.
+	pub directive_parameters:  HashMap<DirectiveParameter, AssemblyTimeValue>,
 }
 
 #[allow(clippy::result_unit_err)]
@@ -97,6 +101,7 @@ impl<Contained> Segments<Contained> {
 			current_segment_start: self.current_segment_start,
 			segment_stack:         self.segment_stack,
 			sample_table:          self.sample_table,
+			directive_parameters:  self.directive_parameters,
 			segments:              self
 				.segments
 				.into_iter()
@@ -115,6 +120,7 @@ impl<Contained> Default for Segments<Contained> {
 			current_segment_start: None,
 			segment_stack:         Vec::default(),
 			sample_table:          SampleTable::default(),
+			directive_parameters:  HashMap::default(),
 		}
 	}
 }

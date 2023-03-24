@@ -9,6 +9,7 @@ use smartstring::alias::String;
 use crate::directive::DirectiveSymbol;
 use crate::parser::instruction::Mnemonic;
 use crate::parser::Register;
+use crate::{AssemblyCode, AssemblyError};
 
 /// Assembly language tokens.
 #[derive(Debug, Clone)]
@@ -17,6 +18,8 @@ pub enum Token {
 	Mnemonic(Mnemonic, SourceSpan),
 	/// Identifier, i.e. a reference.
 	Identifier(String, SourceSpan),
+	/// A "special" identifier used in some directives as a keyword.
+	SpecialIdentifier(&'static str, SourceSpan),
 	/// Register name (this can never be used as an identifier).
 	Register(Register, SourceSpan),
 	/// + Register name; necessary for LALRPOP.
@@ -94,6 +97,7 @@ impl PartialEq for Token {
 			(Self::Register(register, ..), Self::Register(other_register, ..)) => register == other_register,
 			(Self::PlusRegister(register, ..), Self::PlusRegister(other_register, ..)) => register == other_register,
 			(Self::Mnemonic(mnemonic, ..), Self::Mnemonic(other_mnemonic, ..)) => mnemonic == other_mnemonic,
+			(Self::SpecialIdentifier(text, ..), Self::SpecialIdentifier(other_text, ..)) => text == other_text,
 			(Self::String(text, ..), Self::String(other_text, ..)) => text == other_text,
 			(Self::Colon(..), Self::Colon(..))
 			| (Self::OpenParenthesis(..), Self::OpenParenthesis(..))
@@ -166,9 +170,28 @@ impl Token {
 			| Self::DoubleOpenAngleBracket(location)
 			| Self::DoubleCloseAngleBracket(location)
 			| Self::Mnemonic(_, location)
+			| Self::SpecialIdentifier(_, location)
 			| Self::Directive(_, location) => *location,
 			// #[cfg(test)]
 			Self::TestComment(_, location) => *location,
+		}
+	}
+
+	/// Parse a special identifier, mainly validating that the identifier given is one of the special identifiers.
+	pub fn parse_special_identifier(
+		identifier: &str,
+		span: SourceSpan,
+		src: std::sync::Arc<AssemblyCode>,
+	) -> Result<&'static str, AssemblyError> {
+		match identifier {
+			"offset" => Ok("offset"),
+			"align" => Ok("align"),
+			_ => Err(AssemblyError::ExpectedToken {
+				expected: String::from("identifier").into(),
+				actual: Token::Identifier(identifier.into(), span),
+				location: span,
+				src,
+			}),
 		}
 	}
 }
@@ -180,6 +203,7 @@ impl Display for Token {
 		};
 		write!(f, "{}", match self {
 			Self::Identifier(..) => "identifier",
+			Self::SpecialIdentifier(name, ..) => name,
 			Self::String(..) => "string",
 			Self::Register(..) => "register name",
 			Self::PlusRegister(..) => "'+' register name",

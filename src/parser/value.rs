@@ -7,6 +7,7 @@ use std::result::Result;
 use std::sync::Arc;
 
 use miette::SourceSpan;
+use num_derive::{FromPrimitive, ToPrimitive};
 #[allow(unused)]
 use smartstring::alias::String;
 
@@ -238,6 +239,41 @@ impl UpperHex for AssemblyTimeValue {
 			Self::UnaryOperation(number, operator) => write_correctly(&operator.to_string(), f, number.as_ref()),
 			Self::BinaryOperation(lhs, rhs, operator) => write_binary(&operator.to_string(), f, lhs, rhs),
 		}
+	}
+}
+
+/// Size of a value in memory. SPC-700 assembly uses 65c816 naming:
+/// - byte: 1 byte
+/// - word: 2 bytes
+/// - long: 3 bytes (a 65c816 address)
+/// - doubleword/dword: 4 bytes
+#[derive(Clone, Copy, Debug, Eq, PartialEq, Ord, PartialOrd, FromPrimitive, ToPrimitive)]
+#[repr(u8)]
+pub enum Size {
+	/// 1 byte
+	Byte = 1,
+	/// 2 bytes
+	Word = 2,
+	/// 3 bytes
+	Long = 3,
+	/// 4 bytes
+	DWord = 4,
+}
+
+/// An assembly-time value that also carries a size.
+/// The size determines what truncation happens before the value is written out.
+#[derive(Clone, Debug, PartialEq)]
+#[allow(clippy::module_name_repetitions)]
+pub struct SizedAssemblyTimeValue {
+	/// The value itself.
+	pub value: AssemblyTimeValue,
+	/// The size of the value in memory.
+	pub size:  Size,
+}
+
+impl Default for SizedAssemblyTimeValue {
+	fn default() -> Self {
+		Self { value: AssemblyTimeValue::Literal(0), size: Size::Byte }
 	}
 }
 

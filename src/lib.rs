@@ -21,6 +21,8 @@
 	const_trait_impl,
 	drain_filter,
 	extend_one,
+	try_blocks,
+	option_get_or_insert_default,
 	maybe_uninit_array_assume_init
 )]
 #![allow(non_upper_case_globals)]

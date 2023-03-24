@@ -12,7 +12,7 @@ use crate::cli::{default_backend_options, BackendOptions};
 use crate::error::AssemblyError;
 use crate::parser::instruction::{AddressingMode, Instruction, MemoryAddress, Opcode};
 use crate::parser::reference::{Reference, Resolvable};
-use crate::parser::value::BinaryOperator;
+use crate::parser::value::{BinaryOperator, Size, SizedAssemblyTimeValue};
 use crate::parser::{AssemblyTimeValue, ProgramElement, Register};
 use crate::{pretty_hex, AssemblyCode, Segments};
 
@@ -549,6 +549,32 @@ impl AssembledData {
 	) -> Result<(), Box<AssemblyError>> {
 		self.append_8_bits_unresolved(value.clone(), 0, reference, span)?;
 		self.append_8_bits_unresolved(value, 1, None, span)
+	}
+
+	/// Appends an unresolved value to the current segment. The value is sized, which determines how many bytes are
+	/// appended.
+	///
+	/// # Errors
+	/// If there is no segment currently.
+	fn append_sized_unresolved(
+		&mut self,
+		value: SizedAssemblyTimeValue,
+		reference: Option<Reference>,
+		span: SourceSpan,
+	) -> Result<(), Box<AssemblyError>> {
+		match value.size {
+			Size::Byte => self.append_8_bits_unresolved(value.value, 0, reference, span),
+			Size::Word => self.append_16_bits_unresolved(value.value, reference, span),
+			Size::Long => {
+				self.append_16_bits_unresolved(value.value.clone(), reference, span)?;
+				self.append_8_bits_unresolved(value.value, 2, None, span)
+			},
+			Size::DWord => {
+				self.append_16_bits_unresolved(value.value.clone(), reference, span)?;
+				self.append_8_bits_unresolved(value.value.clone(), 2, None, span)?;
+				self.append_8_bits_unresolved(value.value, 3, None, span)
+			},
+		}
 	}
 
 	/// Appends an unresolved value to the current segment. The reference will be resolved to a

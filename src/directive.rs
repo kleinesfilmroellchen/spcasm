@@ -9,13 +9,14 @@ use std::sync::Arc;
 
 use miette::SourceSpan;
 use num_derive::ToPrimitive;
-use num_traits::ToPrimitive;
+use num_traits::{FromPrimitive, ToPrimitive};
 #[allow(unused)]
 use smartstring::alias::String;
 use spcasm_derive::Parse;
 
 use crate::parser::instruction::MemoryAddress;
 use crate::parser::reference::{GlobalLabel, MacroParent, MacroParentReplacable, Reference};
+use crate::parser::value::{Size, SizedAssemblyTimeValue};
 use crate::parser::{self, source_range, AssemblyTimeValue, ProgramElement};
 use crate::{AssemblyCode, AssemblyError, Segments};
 
@@ -38,11 +39,11 @@ impl Directive {
 	/// If the segments are mishandles, for example an empty segment stack.
 	#[allow(clippy::missing_panics_doc)]
 	pub fn perform_segment_operations_if_necessary<Contained>(
-		&self,
+		&mut self,
 		segments: &mut Segments<Contained>,
 		source_code: Arc<AssemblyCode>,
 	) -> Result<(), Box<AssemblyError>> {
-		match &self.value {
+		match &mut self.value {
 			DirectiveValue::PopSection => segments.pop_segment(),
 			DirectiveValue::PushSection => segments.push_segment(),
 			DirectiveValue::Org(address) => {
@@ -57,7 +58,32 @@ impl Directive {
 				));
 				Ok(())
 			},
-			DirectiveValue::SetDirectiveParameters { .. } => todo!(),
+			DirectiveValue::SetDirectiveParameters(parameters) => {
+				for (parameter, value) in parameters {
+					match parameter {
+						DirectiveParameter::FillValue =>
+							segments.directive_parameters.fill_value.get_or_insert_default().value = value.clone(),
+						DirectiveParameter::PadValue =>
+							segments.directive_parameters.pad_value.get_or_insert_default().value = value.clone(),
+						DirectiveParameter::FillSize =>
+							segments.directive_parameters.fill_value.get_or_insert_default().size =
+								Size::from_i64(value.try_value(self.span, source_code.clone())?).unwrap(),
+						DirectiveParameter::PadSize =>
+							segments.directive_parameters.pad_value.get_or_insert_default().size =
+								Size::from_i64(value.try_value(self.span, source_code.clone())?).unwrap(),
+					}
+				}
+				Ok(())
+			},
+			DirectiveValue::Fill { value, operation, .. } => {
+				*value = if operation.is_fill() {
+					&segments.directive_parameters.fill_value
+				} else {
+					&segments.directive_parameters.pad_value
+				}
+				.clone();
+				Ok(())
+			},
 			_ => Ok(()),
 		}
 		.map_err(|_| AssemblyError::NoSegmentOnStack { location: self.span, src: source_code }.into())
@@ -167,9 +193,7 @@ pub enum DirectiveValue {
 	/// dw <16-bit word>
 	Table {
 		/// The entries of the table. For simple directives like "dw $0A", this only has one entry.
-		values:     Vec<AssemblyTimeValue>,
-		/// How many bytes each entry occupies; depends on the specific directive used.
-		entry_size: u8,
+		values: Vec<SizedAssemblyTimeValue>,
 	},
 	/// brr <file name>
 	Brr {
@@ -207,8 +231,11 @@ pub enum DirectiveValue {
 	Fill {
 		/// The exact fill operation to be performed.
 		operation: FillOperation,
+		/// The operation parameter which decides how much to fill. This is interpreted in a variety of ways depending
+		/// on the fill operation.
+		parameter: AssemblyTimeValue,
 		/// The value to fill with, populated from a global directive parameter.
-		value:     Option<AssemblyTimeValue>,
+		value:     Option<SizedAssemblyTimeValue>,
 	},
 }
 
@@ -234,11 +261,11 @@ impl DirectiveValue {
 			| Self::Placeholder
 			| Self::SetDirectiveParameters { .. }
 			| Self::Org(..) => 0,
-			Self::Table { values, entry_size } => values.len() * *entry_size as usize,
+			Self::Table { values } =>
+				values.len() * values.first().and_then(|value| value.size.to_u8()).unwrap_or(0) as usize,
 			Self::String { text, has_null_terminator } => text.len() + (usize::from(*has_null_terminator)),
-			Self::Fill { operation: FillOperation::Amount, value } => value
-				.clone()
-				.and_then(|value| value.value_using_resolver(&|_| None))
+			Self::Fill { operation: FillOperation::Amount, parameter, .. } => parameter
+				.value_using_resolver(&|_| None)
 				.unwrap_or_else(|| (Self::large_assembled_size).try_into().unwrap())
 				as usize,
 			// Use a large assembled size as a signal that we don't know at this point. This will force any later
@@ -274,7 +301,7 @@ impl DirectiveValue {
 			match self {
 				Self::Table { values, .. } =>
 					for value in values.iter_mut() {
-						value.set_global_label(label);
+						value.value.set_global_label(label);
 					},
 				Self::AssignReference { reference, value } => {
 					if let Reference::Local(assigned_local) = reference {
@@ -313,7 +340,7 @@ impl MacroParentReplacable for DirectiveValue {
 		match self {
 			Self::Table { values, .. } => {
 				for value in values {
-					value.replace_macro_parent(replacement_parent.clone(), source_code)?;
+					value.value.replace_macro_parent(replacement_parent.clone(), source_code)?;
 				}
 				Ok(())
 			},
@@ -370,4 +397,67 @@ pub enum FillOperation {
 	ToAddress,
 	/// fill
 	Amount,
+}
+
+impl FillOperation {
+	/// Returns whether this operation represents a `fill` directive in source code (true), or a `pad` directive
+	/// (false).
+	#[must_use]
+	pub const fn is_fill(&self) -> bool {
+		match self {
+			Self::ToAlignment { .. } | Self::Amount => true,
+			Self::ToAddress => false,
+		}
+	}
+
+	/// Returns the amount of bytes to fill, given the fill operation parameter and a current address from which to
+	/// start filling. The result depends on which fill operation is performed:
+	/// - `ToAddress` uses the parameter as the address to fill to. The amount to fill is the distance of that to the
+	///   current address.
+	/// - `ToAlignment` uses the parameter as the alignment to achieve. The amount to fill is the difference between the
+	///   current memory address and the next correctly-aligned address. Also, the offset (if provided) is added to that
+	///   fill amount.
+	/// - `Amount` uses the parameter directly as the amount of bytes to fill.
+	pub fn amount_to_fill(
+		&self,
+		parameter: MemoryAddress,
+		current_address: MemoryAddress,
+		location: SourceSpan,
+		source_code: &Arc<AssemblyCode>,
+	) -> Result<MemoryAddress, AssemblyError> {
+		Ok(match self {
+			Self::ToAlignment { offset } => {
+				let alignment = parameter;
+				// Technically speaking, every address is aligned to 0 :^)
+				if alignment == 0 {
+					0
+				} else {
+					// If this address is already aligned, no fill is required.
+					let offset_to_aligned_address =
+						if current_address % alignment == 0 { 0 } else { alignment - current_address % alignment };
+					offset_to_aligned_address
+						+ offset.clone().map_or(Ok(0), |offset| offset.try_value(location, source_code.clone()))?
+				}
+			},
+			Self::ToAddress => parameter - current_address,
+			Self::Amount => parameter,
+		})
+	}
+}
+
+impl Display for FillOperation {
+	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+		write!(f, "{}", match self {
+			Self::ToAlignment { .. } => "fill align",
+			Self::ToAddress => "pad",
+			Self::Amount => "fill",
+		})
+	}
+}
+
+/// State of all directive parameters, used for state management in the segment structures.
+#[derive(Clone, Debug, Default)]
+pub struct DirectiveParameterTable {
+	fill_value: Option<SizedAssemblyTimeValue>,
+	pad_value:  Option<SizedAssemblyTimeValue>,
 }

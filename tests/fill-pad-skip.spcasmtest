@@ -1,0 +1,30 @@
+fillbyte $fa
+
+org $20
+fill 3 ;= FA FA FA
+
+fillword $5e
+fill 2 ;= 5E 00 5E 00
+
+fill align 4 ;= 5E
+db 0
+fillbyte $09
+fill align 4 ;= 09 09 09
+
+org 0
+; Even though we specified `fillword` in a "later" segment, such specifications use source code order.
+fill 1 ;= 09
+
+fillword $2A
+padbyte $13
+pad $03 ;= 13 13
+
+padword $5162
+pad $06 ;= 62 51 62
+
+; fill examples from the Asar manual
+fillbyte $FF
+fill 8 ;= FF FF FF FF FF FF FF FF
+org $35
+; this writes $FF until address $3A (=$38 + 2)
+fill align 8 offset 2 ;= FF FF FF FF FF FF

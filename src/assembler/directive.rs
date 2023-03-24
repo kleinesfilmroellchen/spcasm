@@ -3,13 +3,17 @@
 use std::fs::File;
 
 use miette::SourceSpan;
+use num_traits::{FromPrimitive, ToPrimitive};
 #[allow(unused)]
 use smartstring::alias::String;
 
 use super::{resolve_file, AssembledData};
 use crate::brr::wav;
-use crate::directive::DirectiveValue;
+use crate::directive::{DirectiveValue, FillOperation};
+use crate::parser::instruction::MemoryAddress;
 use crate::parser::reference::Reference;
+use crate::parser::value::{Size, SizedAssemblyTimeValue};
+use crate::parser::AssemblyTimeValue;
 use crate::{brr, AssemblyError, Directive};
 
 impl AssembledData {
@@ -19,17 +23,12 @@ impl AssembledData {
 	/// Any error caused by the directive assembly process is returned.
 	#[allow(clippy::unnecessary_wraps)]
 	pub fn assemble_directive(&mut self, directive: &mut Directive) -> Result<(), Box<AssemblyError>> {
-		directive.perform_segment_operations_if_necessary(&mut self.segments, self.source_code.clone())?;
+		// directive.perform_segment_operations_if_necessary(&mut self.segments, self.source_code.clone())?;
 		match directive.value {
-			DirectiveValue::Table { entry_size, ref values } => {
+			DirectiveValue::Table { ref values } => {
 				let mut reference = directive.label.clone();
 				for value in values {
-					match entry_size {
-						1 => self.append_8_bits_unresolved(value.clone(), 0, reference, directive.span)?,
-						2 => self.append_16_bits_unresolved(value.clone(), reference, directive.span)?,
-						3 | 4 => unimplemented!(),
-						_ => unreachable!(),
-					}
+					self.append_sized_unresolved(value.clone(), reference, directive.span)?;
 					reference = None;
 				}
 			},
@@ -102,6 +101,20 @@ impl AssembledData {
 					.into());
 				}
 				self.assemble_sample_table(&directive.label, directive.span)?;
+			},
+			DirectiveValue::Fill { ref operation, ref parameter, ref value } => {
+				let current_address = self.segments.current_location().map_err(|_| AssemblyError::MissingSegment {
+					location: directive.span,
+					src:      self.source_code.clone(),
+				})?;
+				self.assemble_fill(
+					operation,
+					parameter,
+					value.clone(),
+					current_address,
+					directive.label.clone(),
+					directive.span,
+				)?;
 			},
 			_ => {},
 		}
@@ -182,5 +195,54 @@ impl AssembledData {
 		} else {
 			data
 		})
+	}
+
+	/// Assemble a fill-like directive (fill, fill align, pad).
+	pub(super) fn assemble_fill(
+		&mut self,
+		operation: &FillOperation,
+		parameter: &AssemblyTimeValue,
+		value: Option<SizedAssemblyTimeValue>,
+		current_address: MemoryAddress,
+		reference: Option<Reference>,
+		location: SourceSpan,
+	) -> Result<(), Box<AssemblyError>> {
+		println!("assembling {:?}: {:?}", operation, value);
+		let value = value.ok_or(AssemblyError::MissingFillParameter {
+			operation: operation.to_string().into(),
+			is_fill: operation.is_fill(),
+			location,
+			src: self.source_code.clone(),
+		})?;
+		let amount_to_fill = operation.amount_to_fill(
+			parameter.try_value(location, self.source_code.clone())?,
+			current_address,
+			location,
+			&self.source_code,
+		)?;
+		// Mostly an optimization.
+		if amount_to_fill == 0 {
+			return Ok(());
+		}
+
+		let numeric_size = MemoryAddress::from(value.size.to_u8().unwrap());
+		// If we don't fill with bytes, there will be truncation at the end. Handle simple full-sized fills first.
+		let full_sized_fills = amount_to_fill / numeric_size;
+		let mut fill_reference = reference;
+		for _ in 0 .. full_sized_fills {
+			self.append_sized_unresolved(value.clone(), fill_reference, location)?;
+			fill_reference = None;
+		}
+
+		if amount_to_fill == full_sized_fills * numeric_size {
+			return Ok(());
+		}
+		// Since remaining_fill is always smaller than the maximum size, this can not fail.
+		let remaining_fill = Size::from_i64(amount_to_fill - full_sized_fills * numeric_size).unwrap();
+		self.append_sized_unresolved(
+			SizedAssemblyTimeValue { value: value.value, size: remaining_fill },
+			None,
+			location,
+		)
 	}
 }

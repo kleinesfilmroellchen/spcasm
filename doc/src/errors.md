@@ -747,8 +747,8 @@ Error: spcasm::syntax::missing_token
   × Expected any of "/n", "%", ".", "<", "arch", "ascii", "asciiz", "brr",
   │ "byte", "db", "dd", "dl", "dw", "end", "fill", "fillbyte", "filldword",
   │ "filllong", "fillword", "identifier", "incbin", "include", "macro",
-  │ "math", "mnemonic", "org", "padbyte", "paddword", "padlong", "padword",
-  │ "pullpc", "pushpc", "sampletable", "word"
+  │ "math", "mnemonic", "org", "pad", "padbyte", "paddword", "padlong",
+  │ "padword", "pullpc", "pushpc", "sampletable", "word"
    ╭─[tests/errors/parser-missing-token.spcasmtest:1:1]
  1 │ org 0
  2 │ label:

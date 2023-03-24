@@ -2,15 +2,14 @@
 //!
 //! This lives in a separate module because both semantic analysis and assembler need to consider segments.
 
-use std::collections::{BTreeMap, HashMap};
+use std::collections::BTreeMap;
 
 #[allow(unused)]
 use smartstring::alias::String;
 
 use crate::assembler::sample_table::SampleTable;
-use crate::directive::DirectiveParameter;
+use crate::directive::DirectiveParameterTable;
 use crate::parser::instruction::MemoryAddress;
-use crate::parser::AssemblyTimeValue;
 
 /// Handles binary segments and assembler state. The type of data contained within each segment is the generic
 /// parameter; the assembler uses memory values and other analysis passes use other kinds of information per assembled
@@ -27,7 +26,7 @@ pub struct Segments<Contained> {
 	/// Current contents of the BRR sample table.
 	pub sample_table:          SampleTable,
 	/// Current state of the directive parameters.
-	pub directive_parameters:  HashMap<DirectiveParameter, AssemblyTimeValue>,
+	pub directive_parameters:  DirectiveParameterTable,
 }
 
 #[allow(clippy::result_unit_err)]
@@ -120,7 +119,7 @@ impl<Contained> Default for Segments<Contained> {
 			current_segment_start: None,
 			segment_stack:         Vec::default(),
 			sample_table:          SampleTable::default(),
-			directive_parameters:  HashMap::default(),
+			directive_parameters:  DirectiveParameterTable::default(),
 		}
 	}
 }

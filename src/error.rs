@@ -525,6 +525,22 @@ pub enum AssemblyError {
 		option_location:    SourceSpan,
 	},
 
+	#[error("No value specified for `{operation}`")]
+	#[diagnostic(
+		code(spcasm::directive::missing_fill_pad_parameter),
+		help("`{operation}` needs a value, which is specified separately via another directive like `{}`. Such a directive was not found.",
+			if *.is_fill { "fillbyte" } else { "padbyte" }),
+		severity(Error)
+	)]
+	MissingFillParameter {
+		operation: String,
+		is_fill:   bool,
+		#[label("`{operation}` defined here")]
+		location:  SourceSpan,
+		#[source_code]
+		src:       Arc<AssemblyCode>,
+	},
+
 	#[error("BRR sample table has more than 256 entries")]
 	#[diagnostic(
 		code(spcasm::directive::sample_table_too_large),

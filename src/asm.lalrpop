@@ -14,7 +14,7 @@ use crate::parser::{
 	instruction::{Instruction, Mnemonic, AddressingMode, Opcode, MemoryAddress},
 	Environment,
 	AssemblyTimeValue,
-	value::{UnaryOperator, BinaryOperator},
+	value::{UnaryOperator, BinaryOperator, Size, SizedAssemblyTimeValue},
 	LabelUsageKind, 
 	Token,
 	Register,
@@ -103,20 +103,22 @@ Mnemonic: (Mnemonic, bool, SourceSpan) = {
 };
 
 Directive: Directive = {
-	<data_directive:TableDirective> <numbers:AssemblyTimeValueList> => Directive {
-		value: DirectiveValue::Table {
-			values: numbers,
-			entry_size: match data_directive.0 {
-				DirectiveSymbol::Byte | DirectiveSymbol::Db => 1,
-				DirectiveSymbol::Dw | DirectiveSymbol::Word => 2,
-				DirectiveSymbol::Dl => 3,
-				DirectiveSymbol::Dd => 4,
-				_ => unreachable!(),
+	<data_directive:TableDirective> <numbers:AssemblyTimeValueList> => {
+		let size = match data_directive.0 {
+			DirectiveSymbol::Byte | DirectiveSymbol::Db => Size::Byte,
+			DirectiveSymbol::Dw | DirectiveSymbol::Word => Size::Word,
+			DirectiveSymbol::Dl => Size::Long,
+			DirectiveSymbol::Dd => Size::DWord,
+			_ => unreachable!(),
+		};
+		Directive {
+			value: DirectiveValue::Table {
+				values: numbers.into_iter().map(|value| SizedAssemblyTimeValue { value, size }).collect(),
 			},
-		},
-		span: data_directive.1,
-		label: None,
-		expected_value: None,
+			span: data_directive.1,
+			label: None,
+			expected_value: None,
+		}
 	},
 	<directive:"org"> <address:AssemblyTimeValue> =>? Ok(Directive {
 		value: DirectiveValue::Org(address.try_value(directive, source_code.clone()).map_err(|err| ParseError::User {
@@ -201,6 +203,7 @@ Directive: Directive = {
 	ArchDirective,
 	FillAlignDirective,
 	FillAmountDirective,
+	PadDirective,
 	<value_directive:FillOrPadValueDirective> <fill_value:AssemblyTimeValue> => Directive {
 		value: DirectiveValue::SetDirectiveParameters ({
 			let mut parameters = HashMap::with_capacity(2);
@@ -263,6 +266,7 @@ FillAlignDirective: Directive = <directive:"fill"> <align_keyword:"align"> <alig
 			operation: FillOperation::ToAlignment {
 				offset: offset.map(|offset| offset.0),
 			},
+			parameter: alignment,
 			value: None,
 		},
 		span: location,
@@ -274,6 +278,18 @@ FillAlignDirective: Directive = <directive:"fill"> <align_keyword:"align"> <alig
 FillAmountDirective: Directive = <directive:"fill"> <amount:AssemblyTimeValue> => Directive {
 	value: DirectiveValue::Fill {
 		operation: FillOperation::Amount,
+		parameter: amount,
+		value: None,
+	},
+	span: directive,
+	label: None,
+	expected_value: None,
+};
+
+PadDirective: Directive = <directive:"pad"> <address:AssemblyTimeValue> => Directive {
+	value: DirectiveValue::Fill {
+		operation: FillOperation::ToAddress,
+		parameter: address,
 		value: None,
 	},
 	span: directive,

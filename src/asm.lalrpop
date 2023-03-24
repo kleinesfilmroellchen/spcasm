@@ -260,7 +260,7 @@ FillAlignDirective: Directive = <directive:"fill"> <align_keyword:"align"> <alig
 	let location = source_range(directive.into(), offset.clone().map(|o| o.1.into()).unwrap_or(align_keyword.into()));
 	Directive {
 		value: DirectiveValue::Fill {
-			operation: FillOperation::FillToAlignment {
+			operation: FillOperation::ToAlignment {
 				offset: offset.map(|offset| offset.0),
 			},
 			value: None,
@@ -273,7 +273,7 @@ FillAlignDirective: Directive = <directive:"fill"> <align_keyword:"align"> <alig
 
 FillAmountDirective: Directive = <directive:"fill"> <amount:AssemblyTimeValue> => Directive {
 	value: DirectiveValue::Fill {
-		operation: FillOperation::FillAmount,
+		operation: FillOperation::Amount,
 		value: None,
 	},
 	span: directive,

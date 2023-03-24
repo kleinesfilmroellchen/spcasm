@@ -178,6 +178,9 @@ impl Token {
 	}
 
 	/// Parse a special identifier, mainly validating that the identifier given is one of the special identifiers.
+	/// 
+	/// # Errors
+	/// If the identifier is not a special identifier.
 	pub fn parse_special_identifier(
 		identifier: &str,
 		span: SourceSpan,
@@ -188,7 +191,7 @@ impl Token {
 			"align" => Ok("align"),
 			_ => Err(AssemblyError::ExpectedToken {
 				expected: String::from("identifier").into(),
-				actual: Token::Identifier(identifier.into(), span),
+				actual: Self::Identifier(identifier.into(), span),
 				location: span,
 				src,
 			}),

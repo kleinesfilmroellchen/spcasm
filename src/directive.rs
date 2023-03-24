@@ -36,6 +36,7 @@ impl Directive {
 	/// Perform the segments operations of this directive, if this directive does any segment operations.
 	/// # Errors
 	/// If the segments are mishandles, for example an empty segment stack.
+	#[allow(clippy::missing_panics_doc)]
 	pub fn perform_segment_operations_if_necessary<Contained>(
 		&self,
 		segments: &mut Segments<Contained>,
@@ -221,6 +222,7 @@ impl DirectiveValue {
 	/// - the size of some directives is not known at this point, so a large placeholder is used instead. Because the
 	///   purpose of this function is to estimate memory locations for coercing references into direct page mode, the
 	///   large value will force later references into normal addressing, which is always correct.
+	#[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
 	pub fn assembled_size(&self) -> usize {
 		match self {
 			// Symbolic operations take no space.
@@ -234,10 +236,10 @@ impl DirectiveValue {
 			| Self::Org(..) => 0,
 			Self::Table { values, entry_size } => values.len() * *entry_size as usize,
 			Self::String { text, has_null_terminator } => text.len() + (usize::from(*has_null_terminator)),
-			Self::Fill { operation: FillOperation::FillAmount, value } => value
+			Self::Fill { operation: FillOperation::Amount, value } => value
 				.clone()
 				.and_then(|value| value.value_using_resolver(&|_| None))
-				.unwrap_or((Self::large_assembled_size).try_into().unwrap())
+				.unwrap_or_else(|| (Self::large_assembled_size).try_into().unwrap())
 				as usize,
 			// Use a large assembled size as a signal that we don't know at this point. This will force any later
 			// reference out of the direct page, which will always yield correct behavior.
@@ -363,9 +365,9 @@ impl Hash for DirectiveParameter {
 #[derive(Clone, Debug, PartialEq)]
 pub enum FillOperation {
 	/// fill align
-	FillToAlignment { offset: Option<AssemblyTimeValue> },
+	ToAlignment { offset: Option<AssemblyTimeValue> },
 	/// pad
-	FillToAddress,
+	ToAddress,
 	/// fill
-	FillAmount,
+	Amount,
 }

@@ -23,7 +23,6 @@ impl AssembledData {
 	/// Any error caused by the directive assembly process is returned.
 	#[allow(clippy::unnecessary_wraps)]
 	pub fn assemble_directive(&mut self, directive: &mut Directive) -> Result<(), Box<AssemblyError>> {
-		// directive.perform_segment_operations_if_necessary(&mut self.segments, self.source_code.clone())?;
 		match directive.value {
 			DirectiveValue::Table { ref values } => {
 				let mut reference = directive.label.clone();
@@ -207,7 +206,6 @@ impl AssembledData {
 		reference: Option<Reference>,
 		location: SourceSpan,
 	) -> Result<(), Box<AssemblyError>> {
-		println!("assembling {:?}: {:?}", operation, value);
 		let value = value.ok_or(AssemblyError::MissingFillParameter {
 			operation: operation.to_string().into(),
 			is_fill: operation.is_fill(),

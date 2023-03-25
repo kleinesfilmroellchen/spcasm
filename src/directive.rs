@@ -84,6 +84,15 @@ impl Directive {
 				.clone();
 				Ok(())
 			},
+			DirectiveValue::AssignReference { reference: Reference::MacroArgument { name, .. }, .. } =>
+				return Err(AssemblyError::AssigningToMacroArgument {
+					name:     name.clone(),
+					src:      source_code,
+					location: self.span,
+				}
+				.into()),
+			DirectiveValue::AssignReference { reference: Reference::MacroGlobal { .. }, .. } =>
+				return Err(AssemblyError::AssigningToMacroGlobal { src: source_code, location: self.span }.into()),
 			_ => Ok(()),
 		}
 		.map_err(|_| AssemblyError::NoSegmentOnStack { location: self.span, src: source_code }.into())
@@ -284,14 +293,14 @@ impl DirectiveValue {
 			| Self::SetDirectiveParameters { .. }
 			| Self::PopSection
 			| Self::End
+			| Self::AssignReference { .. }
 			| Self::UserDefinedMacro { .. } => true,
 			Self::Table { .. }
 			| Self::String { .. }
 			| Self::Brr { .. }
 			| Self::Fill { .. }
 			| Self::SampleTable { .. }
-			| Self::Include { .. }
-			| Self::AssignReference { .. } => false,
+			| Self::Include { .. } => false,
 		}
 	}
 

@@ -827,8 +827,8 @@ Error: spcasm::user_macro::assign_to_argument
  2 │ 
  3 │ macro my_macro(first)
  4 │     <first> = $40
-   ·     ───┬──
-   ·        ╰── Assignment happens here
+   ·     ──────┬──────
+   ·           ╰── Assignment happens here
  5 │ endmacro
  6 │ 
  7 │ %my_macro(5)

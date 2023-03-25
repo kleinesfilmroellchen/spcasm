@@ -472,18 +472,22 @@ lazy_static! {
 		table.insert(Mnemonic::Cbne, EntryOrFirstOperandTable::from([
 			(AddressingModeCategory::DirectPage, EntryOrSecondOperandTable::from([
 				(AddressingModeCategory::DirectPage, (0x2E, append_both_reversed_as_8_bits as TwoOperandSegmentAction)),
+				(AddressingModeCategory::Address, (0x2E, append_both_reversed_as_8_bits as TwoOperandSegmentAction)),
 			])),
 			(AddressingModeCategory::DirectPageXIndexed, EntryOrSecondOperandTable::from([
 				(AddressingModeCategory::DirectPage, (0xDE, append_both_reversed_as_8_bits as TwoOperandSegmentAction)),
+				(AddressingModeCategory::Address, (0xDE, append_both_reversed_as_8_bits as TwoOperandSegmentAction)),
 			])),
 		]));
 
 		table.insert(Mnemonic::Dbnz, EntryOrFirstOperandTable::from([
 			(AddressingModeCategory::DirectPage, EntryOrSecondOperandTable::from([
 				(AddressingModeCategory::DirectPage, (0x6E, append_both_reversed_as_8_bits as TwoOperandSegmentAction)),
+				(AddressingModeCategory::Address, (0x6E, append_both_reversed_as_8_bits as TwoOperandSegmentAction)),
 			])),
 			(AddressingModeCategory::YRegister, EntryOrSecondOperandTable::from([
 				(AddressingModeCategory::DirectPage, (0xFE, append_second_as_8_bits as TwoOperandSegmentAction)),
+				(AddressingModeCategory::Address, (0x6E, append_both_reversed_as_8_bits as TwoOperandSegmentAction)),
 			])),
 		]));
 
@@ -537,28 +541,36 @@ lazy_static! {
 		table.insert(Mnemonic::And1, EntryOrFirstOperandTable::from([
 			(AddressingModeCategory::CarryFlag, EntryOrSecondOperandTable::from([
 				(AddressingModeCategory::AddressBit, TwoOperandEntry::Entry(0x4A, append_second_as_16_bits_and_bit_index as TwoOperandSegmentAction)),
+				(AddressingModeCategory::Address, TwoOperandEntry::Entry(0x4A, append_second_as_16_bits_and_bit_index as TwoOperandSegmentAction)),
 				(AddressingModeCategory::NegatedAddressBit, TwoOperandEntry::Entry(0x6A, append_second_as_16_bits_and_bit_index)),
 			])),
 		]));
 		table.insert(Mnemonic::Or1, EntryOrFirstOperandTable::from([
 			(AddressingModeCategory::CarryFlag, EntryOrSecondOperandTable::from([
 				(AddressingModeCategory::AddressBit, TwoOperandEntry::Entry(0x0A, append_second_as_16_bits_and_bit_index as TwoOperandSegmentAction)),
+				(AddressingModeCategory::Address, TwoOperandEntry::Entry(0x0A, append_second_as_16_bits_and_bit_index as TwoOperandSegmentAction)),
 				(AddressingModeCategory::NegatedAddressBit, TwoOperandEntry::Entry(0x2A, append_second_as_16_bits_and_bit_index)),
 			])),
 		]));
 		table.insert(Mnemonic::Eor1, EntryOrFirstOperandTable::from([
 			(AddressingModeCategory::CarryFlag, EntryOrSecondOperandTable::from([
 				(AddressingModeCategory::AddressBit, TwoOperandEntry::Entry(0x8A, append_second_as_16_bits_and_bit_index as TwoOperandSegmentAction)),
+				(AddressingModeCategory::Address, TwoOperandEntry::Entry(0x8A, append_second_as_16_bits_and_bit_index as TwoOperandSegmentAction)),
 			])),
 		]));
 		table.insert(Mnemonic::Not1, EntryOrFirstOperandTable::from([
 			(AddressingModeCategory::AddressBit, EntryOrSecondOperandTable::Entry(0xEA, append_one_as_16_bits_and_bit_index as SingleOperandSegmentAction)),
+			(AddressingModeCategory::Address, EntryOrSecondOperandTable::Entry(0xEA, append_one_as_16_bits_and_bit_index as SingleOperandSegmentAction)),
 		]));
 		table.insert(Mnemonic::Mov1, EntryOrFirstOperandTable::from([
 			(AddressingModeCategory::CarryFlag, EntryOrSecondOperandTable::from([
 				(AddressingModeCategory::AddressBit, TwoOperandEntry::Entry(0xAA, append_second_as_16_bits_and_bit_index as TwoOperandSegmentAction)),
+				(AddressingModeCategory::Address, TwoOperandEntry::Entry(0xAA, append_second_as_16_bits_and_bit_index as TwoOperandSegmentAction)),
 			])),
 			(AddressingModeCategory::AddressBit, EntryOrSecondOperandTable::from([
+				(AddressingModeCategory::CarryFlag, TwoOperandEntry::Entry(0xCA, append_first_as_16_bits_and_bit_index as TwoOperandSegmentAction)),
+			])),
+			(AddressingModeCategory::Address, EntryOrSecondOperandTable::from([
 				(AddressingModeCategory::CarryFlag, TwoOperandEntry::Entry(0xCA, append_first_as_16_bits_and_bit_index as TwoOperandSegmentAction)),
 			])),
 		]));

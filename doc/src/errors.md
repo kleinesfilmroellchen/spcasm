@@ -169,6 +169,28 @@ Error: spcasm::directive::math_pri_unsupported
 - If your assembly entirely or mostly uses `math pri on`, you can just remove the directive, as spcasm uses proper math priority like Asar with `math pri on`.
 - If your assembly entirely or mostly uses `math pri off`, you can bracket your math expressions manually to emulate the left-to-right precedence behavior of xkas. Then, remove the directive.
 
+#### spcasm::directive::missing_fill_pad_parameter
+
+```trycmd
+$ spcasm tests/errors/missing-fill-value.spcasmtest
+? 1
+Error: spcasm::directive::missing_fill_pad_parameter
+
+  × No value specified for `fill`
+   ╭─[tests/errors/missing-fill-value.spcasmtest:1:1]
+ 1 │ org 0
+ 2 │ fill 7
+   · ───┬──
+   ·    ╰── `fill` defined here
+   ╰────
+  help: `fill` needs a value, which is specified separately via another
+        directive like `fillbyte`. Such a directive was not found.
+
+
+```
+
+The `fill`, `fill align`, and `pad` directives have the value to be used for filling specified in a separate directive. For `fill` and `fill align`, this is `fillbyte`, `fillword`, `filllong`, `filldword`, and for `pad` it's `padbyte`, `padword`, `padlong`, `paddword`. Note that segments have no effect on these directives, so you must precede the fill directive with the value specification directive in source code. (Yes, these directives have a weird design for Asar compatibility reasons.)
+
 #### spcasm::directive::range_out_of_bounds
 
 ```trycmd

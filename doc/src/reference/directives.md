@@ -44,6 +44,42 @@ asciiz "Hello,\xffbinary world!"
 
 While `ascii` includes nothing but the provided characters, `asciiz` additionally includes a null terminator after the last character. This is useful if you are dealing with strings in a C-like way, using the null terminator to detect their end.
 
+## Fill directives
+
+> Note: The invocation and behavior of fill directives is rather strange, and this way of explaining how they work can rarely be found elsewhere. Keep in mind that fill directives only exist in this form for Asar compatibility, and that I would have designed their syntax very differently.
+
+Fill directives repeat a fill value across a potentially large range of memory. There are three available fill directives, which use the keywords `fill`, `fill align`, and `pad`.
+
+```asm
+; Repeat the value to fill exactly 15 bytes
+fill 15
+; Repeat the value until an alignment of 8 is reached (address divisible by 8)
+fill align 8
+; Fill to alignment of 4, then fill another 5 bytes
+fill align 4 offset 5
+; Fill up to address $8086
+pad $8086
+```
+
+`fill align` is the only variant that takes an extra parameter, which specifies additional fill to be added after the alignment is reached. In spcasm, `fill align 1 offset xyz` and `fill align 0 offset xyz` are equivalent to `fill xyz`.
+
+Note that the fill value can have a size of 1 to 4 bytes. If this does not fit the amount of filled bytes exactly, the value will be truncated. As values are output in little endian as usual, that means that upper byte(s) are truncated, like with instructions.
+
+The value that is used for filling memory, as well as its size, is determined by separate directives. `fill` and `fill align` use one set, while `pad` uses another. A fill value directive is effective from the moment it is used in source code on; segments have no effect on this.
+
+```asm
+; For fill and fill align
+fillbyte $12
+fillword $1234
+filllong $123456
+filldword $12345678
+; For pad
+padbyte $12
+padword $1234
+padlong $123456
+paddword $12345678
+```
+
 ## `incbin`
 
 This directive allows to include a binary file verbatim at the current location. The three supported syntaxes are:
@@ -54,7 +90,7 @@ incbin "file", start [, length] ; vasm-style
 incbin "file": start [- end]    ; Asar-style
 ```
 
-Vasm-style includes can specify a number of bytes to include in addition to the start byte. Asar-style includes can specify the end index of the include; this index is exclusive. If length or end are not specified, both variants include from the given start to the
+Vasm-style includes can specify a number of bytes to include in addition to the start byte. Asar-style includes can specify the end index of the include; this index is exclusive. If length or end are not specified, both variants include from the given start to the end of the file.
 
 File paths are relative to the current file, as with `include`.
 

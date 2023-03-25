@@ -158,7 +158,7 @@ data:         ; @ 13
    asl A     ;= 1C
    asl $05   ;= 0B 05
    asl $06+X ;= 1B 06
-   ASL $0708 ;= CC 08 07
+   ASL $0708 ;= 0C 08 07
 
    LSR A     ;= 5C
    LSR $05   ;= 4B 05
@@ -203,10 +203,10 @@ reltarget:    ; @ 01 62
    bvc reltarget+8  ;= 50 F8
    bmi reltarget+10 ;= 30 F8
    bpl reltarget+12 ;= 10 F8
-   cbne $2B,$2C  ;= 2E 2B 2C
-   cbne $2D+X,$2E;= DE 2D 2E
-   dbnz $2F,$30  ;= 6E 2F 30
-   dbnz Y,$31    ;= FE 31
+   cbne $2B,$2C  ;= 2E 2B B7
+   cbne $2D+X,$2E;= DE 2D B6
+   dbnz $2F,$30  ;= 6E 2F B5
+   dbnz Y,$31    ;= FE B4
    jmp $2122     ;= 5F 22 21
    jmp ($2324+X)     ;= 1F 24 23
 
@@ -223,22 +223,22 @@ another_global: ; @ 01 8D
 global_selftarget:
    bne global_selftarget ;= D0 FE
 
-   bbs data.0,$F9 ;= 03 13 F9
-   bbs $30.1,$F9 ;= 23 30 F9
-   bbs $30.2,$F9 ;= 43 30 F9
-   bbs $30.3,$F9 ;= 63 30 F9
-   bbs $30.4,$F9 ;= 83 30 F9
-   bbs $30.5,$F9 ;= A3 30 F9
-   bbs $30.6,$F9 ;= C3 30 F9
-   bbs $30.7,$F9 ;= E3 30 F9
-   bbc start.0,$05 ;= 13 00 05
-   bbc $31.1,$05 ;= 33 31 05
-   bbc $31.2,$05 ;= 53 31 05
-   bbc $31.3,$05 ;= 73 31 05
-   bbc $31.4,$05 ;= 93 31 05
-   bbc $31.5,$05 ;= B3 31 05
-   bbc $31.6,$05 ;= D3 31 05
-   bbc $31.7,$05 ;= F3 31 05
+   bbs data.0,$F9 ;= 03 13 64
+   bbs $30.1,$F9 ;= 23 30 61
+   bbs $30.2,$F9 ;= 43 30 5E
+   bbs $30.3,$F9 ;= 63 30 5B
+   bbs $30.4,$F9 ;= 83 30 58
+   bbs $30.5,$F9 ;= A3 30 55
+   bbs $30.6,$F9 ;= C3 30 52
+   bbs $30.7,$F9 ;= E3 30 4F
+   bbc start.0,$05 ;= 13 00 58
+   bbc $31.1,$05 ;= 33 31 55
+   bbc $31.2,$05 ;= 53 31 52
+   bbc $31.3,$05 ;= 73 31 4F
+   bbc $31.4,$05 ;= 93 31 4C
+   bbc $31.5,$05 ;= B3 31 49
+   bbc $31.6,$05 ;= D3 31 46
+   bbc $31.7,$05 ;= F3 31 43
 
    call $5060 ;= 3F 60 50
    pcall $02  ;= 4F 02

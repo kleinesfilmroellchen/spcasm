@@ -86,6 +86,7 @@ pub struct Opcode {
 impl Opcode {
 	/// Returns the assembled size of this opcode. Every opcode requires at least 1 byte, but additional bytes are
 	/// required for addresses and immediates.
+	#[allow(clippy::too_many_lines)]
 	pub fn assembled_size(&self) -> u8 {
 		match self.mnemonic {
 			// These instructions depend 100% on their operands for their size, so we just add that up.

@@ -504,7 +504,7 @@ lazy_static! {
 			])),
 			(AddressingModeCategory::YRegister, EntryOrSecondOperandTable::from([
 				(AddressingModeCategory::DirectPage, (0xFE, append_second_as_8_bits as TwoOperandSegmentAction)),
-				(AddressingModeCategory::Address, (0x6E, append_both_reversed_as_8_bits_and_second_relative as TwoOperandSegmentAction)),
+				(AddressingModeCategory::Address, (0xFE, append_both_reversed_as_8_bits_and_second_relative as TwoOperandSegmentAction)),
 			])),
 		]));
 

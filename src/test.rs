@@ -1,6 +1,8 @@
 extern crate test;
 use std::cmp::min;
+use std::sync::Arc;
 
+use reqwest;
 #[allow(unused)]
 use smartstring::alias::String;
 use test::Bencher;
@@ -8,7 +10,7 @@ use test::Bencher;
 use crate::cli::default_backend_options;
 use crate::parser::instruction::MemoryAddress;
 use crate::parser::ProgramElement;
-use crate::{dump_reference_tree, pretty_hex, Segments};
+use crate::{dump_reference_tree, pretty_hex, AssemblyError, Segments};
 
 #[bench]
 fn all_opcodes(bencher: &mut Bencher) {
@@ -76,6 +78,32 @@ fn documented_errors() {
 	trycmd::TestCases::new().case("doc/src/errors.md");
 }
 
+#[test]
+fn asar_opcode_test() -> Result<(), Box<AssemblyError>> {
+	const test_file_url: &str = "https://raw.githubusercontent.com/RPGHacker/asar/master/tests/arch-spc700.asm";
+	const file_name: &str = "asar-arch-spc700.asm";
+	let maybe_test_file: Result<_, reqwest::Error> = try { reqwest::blocking::get(test_file_url)?.text()? };
+	match maybe_test_file {
+		Ok(test_file) => {
+			let (_, mut assembled) = super::run_assembler_into_segments(
+				&Arc::new(crate::AssemblyCode {
+					name: file_name.into(),
+					text: test_file.clone().into(),
+					..Default::default()
+				}),
+				default_backend_options(),
+			)?;
+			let only_segment = assembled.segments.first_entry().expect("no segment present").remove();
+			let expected_output = extract_asar_expected_output(&test_file).into_iter().map(|v| Some(v)).collect();
+			assert_segments_are_equal(0, &expected_output, 0, &only_segment, file_name);
+		},
+		Err(why) => {
+			println!("Warning: couldn't download the Asar opcode test: {}", why);
+		},
+	}
+	Ok(())
+}
+
 fn test_file(file: &str) {
 	let (parsed, assembled) = super::run_assembler_into_segments(
 		&crate::AssemblyCode::from_file_or_assembly_error(file).unwrap(),
@@ -90,26 +118,35 @@ fn test_file(file: &str) {
 	for ((parsed_segment_start, expected_segment), (assembled_segment_start, assembled)) in
 		expected_binary.segments.iter().zip(assembled.segments.iter())
 	{
-		assert_eq!(
-			parsed_segment_start, assembled_segment_start,
-			"Assembly and AST differ in segments; something has gone wrong!"
-		);
-		// dbg!(&expected_segment, &assembled);
-		for (byte, (expected, actual)) in expected_segment.iter().zip(assembled.iter()).enumerate() {
-			if let Some(expected) = expected {
-				assert_eq!(
-					expected,
-					actual,
-					"In file {} segment {:04X}: Expected and actual assembly differ at byte {:04X}:\n\texpected: \
-					 {:02X}\n\tactual:   {:02X}\nhint: the bytes before and after are:\n\t{}",
-					file,
-					assembled_segment_start,
-					byte as MemoryAddress + assembled_segment_start,
-					expected,
-					actual,
-					pretty_hex(&assembled[byte.saturating_sub(4) .. min(assembled.len(), byte + 5)], Some(4))
-				);
-			}
+		assert_segments_are_equal(*parsed_segment_start, expected_segment, *assembled_segment_start, assembled, file);
+	}
+}
+
+fn assert_segments_are_equal(
+	parsed_segment_start: MemoryAddress,
+	expected_segment: &Vec<Option<u8>>,
+	assembled_segment_start: MemoryAddress,
+	assembled: &Vec<u8>,
+	file: &str,
+) {
+	assert_eq!(
+		parsed_segment_start, assembled_segment_start,
+		"Assembly and AST differ in segments; something has gone wrong!"
+	);
+	for (byte, (expected, actual)) in expected_segment.iter().zip(assembled.iter()).enumerate() {
+		if let Some(expected) = expected {
+			assert_eq!(
+				expected,
+				actual,
+				"In file {} segment {:04X}: Expected and actual assembly differ at byte {:04X}:\n\texpected: \
+				 {:02X}\n\tactual:   {:02X}\nhint: the bytes before and after are:\n\t{}",
+				file,
+				assembled_segment_start,
+				byte as MemoryAddress + assembled_segment_start,
+				expected,
+				actual,
+				pretty_hex(&assembled[byte.saturating_sub(4) .. min(assembled.len(), byte + 5)], Some(4))
+			);
 		}
 	}
 }
@@ -136,6 +173,25 @@ fn assemble_expected_binary(instructions: Segments<ProgramElement>) -> Segments<
 			)
 		})
 		.unwrap() // safe because we can never fail in the mapper function
+}
+
+fn extract_asar_expected_output(file: &str) -> Vec<u8> {
+	let mut expected_output = Vec::new();
+	for line in file.lines() {
+		if let Some(expected_outputs) = line.strip_prefix(";`") {
+			expected_output.append(
+				&mut expected_outputs
+					.split_whitespace()
+					.map(|byte_string| u8::from_str_radix(byte_string, 16))
+					.try_collect()
+					.unwrap(),
+			);
+		} else {
+			break;
+		}
+	}
+
+	expected_output
 }
 
 #[test]

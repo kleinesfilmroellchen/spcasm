@@ -503,8 +503,8 @@ lazy_static! {
 				(AddressingModeCategory::Address, (0x6E, append_both_reversed_as_8_bits_and_second_relative as TwoOperandSegmentAction)),
 			])),
 			(AddressingModeCategory::YRegister, EntryOrSecondOperandTable::from([
-				(AddressingModeCategory::DirectPage, (0xFE, append_second_as_8_bits as TwoOperandSegmentAction)),
-				(AddressingModeCategory::Address, (0xFE, append_both_reversed_as_8_bits_and_second_relative as TwoOperandSegmentAction)),
+				(AddressingModeCategory::DirectPage, (0xFE, append_second_relative as TwoOperandSegmentAction)),
+				(AddressingModeCategory::Address, (0xFE, append_second_relative as TwoOperandSegmentAction)),
 			])),
 		]));
 
@@ -691,6 +691,16 @@ fn append_second_as_8_bits(
 	_bit_index: u8,
 ) -> Result<(), Box<AssemblyError>> {
 	data.append_8_bits_unresolved(second.clone(), 0, None, span)
+}
+
+fn append_second_relative(
+	data: &mut AssembledData,
+	span: SourceSpan,
+	_first: &AssemblyTimeValue,
+	second: &AssemblyTimeValue,
+	_bit_index: u8,
+) -> Result<(), Box<AssemblyError>> {
+	data.append_relative_unresolved(second.clone(), span)
 }
 
 /// This is for most normal instructions which have their assembly operands in reverse order from machine code.

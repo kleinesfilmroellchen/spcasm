@@ -466,6 +466,7 @@ AddressingMode: AddressingMode = {
 	<AssemblyTimeValue> "." <"number"> =>? try_make_direct_page_addressing_mode((<>),
 		|(a, b)| Ok(AddressingMode::DirectPageBit(a, AddressingMode::check_bit(b.0 as u8, b.1, &source_code)?)),
 		|(a, b)| Ok(AddressingMode::AddressBit(a, AddressingMode::check_bit(b.0 as u8, b.1, &source_code)?))),
+	"/" <address:AssemblyTimeValue> => AddressingMode::NegatedAddressBit(address, 0),
 	"/" <address:AssemblyTimeValue> "." <bit:"number"> =>? Ok(AddressingMode::NegatedAddressBit(address, AddressingMode::check_bit(bit.0 as u8, bit.1, &source_code)?)),
 	"[" "X" "]" "+" => AddressingMode::IndirectXAutoIncrement,
 	"[" "X" "+" "]" => AddressingMode::IndirectXAutoIncrement,

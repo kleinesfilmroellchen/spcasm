@@ -346,7 +346,7 @@ lazy_static! {
 			(AddressingModeCategory::ARegister, EntryOrSecondOperandTable::Entry(0x1C, one_operand_nop as SingleOperandSegmentAction)),
 			(AddressingModeCategory::DirectPage, EntryOrSecondOperandTable::Entry(0x0B, append_one_as_8_bits)),
 			(AddressingModeCategory::DirectPageXIndexed, EntryOrSecondOperandTable::Entry(0x1B, append_one_as_8_bits)),
-			(AddressingModeCategory::Address, EntryOrSecondOperandTable::Entry(0xCC, append_one_as_16_bits)),
+			(AddressingModeCategory::Address, EntryOrSecondOperandTable::Entry(0x0C, append_one_as_16_bits)),
 		]));
 
 		table.insert(Mnemonic::Lsr, EntryOrFirstOperandTable::from([

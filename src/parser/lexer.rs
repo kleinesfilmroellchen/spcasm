@@ -15,6 +15,10 @@ use crate::directive::DirectiveSymbol;
 use crate::error::AssemblyError;
 use crate::AssemblyCode;
 
+macro_rules! start_of_identifier {
+	() => { 'A' ..= 'Z' | 'a' ..= 'z' | '_' | '@' };
+}
+
 /// Lex the given assembly into a list of tokens.
 /// # Errors
 /// Errors are returned for any syntactical error at the token level, e.g. invalid number literals.
@@ -78,7 +82,7 @@ pub fn lex(source_code: Arc<AssemblyCode>) -> Result<Vec<Token>, Box<AssemblyErr
 				end_index += 1;
 				tokens.push(Token::Number(chr as MemoryAddress, (start_index, end_index - start_index).into()));
 			},
-			'A' ..= 'Z' | 'a' ..= 'z' | '_' | '@' => {
+			start_of_identifier!() => {
 				let start_index = index;
 				let identifier = next_identifier(&mut chars, chr);
 				index += identifier.len();
@@ -117,6 +121,14 @@ pub fn lex(source_code: Arc<AssemblyCode>) -> Result<Vec<Token>, Box<AssemblyErr
 				chars.next();
 				index += 2;
 				tokens.push(Token::DoubleCloseAngleBracket((index - 2, 2).into()));
+			},
+			'!' if matches!(chars.peek(), Some(start_of_identifier!())) => {
+				let chr = chars.next().unwrap();
+				let start_index = index;
+				let identifier = next_identifier(&mut chars, chr);
+				index += identifier.len() + 1;
+				let identifier_span = (start_index, identifier.len() + 1).into();
+				tokens.push(Token::Identifier(identifier, identifier_span));
 			},
 			'#' | ',' | '+' | '-' | '^' | '|' | '~' | '&' | '*' | '(' | ')' | '[' | ']' | ':' | '.' | '/' | '!' | '=' | '<' | '>' => {
 				tokens.push(parse_single_char_tokens(chr, index.into()));

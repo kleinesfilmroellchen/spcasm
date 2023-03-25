@@ -5,10 +5,12 @@ nop ;= 00
 
 .local_cool = $aa
 coolvalue = $bbdd
+!ASAR_STYLE_DEFINE = $4849
 
 mov x,coolvalue ;= E9 DD BB
 mov x,zero ;= F8 00
 mov x,.local_cool ;= F8 AA
+mov x,!ASAR_STYLE_DEFINE ;= E9 49 48
 
 later_on:
 nop ;= 00

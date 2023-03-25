@@ -259,8 +259,8 @@ global_selftarget:
    pop Y    ;= EE
    pop P  ;= 8E
 
-   set1 $50.5  ;= A2 50
-   clr1 $51.7  ;= F2 51
+   set $50.5  ;= A2 50
+   clr $51.7  ;= F2 51
 
    tset $5060,a ;= 0E 60 50
    tclr $1011,a ;= 4E 11 10

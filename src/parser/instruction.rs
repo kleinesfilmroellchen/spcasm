@@ -145,8 +145,24 @@ impl Opcode {
 			| Mnemonic::Subw
 			| Mnemonic::Cmpw
 			| Mnemonic::Pcall
+			| Mnemonic::Set
+			| Mnemonic::Set0
 			| Mnemonic::Set1
-			| Mnemonic::Clr1 => 2,
+			| Mnemonic::Set2
+			| Mnemonic::Set3
+			| Mnemonic::Set4
+			| Mnemonic::Set5
+			| Mnemonic::Set6
+			| Mnemonic::Set7
+			| Mnemonic::Clr
+			| Mnemonic::Clr0
+			| Mnemonic::Clr1
+			| Mnemonic::Clr2
+			| Mnemonic::Clr3
+			| Mnemonic::Clr4
+			| Mnemonic::Clr5
+			| Mnemonic::Clr6
+			| Mnemonic::Clr7 => 2,
 			Mnemonic::And1
 			| Mnemonic::Or1
 			| Mnemonic::Eor1
@@ -157,7 +173,23 @@ impl Opcode {
 			| Mnemonic::Tclr1
 			| Mnemonic::Tclr
 			| Mnemonic::Bbs
+			| Mnemonic::Bbs0
+			| Mnemonic::Bbs1
+			| Mnemonic::Bbs2
+			| Mnemonic::Bbs3
+			| Mnemonic::Bbs4
+			| Mnemonic::Bbs5
+			| Mnemonic::Bbs6
+			| Mnemonic::Bbs7
 			| Mnemonic::Bbc
+			| Mnemonic::Bbc0
+			| Mnemonic::Bbc1
+			| Mnemonic::Bbc2
+			| Mnemonic::Bbc3
+			| Mnemonic::Bbc4
+			| Mnemonic::Bbc5
+			| Mnemonic::Bbc6
+			| Mnemonic::Bbc7
 			| Mnemonic::Cbne
 			| Mnemonic::Jmp
 			| Mnemonic::Call => 3,
@@ -294,7 +326,23 @@ pub enum Mnemonic {
 	Bmi,
 	Bpl,
 	Bbs,
+	Bbs0,
+	Bbs1,
+	Bbs2,
+	Bbs3,
+	Bbs4,
+	Bbs5,
+	Bbs6,
+	Bbs7,
 	Bbc,
+	Bbc0,
+	Bbc1,
+	Bbc2,
+	Bbc3,
+	Bbc4,
+	Bbc5,
+	Bbc6,
+	Bbc7,
 	Cbne,
 	Dbnz,
 	Jmp,
@@ -307,8 +355,24 @@ pub enum Mnemonic {
 	Reti,
 	Push,
 	Pop,
+	Set,
+	Set0,
 	Set1,
+	Set2,
+	Set3,
+	Set4,
+	Set5,
+	Set6,
+	Set7,
+	Clr,
+	Clr0,
 	Clr1,
+	Clr2,
+	Clr3,
+	Clr4,
+	Clr5,
+	Clr6,
+	Clr7,
 	Tset1,
 	Tset,
 	Tclr1,
@@ -340,6 +404,23 @@ impl Mnemonic {
 			Self::Tset => Self::Tset1,
 			Self::Tclr => Self::Tclr1,
 			_ => self,
+		}
+	}
+
+	/// Extract the bit index embedded in this mnemonic. spcasm supports some alternate mnemonics that provide the bit
+	/// index themselves instead of it being part of the addressing mode.
+	#[must_use]
+	pub const fn bit_index(&self) -> Option<u8> {
+		match self {
+			Self::Bbc0 | Self::Bbs0 | Self::Set0 | Self::Clr0 => Some(0),
+			Self::Bbc1 | Self::Bbs1 | Self::Set1 | Self::Clr1 => Some(1),
+			Self::Bbc2 | Self::Bbs2 | Self::Set2 | Self::Clr2 => Some(2),
+			Self::Bbc3 | Self::Bbs3 | Self::Set3 | Self::Clr3 => Some(3),
+			Self::Bbc4 | Self::Bbs4 | Self::Set4 | Self::Clr4 => Some(4),
+			Self::Bbc5 | Self::Bbs5 | Self::Set5 | Self::Clr5 => Some(5),
+			Self::Bbc6 | Self::Bbs6 | Self::Set6 | Self::Clr6 => Some(6),
+			Self::Bbc7 | Self::Bbs7 | Self::Set7 | Self::Clr7 => Some(7),
+			_ => None,
 		}
 	}
 }

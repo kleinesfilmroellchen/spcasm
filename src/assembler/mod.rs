@@ -364,13 +364,13 @@ impl AssembledData {
 							self,
 							*span,
 							first_operand.number_ref().unwrap_or(&dummy_value),
-							first_operand.bit_index().unwrap_or_default(),
+							first_operand.bit_index().or_else(|| mnemonic.bit_index()).unwrap_or_default(),
 						)
 					},
 					EntryOrSecondOperandTable::BitEntry(opcode, action) => {
 						self.append_unresolved_opcode_with_bit_index(
 							AssemblyTimeValue::Literal(MemoryAddress::from(*opcode)),
-							first_operand.bit_index().unwrap_or_default(),
+							first_operand.bit_index().or_else(|| mnemonic.bit_index()).unwrap_or_default(),
 							label.clone(),
 							*span,
 						)?;
@@ -378,7 +378,7 @@ impl AssembledData {
 							self,
 							*span,
 							first_operand.number_ref().unwrap_or(&dummy_value),
-							first_operand.bit_index().unwrap_or_default(),
+							first_operand.bit_index().or_else(|| mnemonic.bit_index()).unwrap_or_default(),
 						)
 					},
 					EntryOrSecondOperandTable::TcallEntry(opcode) => self.append_8_bits_unresolved(
@@ -428,7 +428,7 @@ impl AssembledData {
 							})?;
 
 						let bit_index =
-							first_operand.bit_index().or_else(|| second_operand.bit_index()).unwrap_or_default();
+							first_operand.bit_index().or_else(|| second_operand.bit_index()).or_else(|| mnemonic.bit_index()).unwrap_or_default();
 
 						match second_operand_entry {
 							TwoOperandEntry::Entry(opcode, action) => {

@@ -39,6 +39,7 @@ type SingleOperandSegmentAction = fn(
 type TwoOperandTable = HashMap<AddressingModeCategory, TwoOperandEntry>;
 
 /// Either a direct table entry (for instructions that take no first operand), or a lookup table for the first operand.
+#[derive(Clone)]
 pub enum EntryOrFirstOperandTable {
 	/// A direct table entry; the instruction takes no operands at all.
 	Entry(u8),
@@ -54,6 +55,7 @@ impl<const N: usize> From<[(AddressingModeCategory, EntryOrSecondOperandTable); 
 
 /// Either a direct table entry (for instructions that only take a first operand, but no second operand), or a lookup
 /// table for the second operand.
+#[derive(Clone)]
 pub enum EntryOrSecondOperandTable {
 	/// A direct table entry; the instruction takes no second operand.
 	Entry(u8, SingleOperandSegmentAction),
@@ -84,6 +86,7 @@ impl<const N: usize> From<[(AddressingModeCategory, TwoOperandEntry); N]> for En
 }
 
 /// An entry for two operand instructions.
+#[derive(Clone)]
 pub enum TwoOperandEntry {
 	/// A normal entry with an opcode and an action.
 	Entry(u8, TwoOperandSegmentAction),
@@ -455,19 +458,33 @@ lazy_static! {
 			(AddressingModeCategory::Address, EntryOrSecondOperandTable::Entry(0x10, append_one_relative)),
 		]));
 
-		table.insert(Mnemonic::Bbs, EntryOrFirstOperandTable::from([
+		let bbs_entry = EntryOrFirstOperandTable::from([
 			(AddressingModeCategory::DirectPageBit, EntryOrSecondOperandTable::from([
 				(AddressingModeCategory::DirectPage, TwoOperandEntry::BitEntry(0x03, append_both_reversed_as_8_bits as TwoOperandSegmentAction)),
 				(AddressingModeCategory::Address, TwoOperandEntry::BitEntry(0x03, append_both_reversed_as_8_bits)),
 			])),
-		]));
+			(AddressingModeCategory::DirectPage, EntryOrSecondOperandTable::from([
+				(AddressingModeCategory::DirectPage, TwoOperandEntry::BitEntry(0x03, append_both_reversed_as_8_bits as TwoOperandSegmentAction)),
+				(AddressingModeCategory::Address, TwoOperandEntry::BitEntry(0x03, append_both_reversed_as_8_bits)),
+			])),
+		]);
+		for bbs in [Mnemonic::Bbs, Mnemonic::Bbs0, Mnemonic::Bbs1, Mnemonic::Bbs2, Mnemonic::Bbs3, Mnemonic::Bbs4, Mnemonic::Bbs5, Mnemonic::Bbs6, Mnemonic::Bbs7] {
+			table.insert(bbs, bbs_entry.clone());
+		}
 
-		table.insert(Mnemonic::Bbc, EntryOrFirstOperandTable::from([
+		let bbc_entry = EntryOrFirstOperandTable::from([
 			(AddressingModeCategory::DirectPageBit, EntryOrSecondOperandTable::from([
 				(AddressingModeCategory::DirectPage, TwoOperandEntry::BitEntry(0x13, append_both_reversed_as_8_bits as TwoOperandSegmentAction)),
 				(AddressingModeCategory::Address, TwoOperandEntry::BitEntry(0x13, append_both_reversed_as_8_bits)),
 			])),
-		]));
+			(AddressingModeCategory::DirectPage, EntryOrSecondOperandTable::from([
+				(AddressingModeCategory::DirectPage, TwoOperandEntry::BitEntry(0x13, append_both_reversed_as_8_bits as TwoOperandSegmentAction)),
+				(AddressingModeCategory::Address, TwoOperandEntry::BitEntry(0x13, append_both_reversed_as_8_bits)),
+			])),
+		]);
+		for bbc in [Mnemonic::Bbc, Mnemonic::Bbc0, Mnemonic::Bbc1, Mnemonic::Bbc2, Mnemonic::Bbc3, Mnemonic::Bbc4, Mnemonic::Bbc5, Mnemonic::Bbc6, Mnemonic::Bbc7] {
+			table.insert(bbc, bbc_entry.clone());
+		}
 
 		table.insert(Mnemonic::Cbne, EntryOrFirstOperandTable::from([
 			(AddressingModeCategory::DirectPage, EntryOrSecondOperandTable::from([
@@ -525,12 +542,20 @@ lazy_static! {
 			(AddressingModeCategory::FlagsRegister, EntryOrSecondOperandTable::Entry(0x8E, one_operand_nop)),
 		]));
 
-		table.insert(Mnemonic::Set1, EntryOrFirstOperandTable::from([
+		let set_entry = EntryOrFirstOperandTable::from([
 			(AddressingModeCategory::DirectPageBit, EntryOrSecondOperandTable::BitEntry(0x02, append_one_as_8_bits as SingleOperandSegmentAction)),
-		]));
-		table.insert(Mnemonic::Clr1, EntryOrFirstOperandTable::from([
+			(AddressingModeCategory::DirectPage, EntryOrSecondOperandTable::BitEntry(0x02, append_one_as_8_bits as SingleOperandSegmentAction)),
+		]);
+		for set in [Mnemonic::Set, Mnemonic::Set0, Mnemonic::Set1, Mnemonic::Set2, Mnemonic::Set3, Mnemonic::Set4, Mnemonic::Set5, Mnemonic::Set6, Mnemonic::Set7] {
+			table.insert(set, set_entry.clone());
+		}
+		let clr_entry = EntryOrFirstOperandTable::from([
 			(AddressingModeCategory::DirectPageBit, EntryOrSecondOperandTable::BitEntry(0x12, append_one_as_8_bits as SingleOperandSegmentAction)),
-		]));
+			(AddressingModeCategory::DirectPage, EntryOrSecondOperandTable::BitEntry(0x12, append_one_as_8_bits as SingleOperandSegmentAction)),
+		]);
+		for clr in [Mnemonic::Clr, Mnemonic::Clr0, Mnemonic::Clr1, Mnemonic::Clr2, Mnemonic::Clr3, Mnemonic::Clr4, Mnemonic::Clr5, Mnemonic::Clr6, Mnemonic::Clr7] {
+			table.insert(clr, clr_entry.clone());
+		}
 		table.insert(Mnemonic::Tset1, EntryOrFirstOperandTable::from([
 			(AddressingModeCategory::Address, EntryOrSecondOperandTable::ImplicitAEntry(0x0E, append_one_as_16_bits as SingleOperandSegmentAction)),
 		]));

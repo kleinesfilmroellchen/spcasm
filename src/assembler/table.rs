@@ -460,12 +460,12 @@ lazy_static! {
 
 		let bbs_entry = EntryOrFirstOperandTable::from([
 			(AddressingModeCategory::DirectPageBit, EntryOrSecondOperandTable::from([
-				(AddressingModeCategory::DirectPage, TwoOperandEntry::BitEntry(0x03, append_both_reversed_as_8_bits as TwoOperandSegmentAction)),
-				(AddressingModeCategory::Address, TwoOperandEntry::BitEntry(0x03, append_both_reversed_as_8_bits)),
+				(AddressingModeCategory::DirectPage, TwoOperandEntry::BitEntry(0x03, append_both_reversed_as_8_bits_and_second_relative as TwoOperandSegmentAction)),
+				(AddressingModeCategory::Address, TwoOperandEntry::BitEntry(0x03, append_both_reversed_as_8_bits_and_second_relative)),
 			])),
 			(AddressingModeCategory::DirectPage, EntryOrSecondOperandTable::from([
-				(AddressingModeCategory::DirectPage, TwoOperandEntry::BitEntry(0x03, append_both_reversed_as_8_bits as TwoOperandSegmentAction)),
-				(AddressingModeCategory::Address, TwoOperandEntry::BitEntry(0x03, append_both_reversed_as_8_bits)),
+				(AddressingModeCategory::DirectPage, TwoOperandEntry::BitEntry(0x03, append_both_reversed_as_8_bits_and_second_relative as TwoOperandSegmentAction)),
+				(AddressingModeCategory::Address, TwoOperandEntry::BitEntry(0x03, append_both_reversed_as_8_bits_and_second_relative)),
 			])),
 		]);
 		for bbs in [Mnemonic::Bbs, Mnemonic::Bbs0, Mnemonic::Bbs1, Mnemonic::Bbs2, Mnemonic::Bbs3, Mnemonic::Bbs4, Mnemonic::Bbs5, Mnemonic::Bbs6, Mnemonic::Bbs7] {
@@ -474,12 +474,12 @@ lazy_static! {
 
 		let bbc_entry = EntryOrFirstOperandTable::from([
 			(AddressingModeCategory::DirectPageBit, EntryOrSecondOperandTable::from([
-				(AddressingModeCategory::DirectPage, TwoOperandEntry::BitEntry(0x13, append_both_reversed_as_8_bits as TwoOperandSegmentAction)),
-				(AddressingModeCategory::Address, TwoOperandEntry::BitEntry(0x13, append_both_reversed_as_8_bits)),
+				(AddressingModeCategory::DirectPage, TwoOperandEntry::BitEntry(0x13, append_both_reversed_as_8_bits_and_second_relative as TwoOperandSegmentAction)),
+				(AddressingModeCategory::Address, TwoOperandEntry::BitEntry(0x13, append_both_reversed_as_8_bits_and_second_relative)),
 			])),
 			(AddressingModeCategory::DirectPage, EntryOrSecondOperandTable::from([
-				(AddressingModeCategory::DirectPage, TwoOperandEntry::BitEntry(0x13, append_both_reversed_as_8_bits as TwoOperandSegmentAction)),
-				(AddressingModeCategory::Address, TwoOperandEntry::BitEntry(0x13, append_both_reversed_as_8_bits)),
+				(AddressingModeCategory::DirectPage, TwoOperandEntry::BitEntry(0x13, append_both_reversed_as_8_bits_and_second_relative as TwoOperandSegmentAction)),
+				(AddressingModeCategory::Address, TwoOperandEntry::BitEntry(0x13, append_both_reversed_as_8_bits_and_second_relative)),
 			])),
 		]);
 		for bbc in [Mnemonic::Bbc, Mnemonic::Bbc0, Mnemonic::Bbc1, Mnemonic::Bbc2, Mnemonic::Bbc3, Mnemonic::Bbc4, Mnemonic::Bbc5, Mnemonic::Bbc6, Mnemonic::Bbc7] {
@@ -488,23 +488,23 @@ lazy_static! {
 
 		table.insert(Mnemonic::Cbne, EntryOrFirstOperandTable::from([
 			(AddressingModeCategory::DirectPage, EntryOrSecondOperandTable::from([
-				(AddressingModeCategory::DirectPage, (0x2E, append_both_reversed_as_8_bits as TwoOperandSegmentAction)),
-				(AddressingModeCategory::Address, (0x2E, append_both_reversed_as_8_bits as TwoOperandSegmentAction)),
+				(AddressingModeCategory::DirectPage, (0x2E, append_both_reversed_as_8_bits_and_second_relative as TwoOperandSegmentAction)),
+				(AddressingModeCategory::Address, (0x2E, append_both_reversed_as_8_bits_and_second_relative as TwoOperandSegmentAction)),
 			])),
 			(AddressingModeCategory::DirectPageXIndexed, EntryOrSecondOperandTable::from([
-				(AddressingModeCategory::DirectPage, (0xDE, append_both_reversed_as_8_bits as TwoOperandSegmentAction)),
-				(AddressingModeCategory::Address, (0xDE, append_both_reversed_as_8_bits as TwoOperandSegmentAction)),
+				(AddressingModeCategory::DirectPage, (0xDE, append_both_reversed_as_8_bits_and_second_relative as TwoOperandSegmentAction)),
+				(AddressingModeCategory::Address, (0xDE, append_both_reversed_as_8_bits_and_second_relative as TwoOperandSegmentAction)),
 			])),
 		]));
 
 		table.insert(Mnemonic::Dbnz, EntryOrFirstOperandTable::from([
 			(AddressingModeCategory::DirectPage, EntryOrSecondOperandTable::from([
-				(AddressingModeCategory::DirectPage, (0x6E, append_both_reversed_as_8_bits as TwoOperandSegmentAction)),
-				(AddressingModeCategory::Address, (0x6E, append_both_reversed_as_8_bits as TwoOperandSegmentAction)),
+				(AddressingModeCategory::DirectPage, (0x6E, append_both_reversed_as_8_bits_and_second_relative as TwoOperandSegmentAction)),
+				(AddressingModeCategory::Address, (0x6E, append_both_reversed_as_8_bits_and_second_relative as TwoOperandSegmentAction)),
 			])),
 			(AddressingModeCategory::YRegister, EntryOrSecondOperandTable::from([
 				(AddressingModeCategory::DirectPage, (0xFE, append_second_as_8_bits as TwoOperandSegmentAction)),
-				(AddressingModeCategory::Address, (0x6E, append_both_reversed_as_8_bits as TwoOperandSegmentAction)),
+				(AddressingModeCategory::Address, (0x6E, append_both_reversed_as_8_bits_and_second_relative as TwoOperandSegmentAction)),
 			])),
 		]));
 
@@ -706,7 +706,7 @@ fn append_both_as_8_bits(
 }
 
 /// This is for only BBS/BBC which have their assembly operands in the same order as machine code.
-fn append_both_reversed_as_8_bits(
+fn append_both_reversed_as_8_bits_and_second_relative(
 	data: &mut AssembledData,
 	span: SourceSpan,
 	first: &AssemblyTimeValue,
@@ -714,7 +714,7 @@ fn append_both_reversed_as_8_bits(
 	_bit_index: u8,
 ) -> Result<(), Box<AssemblyError>> {
 	data.append_8_bits_unresolved(first.clone(), 0, None, span)?;
-	data.append_8_bits_unresolved(second.clone(), 0, None, span)
+	data.append_relative_unresolved(second.clone(), span)
 }
 
 fn append_first_as_16_bits(

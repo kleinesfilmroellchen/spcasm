@@ -40,12 +40,17 @@ Line: ProgramElement = <labels:MultipleLabelsForInstruction?> <element:Instructi
 InstructionOrDirective: ProgramElement = {
 	InstructionWithTestComment => ProgramElement::Instruction(<>),
 	DirectiveWithTestComment => ProgramElement::Directive(<>),
-	<directive:"include"> <file:"string"> => ProgramElement::IncludeSource {
+	<directive:IncludeDirective> <file:"string"> => ProgramElement::IncludeSource {
 		file: std::string::String::from_utf8_lossy(&file.0).into(),
 		span: source_range(directive.into(), file.1.into()),
 		label: None,
 	},
 	MacroCall => <>,
+};
+
+IncludeDirective: SourceSpan = {
+	"include",
+	"incsrc",
 };
 
 MacroCall: ProgramElement = <start:"%"> <macro_name:"identifier"> "(" <arguments:Comma<AssemblyTimeValue>?> <end:")"> => ProgramElement::UserDefinedMacroCall {
@@ -510,6 +515,7 @@ extern {
 		"asciiz" => Token::Directive(DirectiveSymbol::Asciiz, <SourceSpan>),
 		"incbin" => Token::Directive(DirectiveSymbol::Incbin, <SourceSpan>),
 		"include" => Token::Directive(DirectiveSymbol::Include, <SourceSpan>),
+		"incsrc" => Token::Directive(DirectiveSymbol::Incsrc, <SourceSpan>),
 		"end" => Token::Directive(DirectiveSymbol::End, <SourceSpan>),
 		"brr" => Token::Directive(DirectiveSymbol::Brr, <SourceSpan>),
 		"sampletable" => Token::Directive(DirectiveSymbol::SampleTable, <SourceSpan>),

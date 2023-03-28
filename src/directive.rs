@@ -127,7 +127,7 @@ impl ReferenceResolvable for Directive {
 		direction: parser::reference::RelativeReferenceDirection,
 		relative_labels: &HashMap<NonZeroU64, Arc<RefCell<GlobalLabel>>>,
 	) {
-		self.value.resolve_relative_labels(direction, relative_labels)
+		self.value.resolve_relative_labels(direction, relative_labels);
 	}
 }
 
@@ -401,7 +401,9 @@ impl ReferenceResolvable for DirectiveValue {
 				},
 			Self::Fill { parameter, value, .. } => {
 				parameter.resolve_relative_labels(direction, relative_labels);
-				value.as_mut().map(|value| value.resolve_relative_labels(direction, relative_labels));
+				if let Some(value) = value.as_mut() {
+					value.resolve_relative_labels(direction, relative_labels);
+				}
 			},
 			Self::String { .. }
 			| Self::Include { .. }

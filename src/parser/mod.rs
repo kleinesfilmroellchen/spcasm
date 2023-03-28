@@ -230,6 +230,7 @@ impl AssemblyFile {
 	/// If a local label precedes any global labels.
 	/// # Panics
 	/// All panics are programming errors.
+	#[allow(clippy::too_many_lines)]
 	pub fn fill_in_reference_links(&mut self) -> Result<(), Box<AssemblyError>> {
 		let mut current_global_label: Option<Arc<RefCell<GlobalLabel>>> = None;
 		// While we do the local label merging, also perform the backward relative resolution.

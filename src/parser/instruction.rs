@@ -71,7 +71,7 @@ impl ReferenceResolvable for Instruction {
 		direction: reference::RelativeReferenceDirection,
 		relative_labels: &std::collections::HashMap<std::num::NonZeroU64, Arc<RefCell<GlobalLabel>>>,
 	) {
-		self.opcode.resolve_relative_labels(direction, relative_labels)
+		self.opcode.resolve_relative_labels(direction, relative_labels);
 	}
 }
 

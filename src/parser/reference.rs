@@ -148,9 +148,10 @@ impl ReferenceResolvable for Reference {
 					.try_borrow_mut()
 					.map(|mut reference| reference.resolve_relative_labels(direction, relative_labels));
 			},
-			Self::MacroArgument { value, .. } => {
-				value.as_mut().map(|value| value.resolve_relative_labels(direction, relative_labels));
-			},
+			Self::MacroArgument { value, .. } =>
+				if let Some(value) = value.as_mut() {
+					value.resolve_relative_labels(direction, relative_labels);
+				},
 			Self::MacroGlobal { .. } | Self::Relative { .. } => (),
 		}
 	}
@@ -275,7 +276,9 @@ impl ReferenceResolvable for GlobalLabel {
 		direction: RelativeReferenceDirection,
 		relative_labels: &HashMap<NonZeroU64, Arc<RefCell<GlobalLabel>>>,
 	) {
-		self.location.as_mut().map(|location| location.resolve_relative_labels(direction, relative_labels));
+		if let Some(location) = self.location.as_mut() {
+			location.resolve_relative_labels(direction, relative_labels);
+		}
 	}
 }
 
@@ -334,7 +337,9 @@ impl ReferenceResolvable for LocalLabel {
 		direction: RelativeReferenceDirection,
 		relative_labels: &HashMap<NonZeroU64, Arc<RefCell<GlobalLabel>>>,
 	) {
-		self.location.as_mut().map(|location| location.resolve_relative_labels(direction, relative_labels));
+		if let Some(location) = self.location.as_mut() {
+			location.resolve_relative_labels(direction, relative_labels);
+		}
 	}
 }
 

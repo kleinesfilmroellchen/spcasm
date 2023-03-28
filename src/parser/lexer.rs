@@ -134,7 +134,7 @@ pub fn lex(source_code: Arc<AssemblyCode>) -> Result<Vec<Token>, Box<AssemblyErr
 			'-' => {
 				let start = index;
 				index += 1;
-				while let Some('-') = chars.peek() {
+				while chars.peek() == Some(&'-') {
 					index += 1;
 					chars.next();
 				}

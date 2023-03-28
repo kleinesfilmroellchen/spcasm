@@ -814,14 +814,14 @@ Macro arguments are specific to user-defined macros and cannot be used in any wa
 
 Note: This error is theoretical, macro arguments currently cause undefined reference errors.
 
-#### spcasm::user_macro::assign_to_argument
+#### spcasm::reference::assign_invalid
 
 ```trycmd
 $ spcasm tests/errors/assign-to-argument.spcasmtest
 ? 1
-Error: spcasm::user_macro::assign_to_argument
+Error: spcasm::reference::assign_invalid
 
-  × Assigning a value to the macro argument '<first>' is not possible
+  × Assigning a value to macro argument '<first>' is not possible
    ╭─[tests/errors/assign-to-argument.spcasmtest:1:1]
  1 │ org 0
  2 │ 
@@ -841,15 +841,10 @@ Error: spcasm::user_macro::assign_to_argument
 
 ```
 
-Arguments to user-defined macros are specified with angle bracket syntax, like `<argument>`. When the macro is called, the arguments are replaced with the value given in the macro call. Therefore, it does not make sense to manually assign a specific value to the argument, like you can do with other kinds of labels. Instead, you can for example use local labels under the macro's special `\@` label.
+Some references cannot be assigned a value directly, though the reasons vary:
 
-#### spcasm::user_macro::assign_to_global
-
-```notrycmd
-
-```
-
-The special macro label `\@` is only designed to be used as the label for a particular instruction, so that you get a new local label scope for each macro invocation. Therefore, it is not possible to assign it a value directly.
+- Arguments to user-defined macros are specified with angle bracket syntax, like `<argument>`. When the macro is called, the arguments are replaced with the value given in the macro call. Therefore, it does not make sense to manually assign a specific value to the argument, like you can do with other kinds of labels. Instead, you can for example use local labels under the macro's special `\@` label.
+- Relative labels (`+`/`-`) cannot be assigned a value, since that simply does not make sense. They are addressed by relative labels in instructions, and using them in an assignment does not properly give them any relative position, since assigned references are considered to have no position at all. (That's also why assigned global references do not start a new "scope" of local references.)
 
 #### spcasm::user_macro::incorrect_number_of_arguments
 

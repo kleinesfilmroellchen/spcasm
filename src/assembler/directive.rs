@@ -54,15 +54,12 @@ impl AssembledData {
 				Reference::Global(ref mut global) => {
 					global.borrow_mut().location = Some(value.clone().try_resolve());
 				},
-				Reference::MacroArgument { span, name, .. } =>
-					return Err(AssemblyError::AssigningToMacroArgument {
-						name:     (*name).to_string().into(),
-						src:      self.source_code.clone(),
-						location: *span,
-					}
-					.into()),
-				Reference::MacroGlobal { span, .. } =>
-					return Err(AssemblyError::AssigningToMacroGlobal {
+				Reference::MacroArgument { ref span, .. }
+				| Reference::MacroGlobal { ref span, .. }
+				| Reference::Relative { ref span, .. } =>
+					return Err(AssemblyError::AssigningToReference {
+						kind:     reference.clone().into(),
+						name:     reference.to_string().into(),
 						src:      self.source_code.clone(),
 						location: *span,
 					}

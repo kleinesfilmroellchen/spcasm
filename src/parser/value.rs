@@ -73,7 +73,10 @@ impl AssemblyTimeValue {
 			},
 			Self::Literal(..)
 			| Self::Reference(
-				Reference::Global(..) | Reference::MacroArgument { .. } | Reference::MacroGlobal { .. },
+				Reference::Global(..)
+				| Reference::MacroArgument { .. }
+				| Reference::MacroGlobal { .. }
+				| Reference::Relative { .. },
 			) => (),
 		}
 	}
@@ -132,7 +135,7 @@ impl AssemblyTimeValue {
 					memory_location.try_resolve_impl(attempts_with_this)
 				}
 			},
-			Self::Reference(ref reference @ Reference::MacroArgument { value: Some(ref memory_location) , .. }) => {
+			Self::Reference(ref reference @ (Reference::MacroArgument { value: Some(ref memory_location) , .. } | Reference::Relative { value: Some(ref memory_location) , .. })) => {
 				if resolution_attempts.contains(&reference) {
 					self
 				} else {
@@ -149,7 +152,12 @@ impl AssemblyTimeValue {
 				(Self::Literal(lhs_value), Self::Literal(rhs_value)) => Self::Literal(operator.execute(lhs_value, rhs_value)),
 				(lhs, rhs) => Self::BinaryOperation(Box::new(lhs), Box::new(rhs), operator),
 			},
-			Self::Literal(..) | Self::Reference(Reference::Local(..) | Reference::Global(..) | Reference::MacroArgument { value: None, .. } | Reference::MacroGlobal { .. }) => self,
+			Self::Literal(..) 
+			| Self::Reference(Reference::Local(..) 
+			| Reference::Global(..) 
+			| Reference::MacroArgument { value: None, .. } 
+			| Reference::Relative { value: None, .. } 
+			| Reference::MacroGlobal { .. }) => self,
 		}
 	}
 
@@ -166,11 +174,13 @@ impl AssemblyTimeValue {
 			Self::Reference(ref reference) => match reference {
 				Reference::Global(global_label) if let Some(ref value) = global_label.borrow().location => value.value_using_resolver(resolver),
 				Reference::Local(local) if let Some(ref value) = local.borrow().location => value.value_using_resolver(resolver),
-				Reference::Local(_) |
-				Reference::Global(_) |
-				Reference::MacroGlobal { .. } |
-				Reference::MacroArgument{value: None, ..} => resolver(reference.clone()),
-				Reference::MacroArgument{value: Some(value), ..} => value.value_using_resolver(resolver),
+				Reference::MacroArgument { value: Some(value), .. }
+				| Reference::Relative { value: Some(value), .. } => value.value_using_resolver(resolver),
+				Reference::Local(_)
+				| Reference::Global(_)
+				| Reference::MacroGlobal { .. }
+				| Reference::Relative { value: None, .. }
+				| Reference::MacroArgument { value: None, .. } => resolver(reference.clone()),
 			},
 			Self::UnaryOperation(number, operator) => number.value_using_resolver(resolver).map(|value| operator.execute(value)),
 			Self::BinaryOperation(lhs, rhs, operator) => lhs.value_using_resolver(resolver).and_then(|lhs|rhs.value_using_resolver(resolver).map(|rhs| operator.execute(lhs, rhs))),

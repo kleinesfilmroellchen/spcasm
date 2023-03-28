@@ -280,7 +280,7 @@ impl AssemblyFile {
 				ProgramElement::Instruction(_)
 				| ProgramElement::UserDefinedMacroCall { .. }
 				| ProgramElement::IncludeSource { .. }
-				| ProgramElement::Label(Reference::MacroGlobal { .. }) => (),
+				| ProgramElement::Label(Reference::MacroGlobal { .. } | Reference::Relative { .. }) => (),
 			}
 		}
 		Ok(())

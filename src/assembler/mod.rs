@@ -697,11 +697,12 @@ impl AssembledData {
 					.filter_map(|resolved_reference| {
 						had_modifications |= true;
 						match *resolved_reference {
-							Reference::Global(..) | Reference::Local(..) => resolved_reference.resolve_to(
-								memory_address,
-								datum.instruction_location,
-								self.source_code.clone(),
-							),
+							Reference::Global(..) | Reference::Local(..) | Reference::Relative { .. } =>
+								resolved_reference.resolve_to(
+									memory_address,
+									datum.instruction_location,
+									self.source_code.clone(),
+								),
 							Reference::MacroArgument { value: Some(_), .. } => Ok(()),
 							Reference::MacroArgument { value: None, span, .. } =>
 								Err(AssemblyError::UnresolvedReference {

@@ -83,15 +83,22 @@ impl Directive {
 				.clone();
 				Ok(())
 			},
-			DirectiveValue::AssignReference { reference: Reference::MacroArgument { name, .. }, .. } =>
-				return Err(AssemblyError::AssigningToMacroArgument {
-					name:     name.clone(),
+			DirectiveValue::AssignReference { reference: reference @ Reference::MacroArgument { .. }, .. } =>
+				return Err(AssemblyError::AssigningToReference {
+					kind:     crate::error::ReferenceType::MacroArgument,
+					name:     reference.to_string().into(),
 					src:      source_code,
 					location: self.span,
 				}
 				.into()),
-			DirectiveValue::AssignReference { reference: Reference::MacroGlobal { .. }, .. } =>
-				return Err(AssemblyError::AssigningToMacroGlobal { src: source_code, location: self.span }.into()),
+			DirectiveValue::AssignReference { reference: reference @ Reference::MacroGlobal { .. }, .. } =>
+				return Err(AssemblyError::AssigningToReference {
+					name:     reference.to_string().into(),
+					kind:     crate::error::ReferenceType::MacroGlobal,
+					src:      source_code,
+					location: self.span,
+				}
+				.into()),
 			_ => Ok(()),
 		}
 		.map_err(|_| AssemblyError::NoSegmentOnStack { location: self.span, src: source_code }.into())

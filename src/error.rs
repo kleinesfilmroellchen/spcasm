@@ -14,6 +14,7 @@ use thiserror::Error;
 use crate::cli::BackendOptions;
 use crate::directive::DirectiveSymbol;
 use crate::parser::instruction::{MemoryAddress, Mnemonic};
+use crate::parser::reference::Reference;
 use crate::parser::Token;
 use crate::AssemblyCode;
 
@@ -83,35 +84,26 @@ pub enum AssemblyError {
 		location: SourceSpan,
 	},
 
-	#[error("Assigning a value to the macro argument '<{name}>' is not possible")]
+	#[error("Assigning a value to {} '{name}' is not possible", .kind.name())]
 	#[diagnostic(
-		code(spcasm::user_macro::assign_to_argument),
+		code(spcasm::reference::assign_invalid),
 		severity(Error),
-		help(
-			"Arguments of macros are given a value when the macro is called. Therefore, it does not make sense to \
-			 assign them a value. If you need a label with a specific value inside a macro, use a local label under \
-			 the macro's special '\\@' label instead"
+		help("{}", match .kind {
+				ReferenceType::MacroArgument => "Arguments of macros are given a value when the macro is called. Therefore, it does not make sense to \
+				                                 assign them a value. If you need a label with a specific value inside a macro, use a local label under \
+				                                 the macro's special '\\@' label instead",
+				ReferenceType::MacroGlobal => "The special macro label '\\@' can be used for creating a unique global label per user macro call. It can \
+				                               therefore only be assigned a value by using it as the label for an instruction. If you need to compute \
+				                               values based on macro arguments, there is currently no non-repetitive way to do this.",
+				ReferenceType::Relative => "Relative labels cannot be referred to unambiguously, since they don't have a proper name. Therefore, \
+				                            assigning to them is not useful, since that would make them have no proper relative position to anything.",
+				_ => "",
+			}
 		)
 	)]
-	AssigningToMacroArgument {
+	AssigningToReference {
 		name:     String,
-		#[source_code]
-		src:      Arc<AssemblyCode>,
-		#[label("Assignment happens here")]
-		location: SourceSpan,
-	},
-
-	#[error("Assigning a value to the special macro label '\\@' is not possible")]
-	#[diagnostic(
-		code(spcasm::user_macro::assign_to_global),
-		severity(Error),
-		help(
-			"The special macro label '\\@' can be used for creating a unique global label per user macro call. It can \
-			 therefore only be assigned a value by using it as the label for an instruction. If you need to compute \
-			 values based on macro arguments, there is currently no non-repetitive way to do this."
-		)
-	)]
-	AssigningToMacroGlobal {
+		kind:     ReferenceType,
 		#[source_code]
 		src:      Arc<AssemblyCode>,
 		#[label("Assignment happens here")]
@@ -795,5 +787,42 @@ impl From<&str> for TokenOrString {
 impl From<Token> for TokenOrString {
 	fn from(string: Token) -> Self {
 		Self::Token(string)
+	}
+}
+
+/// Reference type for keeping track of what error text to print for different references in errors.
+#[repr(u8)]
+#[allow(clippy::missing_docs_in_private_items)]
+#[derive(Clone, Copy, Debug, Eq, PartialEq, Default)]
+pub enum ReferenceType {
+	MacroGlobal,
+	MacroArgument,
+	Relative,
+	Local,
+	#[default]
+	Global,
+}
+
+impl ReferenceType {
+	pub const fn name(self) -> &'static str {
+		match self {
+			Self::MacroGlobal => "macro global label",
+			Self::MacroArgument => "macro argument",
+			Self::Relative => "'+'/'-' relative label",
+			Self::Local => "local label",
+			Self::Global => "global label",
+		}
+	}
+}
+
+impl From<Reference> for ReferenceType {
+	fn from(value: Reference) -> Self {
+		match value {
+			Reference::Global(_) => Self::Global,
+			Reference::Local(_) => Self::Local,
+			Reference::Relative { .. } => Self::Relative,
+			Reference::MacroArgument { .. } => Self::MacroArgument,
+			Reference::MacroGlobal { .. } => Self::MacroGlobal,
+		}
 	}
 }

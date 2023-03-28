@@ -3,6 +3,7 @@
 use std::cell::RefCell;
 use std::collections::HashMap;
 use std::fmt::Display;
+use std::num::NonZeroU64;
 use std::sync::{Arc, Weak};
 
 use miette::SourceSpan;
@@ -36,6 +37,20 @@ pub enum Reference {
 	Global(Arc<RefCell<GlobalLabel>>),
 	/// A reference only valid within a global label. It may be reused with a different value later on.
 	Local(Arc<RefCell<LocalLabel>>),
+	/// A relative label, declared with '+' or '-'.
+	/// Note that the usages of these labels additionally contain offset information, which is not found here, but in
+	/// the AssemblyTimeValue data.
+	Relative {
+		/// The direction of the label, either a '+' or a '-' label.
+		direction: RelativeReferenceDirection,
+		/// The offset of this label, meaning how many of those special '-' or '+' labels it is pointing forwards or
+		/// backwards. This must be 1 for relative label declarations, but may be more than 1 for relative label uses
+		/// in code.
+		offset:    NonZeroU64,
+		value:     Option<Box<AssemblyTimeValue>>,
+		/// The location of definition of this label.
+		span:      SourceSpan,
+	},
 	/// A macro argument that is resolved at a later point.
 	MacroArgument {
 		/// The name of the argument.
@@ -58,7 +73,7 @@ impl Reference {
 		match self {
 			Self::Global(global) => global.borrow().span,
 			Self::Local(label) => label.borrow().span,
-			Self::MacroArgument { span, .. } | Self::MacroGlobal { span, .. } => *span,
+			Self::MacroArgument { span, .. } | Self::Relative { span, .. } | Self::MacroGlobal { span, .. } => *span,
 		}
 	}
 
@@ -66,6 +81,7 @@ impl Reference {
 		match self {
 			Self::Global(global) => global.borrow_mut().location = Some(location),
 			Self::Local(local) => local.borrow_mut().location = Some(location),
+			Self::Relative { value, .. } => *value = Some(location.into()),
 			// noop on macro arguments
 			Self::MacroArgument { .. } | Self::MacroGlobal { .. } => {},
 		}
@@ -75,7 +91,7 @@ impl Reference {
 		match self {
 			Self::Global(global) => global.borrow().location.clone(),
 			Self::Local(local) => local.borrow().location.clone(),
-			Self::MacroArgument { value, .. } => value.clone().map(|boxed| *boxed),
+			Self::MacroArgument { value, .. } | Self::Relative { value, .. } => value.clone().map(|boxed| *boxed),
 			Self::MacroGlobal { .. } => None,
 		}
 	}
@@ -114,7 +130,7 @@ impl MacroParentReplacable for Reference {
 					},
 				)
 			},
-			Self::MacroGlobal { .. } => Ok(()),
+			Self::MacroGlobal { .. } | Self::Relative { .. } => Ok(()),
 		}
 	}
 }
@@ -126,6 +142,7 @@ impl Display for Reference {
 			Self::Local(local) => format!(".{}", local.borrow().name).into(),
 			Self::MacroArgument { name, .. } => format!("<{}>", name).into(),
 			Self::MacroGlobal { .. } => "\\@".to_string().into(),
+			Self::Relative { direction, .. } => direction.string().into(),
 		})
 	}
 }
@@ -138,6 +155,7 @@ impl PartialEq for Reference {
 				_ => false,
 			},
 			Self::Local(..) |
+			Self::Relative { .. } |
 			// Equality doesn't really make sense for dynamic user macro globals.
 			Self::MacroGlobal { .. } => false,
 			Self::MacroArgument { name, .. } => match other {
@@ -154,8 +172,8 @@ impl Resolvable for Reference {
 		match self {
 			Self::Global(label) => label.borrow().is_resolved(),
 			Self::Local(label) => label.borrow().is_resolved(),
-			Self::MacroArgument { value: Some(_), .. } => true,
-			Self::MacroArgument { .. } | Self::MacroGlobal { .. } => false,
+			Self::MacroArgument { value: Some(_), .. } | Self::Relative { value: Some(_), .. } => true,
+			Self::MacroArgument { .. } | Self::Relative { .. } | Self::MacroGlobal { .. } => false,
 		}
 	}
 
@@ -168,12 +186,37 @@ impl Resolvable for Reference {
 		match self {
 			Self::Global(label) => label.borrow_mut().resolve_to(location, usage_span, source_code),
 			Self::Local(label) => label.borrow_mut().resolve_to(location, usage_span, source_code),
-			Self::MacroArgument { value, .. } => {
+			Self::MacroArgument { value, .. } | Self::Relative { value, .. } => {
 				*value = Some(Box::new(AssemblyTimeValue::Literal(location)));
 				Ok(())
 			},
 			Self::MacroGlobal { .. } => unimplemented!("macro global leaked to reference resolution, what to do?"),
 		}
+	}
+}
+
+/// The direction of a relative reference.
+#[repr(u8)]
+#[derive(Clone, Copy, Debug)]
+pub enum RelativeReferenceDirection {
+	/// A "+" label, referencing some later "+" label.
+	Forward,
+	/// A "-" label, referencing some previous "-" label.
+	Backward,
+}
+
+impl RelativeReferenceDirection {
+	pub const fn string(self) -> &'static str {
+		match self {
+			Self::Forward => "+",
+			Self::Backward => "-",
+		}
+	}
+}
+
+impl Display for RelativeReferenceDirection {
+	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+		write!(f, "{}", self.string())
 	}
 }
 

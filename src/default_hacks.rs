@@ -12,7 +12,7 @@ use std::sync::Arc;
 use smartstring::alias::String;
 
 use crate::directive::DirectiveSymbol;
-use crate::error::TokenOrString;
+use crate::error::{ReferenceType, TokenOrString};
 use crate::parser::instruction::Mnemonic;
 use crate::parser::Token;
 use crate::AssemblyCode;
@@ -25,7 +25,7 @@ use crate::AssemblyCode;
 pub trait FakeDefaultForIgnoredValues {
 	fn default() -> Self;
 }
-trait InheritFromDefault: Default {}
+pub trait InheritFromDefault: Default {}
 impl<T> FakeDefaultForIgnoredValues for T
 where
 	T: InheritFromDefault,
@@ -35,6 +35,7 @@ where
 	}
 }
 
+impl InheritFromDefault for ReferenceType {}
 impl InheritFromDefault for String {}
 impl InheritFromDefault for AssemblyCode {}
 impl InheritFromDefault for bool {}

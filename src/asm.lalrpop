@@ -345,7 +345,7 @@ InclusionRange: SourceSpan = {
 MultipleLabelsForInstruction: Vec<Reference> = LabelForInstruction+;
 
 LabelForInstruction: Reference = {
-	"." <identifier:"identifier"> ":" "\n"* => Reference::Local(
+	"." <identifier:"identifier"> ":"? "\n"* => Reference::Local(
 		// Create a new local label that might be merged in the future.
 		Arc::new(RefCell::new(LocalLabel {
 			name: identifier.0.clone(),

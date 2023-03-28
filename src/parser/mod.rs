@@ -172,7 +172,6 @@ impl Environment {
 		}));
 		let mut file = rc_file.borrow_mut();
 
-		file.fill_in_reference_links()?;
 		file.resolve_user_macro_arguments()?;
 		file.coerce_to_direct_page_addressing();
 

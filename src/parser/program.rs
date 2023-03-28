@@ -8,7 +8,7 @@ use miette::SourceSpan;
 use smartstring::alias::String;
 
 use super::instruction::Instruction;
-use super::reference::{MacroParent, MacroParentReplacable, Reference};
+use super::reference::{MacroParent, Reference, ReferenceResolvable};
 use super::{AssemblyTimeValue, Directive};
 use crate::parser::source_range;
 use crate::{AssemblyCode, AssemblyError};
@@ -81,7 +81,7 @@ impl ProgramElement {
 	}
 }
 
-impl MacroParentReplacable for ProgramElement {
+impl ReferenceResolvable for ProgramElement {
 	fn replace_macro_parent(
 		&mut self,
 		replacement_parent: Arc<RefCell<MacroParent>>,
@@ -98,6 +98,23 @@ impl MacroParentReplacable for ProgramElement {
 				Ok(())
 			},
 			Self::IncludeSource { .. } => Ok(()),
+		}
+	}
+
+	fn resolve_relative_labels(
+		&mut self,
+		direction: super::reference::RelativeReferenceDirection,
+		relative_labels: &std::collections::HashMap<std::num::NonZeroU64, Arc<RefCell<super::reference::GlobalLabel>>>,
+	) {
+		match self {
+			Self::Directive(directive) => directive.resolve_relative_labels(direction, relative_labels),
+			Self::Label(reference) => reference.resolve_relative_labels(direction, relative_labels),
+			Self::Instruction(instruction) => instruction.resolve_relative_labels(direction, relative_labels),
+			Self::UserDefinedMacroCall { arguments, .. } =>
+				for argument in arguments {
+					argument.resolve_relative_labels(direction, relative_labels);
+				},
+			Self::IncludeSource { .. } => (),
 		}
 	}
 }

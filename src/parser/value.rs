@@ -2,7 +2,9 @@
 
 use core::fmt;
 use std::cell::RefCell;
+use std::collections::HashMap;
 use std::fmt::{Display, Error, Formatter, UpperHex, Write};
+use std::num::NonZeroU64;
 use std::result::Result;
 use std::sync::Arc;
 
@@ -12,7 +14,7 @@ use num_derive::{FromPrimitive, ToPrimitive};
 use smartstring::alias::String;
 
 use super::instruction::MemoryAddress;
-use super::reference::{self, GlobalLabel, MacroParentReplacable, Reference};
+use super::reference::{self, GlobalLabel, ReferenceResolvable, Reference, RelativeReferenceDirection};
 use crate::error::AssemblyError;
 use crate::AssemblyCode;
 
@@ -188,7 +190,7 @@ impl AssemblyTimeValue {
 	}
 }
 
-impl MacroParentReplacable for AssemblyTimeValue {
+impl ReferenceResolvable for AssemblyTimeValue {
 	fn replace_macro_parent(
 		&mut self,
 		replacement_parent: Arc<RefCell<reference::MacroParent>>,
@@ -209,6 +211,29 @@ impl MacroParentReplacable for AssemblyTimeValue {
 			},
 		}
 	}
+
+	fn resolve_relative_labels(&mut self, direction: RelativeReferenceDirection, relative_labels: &HashMap<NonZeroU64, Arc<RefCell<GlobalLabel>>>) {
+		match self {
+			// Awkward match since the borrow checker is not smart enough for this.
+			Self::Reference(reference @ Reference::Relative { .. }) => {
+				let (id, own_direction) = match reference {
+					Reference::Relative { id, direction,.. } => (*id, *direction),
+					_ => unreachable!(),
+				};
+				if let Some(new_reference) = relative_labels.get(&id).cloned() && own_direction == direction {
+					*reference = Reference::Global(new_reference);
+				}
+			},
+			Self::Literal(_) => (),
+			Self::Reference(reference) => reference.resolve_relative_labels(direction, relative_labels),
+			Self::UnaryOperation(number, _) => number.resolve_relative_labels(direction, relative_labels),
+			Self::BinaryOperation(lhs, rhs, _) => {
+				lhs.resolve_relative_labels(direction, relative_labels);
+				rhs.resolve_relative_labels(direction, relative_labels);
+			},
+		}
+	}
+	
 }
 
 impl From<MemoryAddress> for AssemblyTimeValue {
@@ -284,6 +309,23 @@ pub struct SizedAssemblyTimeValue {
 impl Default for SizedAssemblyTimeValue {
 	fn default() -> Self {
 		Self { value: AssemblyTimeValue::Literal(0), size: Size::Byte }
+	}
+}
+
+impl ReferenceResolvable for SizedAssemblyTimeValue {
+	fn replace_macro_parent(
+			&mut self,
+			replacement_parent: Arc<RefCell<reference::MacroParent>>,
+			source_code: &Arc<AssemblyCode>,
+		) -> Result<(), Box<AssemblyError>> {
+		 self.value.replace_macro_parent(replacement_parent, source_code)
+	}
+	fn resolve_relative_labels(
+			&mut self,
+			direction: RelativeReferenceDirection,
+			relative_labels: &HashMap<NonZeroU64, Arc<RefCell<GlobalLabel>>>,
+		) {
+		 self.value.resolve_relative_labels(direction, relative_labels);
 	}
 }
 

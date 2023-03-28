@@ -5,6 +5,7 @@ use std::cell::RefCell;
 use std::collections::HashMap;
 use std::fmt::Display;
 use std::hash::Hash;
+use std::num::NonZeroU64;
 use std::sync::Arc;
 
 use miette::SourceSpan;
@@ -15,7 +16,7 @@ use smartstring::alias::String;
 use spcasm_derive::Parse;
 
 use crate::parser::instruction::MemoryAddress;
-use crate::parser::reference::{GlobalLabel, MacroParent, MacroParentReplacable, Reference};
+use crate::parser::reference::{GlobalLabel, MacroParent, Reference, ReferenceResolvable};
 use crate::parser::value::{Size, SizedAssemblyTimeValue};
 use crate::parser::{self, source_range, AssemblyTimeValue, ProgramElement};
 use crate::{AssemblyCode, AssemblyError, Segments};
@@ -112,13 +113,21 @@ impl Default for Directive {
 	}
 }
 
-impl MacroParentReplacable for Directive {
+impl ReferenceResolvable for Directive {
 	fn replace_macro_parent(
 		&mut self,
 		replacement_parent: Arc<RefCell<MacroParent>>,
 		source_code: &Arc<AssemblyCode>,
 	) -> Result<(), Box<crate::AssemblyError>> {
 		self.value.replace_macro_parent(replacement_parent, source_code)
+	}
+
+	fn resolve_relative_labels(
+		&mut self,
+		direction: parser::reference::RelativeReferenceDirection,
+		relative_labels: &HashMap<NonZeroU64, Arc<RefCell<GlobalLabel>>>,
+	) {
+		self.value.resolve_relative_labels(direction, relative_labels)
 	}
 }
 
@@ -342,7 +351,7 @@ impl DirectiveValue {
 	}
 }
 
-impl MacroParentReplacable for DirectiveValue {
+impl ReferenceResolvable for DirectiveValue {
 	fn replace_macro_parent(
 		&mut self,
 		replacement_parent: Arc<RefCell<MacroParent>>,
@@ -377,6 +386,35 @@ impl MacroParentReplacable for DirectiveValue {
 				src:      source_code.clone(),
 			}
 			.into()),
+		}
+	}
+
+	fn resolve_relative_labels(
+		&mut self,
+		direction: parser::reference::RelativeReferenceDirection,
+		relative_labels: &HashMap<NonZeroU64, Arc<RefCell<GlobalLabel>>>,
+	) {
+		match self {
+			Self::Table { values, .. } =>
+				for value in values {
+					value.value.resolve_relative_labels(direction, relative_labels);
+				},
+			Self::Fill { parameter, value, .. } => {
+				parameter.resolve_relative_labels(direction, relative_labels);
+				value.as_mut().map(|value| value.resolve_relative_labels(direction, relative_labels));
+			},
+			Self::String { .. }
+			| Self::Include { .. }
+			| Self::End
+			| Self::PushSection
+			| Self::Placeholder
+			| Self::Brr { .. }
+			| Self::SampleTable { .. }
+			| Self::SetDirectiveParameters { .. }
+			| Self::PopSection
+			| Self::Org(_)
+			| Self::UserDefinedMacro { .. } => (),
+			Self::AssignReference { value, .. } => value.resolve_relative_labels(direction, relative_labels),
 		}
 	}
 }

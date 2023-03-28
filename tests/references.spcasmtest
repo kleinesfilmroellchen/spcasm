@@ -51,3 +51,13 @@ nop
 dw overlapping_global_label ;= 00 30
 dw second_overlapping_global_label ;= 00 30
 dw .overlapping_local_label ;= 00 30
+
+nop
+nop
+- nop
+nop
+bra +
+nop
+nop
++: nop
+bra -

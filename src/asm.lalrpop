@@ -359,13 +359,13 @@ LabelForInstruction: Reference = {
 	<identifier:"identifier"> ":" "\n"* => Reference::Global(environment.borrow_mut().get_global_label(&identifier.0, identifier.1, LabelUsageKind::AsDefinition)),
 	<plus:LabelingPlus> ":"? "\n"* => Reference::Relative {
 		direction: RelativeReferenceDirection::Forward,
-		offset: plus.0,
+		id: plus.0,
 		value: None,
 		span: plus.1,
 	},
 	<minus:LabelingMinus> ":"? "\n"* => Reference::Relative {
 		direction: RelativeReferenceDirection::Backward,
-		offset: minus.0,
+		id: minus.0,
 		value: None,
 		span: minus.1,
 	},
@@ -398,13 +398,13 @@ Reference: Reference = {
 	},
 	<pluses:"+++"> => Reference::Relative {
 		direction: RelativeReferenceDirection::Forward,
-		offset: pluses.0,
+		id: pluses.0,
 		value: None,
 		span: pluses.1,
 	},
 	<minuses:"---"> => Reference::Relative {
 		direction: RelativeReferenceDirection::Backward,
-		offset: minuses.0,
+		id: minuses.0,
 		value: None,
 		span: minuses.1,
 	},

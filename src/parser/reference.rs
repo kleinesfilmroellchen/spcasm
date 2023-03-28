@@ -38,15 +38,11 @@ pub enum Reference {
 	/// A reference only valid within a global label. It may be reused with a different value later on.
 	Local(Arc<RefCell<LocalLabel>>),
 	/// A relative label, declared with '+' or '-'.
-	/// Note that the usages of these labels additionally contain offset information, which is not found here, but in
-	/// the AssemblyTimeValue data.
 	Relative {
 		/// The direction of the label, either a '+' or a '-' label.
 		direction: RelativeReferenceDirection,
-		/// The offset of this label, meaning how many of those special '-' or '+' labels it is pointing forwards or
-		/// backwards. This must be 1 for relative label declarations, but may be more than 1 for relative label uses
-		/// in code.
-		offset:    NonZeroU64,
+		/// The id of this label, meaning how many '-' or '+' were used.
+		id:        NonZeroU64,
 		value:     Option<Box<AssemblyTimeValue>>,
 		/// The location of definition of this label.
 		span:      SourceSpan,
@@ -97,7 +93,7 @@ impl Reference {
 	}
 }
 
-impl MacroParentReplacable for Reference {
+impl ReferenceResolvable for Reference {
 	fn replace_macro_parent(
 		&mut self,
 		replacement_parent: Arc<RefCell<MacroParent>>,
@@ -131,6 +127,31 @@ impl MacroParentReplacable for Reference {
 				)
 			},
 			Self::MacroGlobal { .. } | Self::Relative { .. } => Ok(()),
+		}
+	}
+
+	fn resolve_relative_labels(
+		&mut self,
+		direction: RelativeReferenceDirection,
+		relative_labels: &HashMap<NonZeroU64, Arc<RefCell<GlobalLabel>>>,
+	) {
+		// Only try to borrow mutably globals and locals. If there are circular references, this borrowing will fail and
+		// we can stop resolving, since there will be a resolution error later on anyways.
+		match self {
+			Self::Global(global) => {
+				let _ = global
+					.try_borrow_mut()
+					.map(|mut reference| reference.resolve_relative_labels(direction, relative_labels));
+			},
+			Self::Local(local) => {
+				let _ = local
+					.try_borrow_mut()
+					.map(|mut reference| reference.resolve_relative_labels(direction, relative_labels));
+			},
+			Self::MacroArgument { value, .. } => {
+				value.as_mut().map(|value| value.resolve_relative_labels(direction, relative_labels));
+			},
+			Self::MacroGlobal { .. } | Self::Relative { .. } => (),
 		}
 	}
 }
@@ -197,7 +218,7 @@ impl Resolvable for Reference {
 
 /// The direction of a relative reference.
 #[repr(u8)]
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum RelativeReferenceDirection {
 	/// A "+" label, referencing some later "+" label.
 	Forward,
@@ -236,7 +257,7 @@ pub struct GlobalLabel {
 	pub locals:          HashMap<String, Arc<RefCell<LocalLabel>>>,
 }
 
-impl MacroParentReplacable for GlobalLabel {
+impl ReferenceResolvable for GlobalLabel {
 	fn replace_macro_parent(
 		&mut self,
 		replacement_parent: Arc<RefCell<MacroParent>>,
@@ -247,6 +268,14 @@ impl MacroParentReplacable for GlobalLabel {
 			.map(|location| location.replace_macro_parent(replacement_parent, source_code))
 			.transpose()
 			.map(|_| ())
+	}
+
+	fn resolve_relative_labels(
+		&mut self,
+		direction: RelativeReferenceDirection,
+		relative_labels: &HashMap<NonZeroU64, Arc<RefCell<GlobalLabel>>>,
+	) {
+		self.location.as_mut().map(|location| location.resolve_relative_labels(direction, relative_labels));
 	}
 }
 
@@ -287,7 +316,7 @@ pub struct LocalLabel {
 	pub parent:   Weak<RefCell<GlobalLabel>>,
 }
 
-impl MacroParentReplacable for LocalLabel {
+impl ReferenceResolvable for LocalLabel {
 	fn replace_macro_parent(
 		&mut self,
 		replacement_parent: Arc<RefCell<MacroParent>>,
@@ -298,6 +327,14 @@ impl MacroParentReplacable for LocalLabel {
 			.map(|location| location.replace_macro_parent(replacement_parent, source_code))
 			.transpose()
 			.map(|_| ())
+	}
+
+	fn resolve_relative_labels(
+		&mut self,
+		direction: RelativeReferenceDirection,
+		relative_labels: &HashMap<NonZeroU64, Arc<RefCell<GlobalLabel>>>,
+	) {
+		self.location.as_mut().map(|location| location.resolve_relative_labels(direction, relative_labels));
 	}
 }
 
@@ -385,7 +422,7 @@ impl MacroParameters {
 	}
 }
 
-pub trait MacroParentReplacable {
+pub trait ReferenceResolvable {
 	/// Replace any macro argument's parent with the given macro parent. The macro parent stores the current macro's
 	/// argument list.
 	///
@@ -396,6 +433,14 @@ pub trait MacroParentReplacable {
 		replacement_parent: Arc<RefCell<MacroParent>>,
 		source_code: &Arc<AssemblyCode>,
 	) -> Result<(), Box<AssemblyError>>;
+
+	/// Replace any relative label with the stand-in global label from the given list, if possible. Only operates in one
+	/// direction, since the two directions are entirely distinct.
+	fn resolve_relative_labels(
+		&mut self,
+		direction: RelativeReferenceDirection,
+		relative_labels: &HashMap<NonZeroU64, Arc<RefCell<GlobalLabel>>>,
+	);
 }
 
 /// Ensures that the local label is referencing the parent, and that the parent is referencing the local. The local

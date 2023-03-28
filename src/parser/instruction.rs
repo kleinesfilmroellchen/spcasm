@@ -11,7 +11,7 @@ use miette::SourceSpan;
 use smartstring::alias::String;
 use spcasm_derive::{Parse, VariantName};
 
-use super::reference::{self, GlobalLabel, MacroParentReplacable, Reference};
+use super::reference::{self, GlobalLabel, Reference, ReferenceResolvable};
 use super::register::Register;
 use crate::error::AssemblyError;
 use crate::parser::AssemblyTimeValue;
@@ -57,13 +57,21 @@ impl Instruction {
 	}
 }
 
-impl MacroParentReplacable for Instruction {
+impl ReferenceResolvable for Instruction {
 	fn replace_macro_parent(
 		&mut self,
 		replacement_parent: Arc<RefCell<reference::MacroParent>>,
 		source_code: &Arc<AssemblyCode>,
 	) -> Result<(), Box<AssemblyError>> {
 		self.opcode.replace_macro_parent(replacement_parent, source_code)
+	}
+
+	fn resolve_relative_labels(
+		&mut self,
+		direction: reference::RelativeReferenceDirection,
+		relative_labels: &std::collections::HashMap<std::num::NonZeroU64, Arc<RefCell<GlobalLabel>>>,
+	) {
+		self.opcode.resolve_relative_labels(direction, relative_labels)
 	}
 }
 
@@ -273,7 +281,7 @@ impl Opcode {
 	}
 }
 
-impl MacroParentReplacable for Opcode {
+impl ReferenceResolvable for Opcode {
 	fn replace_macro_parent(
 		&mut self,
 		replacement_parent: Arc<RefCell<reference::MacroParent>>,
@@ -283,6 +291,16 @@ impl MacroParentReplacable for Opcode {
 			operand.replace_macro_parent(replacement_parent.clone(), source_code)?;
 		}
 		Ok(())
+	}
+
+	fn resolve_relative_labels(
+		&mut self,
+		direction: reference::RelativeReferenceDirection,
+		relative_labels: &std::collections::HashMap<std::num::NonZeroU64, Arc<RefCell<GlobalLabel>>>,
+	) {
+		for operand in self.first_operand.iter_mut().chain(self.second_operand.iter_mut()) {
+			operand.resolve_relative_labels(direction, relative_labels);
+		}
 	}
 }
 
@@ -650,7 +668,7 @@ impl AddressingMode {
 	}
 }
 
-impl MacroParentReplacable for AddressingMode {
+impl ReferenceResolvable for AddressingMode {
 	fn replace_macro_parent(
 		&mut self,
 		replacement_parent: Arc<RefCell<reference::MacroParent>>,
@@ -674,6 +692,32 @@ impl MacroParentReplacable for AddressingMode {
 			| AddressingMode::IndirectXAutoIncrement
 			| AddressingMode::CarryFlag
 			| AddressingMode::Register(_) => Ok(()),
+		}
+	}
+
+	fn resolve_relative_labels(
+		&mut self,
+		direction: reference::RelativeReferenceDirection,
+		relative_labels: &std::collections::HashMap<std::num::NonZeroU64, Arc<RefCell<GlobalLabel>>>,
+	) {
+		match self {
+			AddressingMode::Immediate(number)
+			| AddressingMode::DirectPage(number)
+			| AddressingMode::DirectPageXIndexed(number)
+			| AddressingMode::DirectPageYIndexed(number)
+			| AddressingMode::Address(number)
+			| AddressingMode::XIndexed(number)
+			| AddressingMode::YIndexed(number)
+			| AddressingMode::DirectPageXIndexedIndirect(number)
+			| AddressingMode::DirectPageIndirectYIndexed(number)
+			| AddressingMode::DirectPageBit(number, _)
+			| AddressingMode::AddressBit(number, _)
+			| AddressingMode::NegatedAddressBit(number, _) => number.resolve_relative_labels(direction, relative_labels),
+			AddressingMode::IndirectX
+			| AddressingMode::IndirectY
+			| AddressingMode::IndirectXAutoIncrement
+			| AddressingMode::CarryFlag
+			| AddressingMode::Register(_) => (),
 		}
 	}
 }

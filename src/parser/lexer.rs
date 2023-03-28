@@ -1,6 +1,7 @@
 //! Lexing.
 
 use std::iter::Peekable;
+use std::num::NonZeroU64;
 use std::sync::Arc;
 
 use miette::SourceOffset;
@@ -130,7 +131,22 @@ pub fn lex(source_code: Arc<AssemblyCode>) -> Result<Vec<Token>, Box<AssemblyErr
 				let identifier_span = (start_index, identifier.len() + 1).into();
 				tokens.push(Token::Identifier(identifier, identifier_span));
 			},
-			'#' | ',' | '+' | '-' | '^' | '|' | '~' | '&' | '*' | '(' | ')' | '[' | ']' | ':' | '.' | '/' | '!' | '=' | '<' | '>' => {
+			'-' => {
+				let start = index;
+				index += 1;
+				while let Some('-') = chars.peek() {
+					index += 1;
+					chars.next();
+				}
+				let end = index;
+				// Multi-dash: reference!
+				if end - start > 1 {
+					tokens.push(Token::RelativeLabelMinus(NonZeroU64::new((end-start).try_into().unwrap()).unwrap(), (start, end-start).into()));
+				} else {
+					tokens.push(parse_single_char_tokens(chr, index.into()));
+				}
+			},
+			'#' | ',' | '+' | '^' | '|' | '~' | '&' | '*' | '(' | ')' | '[' | ']' | ':' | '.' | '/' | '!' | '=' | '<' | '>' => {
 				tokens.push(parse_single_char_tokens(chr, index.into()));
 				index += 1;
 			},

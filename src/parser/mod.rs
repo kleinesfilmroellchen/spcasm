@@ -12,7 +12,7 @@ use smartstring::alias::String;
 
 use self::instruction::{AddressingMode, Instruction, Opcode};
 use self::lexer::lex;
-use self::reference::{GlobalLabel, MacroParameters, MacroParent, MacroParentReplacable, Reference};
+use self::reference::{GlobalLabel, MacroParameters, MacroParent, ReferenceResolvable, Reference, RelativeReferenceDirection};
 use crate::assembler::resolve_file;
 use crate::cli::{default_backend_options, BackendOptions};
 use crate::directive::DirectiveValue;
@@ -232,6 +232,9 @@ impl AssemblyFile {
 	/// All panics are programming errors.
 	pub fn fill_in_reference_links(&mut self) -> Result<(), Box<AssemblyError>> {
 		let mut current_global_label: Option<Arc<RefCell<GlobalLabel>>> = None;
+		// While we do the local label merging, also perform the backward relative resolution.
+		// The forward relative labels are resolved in a reverse pass afterwards.
+		let mut current_backward_relative_label_map = HashMap::new();
 
 		for element in &mut self.content {
 			// First match for reference resolution in instruction position
@@ -242,6 +245,7 @@ impl AssemblyFile {
 						current_global_label.clone(),
 						&self.source_code,
 					)?;
+					local.borrow_mut().resolve_relative_labels(RelativeReferenceDirection::Backward, &current_backward_relative_label_map);
 				},
 				ProgramElement::Label(Reference::Global(ref global)) => {
 					current_global_label = Some(global.clone());
@@ -253,9 +257,31 @@ impl AssemblyFile {
 						location: *span,
 					}
 					.into()),
+				ProgramElement::Label(Reference::Relative {
+					direction: RelativeReferenceDirection::Backward,
+					id,
+					span,
+					..
+				}) => {
+					// "Drop" the mutable borrow from id before *element is used to not confuse the borrow checker.
+					let id = *id;
+					// To reference the relative label until codegen, create a new local label for it.
+					let global_for_relative =  Arc::new(RefCell::new(GlobalLabel {
+						// This name is likely, but not guaranteed, to be unique! That's why we directly insert into the globals list.
+						name: format!("ref_-_{}_{}", id, span.offset()).into(),
+						span: *span,
+						used_as_address: true,
+						locals: HashMap::default(),
+						location: None,
+					}));
+					self.parent.upgrade().expect("parent disappeared").borrow_mut().globals.push(global_for_relative.clone());
+					*element = ProgramElement::Label(Reference::Global(global_for_relative.clone()));
+					current_backward_relative_label_map.insert(id, global_for_relative);
+				},
 
 				ProgramElement::Directive(Directive { value, .. }) => {
 					value.set_global_label(&current_global_label, &self.source_code);
+					value.resolve_relative_labels(RelativeReferenceDirection::Backward, &current_backward_relative_label_map);
 				},
 				ProgramElement::Instruction(Instruction {
 					opcode: Opcode { first_operand, second_operand, .. },
@@ -263,9 +289,11 @@ impl AssemblyFile {
 				}) if let Some(ref actual_global_label) = current_global_label => {
 					if let Some(mode) = first_operand.as_mut() {
 						mode.set_global_label(actual_global_label);
+						mode.resolve_relative_labels(RelativeReferenceDirection::Backward, &current_backward_relative_label_map);
 					}
 					if let Some(mode) = second_operand.as_mut() {
 						mode.set_global_label(actual_global_label);
+						mode.resolve_relative_labels(RelativeReferenceDirection::Backward, &current_backward_relative_label_map);
 					}
 				},
 				ProgramElement::UserDefinedMacroCall { 
@@ -274,14 +302,54 @@ impl AssemblyFile {
 				} if let Some(ref actual_global_label) = current_global_label => {
 					for argument in arguments {
 						argument.set_global_label(actual_global_label);
+						argument.resolve_relative_labels(RelativeReferenceDirection::Backward, &current_backward_relative_label_map);
 					}
 				},
-				ProgramElement::Instruction(_)
-				| ProgramElement::UserDefinedMacroCall { .. }
+				ProgramElement::Instruction(Instruction {
+					opcode: Opcode { first_operand, second_operand, .. },
+					..
+				}) => {
+					if let Some(mode) = first_operand.as_mut() {
+						mode.resolve_relative_labels(RelativeReferenceDirection::Backward, &current_backward_relative_label_map);
+					}
+					if let Some(mode) = second_operand.as_mut() {
+						mode.resolve_relative_labels(RelativeReferenceDirection::Backward, &current_backward_relative_label_map);
+					}
+				}
+				
+				ProgramElement::UserDefinedMacroCall { .. }
 				| ProgramElement::IncludeSource { .. }
 				| ProgramElement::Label(Reference::MacroGlobal { .. } | Reference::Relative { .. }) => (),
 			}
 		}
+
+		let mut current_forward_relative_label_map = HashMap::new();
+		// Reverse iteration to resolve forward references.
+		for element in self.content.iter_mut().rev() {
+			if let ProgramElement::Label(Reference::Relative {
+				direction: RelativeReferenceDirection::Forward,
+				id,
+				span,
+				..
+			}) = element {
+				let id = *id;
+				// To reference the relative label until codegen, create a new local label for it.
+				let global_for_relative =  Arc::new(RefCell::new(GlobalLabel {
+					// This name is likely, but not guaranteed, to be unique! That's why we directly insert into the globals list.
+					name: format!("ref_+_{}_{}", id, span.offset()).into(),
+					span: *span,
+					used_as_address: true,
+					locals: HashMap::default(),
+					location: None,
+				}));
+				self.parent.upgrade().expect("parent disappeared").borrow_mut().globals.push(global_for_relative.clone());
+				*element = ProgramElement::Label(Reference::Global(global_for_relative.clone()));
+				current_forward_relative_label_map.insert(id, global_for_relative);
+			}
+			element.resolve_relative_labels(RelativeReferenceDirection::Forward, &current_forward_relative_label_map);
+		}
+
+
 		Ok(())
 	}
 

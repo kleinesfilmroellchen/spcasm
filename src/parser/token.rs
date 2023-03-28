@@ -1,6 +1,7 @@
 //! The Token struct.
 
 use std::fmt::Display;
+use std::num::NonZeroU64;
 
 use miette::{SourceOffset, SourceSpan};
 #[allow(unused)]
@@ -36,8 +37,12 @@ pub enum Token {
 	Comma(SourceOffset),
 	/// '+'
 	Plus(SourceOffset),
+	/// Multiple '+' (or just one), when it's clear that they are used as a relative label.
+	RelativeLabelPlus(NonZeroU64, SourceSpan),
 	/// '-'
 	Minus(SourceOffset),
+	/// Multiple '-' (or just one), when it's clear that they are used as a relative label.
+	RelativeLabelMinus(NonZeroU64, SourceSpan),
 	/// '-' but used in range expressions like for 'incbin'
 	RangeMinus(SourceOffset),
 	/// '*'
@@ -114,6 +119,8 @@ impl PartialEq for Token {
 			| (Self::OpenAngleBracket(..), Self::OpenAngleBracket(..))
 			| (Self::DoubleOpenAngleBracket(..), Self::DoubleOpenAngleBracket(..))
 			| (Self::DoubleCloseAngleBracket(..), Self::DoubleCloseAngleBracket(..))
+			| (Self::RelativeLabelMinus(..), Self::RelativeLabelMinus(..))
+			| (Self::RelativeLabelPlus(..), Self::RelativeLabelPlus(..))
 			| (Self::Percent(..), Self::Percent(..))
 			| (Self::Pipe(..), Self::Pipe(..))
 			| (Self::Tilde(..), Self::Tilde(..))
@@ -169,16 +176,17 @@ impl Token {
 			| Self::DoubleStar(location)
 			| Self::DoubleOpenAngleBracket(location)
 			| Self::DoubleCloseAngleBracket(location)
+			| Self::RelativeLabelMinus(_, location)
+			| Self::RelativeLabelPlus(_, location)
 			| Self::Mnemonic(_, location)
 			| Self::SpecialIdentifier(_, location)
 			| Self::Directive(_, location) => *location,
-			// #[cfg(test)]
 			Self::TestComment(_, location) => *location,
 		}
 	}
 
 	/// Parse a special identifier, mainly validating that the identifier given is one of the special identifiers.
-	/// 
+	///
 	/// # Errors
 	/// If the identifier is not a special identifier.
 	pub fn parse_special_identifier(
@@ -205,38 +213,39 @@ impl Display for Token {
 			return write!(f, "{}", mnemonic);
 		};
 		write!(f, "{}", match self {
-			Self::Identifier(..) => "identifier",
-			Self::SpecialIdentifier(name, ..) => name,
-			Self::String(..) => "string",
-			Self::Register(..) => "register name",
-			Self::PlusRegister(..) => "'+' register name",
-			Self::Directive(..) => "directive",
-			Self::Number(..) => "number",
-			Self::Hash(..) => "hash",
-			Self::Comma(..) => "comma",
-			Self::Period(..) => "'.'",
-			Self::ExplicitDirectPage(..) => "'.b'",
-			Self::Plus(..) => "'+'",
-			Self::Minus(..) | Self::RangeMinus(..) => "'-'",
-			Self::Star(..) => "'*'",
-			Self::Tilde(..) => "'~'",
-			Self::DoubleStar(..) => "'**'",
-			Self::OpenAngleBracket(..) => "'<'",
-			Self::CloseAngleBracket(..) => "'>'",
-			Self::DoubleOpenAngleBracket(..) => "'<<'",
-			Self::DoubleCloseAngleBracket(..) => "'>>'",
-			Self::Percent(..) => "'%'",
-			Self::Equals(..) => "'='",
-			Self::CloseParenthesis(..) | Self::CloseIndexingParenthesis(..) => "')'",
-			Self::OpenIndexingParenthesis(..) | Self::OpenParenthesis(..) => "'('",
-			Self::Slash(..) => "'/'",
-			Self::Pipe(..) => "'|'",
-			Self::Ampersand(..) => "'&'",
-			Self::Caret(..) => "'^'",
-			Self::Newline(..) => "new line",
-			Self::Colon(..) => "':'",
-			// #[cfg(test)]
-			Self::TestComment(..) => "test comment (';=')",
+			Self::Identifier(..) => "identifier".to_string(),
+			Self::SpecialIdentifier(name, ..) => (*name).to_string(),
+			Self::String(..) => "string".to_string(),
+			Self::Register(..) => "register name".to_string(),
+			Self::PlusRegister(..) => "'+' register name".to_string(),
+			Self::Directive(..) => "directive".to_string(),
+			Self::Number(..) => "number".to_string(),
+			Self::Hash(..) => "hash".to_string(),
+			Self::Comma(..) => "comma".to_string(),
+			Self::Period(..) => "'.'".to_string(),
+			Self::ExplicitDirectPage(..) => "'.b'".to_string(),
+			Self::Plus(..) => "'+'".to_string(),
+			Self::RelativeLabelPlus(count, _) => format!("'{}'", "+".repeat(usize::try_from(u64::from(*count)).unwrap_or(usize::MAX))),
+			Self::RelativeLabelMinus(count, _) => format!("'{}'", "-".repeat(usize::try_from(u64::from(*count)).unwrap_or(usize::MAX))),
+			Self::Minus(..) | Self::RangeMinus(..) => "'-'".to_string(),
+			Self::Star(..) => "'*'".to_string(),
+			Self::Tilde(..) => "'~'".to_string(),
+			Self::DoubleStar(..) => "'**'".to_string(),
+			Self::OpenAngleBracket(..) => "'<'".to_string(),
+			Self::CloseAngleBracket(..) => "'>'".to_string(),
+			Self::DoubleOpenAngleBracket(..) => "'<<'".to_string(),
+			Self::DoubleCloseAngleBracket(..) => "'>>'".to_string(),
+			Self::Percent(..) => "'%'".to_string(),
+			Self::Equals(..) => "'='".to_string(),
+			Self::CloseParenthesis(..) | Self::CloseIndexingParenthesis(..) => "')'".to_string(),
+			Self::OpenIndexingParenthesis(..) | Self::OpenParenthesis(..) => "'('".to_string(),
+			Self::Slash(..) => "'/'".to_string(),
+			Self::Pipe(..) => "'|'".to_string(),
+			Self::Ampersand(..) => "'&'".to_string(),
+			Self::Caret(..) => "'^'".to_string(),
+			Self::Newline(..) => "new line".to_string(),
+			Self::Colon(..) => "':'".to_string(),
+			Self::TestComment(..) => "test comment (';=')".to_string(),
 			Self::Mnemonic(..) => unreachable!(),
 		})
 	}

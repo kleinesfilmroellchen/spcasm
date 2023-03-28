@@ -16,7 +16,7 @@ adc a,3+4 ;= 84 07
 mov x,zero_label  + $0F ;= F8 0F
 mov x, 80 /10 ;= F8 08
 mov A, +(80/10)+5 ;= E4 0D
-mov A, 80/ (10+5) ;= E4 05
+-: mov A, 80/ (10+5) ;= E4 05
 mov A, +(80/10)+X ;= F4 08
 mov a,# 40-30-10 ;= E8 00
 mov A,bytelabel
@@ -31,7 +31,7 @@ mov a ,#~%10110010 ;= E8 4D
 mov a, #$9f ^ $78 ^$9F ;= E8 78
 mov a,#6**3 ;= E8 D8
 
-mov a,$abcd    ;= E5 CD AB
++ mov a,$abcd    ;= E5 CD AB
 mov.b a,$abcd  ;= E4 CD
 
 db 'x', '\x67', '\\', '\"', '\''
@@ -52,6 +52,7 @@ textlabel: ascii "\x08\xff\x1D'\'"
 
 incbin "binary.bin":2-3
 incbin "binary.bin":(2-1)-3
++
 incbin "binary.bin":2-(3-1)
 incbin "binary.bin",2
 incbin "binary.bin",2,1

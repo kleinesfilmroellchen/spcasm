@@ -46,6 +46,7 @@ global_selftarget        0190
 
 ```trycmd
 $ spcasm -w all -f elf tests/opcodes.s tests/test-output
+
 ```
 
 ```trycmd

@@ -6,9 +6,10 @@ use lalrpop_util::ParseError;
 
 use smartstring::alias::String;
 
-use std::sync::{Weak, Arc};
 use std::cell::RefCell;
 use std::collections::HashMap;
+use std::num::NonZeroU64;
+use std::sync::{Weak, Arc};
 
 use crate::parser::{
 	instruction::{Instruction, Mnemonic, AddressingMode, Opcode, MemoryAddress},
@@ -18,7 +19,7 @@ use crate::parser::{
 	LabelUsageKind, 
 	Token,
 	Register,
-	reference::{Reference, LocalLabel, MacroParent},
+	reference::{Reference, LocalLabel, MacroParent, RelativeReferenceDirection},
 	try_make_direct_page_addressing_mode,
 	source_range,
 	apply_brr_options,
@@ -356,6 +357,28 @@ LabelForInstruction: Reference = {
 		}))
 	),
 	<identifier:"identifier"> ":" "\n"* => Reference::Global(environment.borrow_mut().get_global_label(&identifier.0, identifier.1, LabelUsageKind::AsDefinition)),
+	<plus:LabelingPlus> ":"? "\n"* => Reference::Relative {
+		direction: RelativeReferenceDirection::Forward,
+		offset: plus.0,
+		value: None,
+		span: plus.1,
+	},
+	<minus:LabelingMinus> ":"? "\n"* => Reference::Relative {
+		direction: RelativeReferenceDirection::Backward,
+		offset: minus.0,
+		value: None,
+		span: minus.1,
+	},
+};
+
+LabelingMinus: (NonZeroU64, SourceSpan) = {
+	"---" => <>,
+	"-" => (NonZeroU64::new(1).unwrap(), <>.into()),
+	"-range-" => (NonZeroU64::new(1).unwrap(), <>.into()),
+};
+LabelingPlus: (NonZeroU64, SourceSpan) = {
+	"+++" => <>,
+	"+" => (NonZeroU64::new(1).unwrap(), <>.into()),
 };
 
 Reference: Reference = {
@@ -372,7 +395,19 @@ Reference: Reference = {
 		span: source_range(start.into(), end.into()),
 		macro_parent: MacroParent::new_formal(None, identifier.1),
 		value: None,
-	}
+	},
+	<pluses:"+++"> => Reference::Relative {
+		direction: RelativeReferenceDirection::Forward,
+		offset: pluses.0,
+		value: None,
+		span: pluses.1,
+	},
+	<minuses:"---"> => Reference::Relative {
+		direction: RelativeReferenceDirection::Backward,
+		offset: minuses.0,
+		value: None,
+		span: minuses.1,
+	},
 };
 
 LabelAssignment: Directive = <mut reference:Reference> <eq:"="> <value:AssemblyTimeValue> => {
@@ -525,6 +560,8 @@ extern {
 		"#" => Token::Hash(<SourceOffset>),
 		"," => Token::Comma(<SourceOffset>),
 		"+" => Token::Plus(<SourceOffset>),
+		"+++" => Token::RelativeLabelPlus(<NonZeroU64>, <SourceSpan>),
+		"---" => Token::RelativeLabelMinus(<NonZeroU64>, <SourceSpan>),
 		"*" => Token::Star(<SourceOffset>),
 		"**" => Token::DoubleStar(<SourceSpan>),
 		"-" => Token::Minus(<SourceOffset>),

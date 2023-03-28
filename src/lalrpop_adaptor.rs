@@ -1,11 +1,13 @@
 //! LALRPOP adaptor code.
 
+use std::num::NonZeroU64;
 use std::vec::IntoIter;
 
 #[allow(unused)]
 use smartstring::alias::String;
 
 use crate::error::AssemblyError;
+use crate::parser::reference::RelativeReferenceDirection;
 use crate::parser::{source_range, Register, Token};
 
 /// An API adaptor that allows us to pass the Vec<Token> we lexed into LALRPOP.
@@ -33,6 +35,7 @@ impl Iterator for LalrpopAdaptor {
 /// - disambiguate parenthesis used for expressions and for addressing
 /// - combine '+X' and '+Y' into one token
 /// - transform simple '-' into a "range dash" for range specifications
+#[allow(clippy::too_many_lines)]
 pub fn preprocess_token_stream(tokens: Vec<Token>) -> Vec<Token> {
 	let mut tokens = tokens.into_iter();
 	let mut result = Vec::new();
@@ -111,6 +114,42 @@ pub fn preprocess_token_stream(tokens: Vec<Token>) -> Vec<Token> {
 			},
 			Token::Minus(offset) if !in_mnemonic_line => {
 				result.push(Token::RangeMinus(offset));
+				continue;
+			},
+			Token::Plus(offset) | Token::Minus(offset) => {
+				expecting_indexing_addressing_mode = false;
+				let direction = match next_token {
+					Token::Plus(_) => RelativeReferenceDirection::Forward,
+					Token::Minus(_) => RelativeReferenceDirection::Backward,
+					_ => unreachable!(),
+				};
+				let mut collected_tokens = vec![next_token.clone()];
+				for further_token in tokens.by_ref() {
+					if further_token == next_token {
+						// It can still be a relative + / - token...
+						collected_tokens.push(further_token);
+					} else if matches!(further_token, Token::TestComment(..) | Token::Newline(_)) {
+						// We really did find a relative + / - token.
+						let plus_amount = NonZeroU64::new(u64::try_from(collected_tokens.len()).unwrap()).unwrap();
+						let source_span =
+							source_range(offset.into(), collected_tokens.last().unwrap().source_span().into());
+						result.push(match direction {
+							RelativeReferenceDirection::Backward => Token::RelativeLabelMinus(plus_amount, source_span),
+							RelativeReferenceDirection::Forward => Token::RelativeLabelPlus(plus_amount, source_span),
+						});
+						result.push(further_token);
+						collected_tokens.clear();
+						in_mnemonic_line = false;
+						break;
+					} else {
+						// Didn't find a relative + / - token.
+						collected_tokens.push(further_token);
+						break;
+					}
+				}
+				if !collected_tokens.is_empty() {
+					result.append(&mut collected_tokens);
+				}
 				continue;
 			},
 			// After all of these tokens we can be sure we can't have an indexing addressing mode, so parentheses can

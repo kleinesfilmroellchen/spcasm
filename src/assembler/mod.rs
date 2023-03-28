@@ -65,10 +65,15 @@ fn assemble_to_data(
 
 	for (segment_start, segment_content) in &mut segments.segments {
 		data.segments.new_segment(*segment_start);
+		let mut current_labels = Vec::default();
 		for program_element in segment_content {
 			match program_element {
-				ProgramElement::Instruction(instruction) => data.assemble_instruction(instruction)?,
-				ProgramElement::Directive(directive) => data.assemble_directive(directive)?,
+				ProgramElement::Label(label) => {
+					current_labels.push(label.clone());
+					continue;
+				},
+				ProgramElement::Instruction(instruction) => data.assemble_instruction(instruction, &current_labels)?,
+				ProgramElement::Directive(directive) => data.assemble_directive(directive, &current_labels)?,
 				ProgramElement::IncludeSource { .. } =>
 					unreachable!("there should not be any remaining unincluded source code at assembly time"),
 				ProgramElement::UserDefinedMacroCall { .. } =>
@@ -77,6 +82,7 @@ fn assemble_to_data(
 			if data.should_stop {
 				break;
 			}
+			current_labels.clear();
 		}
 		if data.should_stop {
 			break;
@@ -103,8 +109,8 @@ pub(crate) fn resolve_file(source_code: &Arc<AssemblyCode>, target_file: &str) -
 /// This data may have an attached reference.
 #[derive(Clone, Debug)]
 pub struct LabeledMemoryValue {
-	/// The label of this memory value.
-	pub label:                Option<Reference>,
+	/// The label(s) of this memory value.
+	pub labels:               Vec<Reference>,
 	/// The actual memory value, which might or might not be resolved.
 	pub value:                MemoryValue,
 	/// The source span of the instruction or directive that was compiled to this memory value.
@@ -220,6 +226,8 @@ pub struct AssembledData {
 }
 
 impl AssembledData {
+	const DEFAULT_VEC: &'static Vec<Reference> = &Vec::default();
+
 	/// Combine the segments into one binary stream. The result has correct memory addresses, so the first byte is
 	/// memory address 0 etc.
 	/// # Errors
@@ -285,14 +293,17 @@ impl AssembledData {
 
 	/// Assemble a single instruction. This function uses the codegen table `table::assembly_table`.
 	#[allow(clippy::unnecessary_wraps, clippy::too_many_lines)]
-	fn assemble_instruction(&mut self, instruction: &mut Instruction) -> Result<(), Box<AssemblyError>> {
+	fn assemble_instruction(
+		&mut self,
+		instruction: &mut Instruction,
+		current_labels: &[Reference],
+	) -> Result<(), Box<AssemblyError>> {
 		// Because the actions always expect to get a value, we need a fallback dummy value if there is none in the
 		// addressing mode. This is fine, since we control the codegen table and we can make sure that we never use a
 		// value where there is none in the operand.
 		const dummy_value: AssemblyTimeValue = AssemblyTimeValue::Literal(0);
 
-		let Instruction { label, opcode: Opcode { first_operand, mnemonic, second_operand, .. }, span, .. } =
-			instruction;
+		let Instruction { opcode: Opcode { first_operand, mnemonic, second_operand, .. }, span, .. } = instruction;
 
 		// Retrieve the table entry for the mnemonic.
 		let mnemonic_entry = assembly_table
@@ -309,7 +320,7 @@ impl AssembledData {
 					}
 					.into())
 				} else {
-					self.append_8_bits(MemoryAddress::from(*opcode), label.clone(), *span)
+					self.append_8_bits(MemoryAddress::from(*opcode), current_labels, *span)
 				},
 			EntryOrFirstOperandTable::Table(first_operand_table) => {
 				let mut legal_modes: Vec<_> = first_operand_table.keys().map(|f| f.to_string().into()).collect();
@@ -359,7 +370,7 @@ impl AssembledData {
 				match first_operand_entry {
 					EntryOrSecondOperandTable::Entry(opcode, action)
 					| EntryOrSecondOperandTable::ImplicitAEntry(opcode, action) => {
-						self.append_8_bits(MemoryAddress::from(*opcode), label.clone(), *span)?;
+						self.append_8_bits(MemoryAddress::from(*opcode), current_labels, *span)?;
 						action(
 							self,
 							*span,
@@ -371,7 +382,7 @@ impl AssembledData {
 						self.append_unresolved_opcode_with_bit_index(
 							AssemblyTimeValue::Literal(MemoryAddress::from(*opcode)),
 							first_operand.bit_index().or_else(|| mnemonic.bit_index()).unwrap_or(1),
-							label.clone(),
+							current_labels,
 							*span,
 						)?;
 						action(
@@ -400,7 +411,7 @@ impl AssembledData {
 							BinaryOperator::Or,
 						),
 						0,
-						label.clone(),
+						current_labels,
 						*span,
 					),
 					EntryOrSecondOperandTable::Table(second_operand_table) => {
@@ -427,12 +438,15 @@ impl AssembledData {
 								}
 							})?;
 
-						let bit_index =
-							first_operand.bit_index().or_else(|| second_operand.bit_index()).or_else(|| mnemonic.bit_index()).unwrap_or(1);
+						let bit_index = first_operand
+							.bit_index()
+							.or_else(|| second_operand.bit_index())
+							.or_else(|| mnemonic.bit_index())
+							.unwrap_or(1);
 
 						match second_operand_entry {
 							TwoOperandEntry::Entry(opcode, action) => {
-								self.append(*opcode, label.clone(), *span)?;
+								self.append(*opcode, current_labels, *span)?;
 								action(
 									self,
 									*span,
@@ -445,7 +459,7 @@ impl AssembledData {
 								self.append_unresolved_opcode_with_bit_index(
 									AssemblyTimeValue::Literal(MemoryAddress::from(*opcode)),
 									bit_index,
-									label.clone(),
+									current_labels,
 									*span,
 								)?;
 								action(
@@ -472,7 +486,7 @@ impl AssembledData {
 	fn append_8_bits(
 		&mut self,
 		value: MemoryAddress,
-		reference: Option<Reference>,
+		labels: &[Reference],
 		span: SourceSpan,
 	) -> Result<(), Box<AssemblyError>> {
 		if (value & 0xFF) != value {
@@ -483,17 +497,17 @@ impl AssembledData {
 				size: 8,
 			})?;
 		}
-		self.append((value & 0xFF) as u8, reference, span)
+		self.append((value & 0xFF) as u8, labels, span)
 	}
 
 	/// Appends an 8-bit value to the current segment.
 	#[inline]
-	fn append(&mut self, value: u8, reference: Option<Reference>, span: SourceSpan) -> Result<(), Box<AssemblyError>> {
+	fn append(&mut self, value: u8, labels: &[Reference], span: SourceSpan) -> Result<(), Box<AssemblyError>> {
 		let src = self.source_code.clone();
 		self.segments.current_segment_mut().map_err(|_| AssemblyError::MissingSegment { location: span, src })?.push(
 			LabeledMemoryValue {
 				value:                MemoryValue::Resolved(value),
-				label:                reference,
+				labels:               labels.to_owned(),
 				instruction_location: span,
 			},
 		);
@@ -503,12 +517,12 @@ impl AssembledData {
 	fn append_bytes(
 		&mut self,
 		values: Vec<u8>,
-		reference: &Option<Reference>,
+		labels: &[Reference],
 		span: SourceSpan,
 	) -> Result<(), Box<AssemblyError>> {
 		let mut is_first = true;
 		for value in values {
-			self.append(value, if is_first { reference.clone() } else { None }, span)?;
+			self.append(value, if is_first { labels } else { Self::DEFAULT_VEC }, span)?;
 			is_first = false;
 		}
 		Ok(())
@@ -523,14 +537,14 @@ impl AssembledData {
 		&mut self,
 		value: AssemblyTimeValue,
 		byte: u8,
-		reference: Option<Reference>,
+		labels: &[Reference],
 		span: SourceSpan,
 	) -> Result<(), Box<AssemblyError>> {
 		let src = self.source_code.clone();
 		self.segments.current_segment_mut().map_err(|_| AssemblyError::MissingSegment { location: span, src })?.push(
 			LabeledMemoryValue {
 				value:                MemoryValue::Number(value, byte),
-				label:                reference,
+				labels:               labels.to_owned(),
 				instruction_location: span,
 			},
 		);
@@ -544,11 +558,11 @@ impl AssembledData {
 	fn append_16_bits_unresolved(
 		&mut self,
 		value: AssemblyTimeValue,
-		reference: Option<Reference>,
+		labels: &[Reference],
 		span: SourceSpan,
 	) -> Result<(), Box<AssemblyError>> {
-		self.append_8_bits_unresolved(value.clone(), 0, reference, span)?;
-		self.append_8_bits_unresolved(value, 1, None, span)
+		self.append_8_bits_unresolved(value.clone(), 0, labels, span)?;
+		self.append_8_bits_unresolved(value, 1, &Vec::default(), span)
 	}
 
 	/// Appends an unresolved value to the current segment. The value is sized, which determines how many bytes are
@@ -559,20 +573,20 @@ impl AssembledData {
 	fn append_sized_unresolved(
 		&mut self,
 		value: SizedAssemblyTimeValue,
-		reference: Option<Reference>,
+		labels: &[Reference],
 		span: SourceSpan,
 	) -> Result<(), Box<AssemblyError>> {
 		match value.size {
-			Size::Byte => self.append_8_bits_unresolved(value.value, 0, reference, span),
-			Size::Word => self.append_16_bits_unresolved(value.value, reference, span),
+			Size::Byte => self.append_8_bits_unresolved(value.value, 0, labels, span),
+			Size::Word => self.append_16_bits_unresolved(value.value, labels, span),
 			Size::Long => {
-				self.append_16_bits_unresolved(value.value.clone(), reference, span)?;
-				self.append_8_bits_unresolved(value.value, 2, None, span)
+				self.append_16_bits_unresolved(value.value.clone(), labels, span)?;
+				self.append_8_bits_unresolved(value.value, 2, &Vec::default(), span)
 			},
 			Size::DWord => {
-				self.append_16_bits_unresolved(value.value.clone(), reference, span)?;
-				self.append_8_bits_unresolved(value.value.clone(), 2, None, span)?;
-				self.append_8_bits_unresolved(value.value, 3, None, span)
+				self.append_16_bits_unresolved(value.value.clone(), labels, span)?;
+				self.append_8_bits_unresolved(value.value.clone(), 2, &Vec::default(), span)?;
+				self.append_8_bits_unresolved(value.value, 3, &Vec::default(), span)
 			},
 		}
 	}
@@ -590,7 +604,7 @@ impl AssembledData {
 		let src = self.source_code.clone();
 		self.segments.current_segment_mut().map_err(|_| AssemblyError::MissingSegment { location: span, src })?.push(
 			LabeledMemoryValue {
-				label:                None,
+				labels:               Vec::default(),
 				value:                MemoryValue::NumberRelative(value),
 				instruction_location: span,
 			},
@@ -614,7 +628,7 @@ impl AssembledData {
 		self.segments.current_segment_mut().map_err(|_| AssemblyError::MissingSegment { location: span, src })?.push(
 			LabeledMemoryValue {
 				value:                MemoryValue::NumberHighByteWithContainedBitIndex(value, bit_index),
-				label:                None,
+				labels:               Vec::default(),
 				instruction_location: span,
 			},
 		);
@@ -629,14 +643,14 @@ impl AssembledData {
 		&mut self,
 		value: AssemblyTimeValue,
 		bit_index: u8,
-		label: Option<Reference>,
+		labels: &[Reference],
 		span: SourceSpan,
 	) -> Result<(), Box<AssemblyError>> {
 		let src = self.source_code.clone();
 		self.segments.current_segment_mut().map_err(|_| AssemblyError::MissingSegment { location: span, src })?.push(
 			LabeledMemoryValue {
 				// Synthesize the (bit_index << 5) | value which is needed for bit indices in opcodes.
-				value: MemoryValue::Number(
+				value:                MemoryValue::Number(
 					AssemblyTimeValue::BinaryOperation(
 						value.into(),
 						AssemblyTimeValue::Literal(MemoryAddress::from(bit_index) << 5).into(),
@@ -644,7 +658,7 @@ impl AssembledData {
 					),
 					0,
 				),
-				label,
+				labels:               labels.to_owned(),
 				instruction_location: span,
 			},
 		);
@@ -669,17 +683,18 @@ impl AssembledData {
 			for (offset, datum) in segment_data.iter_mut().enumerate() {
 				let memory_address = segment_start + offset as i64;
 				current_global_label = datum
-					.label
-					.clone()
-					.filter(|reference| matches!(reference, Reference::Global(..)))
+					.labels
+					.last()
+					.filter(|label| matches!(label, Reference::Global(..)))
+					.cloned()
 					.or(current_global_label);
 				// Resolve the actual reference definition; i.e. if the below code executes, we're at the memory
 				// location which is labeled.
 				datum
-					.label
-					.as_mut()
+					.labels
+					.iter_mut()
 					.filter(|existing_reference| !existing_reference.is_resolved())
-					.and_then(|resolved_reference| {
+					.filter_map(|resolved_reference| {
 						had_modifications |= true;
 						match *resolved_reference {
 							Reference::Global(..) | Reference::Local(..) => resolved_reference.resolve_to(
@@ -704,7 +719,8 @@ impl AssembledData {
 						}
 						.err()
 					})
-					.map_or_else(|| Ok(()), |err| err.report_or_throw(&*self.options))?;
+					.find_map(|err| err.report_or_throw(&*self.options).err())
+					.map_or_else(|| Ok(()), Err)?;
 				// Resolve a reference used as a memory address, e.g. in an instruction operand like a jump target.
 				had_modifications |= datum.try_resolve(memory_address);
 			}

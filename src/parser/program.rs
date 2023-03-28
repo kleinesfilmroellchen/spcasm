@@ -8,14 +8,17 @@ use miette::SourceSpan;
 use smartstring::alias::String;
 
 use super::instruction::Instruction;
-use super::reference::{merge_local_into_parent, MacroParent, MacroParentReplacable, Reference};
+use super::reference::{MacroParent, MacroParentReplacable, Reference};
 use super::{AssemblyTimeValue, Directive};
 use crate::parser::source_range;
 use crate::{AssemblyCode, AssemblyError};
 
-/// A program element of an assenbled program. A list of program elements makes an assembled program itself.
+/// A program element of an assembled program. A list of program elements makes an assembled program itself.
 #[derive(Clone, Debug)]
 pub enum ProgramElement {
+	/// A label for the current location in memory.
+	/// Later on, these are used to assign specific values to these references.
+	Label(Reference),
 	/// An assembly directive that doesn't necessarily correspond to assembled data directly.
 	Directive(Directive),
 	/// A processor instruction that corresponds to some assembled data.
@@ -23,11 +26,9 @@ pub enum ProgramElement {
 	/// Include directive that copy-pastes another file's assembly into this one.
 	IncludeSource {
 		/// The file that is included as source code.
-		file:  String,
+		file: String,
 		/// Source code location of the include directive.
-		span:  SourceSpan,
-		/// Label before the include directive. This label will be used for the first instruction in the included file.
-		label: Option<Reference>,
+		span: SourceSpan,
 	},
 	/// Calling a user-defined macro, e.g. `%my_macro(3, 4, 5)`
 	UserDefinedMacroCall {
@@ -37,20 +38,19 @@ pub enum ProgramElement {
 		arguments:  Vec<AssemblyTimeValue>,
 		/// Location in source code of the macro call.
 		span:       SourceSpan,
-		/// Label before the macro call. This label will be used for the first instruction in the macro.
-		label:      Option<Reference>,
 	},
 }
 
 impl ProgramElement {
 	/// Obtains a reference to the source span of this program element.
 	#[must_use]
-	pub const fn span(&self) -> &SourceSpan {
+	pub fn span(&self) -> SourceSpan {
 		match self {
 			Self::Directive(Directive { span, .. })
 			| Self::Instruction(Instruction { span, .. })
 			| Self::UserDefinedMacroCall { span, .. }
-			| Self::IncludeSource { span, .. } => span,
+			| Self::IncludeSource { span, .. } => *span,
+			Self::Label(reference) => reference.source_span(),
 		}
 	}
 
@@ -62,52 +62,10 @@ impl ProgramElement {
 			| Self::Instruction(Instruction { span, .. })
 			| Self::UserDefinedMacroCall { span, .. }
 			| Self::IncludeSource { span, .. } => *span = source_range((*span).into(), end.into()),
+			// Label source spans never need to be adjusted afterwards.
+			Self::Label(_) => (),
 		}
 		self
-	}
-
-	/// Set the labels on this program element, returning itself.
-	#[allow(clippy::missing_panics_doc)]
-	#[must_use]
-	pub fn set_labels(self, mut labels: Vec<Reference>, source_code: &Arc<AssemblyCode>) -> Self {
-		// Preserve the label hierarchy correctly.
-		let mut current_global = None;
-		// First: Assign all local labels to their preceding global label, and find the last global label, if any.
-		for label in &mut labels {
-			match label {
-				Reference::Global(ref global) => current_global = Some(global.clone()),
-				Reference::Local(ref local) =>
-					if current_global.is_some() {
-						merge_local_into_parent(local.clone(), current_global.clone(), source_code).unwrap();
-					},
-				_ => (),
-			}
-		}
-		// If there was no global label, we only have locals. Use the last local as the reference for everyone else.
-		let mut master_label = current_global.map(Reference::Global).or_else(|| labels.pop());
-		if let Some(ref mut master_label) = master_label {
-			for mut label in labels {
-				if label != *master_label {
-					label.set_location(AssemblyTimeValue::Reference(master_label.clone()));
-				}
-			}
-		}
-
-		// Assign the master label to this program element.
-		match self {
-			Self::Directive(mut directive) => {
-				directive.label = directive.label.or(master_label);
-				Self::Directive(directive)
-			},
-			Self::Instruction(mut instruction) => {
-				instruction.label = instruction.label.or(master_label);
-				Self::Instruction(instruction)
-			},
-			Self::IncludeSource { file, span, label: original_label } =>
-				Self::IncludeSource { file, span, label: original_label.or(master_label) },
-			Self::UserDefinedMacroCall { span, arguments, macro_name, label: original_label } =>
-				Self::UserDefinedMacroCall { span, arguments, macro_name, label: original_label.or(master_label) },
-		}
 	}
 
 	/// Returns the assembled size of this program element. Note that some program elements return a size of 0 as they
@@ -118,7 +76,7 @@ impl ProgramElement {
 		match self {
 			Self::Directive(directive) => directive.value.assembled_size(),
 			Self::Instruction(instruction) => instruction.assembled_size() as usize,
-			Self::IncludeSource { .. } | Self::UserDefinedMacroCall { .. } => 0,
+			Self::IncludeSource { .. } | Self::UserDefinedMacroCall { .. } | Self::Label(_) => 0,
 		}
 	}
 }
@@ -131,6 +89,7 @@ impl MacroParentReplacable for ProgramElement {
 	) -> Result<(), Box<AssemblyError>> {
 		match self {
 			Self::Directive(directive) => directive.replace_macro_parent(replacement_parent, source_code),
+			Self::Label(reference) => reference.replace_macro_parent(replacement_parent, source_code),
 			Self::Instruction(instruction) => instruction.replace_macro_parent(replacement_parent, source_code),
 			Self::UserDefinedMacroCall { arguments, .. } => {
 				for argument in arguments {

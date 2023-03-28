@@ -44,7 +44,7 @@ impl AssembledData {
 	/// If the sample table is too large or a section is missing, an error is returned.
 	pub(super) fn assemble_sample_table(
 		&mut self,
-		reference: &Option<Reference>,
+		labels: &[Reference],
 		span: SourceSpan,
 	) -> Result<(), Box<AssemblyError>> {
 		if self.segments.sample_table.entries.len() > 256 {
@@ -58,11 +58,17 @@ impl AssembledData {
 		// FIXME: Borrow checker doesn't realize that a cloning iterator is not interfering with the later mutable
 		// borrow.
 		let iter = self.segments.sample_table.entries.clone();
+		let mut is_first = true;
 		for entry in iter {
 			let start_address = entry.start_address.clone().try_resolve();
-			self.append_16_bits_unresolved(start_address.clone(), reference.clone(), span)?;
+			self.append_16_bits_unresolved(
+				start_address.clone(),
+				if is_first { labels } else { Self::DEFAULT_VEC },
+				span,
+			)?;
 			// TODO: Loop points aren't user-specifyable yet. For now we use the beginning of the sample.
-			self.append_16_bits_unresolved(start_address, reference.clone(), span)?;
+			self.append_16_bits_unresolved(start_address, &Vec::default(), span)?;
+			is_first = false;
 		}
 		Ok(())
 	}

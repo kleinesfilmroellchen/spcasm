@@ -642,7 +642,7 @@ fn append_one_as_8_bits(
 	first: &AssemblyTimeValue,
 	_bit_index: u8,
 ) -> Result<(), Box<AssemblyError>> {
-	data.append_8_bits_unresolved(first.clone(), 0, None, span)
+	data.append_8_bits_unresolved(first.clone(), 0, &Vec::default(), span)
 }
 
 fn append_one_relative(
@@ -660,7 +660,7 @@ fn append_one_as_16_bits(
 	first: &AssemblyTimeValue,
 	_bit_index: u8,
 ) -> Result<(), Box<AssemblyError>> {
-	data.append_16_bits_unresolved(first.clone(), None, span)
+	data.append_16_bits_unresolved(first.clone(), &Vec::default(), span)
 }
 
 fn append_one_as_16_bits_and_bit_index(
@@ -669,7 +669,7 @@ fn append_one_as_16_bits_and_bit_index(
 	first: &AssemblyTimeValue,
 	bit_index: u8,
 ) -> Result<(), Box<AssemblyError>> {
-	data.append_8_bits_unresolved(first.clone(), 0, None, span)?;
+	data.append_8_bits_unresolved(first.clone(), 0, &Vec::default(), span)?;
 	data.append_unresolved_with_high_byte_bit_index(first.clone(), bit_index, span)
 }
 
@@ -680,7 +680,7 @@ fn append_first_as_8_bits(
 	_second: &AssemblyTimeValue,
 	_bit_index: u8,
 ) -> Result<(), Box<AssemblyError>> {
-	data.append_8_bits_unresolved(first.clone(), 0, None, span)
+	data.append_8_bits_unresolved(first.clone(), 0, &Vec::default(), span)
 }
 
 fn append_second_as_8_bits(
@@ -690,7 +690,7 @@ fn append_second_as_8_bits(
 	second: &AssemblyTimeValue,
 	_bit_index: u8,
 ) -> Result<(), Box<AssemblyError>> {
-	data.append_8_bits_unresolved(second.clone(), 0, None, span)
+	data.append_8_bits_unresolved(second.clone(), 0, &Vec::default(), span)
 }
 
 fn append_second_relative(
@@ -711,8 +711,8 @@ fn append_both_as_8_bits(
 	second: &AssemblyTimeValue,
 	_bit_index: u8,
 ) -> Result<(), Box<AssemblyError>> {
-	data.append_8_bits_unresolved(second.clone(), 0, None, span)?;
-	data.append_8_bits_unresolved(first.clone(), 0, None, span)
+	data.append_8_bits_unresolved(second.clone(), 0, &Vec::default(), span)?;
+	data.append_8_bits_unresolved(first.clone(), 0, &Vec::default(), span)
 }
 
 /// This is for only BBS/BBC which have their assembly operands in the same order as machine code.
@@ -723,7 +723,7 @@ fn append_both_reversed_as_8_bits_and_second_relative(
 	second: &AssemblyTimeValue,
 	_bit_index: u8,
 ) -> Result<(), Box<AssemblyError>> {
-	data.append_8_bits_unresolved(first.clone(), 0, None, span)?;
+	data.append_8_bits_unresolved(first.clone(), 0, &Vec::default(), span)?;
 	data.append_relative_unresolved(second.clone(), span)
 }
 
@@ -734,7 +734,7 @@ fn append_first_as_16_bits(
 	_second: &AssemblyTimeValue,
 	_bit_index: u8,
 ) -> Result<(), Box<AssemblyError>> {
-	data.append_16_bits_unresolved(first.clone(), None, span)
+	data.append_16_bits_unresolved(first.clone(), &Vec::default(), span)
 }
 
 fn append_second_as_16_bits(
@@ -744,7 +744,7 @@ fn append_second_as_16_bits(
 	second: &AssemblyTimeValue,
 	_bit_index: u8,
 ) -> Result<(), Box<AssemblyError>> {
-	data.append_16_bits_unresolved(second.clone(), None, span)
+	data.append_16_bits_unresolved(second.clone(), &Vec::default(), span)
 }
 
 fn append_second_as_16_bits_and_bit_index(
@@ -754,7 +754,7 @@ fn append_second_as_16_bits_and_bit_index(
 	second: &AssemblyTimeValue,
 	bit_index: u8,
 ) -> Result<(), Box<AssemblyError>> {
-	data.append_8_bits_unresolved(second.clone(), 0, None, span)?;
+	data.append_8_bits_unresolved(second.clone(), 0, &Vec::default(), span)?;
 	data.append_unresolved_with_high_byte_bit_index(second.clone(), bit_index, span)
 }
 
@@ -765,6 +765,6 @@ fn append_first_as_16_bits_and_bit_index(
 	_second: &AssemblyTimeValue,
 	bit_index: u8,
 ) -> Result<(), Box<AssemblyError>> {
-	data.append_8_bits_unresolved(first.clone(), 0, None, span)?;
+	data.append_8_bits_unresolved(first.clone(), 0, &Vec::default(), span)?;
 	data.append_unresolved_with_high_byte_bit_index(first.clone(), bit_index, span)
 }

@@ -22,25 +22,29 @@ impl AssembledData {
 	/// # Errors
 	/// Any error caused by the directive assembly process is returned.
 	#[allow(clippy::unnecessary_wraps)]
-	pub fn assemble_directive(&mut self, directive: &mut Directive) -> Result<(), Box<AssemblyError>> {
+	pub fn assemble_directive(
+		&mut self,
+		directive: &mut Directive,
+		current_labels: &[Reference],
+	) -> Result<(), Box<AssemblyError>> {
 		match directive.value {
 			DirectiveValue::Table { ref values } => {
-				let mut reference = directive.label.clone();
+				let mut is_first = true;
 				for value in values {
-					self.append_sized_unresolved(value.clone(), reference, directive.span)?;
-					reference = None;
+					self.append_sized_unresolved(
+						value.clone(),
+						if is_first { current_labels } else { Self::DEFAULT_VEC },
+						directive.span,
+					)?;
+					is_first = false;
 				}
 			},
 			DirectiveValue::Brr { ref file, range, auto_trim, .. } =>
-				self.assemble_brr(directive, file, range, auto_trim)?,
+				self.assemble_brr(directive, file, range, auto_trim, current_labels)?,
 			DirectiveValue::String { ref text, has_null_terminator } => {
-				let mut is_first = true;
-				for chr in text {
-					self.append(*chr, if is_first { directive.label.clone() } else { None }, directive.span)?;
-					is_first = false;
-				}
+				self.append_bytes(text.clone(), current_labels, directive.span)?;
 				if has_null_terminator {
-					self.append(0, if is_first { directive.label.clone() } else { None }, directive.span)?;
+					self.append(0, if text.is_empty() { current_labels } else { Self::DEFAULT_VEC }, directive.span)?;
 				}
 			},
 			DirectiveValue::AssignReference { ref mut reference, ref value } => match reference {
@@ -74,7 +78,7 @@ impl AssembledData {
 				})?;
 
 				binary_data = self.slice_data_if_necessary(file, directive.span, binary_data, range)?;
-				self.append_bytes(binary_data, &directive.label, directive.span)?;
+				self.append_bytes(binary_data, current_labels, directive.span)?;
 			},
 			DirectiveValue::End => {
 				self.should_stop = true;
@@ -89,7 +93,7 @@ impl AssembledData {
 						let target_address = (current_address + 0x100) & !0xff;
 						let missing_bytes = target_address - current_address;
 						let space = std::iter::repeat(0).take(missing_bytes as usize).collect();
-						self.append_bytes(space, &None, directive.span)?;
+						self.append_bytes(space, &Vec::default(), directive.span)?;
 					}
 				} else if current_address & 0xff != 0 {
 					return Err(AssemblyError::UnalignedSampleTable {
@@ -99,7 +103,7 @@ impl AssembledData {
 					}
 					.into());
 				}
-				self.assemble_sample_table(&directive.label, directive.span)?;
+				self.assemble_sample_table(current_labels, directive.span)?;
 			},
 			DirectiveValue::Fill { ref operation, ref parameter, ref value } => {
 				let current_address = self.segments.current_location().map_err(|_| AssemblyError::MissingSegment {
@@ -111,7 +115,7 @@ impl AssembledData {
 					parameter,
 					value.clone(),
 					current_address,
-					directive.label.clone(),
+					current_labels,
 					directive.span,
 				)?;
 			},
@@ -126,6 +130,7 @@ impl AssembledData {
 		file_name: &str,
 		range: Option<SourceSpan>,
 		auto_trim: bool,
+		current_labels: &[Reference],
 	) -> Result<(), Box<AssemblyError>> {
 		// Resolve the audio file's path relative to the source file.
 		let actual_path = resolve_file(&self.source_code, file_name);
@@ -162,7 +167,7 @@ impl AssembledData {
 
 		let encoded = brr::encode_to_brr(&mut sample_data, None, brr::CompressionLevel::Max);
 
-		self.append_bytes(encoded, &directive.label, directive.span)
+		self.append_bytes(encoded, current_labels, directive.span)
 	}
 
 	/// Applies the range to the given data if necessary.
@@ -203,7 +208,7 @@ impl AssembledData {
 		parameter: &AssemblyTimeValue,
 		value: Option<SizedAssemblyTimeValue>,
 		current_address: MemoryAddress,
-		reference: Option<Reference>,
+		labels: &[Reference],
 		location: SourceSpan,
 	) -> Result<(), Box<AssemblyError>> {
 		let value = value.ok_or(AssemblyError::MissingFillParameter {
@@ -226,10 +231,10 @@ impl AssembledData {
 		let numeric_size = MemoryAddress::from(value.size.to_u8().unwrap());
 		// If we don't fill with bytes, there will be truncation at the end. Handle simple full-sized fills first.
 		let full_sized_fills = amount_to_fill / numeric_size;
-		let mut fill_reference = reference;
+		let mut fill_labels = labels.to_owned();
 		for _ in 0 .. full_sized_fills {
-			self.append_sized_unresolved(value.clone(), fill_reference, location)?;
-			fill_reference = None;
+			self.append_sized_unresolved(value.clone(), &fill_labels, location)?;
+			fill_labels.clear();
 		}
 
 		if amount_to_fill == full_sized_fills * numeric_size {
@@ -239,7 +244,7 @@ impl AssembledData {
 		let remaining_fill = Size::from_i64(amount_to_fill - full_sized_fills * numeric_size).unwrap();
 		self.append_sized_unresolved(
 			SizedAssemblyTimeValue { value: value.value, size: remaining_fill },
-			None,
+			&Vec::default(),
 			location,
 		)
 	}

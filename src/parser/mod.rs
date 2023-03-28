@@ -237,87 +237,50 @@ impl AssemblyFile {
 		for element in &mut self.content {
 			// First match for reference resolution in instruction position
 			match element {
-				// Directive labeled with local label
-				ProgramElement::Directive(Directive {
-					value, label: Some(Reference::Local(ref mut local)), ..
-				}) => {
-					value.set_global_label(&current_global_label, &self.source_code);
+				ProgramElement::Label(Reference::Local(ref mut local)) => {
 					*local = reference::merge_local_into_parent(
 						local.clone(),
 						current_global_label.clone(),
 						&self.source_code,
 					)?;
 				},
-				// Directive labeled with global label
-				ProgramElement::Directive(Directive { label: Some(Reference::Global(ref global)), value, .. }) => {
+				ProgramElement::Label(Reference::Global(ref global)) => {
 					current_global_label = Some(global.clone());
-					value.set_global_label(&current_global_label, &self.source_code);
 				},
-
-				ProgramElement::Directive(Directive {
-					label: None | Some(Reference::MacroGlobal { .. }),
-					value,
-					..
-				}) => {
-					value.set_global_label(&current_global_label, &self.source_code);
-				},
-
-				// Anything else labeled with global label - we need to update the current global
-				ProgramElement::Instruction(Instruction { label: Some(Reference::Global(ref global)), .. })
-				| ProgramElement::UserDefinedMacroCall { label: Some(Reference::Global(ref global)), .. }
-				| ProgramElement::IncludeSource { label: Some(Reference::Global(ref global)), .. } =>
-					current_global_label = Some(global.clone()),
-
-				// Anything labeled with local label: fill in the reference and merge local label.
-				ProgramElement::Instruction(Instruction { label: Some(Reference::Local(ref mut local)), .. })
-				| ProgramElement::UserDefinedMacroCall { label: Some(Reference::Local(ref mut local)), .. }
-				| ProgramElement::IncludeSource { label: Some(Reference::Local(ref mut local)), .. } =>
-					*local = reference::merge_local_into_parent(
-						local.clone(),
-						current_global_label.clone(),
-						&self.source_code,
-					)?,
-
-				// Anything unreferenced or referenced with irrelevant reference: ignore
-				ProgramElement::Instruction(Instruction {
-					label: None | Some(Reference::MacroGlobal { .. }), ..
-				})
-				| ProgramElement::IncludeSource { label: None | Some(Reference::MacroGlobal { .. }), .. }
-				| ProgramElement::UserDefinedMacroCall { label: None | Some(Reference::MacroGlobal { .. }), .. } => (),
-
-				// Anything labeled with a user macro argument: This is always an error; we're not inside a user macro.
-				ProgramElement::Instruction(Instruction {
-					label: Some(ref mal @ Reference::MacroArgument { ref span, .. }),
-					..
-				})
-				| ProgramElement::IncludeSource {
-					label: Some(ref mal @ Reference::MacroArgument { ref span, .. }),
-					..
-				}
-				| ProgramElement::UserDefinedMacroCall {
-					label: Some(ref mal @ Reference::MacroArgument { ref span, .. }),
-					..
-				}
-				| ProgramElement::Directive(Directive {
-					label: Some(ref mal @ Reference::MacroArgument { ref span, .. }),
-					..
-				}) =>
+				ProgramElement::Label(ref mal @ Reference::MacroArgument { ref span, .. }) =>
 					return Err(AssemblyError::UsingMacroArgumentOutsideMacro {
 						name:     mal.to_string().into(),
 						src:      self.source_code.clone(),
 						location: *span,
 					}
 					.into()),
-			}
-			// Instruction's operands are also in need of setting the global label. To reduce complexity in the above
-			// `match`, we do this separately here.
-			if let ProgramElement::Instruction(Instruction {
-				opcode: Opcode { first_operand, second_operand, .. },
-				..
-			}) = element && let Some(ref actual_global_label) = current_global_label
-			{
-				if let Some(mode) = first_operand.as_mut() { mode.set_global_label(actual_global_label) }
-				if let Some(mode) = second_operand.as_mut() { mode.set_global_label(actual_global_label) }
+
+				ProgramElement::Directive(Directive { value, .. }) => {
+					value.set_global_label(&current_global_label, &self.source_code);
+				},
+				ProgramElement::Instruction(Instruction {
+					opcode: Opcode { first_operand, second_operand, .. },
+					..
+				}) if let Some(ref actual_global_label) = current_global_label => {
+					if let Some(mode) = first_operand.as_mut() {
+						mode.set_global_label(actual_global_label);
+					}
+					if let Some(mode) = second_operand.as_mut() {
+						mode.set_global_label(actual_global_label);
+					}
+				},
+				ProgramElement::UserDefinedMacroCall { 
+					arguments,
+					..
+				} if let Some(ref actual_global_label) = current_global_label => {
+					for argument in arguments {
+						argument.set_global_label(actual_global_label);
+					}
+				},
+				ProgramElement::Instruction(_)
+				| ProgramElement::UserDefinedMacroCall { .. }
+				| ProgramElement::IncludeSource { .. }
+				| ProgramElement::Label(Reference::MacroGlobal { .. }) => (),
 			}
 		}
 		Ok(())
@@ -374,8 +337,17 @@ impl AssemblyFile {
 	pub fn split_into_segments(&self) -> Result<Segments<ProgramElement>, Box<AssemblyError>> {
 		let mut segments = Segments::default();
 		let mut brr_label_number = 0;
+		let mut current_labels = Vec::default();
 		for mut element in self.content.iter().cloned() {
 			match element {
+				ProgramElement::Label(reference) => {
+					current_labels.push(reference.clone());
+					segments
+						.add_element(ProgramElement::Label(reference.clone()))
+						.map_err(Self::to_asm_error(&reference.source_span(), &self.source_code))?;
+					// Prevent the clearing of current labels.
+					continue;
+				}
 				ProgramElement::Instruction(instruction) => segments
 					.add_element(ProgramElement::Instruction(instruction.clone()))
 					.map_err(Self::to_asm_error(&instruction.span, &self.source_code))?,
@@ -383,10 +355,7 @@ impl AssemblyFile {
 				ProgramElement::Directive(ref mut directive @ Directive { .. }) => {
 					// All BRR directives that go into the BRR sample directory need a label, so we add a unique label
 					// while we're here.
-					if matches!(
-						(&directive.value, &directive.label),
-						(DirectiveValue::Brr { directory: true, .. }, None)
-					) {
+					if matches!( &directive.value, DirectiveValue::Brr { directory: true, .. }) && current_labels.is_empty() {
 						let new_brr_label = Arc::new(RefCell::new(GlobalLabel {
 							name:            format!("brr_sample_{}", brr_label_number).into(),
 							location:        None,
@@ -403,10 +372,13 @@ impl AssemblyFile {
 							.borrow_mut()
 							.globals
 							.push(new_brr_label.clone());
-						directive.label = Some(Reference::Global(new_brr_label.clone()));
+						segments
+							.add_element(ProgramElement::Label(Reference::Global(new_brr_label.clone())))
+							.map_err(Self::to_asm_error(&new_brr_label.borrow().span, &self.source_code))?;
+						current_labels.push(Reference::Global(new_brr_label));
 					}
 
-					directive.perform_segment_operations_if_necessary(&mut segments, self.source_code.clone())?;
+					directive.perform_segment_operations_if_necessary(&mut segments, self.source_code.clone(), current_labels.first())?;
 					if !directive.value.is_symbolic() {
 						segments
 							.add_element(ProgramElement::Directive(directive.clone()))
@@ -415,6 +387,7 @@ impl AssemblyFile {
 				},
 				ProgramElement::IncludeSource { .. } | ProgramElement::UserDefinedMacroCall { .. } => {},
 			}
+			current_labels.clear();
 		}
 
 		self.optimize_direct_page_labels(&mut segments);
@@ -477,21 +450,13 @@ impl AssemblyFile {
 				})
 				.enumerate()
 			{
-				macro_rules! handle_label {
-					($label:expr) => {
-						if let Some(label) = $label {
-							referenced_objects.push(ReferencedObject {
-								address:       offset + *segment_start,
-								segment_start: *segment_start,
-								object:        InstructionOrReference::Reference(label.clone()),
-							});
-						}
-					};
-				}
-
 				match element {
-					ProgramElement::Instruction(Instruction { label, opcode, .. }) => {
-						handle_label!(label);
+					ProgramElement::Label(label) => referenced_objects.push(ReferencedObject {
+						address:       offset + *segment_start,
+						segment_start: *segment_start,
+						object:        InstructionOrReference::Reference(label.clone()),
+					}),
+					ProgramElement::Instruction(Instruction { opcode, .. }) => {
 						let references = opcode.references_and_calculations();
 						if opcode.has_long_address()
 							&& !references.is_empty() && opcode.can_use_direct_page_addressing()
@@ -510,7 +475,7 @@ impl AssemblyFile {
 							});
 						}
 					},
-					ProgramElement::Directive(Directive { label, .. }) => handle_label!(label),
+					ProgramElement::Directive(Directive { .. }) => (),
 					ProgramElement::IncludeSource { .. } | ProgramElement::UserDefinedMacroCall { .. } => panic!(
 						"source includes and unresolved macro calls at reference optimization time, this is a bug"
 					),
@@ -603,13 +568,6 @@ impl AssemblyFile {
 		}
 	}
 
-	/// Sets the first label in this file if a label was given.
-	pub fn set_first_label(&mut self, reference: Option<Reference>) {
-		if let Some(first) = self.content.get_mut(0) {
-			*first = first.clone().set_labels(reference.into_iter().collect(), &self.source_code);
-		}
-	}
-
 	/// Returns whether this file's parsed content contains any unresolved include directives.
 	pub(crate) fn has_unresolved_source_includes(&self) -> bool {
 		self.content.iter().any(|element| matches!(element, ProgramElement::IncludeSource { .. }))
@@ -623,7 +581,7 @@ impl AssemblyFile {
 		let mut index = 0;
 		while index < self.content.len() {
 			let element = self.content[index].clone();
-			if let ProgramElement::IncludeSource { ref file, label, span } = element {
+			if let ProgramElement::IncludeSource { ref file, span } = element {
 				let environment = self.parent.upgrade().expect("parent deleted while we're still parsing");
 				let file: String = resolve_file(&self.source_code, file).to_string_lossy().into();
 				let mut included_code =
@@ -640,7 +598,6 @@ impl AssemblyFile {
 				let tokens = lex(included_code.clone())?;
 				let included_file = Environment::parse(&environment, tokens, &included_code)?;
 
-				included_file.borrow_mut().set_first_label(label);
 				self.content.splice(index ..= index, included_file.borrow().content.clone());
 				continue;
 			}

@@ -31,11 +31,12 @@ use crate::AssemblyCode;
 
 grammar<'env, 'src>(environment: &'env Arc<RefCell<Environment>>, source_code: &'src Arc<AssemblyCode>);
 
-pub Program: Vec<ProgramElement> = "\n"* <line:( <Line> )*> => line;
+pub Program: Vec<ProgramElement> = "\n"* <line:( <Line> )*> => line.into_iter().flatten().collect();
 
-Line: ProgramElement = <labels:MultipleLabelsForInstruction?> <element:InstructionOrDirective> <newlines:("\n"+)> => {
-	element.set_labels(labels.into_iter().flatten().collect(), source_code).extend_span(newlines[0].into())
-};
+Line: Vec<ProgramElement> = <mut labels:MultipleLabelsForInstruction?> <element:InstructionOrDirective> <newlines:("\n"+)> =>
+	(*labels.get_or_insert_default()).clone().into_iter()
+		.map(ProgramElement::Label)
+		.chain(Some(element.extend_span(newlines[0].into()))).collect();
 
 InstructionOrDirective: ProgramElement = {
 	InstructionWithTestComment => ProgramElement::Instruction(<>),
@@ -43,7 +44,6 @@ InstructionOrDirective: ProgramElement = {
 	<directive:IncludeDirective> <file:"string"> => ProgramElement::IncludeSource {
 		file: std::string::String::from_utf8_lossy(&file.0).into(),
 		span: source_range(directive.into(), file.1.into()),
-		label: None,
 	},
 	MacroCall => <>,
 };
@@ -57,7 +57,6 @@ MacroCall: ProgramElement = <start:"%"> <macro_name:"identifier"> "(" <arguments
 	macro_name: macro_name.0,
 	arguments: arguments.unwrap_or(Vec::new()),
 	span: source_range(start.into(), end.into()),
-	label: None
 };
 
 InstructionWithTestComment: Instruction = <mut instruction:Instruction> <expected:";="?> => {
@@ -121,7 +120,6 @@ Directive: Directive = {
 				values: numbers.into_iter().map(|value| SizedAssemblyTimeValue { value, size }).collect(),
 			},
 			span: data_directive.1,
-			label: None,
 			expected_value: None,
 		}
 	},
@@ -136,7 +134,6 @@ Directive: Directive = {
 			},
 		})?),
 		span: directive,
-		label: None,
 		expected_value: None,
 	}),
 	<directive:"brr"> <filename:"string"> <range:InclusionRange?> <options:IdentifierOptions> =>? Ok(Directive {
@@ -148,7 +145,6 @@ Directive: Directive = {
 				directory: true,
 			}, options)?,
 		span: source_range(directive.into(), filename.1.into()),
-		label: None,
 		expected_value: None,
 	}),
 	<directive:"sampletable"> <options:IdentifierOptions> =>? Ok(Directive {
@@ -157,19 +153,16 @@ Directive: Directive = {
 				auto_align: true,
 			}, options)?,
 		span: directive.into(),
-		label: None,
 		expected_value: None,
 	}),
 	<directive:"ascii"> <text:"string"> => Directive {
 		value: DirectiveValue::String { text: text.0, has_null_terminator: false },
 		span: source_range(directive.into(), text.1.into()),
-		label: None,
 		expected_value: None,
 	},
 	<directive:"asciiz"> <text:"string"> => Directive {
 		value: DirectiveValue::String { text: text.0, has_null_terminator: true },
 		span: source_range(directive.into(), text.1.into()),
-		label: None,
 		expected_value: None,
 	},
 	<directive:"incbin"> <text:"string"> <range:InclusionRange?> => Directive {
@@ -178,25 +171,21 @@ Directive: Directive = {
 			range,
 		},
 		span: source_range(directive.into(), text.1.into()),
-		label: None,
 		expected_value: None,
 	},
 	"end" => Directive {
 		value: DirectiveValue::End,
 		span: <>,
-		label: None,
 		expected_value: None,
 	},
 	"pushpc" => Directive {
 		value: DirectiveValue::PushSection,
 		span: <>,
-		label: None,
 		expected_value: None,
 	},
 	"pullpc" => Directive {
 		value: DirectiveValue::PopSection,
 		span: <>,
-		label: None,
 		expected_value: None,
 	},
 	<math:"math"> ("identifier")* =>? {
@@ -218,7 +207,6 @@ Directive: Directive = {
 			parameters
 		}),
 		span: value_directive.3,
-		label: None,
 		expected_value: None,
 	},
 	LabelAssignment,
@@ -275,7 +263,6 @@ FillAlignDirective: Directive = <directive:"fill"> <align_keyword:"align"> <alig
 			value: None,
 		},
 		span: location,
-		label: None,
 		expected_value: None,
 	}
 };
@@ -287,7 +274,6 @@ FillAmountDirective: Directive = <directive:"fill"> <amount:AssemblyTimeValue> =
 		value: None,
 	},
 	span: directive,
-	label: None,
 	expected_value: None,
 };
 
@@ -298,7 +284,6 @@ PadDirective: Directive = <directive:"pad"> <address:AssemblyTimeValue> => Direc
 		value: None,
 	},
 	span: directive,
-	label: None,
 	expected_value: None,
 };
 
@@ -312,7 +297,6 @@ UserDefinedMacro: Directive = <start:"macro"> <name:"identifier"> <arguments:Use
 		body,
 	},
 	span:           source_range(start.into(), end.into()),
-	label:          None,
 	expected_value: None,
 };
 
@@ -396,7 +380,6 @@ LabelAssignment: Directive = <mut reference:Reference> <eq:"="> <value:AssemblyT
 	Directive {
 		value: DirectiveValue::AssignReference { reference: reference.clone(), value },
 		span: source_range(reference.source_span().into(), eq.into()),
-		label: None,
 		expected_value: None,
 	}
 };

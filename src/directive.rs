@@ -28,8 +28,6 @@ pub struct Directive {
 	pub value:          DirectiveValue,
 	pub(crate) span:    SourceSpan,
 	/// Label at the start of the directive. Some directives ignore this.
-	pub label:          Option<Reference>,
-	/// Expected value of the directive, for testing.
 	pub expected_value: Option<Vec<u8>>,
 }
 
@@ -42,6 +40,7 @@ impl Directive {
 		&mut self,
 		segments: &mut Segments<Contained>,
 		source_code: Arc<AssemblyCode>,
+		current_label: Option<&Reference>,
 	) -> Result<(), Box<AssemblyError>> {
 		match &mut self.value {
 			DirectiveValue::PopSection => segments.pop_segment(),
@@ -52,8 +51,8 @@ impl Directive {
 			},
 			DirectiveValue::Brr { directory: true, .. } => {
 				segments.sample_table.add_sample(AssemblyTimeValue::Reference(
-					self.label
-						.clone()
+					current_label
+						.cloned()
 						.expect("all BRR samples in directories should have a label *automatically added*"),
 				));
 				Ok(())
@@ -102,12 +101,7 @@ impl Directive {
 impl Default for Directive {
 	fn default() -> Self {
 		// We use the table directive with no entries as default as that will do nothing.
-		Self {
-			value:          DirectiveValue::Placeholder,
-			label:          None,
-			span:           (0, 0).into(),
-			expected_value: None,
-		}
+		Self { value: DirectiveValue::Placeholder, span: (0, 0).into(), expected_value: None }
 	}
 }
 
@@ -369,8 +363,8 @@ impl MacroParentReplacable for DirectiveValue {
 			Self::UserDefinedMacro { name, body, .. } => Err(AssemblyError::RecursiveMacroDefinition {
 				name:     (*name).to_string().into(),
 				location: source_range(
-					body.first().map_or_else(|| (0, 0).into(), |p| *p.span()).into(),
-					body.last().map_or_else(|| (0, 0).into(), |p| *p.span()).into(),
+					body.first().map_or_else(|| (0, 0).into(), ProgramElement::span).into(),
+					body.last().map_or_else(|| (0, 0).into(), ProgramElement::span).into(),
 				),
 				outer:    replacement_parent.borrow().global_label().borrow().span,
 				src:      source_code.clone(),

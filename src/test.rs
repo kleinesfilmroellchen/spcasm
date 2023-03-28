@@ -343,17 +343,15 @@ fn coverage() {
 			== crate::assembler::sample_table::SampleEntry { start_address: 0.into() }.clone(),
 	);
 
-	assert_eq!(crate::parser::ProgramElement::Directive(crate::Directive::default()).span(), &(0, 0).into());
+	assert_eq!(crate::parser::ProgramElement::Directive(crate::Directive::default()).span(), (0, 0).into());
 	let macro_call = crate::parser::ProgramElement::UserDefinedMacroCall {
 		macro_name: "".into(),
 		arguments:  Vec::new(),
 		span:       (0, 5).into(),
-		label:      None,
 	};
-	let include_source =
-		crate::parser::ProgramElement::IncludeSource { file: "".into(), span: (0, 0).into(), label: None };
+	let include_source = crate::parser::ProgramElement::IncludeSource { file: "".into(), span: (0, 0).into() };
 	format!("{:?} {:?}", macro_call, include_source);
-	assert_eq!(macro_call.span(), &(0, 5).into());
+	assert_eq!(macro_call.span(), (0, 5).into());
 	assert_eq!(macro_call.assembled_size(), 0);
 	assert_eq!(include_source.assembled_size(), 0);
 }

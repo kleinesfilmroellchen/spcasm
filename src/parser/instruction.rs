@@ -23,8 +23,6 @@ pub type MemoryAddress = i64;
 /// One CPU instruction.
 #[derive(Clone, Debug)]
 pub struct Instruction {
-	/// Label of this instruction, if any.
-	pub label:          Option<Reference>,
 	/// Opcode of this instruction (slightly misnamed)
 	pub opcode:         Opcode,
 	pub(crate) span:    SourceSpan,
@@ -37,7 +35,6 @@ pub struct Instruction {
 impl Default for Instruction {
 	fn default() -> Self {
 		Self {
-			label:                       None,
 			opcode:                      Opcode {
 				mnemonic:          Mnemonic::Nop,
 				first_operand:     None,

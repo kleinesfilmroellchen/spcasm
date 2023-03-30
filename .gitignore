@@ -9,6 +9,9 @@
 
 /target
 
+/hugpads
+/hudpags-analysis.json
+
 /index.html
 /doc/index.html
 **/*.sfc

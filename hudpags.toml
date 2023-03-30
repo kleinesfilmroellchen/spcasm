@@ -1,0 +1,16 @@
+# https://github.com/linusg/hyper-unspecific-data-parsing-and-graphing-scripts
+repository = "."
+output = "./hudpags-analysis.json"
+commit_sampling = "all"
+
+[cache]
+directory = "./hudpags"
+
+[analyzers.lines_of_code]
+type = "scc"
+files_glob = "src/**"
+
+[analyzers.fixmes_and_todos]
+type = "grep"
+regex = "fixme|todo"
+case_insensitive = true

@@ -3,6 +3,9 @@ repository = "."
 output = "./hudpags-analysis.json"
 commit_sampling = "all"
 
+[logging]
+level = "INFO"
+
 [cache]
 directory = "./hudpags"
 
@@ -14,3 +17,12 @@ files_glob = "src/**"
 type = "grep"
 regex = "fixme|todo"
 case_insensitive = true
+
+[analyzers.clippy_commits]
+type = "grep_commits"
+regex = "clippy"
+case_insensitive = true
+
+[analyzers.dependabot]
+type = "grep_commits"
+regex = "Signed-off-by: dependabot\\[bot\\] <support@github\\.com>"

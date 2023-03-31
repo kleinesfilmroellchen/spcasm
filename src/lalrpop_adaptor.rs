@@ -124,30 +124,38 @@ pub fn preprocess_token_stream(tokens: Vec<Token>) -> Vec<Token> {
 					_ => unreachable!(),
 				};
 				let mut collected_tokens = vec![next_token.clone()];
-				for further_token in tokens.by_ref() {
-					if further_token == next_token {
-						// It can still be a relative + / - token...
-						collected_tokens.push(further_token);
-					} else if matches!(further_token, Token::TestComment(..) | Token::Newline(_)) {
-						// We really did find a relative + / - token.
-						let plus_amount = NonZeroU64::new(u64::try_from(collected_tokens.len()).unwrap()).unwrap();
-						let source_span =
-							source_range(offset.into(), collected_tokens.last().unwrap().source_span().into());
-						result.push(match direction {
-							RelativeReferenceDirection::Backward => Token::RelativeLabelMinus(plus_amount, source_span),
-							RelativeReferenceDirection::Forward => Token::RelativeLabelPlus(plus_amount, source_span),
-						});
-						result.push(further_token);
-						collected_tokens.clear();
-						in_mnemonic_line = false;
-						break;
+				let mut final_token = None;
+				let was_uniform = loop {
+					if let Some(further_token) = tokens.next() {
+						if further_token == next_token {
+							// It can still be a relative + / - token...
+							collected_tokens.push(further_token);
+						} else if matches!(further_token, Token::TestComment(..) | Token::Newline(_)) {
+							// We really did find a relative + / - token.
+							final_token = Some(further_token);
+							in_mnemonic_line = false;
+							break true;
+						} else {
+							// Didn't find a relative + / - token.
+							collected_tokens.push(further_token);
+							break false;
+						}
 					} else {
-						// Didn't find a relative + / - token.
-						collected_tokens.push(further_token);
-						break;
+						break true;
 					}
-				}
-				if !collected_tokens.is_empty() {
+				};
+				if was_uniform {
+					let plus_amount = NonZeroU64::new(u64::try_from(collected_tokens.len()).unwrap()).unwrap();
+					let source_span =
+						source_range(offset.into(), collected_tokens.last().unwrap().source_span().into());
+					result.push(match direction {
+						RelativeReferenceDirection::Backward => Token::RelativeLabelMinus(plus_amount, source_span),
+						RelativeReferenceDirection::Forward => Token::RelativeLabelPlus(plus_amount, source_span),
+					});
+					if let Some(final_token) = final_token {
+						result.push(final_token);
+					}
+				} else {
 					result.append(&mut collected_tokens);
 				}
 				continue;

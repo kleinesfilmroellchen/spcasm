@@ -39,7 +39,7 @@ pub fn lex(source_code: Arc<AssemblyCode>) -> Result<Vec<Token>, Box<AssemblyErr
 		} else if chr.is_whitespace() {
 			index += 1;
 			// A ':' surrounded by whitespace serves as a pseudo-line separator within a line for code organization.
-			if chars.peek().contains(&&':') {
+			if chars.peek().is_some_and(|chr| chr == &':') {
 				chars.next();
 				index += 1;
 				if chars.peek().is_some_and(|c| c.is_whitespace()) {
@@ -103,22 +103,22 @@ pub fn lex(source_code: Arc<AssemblyCode>) -> Result<Vec<Token>, Box<AssemblyErr
 				tokens.push(Token::Number(number, (index, size).into()));
 				index += size;
 			},
-			'.' if chars.peek().contains(&&'b') =>  {
+			'.' if chars.peek().is_some_and(|chr| chr == &'b') =>  {
 				chars.next();
 				index += 2;
 				tokens.push(Token::ExplicitDirectPage((index - 2, 2).into()));
 			},
-			'*' if chars.peek().contains(&&'*') => {
+			'*' if chars.peek().is_some_and(|chr| chr == &'*') => {
 				chars.next();
 				index += 2;
 				tokens.push(Token::DoubleStar((index - 2, 2).into()));
 			},
-			'<' if chars.peek().contains(&&'<') => {
+			'<' if chars.peek().is_some_and(|chr| chr == &'<') => {
 				chars.next();
 				index += 2;
 				tokens.push(Token::DoubleOpenAngleBracket((index - 2, 2).into()));
 			},
-			'>' if chars.peek().contains(&&'>') => {
+			'>' if chars.peek().is_some_and(|chr|chr == &'>') => {
 				chars.next();
 				index += 2;
 				tokens.push(Token::DoubleCloseAngleBracket((index - 2, 2).into()));

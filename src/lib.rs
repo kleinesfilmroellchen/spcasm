@@ -13,7 +13,6 @@
 	const_option_ext,
 	const_for,
 	let_chains,
-	option_result_contains,
 	slice_as_chunks,
 	exact_size_is_empty,
 	result_option_inspect,

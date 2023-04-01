@@ -45,7 +45,7 @@ bench = false
 
 [features]
 default = ["expensive_tests", "binaries"]
-binaries = ["dep:clap", "dep:object", "dep:shadow-rs", "dep:human-panic"]
+binaries = ["dep:clap", "dep:object", "dep:shadow-rs"]
 expensive_tests = []
 
 [dependencies]

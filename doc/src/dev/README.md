@@ -43,7 +43,7 @@ There's further ways of fiddling with the build config:
 - Make sure that the Rust compiler(s) are up-to-date and all (!) tests pass
 - Bump the spcasm version if that didn't happen before
 - Switch the `spcasm-release` profile to "fat" LTO temporarily
-- Clean any existing files for the release build, if necessary: `cargo clean --profile=spcasm-release`
+- Clean any existing files for the release build, if necessary: `cargo clean --profile=spcasm-release --all-features`
 - Run a build on spcasm-release on both Windows and Linux: `cargo build --profile=spcasm-release`
 - Make sure that the four (!) binaries have correct build times and version numbers
 - Copy the four binaries into a temporary release folder named `spcasm-<version>`

@@ -13,6 +13,7 @@ pub fn main() -> miette::Result<()> {
 
 	use crate::cli::BackendOptions;
 
+	#[cfg(feature = "dep:human-panic")]
 	human_panic::setup_panic!(human_panic::metadata!());
 	miette::set_hook(Box::new(|_| {
 		Box::new(

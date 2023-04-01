@@ -139,8 +139,12 @@ impl LabeledMemoryValue {
 	/// # Errors
 	/// If the memory value is not resolved, a nice "unresolved reference" error is returned.
 	#[inline]
-	pub fn try_as_resolved(&self, src: &Arc<AssemblyCode>) -> Result<u8, Box<AssemblyError>> {
-		self.value.try_resolved(self.instruction_location, src).map_err(|number| {
+	pub fn try_as_resolved(
+		&self,
+		own_memory_address: MemoryAddress,
+		src: &Arc<AssemblyCode>,
+	) -> Result<u8, Box<AssemblyError>> {
+		self.value.try_resolved(own_memory_address).map_err(|number| {
 			{
 				let first_reference = number
 					.first_reference()
@@ -202,12 +206,12 @@ impl MemoryValue {
 	}
 
 	#[allow(clippy::missing_const_for_fn)]
-	fn try_resolved(&self, _location: SourceSpan, _source_code: &Arc<AssemblyCode>) -> Result<u8, AssemblyTimeValue> {
-		match self {
-			Self::Resolved(value) => Ok(*value),
+	fn try_resolved(&self, own_memory_address: MemoryAddress) -> Result<u8, AssemblyTimeValue> {
+		match self.clone().try_resolve(own_memory_address) {
+			Self::Resolved(value) => Ok(value),
 			Self::Number(number, ..)
 			| Self::NumberHighByteWithContainedBitIndex(number, ..)
-			| Self::NumberRelative(number) => Err(number.clone()),
+			| Self::NumberRelative(number) => Err(number),
 		}
 	}
 }
@@ -264,9 +268,17 @@ impl AssembledData {
 	///
 	/// # Errors
 	/// If any memory location cannot be resolved to a value.
+	#[allow(clippy::missing_panics_doc)]
 	pub fn resolve_segments(&self) -> Result<Segments<u8>, Box<AssemblyError>> {
-		let try_resolve = |lmv: &LabeledMemoryValue| lmv.try_as_resolved(&self.source_code);
-		self.segments.clone().try_map_segments(|_, elements| elements.iter().map(try_resolve).try_collect::<Vec<u8>>())
+		self.segments.clone().try_map_segments(|start_address, elements| {
+			elements
+				.iter()
+				.enumerate()
+				.map(|(address, lmv)| {
+					lmv.try_as_resolved(MemoryAddress::try_from(address).unwrap() + start_address, &self.source_code)
+				})
+				.try_collect::<Vec<u8>>()
+		})
 	}
 
 	/// Creates new assembled data

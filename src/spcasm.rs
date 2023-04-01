@@ -13,6 +13,7 @@ pub fn main() -> miette::Result<()> {
 
 	use crate::cli::BackendOptions;
 
+	human_panic::setup_panic!(human_panic::metadata!());
 	miette::set_hook(Box::new(|_| {
 		Box::new(
 			miette::MietteHandlerOpts::new().unicode(true).context_lines(3).tab_width(4).with_cause_chain().build(),

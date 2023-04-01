@@ -28,3 +28,5 @@ fill 8 ;= FF FF FF FF FF FF FF FF
 org $35
 ; this writes $FF until address $3A (=$38 + 2)
 fill align 8 offset 2 ;= FF FF FF FF FF FF
+
+fill 0

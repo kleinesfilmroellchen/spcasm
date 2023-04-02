@@ -264,7 +264,7 @@ impl UpperHex for AssemblyTimeValue {
 
 		match self {
 			Self::Reference(reference) => match reference.location() {
-				Some(ref numeric_address) => write_correctly("$", f, numeric_address),
+				Some(ref numeric_address) => fmt::UpperHex::fmt(numeric_address, f),
 				None => write!(f, "{}", reference),
 			},
 			Self::Literal(numeric_address) => {

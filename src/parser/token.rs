@@ -193,7 +193,7 @@ impl Token {
 		identifier: &str,
 		span: SourceSpan,
 		src: std::sync::Arc<AssemblyCode>,
-	) -> Result<&'static str, AssemblyError> {
+	) -> Result<&'static str, Box<AssemblyError>> {
 		match identifier {
 			"offset" => Ok("offset"),
 			"align" => Ok("align"),
@@ -202,7 +202,8 @@ impl Token {
 				actual: Self::Identifier(identifier.into(), span),
 				location: span,
 				src,
-			}),
+			}
+			.into()),
 		}
 	}
 }

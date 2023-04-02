@@ -867,6 +867,7 @@ pub fn source_range(start: SpanOrOffset, end: SpanOrOffset) -> SourceSpan {
 ///
 /// # Errors
 /// An invalid option was provided.
+#[allow(clippy::result_large_err)] // Used by LALRPOP
 pub fn apply_brr_options(
 	directive_location: SourceSpan,
 	source_code: &Arc<AssemblyCode>,
@@ -900,6 +901,7 @@ pub fn apply_brr_options(
 ///
 /// # Errors
 /// An invalid option was provided.
+#[allow(clippy::result_large_err)] // Used by LALRPOP
 pub fn apply_sample_table_options(
 	directive_location: SourceSpan,
 	source_code: &Arc<AssemblyCode>,

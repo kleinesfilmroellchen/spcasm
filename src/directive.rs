@@ -475,7 +475,7 @@ impl FillOperation {
 		current_address: MemoryAddress,
 		location: SourceSpan,
 		source_code: &Arc<AssemblyCode>,
-	) -> Result<MemoryAddress, AssemblyError> {
+	) -> Result<MemoryAddress, Box<AssemblyError>> {
 		Ok(match self {
 			Self::ToAlignment { offset } => {
 				let alignment = parameter;

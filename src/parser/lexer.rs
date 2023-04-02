@@ -100,7 +100,7 @@ pub fn lex(source_code: Arc<AssemblyCode>, options: &dyn BackendOptions) -> Resu
 								.or_else::<AssemblyError, _>(|_| Ok(Token::Identifier(identifier, identifier_span)))?);
 			},
 			'0'..='9' => {
-				let (number, size) = next_number(&mut chars, Some(chr), false, 10, index, source_code.clone(), options)?;
+				let (number, size) = next_number(&mut chars, Some(chr), false, 10, index, &source_code, options)?;
 				tokens.push(number);
 				index += size;
 			},
@@ -152,14 +152,14 @@ pub fn lex(source_code: Arc<AssemblyCode>, options: &dyn BackendOptions) -> Resu
 				index += 1;
 			},
 			'$' => {
-				let (number, size) = next_number(&mut chars, None, true, 16, index, source_code.clone(), options)?;
+				let (number, size) = next_number(&mut chars, None, true, 16, index, &source_code, options)?;
 				tokens.push(number);
 				index += size+1;
 			},
 			'%' => {
 				let can_be_binary = chars.peek().map(|chr| ['0', '1'].contains(chr));
 				let (token, increment) = if can_be_binary.is_some_and(|v| v) {
-					next_number(&mut chars, None, true, 2, index, source_code.clone(), options)
+					next_number(&mut chars, None, true, 2, index, &source_code, options)
 				} else {
 					Ok((Token::Percent(index.into()), 0))
 				}?;
@@ -231,7 +231,7 @@ fn next_number(
 	must_be_number: bool,
 	radix: u8,
 	start_index: usize,
-	source_code: Arc<AssemblyCode>,
+	source_code: &Arc<AssemblyCode>,
 	options: &dyn BackendOptions,
 ) -> Result<(Token, usize), Box<AssemblyError>> {
 	let mut number_chars: String =

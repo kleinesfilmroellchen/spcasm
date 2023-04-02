@@ -12,6 +12,7 @@ use super::instruction::{MemoryAddress, Mnemonic};
 use super::register::Register;
 use super::token::Token;
 use super::Parse;
+use crate::cli::BackendOptions;
 use crate::directive::DirectiveSymbol;
 use crate::error::AssemblyError;
 use crate::AssemblyCode;
@@ -24,7 +25,7 @@ macro_rules! start_of_identifier {
 /// # Errors
 /// Errors are returned for any syntactical error at the token level, e.g. invalid number literals.
 #[allow(clippy::missing_panics_doc, clippy::too_many_lines)]
-pub fn lex(source_code: Arc<AssemblyCode>) -> Result<Vec<Token>, Box<AssemblyError>> {
+pub fn lex(source_code: Arc<AssemblyCode>, options: &dyn BackendOptions) -> Result<Vec<Token>, Box<AssemblyError>> {
 	let mut chars = source_code.text.chars().peekable();
 	let code_length = source_code.text.len();
 	let mut index = 0usize;
@@ -81,7 +82,7 @@ pub fn lex(source_code: Arc<AssemblyCode>) -> Result<Vec<Token>, Box<AssemblyErr
 					return Err(AssemblyError::UnexpectedEndOfTokens { expected: vec!["'".into()], location: (end_index, 1).into(), src: source_code.clone() }.into());
 				}
 				end_index += 1;
-				tokens.push(Token::Number(chr as MemoryAddress, (start_index, end_index - start_index).into()));
+				tokens.push(Token::Number(chr as MemoryAddress, source_code.text[start_index..=end_index].into(), (start_index, end_index - start_index).into()));
 			},
 			start_of_identifier!() => {
 				let start_index = index;
@@ -99,8 +100,8 @@ pub fn lex(source_code: Arc<AssemblyCode>) -> Result<Vec<Token>, Box<AssemblyErr
 								.or_else::<AssemblyError, _>(|_| Ok(Token::Identifier(identifier, identifier_span)))?);
 			},
 			'0'..='9' => {
-				let (number, size) = next_number(&mut chars, Some(chr), 10, index, source_code.clone())?;
-				tokens.push(Token::Number(number, (index, size).into()));
+				let (number, size) = next_number(&mut chars, Some(chr), false, 10, index, source_code.clone(), options)?;
+				tokens.push(number);
 				index += size;
 			},
 			'.' if chars.peek().is_some_and(|chr| chr == &'b') =>  {
@@ -151,20 +152,19 @@ pub fn lex(source_code: Arc<AssemblyCode>) -> Result<Vec<Token>, Box<AssemblyErr
 				index += 1;
 			},
 			'$' => {
-				let (number, size) = next_number(&mut chars, None, 16, index, source_code.clone())?;
-				tokens.push(Token::Number(number, (index, size).into()));
+				let (number, size) = next_number(&mut chars, None, true, 16, index, source_code.clone(), options)?;
+				tokens.push(number);
 				index += size+1;
 			},
 			'%' => {
 				let can_be_binary = chars.peek().map(|chr| ['0', '1'].contains(chr));
 				let (token, increment) = if can_be_binary.is_some_and(|v| v) {
-					next_number(&mut chars, None, 2, index, source_code.clone()).map(
-						|(number, size)| (Token::Number(number, (index, size).into()), size + 1))
+					next_number(&mut chars, None, true, 2, index, source_code.clone(), options)
 				} else {
-					Ok((Token::Percent(index.into()), 1))
+					Ok((Token::Percent(index.into()), 0))
 				}?;
 				tokens.push(token);
-				index += increment;
+				index += increment + 1;
 			},
 			';' =>
 				if cfg!(test) && let Some(chr) = chars.peek() && chr == &'=' {
@@ -217,24 +217,58 @@ fn next_identifier(chars: &mut Peekable<std::str::Chars>, start: char) -> String
 	identifier
 }
 
+/// Parse the next number from the character stream `chars`. Since the first character may have already been extracted
+/// from the stream, it can be provided separately. If this number is known to be a number (mostly due to radix
+/// prefixes), `must_be_number` is set.
+///
+/// # Returns
+/// The number, parsed as either a Number token or an Identifier token (if parsing the number failed), as well as the
+/// length of underlying text is returned. An error is only returned if fallback parsing of numbers as identifiers is
+/// disabled according to the `options` or with `must_be_number`.
 fn next_number(
 	chars: &mut Peekable<std::str::Chars>,
 	first_char: Option<char>,
+	must_be_number: bool,
 	radix: u8,
 	start_index: usize,
 	source_code: Arc<AssemblyCode>,
-) -> Result<(i64, usize), Box<AssemblyError>> {
+	options: &dyn BackendOptions,
+) -> Result<(Token, usize), Box<AssemblyError>> {
 	let mut number_chars: String =
 		first_char.map_or_else(std::string::String::default, std::string::String::from).into();
 	while let Some(chr) = chars.peek() && chr.is_alphanumeric() {
 		number_chars.push(chars.next().unwrap());
 	}
 	i64::from_str_radix(&number_chars, radix.into())
-		.map_err(|error| {
-			AssemblyError::InvalidNumber { error, location: (start_index, number_chars.len()).into(), src: source_code }
-				.into()
-		})
-		.map(|value| (value, number_chars.len()))
+		.map_or_else(
+			|error| {
+				if must_be_number {
+					Err(AssemblyError::InvalidNumber {
+						error,
+						location: (start_index, number_chars.len()).into(),
+						src: source_code.clone(),
+					}
+					.into())
+				} else {
+					AssemblyError::NumberIdentifier {
+						text: number_chars.clone(),
+						error,
+						location: (start_index, number_chars.len()).into(),
+						src: source_code.clone(),
+					}
+					.report_or_throw(options)
+					.map(|_| Token::Identifier(number_chars.clone(), (start_index, number_chars.len()).into()))
+				}
+			},
+			|number| {
+				Ok(Token::Number(
+					number,
+					source_code.text[start_index .. start_index + number_chars.len()].into(),
+					(start_index, number_chars.len()).into(),
+				))
+			},
+		)
+		.map(|token| (token, number_chars.len()))
 }
 
 fn next_string(

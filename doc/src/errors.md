@@ -720,9 +720,9 @@ Error: spcasm::syntax::invalid_number
   × Invalid number: invalid digit found in string
    ╭─[tests/errors/parser-invalid-number.spcasmtest:1:1]
  1 │ org 0
- 2 │ label = %34af
-   ·          ──┬─
-   ·            ╰── invalid digit found in string
+ 2 │ label = %134af
+   ·         ──┬──
+   ·           ╰── invalid digit found in string
    ╰────
 
 
@@ -735,7 +735,7 @@ Error: spcasm::syntax::invalid_number
 
   × Invalid number: number too large to fit in target type
    ╭─[tests/errors/parser-too-large-number.spcasmtest:1:1]
- 1 │ org 99999999999999999999999999999999999999
+ 1 │ org $99999999999999999999999999999999999999
    ·     ───────────────────┬──────────────────
    ·                        ╰── number too large to fit in target type
    ╰────

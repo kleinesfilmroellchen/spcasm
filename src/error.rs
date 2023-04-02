@@ -596,6 +596,24 @@ pub enum AssemblyError {
 		src:      Arc<AssemblyCode>,
 	},
 
+	#[error("\"{text}\" was expected to be a number, but it is parsed as an identifier instead")]
+	#[diagnostic(
+		code(spcasm::syntax::number_identifier),
+		severity(Warning),
+		help(
+			"Identifiers starting with numbers is an Asar compatibility feature, but it is not recommended since it \
+			 can lead to weird errors later on."
+		)
+	)]
+	NumberIdentifier {
+		text:     String,
+		error:    ParseIntError,
+		#[label("Parse error: {error}")]
+		location: SourceSpan,
+		#[source_code]
+		src:      Arc<AssemblyCode>,
+	},
+
 	#[error("Expected any of {}", expected.iter().map(std::string::ToString::to_string).collect::<Vec<_>>().join(", "))]
 	#[diagnostic(code(spcasm::syntax::missing_token), severity(Error))]
 	UnexpectedEndOfTokens {

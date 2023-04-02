@@ -28,7 +28,7 @@ pub enum Token {
 	/// Start of a directive.
 	Directive(DirectiveSymbol, SourceSpan),
 	/// Literal number which was already parsed.
-	Number(i64, SourceSpan),
+	Number(i64, String, SourceSpan),
 	/// Text string delimited by "".
 	String(Vec<u8>, SourceSpan),
 	/// '#'
@@ -169,7 +169,7 @@ impl Token {
 			| Self::Plus(location) => (*location, SourceOffset::from(1)).into(),
 			Self::Identifier(_, location)
 			| Self::ExplicitDirectPage(location)
-			| Self::Number(_, location)
+			| Self::Number(_, _, location)
 			| Self::Register(_, location)
 			| Self::String(_, location)
 			| Self::PlusRegister(_, location)
@@ -225,8 +225,10 @@ impl Display for Token {
 			Self::Period(..) => "'.'".to_string(),
 			Self::ExplicitDirectPage(..) => "'.b'".to_string(),
 			Self::Plus(..) => "'+'".to_string(),
-			Self::RelativeLabelPlus(count, _) => format!("'{}'", "+".repeat(usize::try_from(u64::from(*count)).unwrap_or(usize::MAX))),
-			Self::RelativeLabelMinus(count, _) => format!("'{}'", "-".repeat(usize::try_from(u64::from(*count)).unwrap_or(usize::MAX))),
+			Self::RelativeLabelPlus(count, _) =>
+				format!("'{}'", "+".repeat(usize::try_from(u64::from(*count)).unwrap_or(usize::MAX))),
+			Self::RelativeLabelMinus(count, _) =>
+				format!("'{}'", "-".repeat(usize::try_from(u64::from(*count)).unwrap_or(usize::MAX))),
 			Self::Minus(..) | Self::RangeMinus(..) => "'-'".to_string(),
 			Self::Star(..) => "'*'".to_string(),
 			Self::Tilde(..) => "'~'".to_string(),

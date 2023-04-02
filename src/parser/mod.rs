@@ -663,7 +663,7 @@ impl AssemblyFile {
 				child_include_path.push(self.source_code.name.clone());
 				child_include_path.append(&mut self.source_code.include_path.clone());
 
-				let tokens = lex(included_code.clone())?;
+				let tokens = lex(included_code.clone(), environment.borrow().options.as_ref())?;
 				let included_file = Environment::parse(&environment, tokens, &included_code)?;
 
 				self.content.splice(index ..= index, included_file.borrow().content.clone());

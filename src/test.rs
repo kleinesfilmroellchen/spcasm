@@ -317,7 +317,7 @@ fn coverage() {
 		Token::String(Vec::new(), 0.into()),
 		Token::TestComment(Vec::new(), 0.into()),
 		Token::Tilde(0.into()),
-		Token::Number(0, 0.into()),
+		Token::Number(0, "897".into(), 0.into()),
 		Token::Register(crate::parser::Register::X, 0.into()),
 	] {
 		assert_eq!(token, token);

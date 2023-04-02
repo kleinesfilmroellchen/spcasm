@@ -356,6 +356,15 @@ LabelForInstruction: Reference = {
 			parent: Weak::new(),
 		}))
 	),
+	// Asar allows number-only identifiers, at least in local labels where ambiguity is not a problem.
+	"." <identifier:"number"> ":"? "\n"* => Reference::Local(
+		Arc::new(RefCell::new(LocalLabel {
+			name: identifier.1.clone(),
+			location: None,
+			span: identifier.2,
+			parent: Weak::new(),
+		}))
+	),
 	<identifier:"identifier"> ":" "\n"* => Reference::Global(environment.borrow_mut().get_global_label(&identifier.0, identifier.1, LabelUsageKind::AsDefinition)),
 	<plus:LabelingPlus> ":"? "\n"* => Reference::Relative {
 		direction: RelativeReferenceDirection::Forward,
@@ -487,10 +496,10 @@ AddressingMode: AddressingMode = {
 	"[" <AssemblyTimeValue> "+X" "]" => try_make_direct_page_addressing_mode(<>, AddressingMode::DirectPageXIndexedIndirect, AddressingMode::DirectPageXIndexedIndirect),
 	"[" <AssemblyTimeValue> "]" "+Y" => try_make_direct_page_addressing_mode(<>, AddressingMode::DirectPageIndirectYIndexed, AddressingMode::DirectPageIndirectYIndexed),
 	<AssemblyTimeValue> "." <"number"> =>? try_make_direct_page_addressing_mode((<>),
-		|(a, b)| Ok(AddressingMode::DirectPageBit(a, AddressingMode::check_bit(b.0 as u8, b.1, &source_code)?)),
-		|(a, b)| Ok(AddressingMode::AddressBit(a, AddressingMode::check_bit(b.0 as u8, b.1, &source_code)?))),
+		|(a, b)| Ok(AddressingMode::DirectPageBit(a, AddressingMode::check_bit(b.0 as u8, b.2, &source_code)?)),
+		|(a, b)| Ok(AddressingMode::AddressBit(a, AddressingMode::check_bit(b.0 as u8, b.2, &source_code)?))),
 	"/" <address:AssemblyTimeValue> => AddressingMode::NegatedAddressBit(address, 1),
-	"/" <address:AssemblyTimeValue> "." <bit:"number"> =>? Ok(AddressingMode::NegatedAddressBit(address, AddressingMode::check_bit(bit.0 as u8, bit.1, &source_code)?)),
+	"/" <address:AssemblyTimeValue> "." <bit:"number"> =>? Ok(AddressingMode::NegatedAddressBit(address, AddressingMode::check_bit(bit.0 as u8, bit.2, &source_code)?)),
 	"[" "X" "]" "+" => AddressingMode::IndirectXAutoIncrement,
 	"[" "X" "+" "]" => AddressingMode::IndirectXAutoIncrement,
 	"[" "X" "]" => AddressingMode::IndirectX,
@@ -555,7 +564,7 @@ extern {
 		"macro" => Token::Directive(DirectiveSymbol::Macro, <SourceSpan>),
 		"endmacro" => Token::Directive(DirectiveSymbol::EndMacro, <SourceSpan>),
 		"math" => Token::Directive(DirectiveSymbol::Math, <SourceSpan>),
-		"number" => Token::Number(<i64>, <SourceSpan>),
+		"number" => Token::Number(<i64>, <String>, <SourceSpan>),
 		"string" => Token::String(<Vec<u8>>, <SourceSpan>),
 		"#" => Token::Hash(<SourceOffset>),
 		"," => Token::Comma(<SourceOffset>),

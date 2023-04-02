@@ -5750,25 +5750,6 @@ $ spcasm -w all -a tests/opcodes.s
                     },
                     used_as_address: false,
                     locals: {
-                        "subtarget": RefCell {
-                            value: LocalLabel {
-                                name: "subtarget",
-                                location: Some(
-                                    Literal(
-                                        394,
-                                    ),
-                                ),
-                                span: SourceSpan {
-                                    offset: SourceOffset(
-                                        5103,
-                                    ),
-                                    length: SourceOffset(
-                                        9,
-                                    ),
-                                },
-                                parent: (Weak),
-                            },
-                        },
                         "selftarget": RefCell {
                             value: LocalLabel {
                                 name: "selftarget",
@@ -5783,6 +5764,25 @@ $ spcasm -w all -a tests/opcodes.s
                                     ),
                                     length: SourceOffset(
                                         10,
+                                    ),
+                                },
+                                parent: (Weak),
+                            },
+                        },
+                        "subtarget": RefCell {
+                            value: LocalLabel {
+                                name: "subtarget",
+                                location: Some(
+                                    Literal(
+                                        394,
+                                    ),
+                                ),
+                                span: SourceSpan {
+                                    offset: SourceOffset(
+                                        5103,
+                                    ),
+                                    length: SourceOffset(
+                                        9,
                                     ),
                                 },
                                 parent: (Weak),

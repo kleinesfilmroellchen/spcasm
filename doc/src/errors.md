@@ -68,6 +68,32 @@ $ spcasm tests/parse.spcasmtest
 
 In most places, numbers have a limited size, often 8 or 16 bits. However, user-specified numbers are initially limited much higher, to 64-bit signed numbers, in order to allow computations that involve large intermediate values. When using those large numbers in these bit-limited places, the higher bits are simply cut off or truncated. This can be surprising depending on what exact instruction or directive the number is used in, so spcasm issues a specific warning by default.
 
+
+### spcasm::syntax::number_identifier
+
+```trycmd
+$ spcasm tests/number-identifier.spcasmtest
+spcasm::syntax::number_identifier
+
+  ⚠ "07x" was expected to be a number, but it is parsed as an identifier
+  │ instead
+   ╭─[tests/number-identifier.spcasmtest:5:1]
+ 5 │ 
+ 6 │ 
+ 7 │ 
+ 8 │ .07x nop
+   ·  ─┬─
+   ·   ╰── Parse error: invalid digit found in string
+   ╰────
+  help: Identifiers starting with numbers is an Asar compatibility feature,
+        but it is not recommended since it can lead to weird errors later
+        on.
+
+
+```
+
+In Asar, identifiers can start with numbers, and in fact can consist entirely of numbers when their use is unambiguous. (The rules on this are not precisely documented, in fact.) In particular, a popular use of numeric identifiers are numbered local labels, such as `.01`, `.02` etc., where due to the leading `.` there never is any ambiguity. For compatibility reasons, spcasm supports this syntax, but it will issue a warning when an identifier starts with numbers. This is because if the identifier entirely consists of numbers, whether or not it is recognized as a reference entirely depends on the circumstances, and spcasm will usually not issue an error if the number appears in a valid context. That can mean that either the assembly output is wrong, or the error is very strange. Since warnings can be turned into hard errors, this "feature" can therefore be disabled, and doing so is strongly recommended.
+
 ## Errors
 
 ### spcasm::arch::invalid

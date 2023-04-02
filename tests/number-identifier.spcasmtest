@@ -1,0 +1,8 @@
+org 0
+global:
+.03:
+	bra .03 ;= 2F FE
+
+
+
+.07x nop

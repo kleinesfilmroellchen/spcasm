@@ -196,7 +196,8 @@ fn extract_asar_expected_output(file: &str) -> Vec<u8> {
 
 #[test]
 fn coverage() {
-	use std::collections::HashMap;
+	use std::collections::BTreeMap;
+	use std::sync::Weak;
 
 	use crate::default_hacks::FakeDefaultForIgnoredValues;
 	use crate::parser::value::BinaryOperator;
@@ -223,22 +224,14 @@ fn coverage() {
 		crate::parser::AssemblyTimeValue::BinaryOperation(Box::new(32.into()), Box::new(7.into()), BinaryOperator::And,),
 	);
 
-	let local = crate::parser::reference::Reference::Local(std::sync::Arc::new(
-		crate::parser::reference::LocalLabel {
-			location: None,
-			name:     "example".into(),
-			span:     (0, 0).into(),
-			parent:   std::sync::Weak::new(),
-		}
-		.into(),
-	));
-	let global = crate::parser::reference::Reference::Global(std::sync::Arc::new(
-		crate::parser::reference::GlobalLabel {
-			locals:          HashMap::new(),
+	let label = crate::parser::reference::Reference::Label(std::sync::Arc::new(
+		crate::parser::reference::Label {
+			children:        BTreeMap::new(),
 			location:        None,
 			name:            "example".into(),
 			used_as_address: true,
 			span:            (0, 0).into(),
+			parent:          Weak::new(),
 		}
 		.into(),
 	));
@@ -250,14 +243,12 @@ fn coverage() {
 		macro_parent: macro_parent.clone(),
 	};
 
-	format!("{}, {}, {}, {0:?}, {1:?}, {2:?}, {3:?}", global, local, macro_parameter, macro_parent);
-	let mut resolved_global = global.clone();
+	format!("{}, {}, {0:?}, {1:?}, {2:?}", label, macro_parameter, macro_parent);
+	let mut resolved_global = label.clone();
 	resolved_global.set_location(7.into());
-	let mut resolved_local = local.clone();
-	resolved_local.set_location(8.into());
 	let mut resolved_macro_parameter = macro_parameter.clone();
 	resolved_macro_parameter.set_location(9.into());
-	format!("{}, {}, {}", resolved_global, resolved_local, resolved_macro_parameter);
+	format!("{}, {}", resolved_global, resolved_macro_parameter);
 
 	for operator in [
 		BinaryOperator::Add,
@@ -276,8 +267,8 @@ fn coverage() {
 		let _ = format!(
 			"{:X}",
 			crate::parser::AssemblyTimeValue::BinaryOperation(
-				Box::new(crate::parser::AssemblyTimeValue::Reference(local.clone())),
-				Box::new(crate::parser::AssemblyTimeValue::Reference(global.clone())),
+				Box::new(crate::parser::AssemblyTimeValue::Reference(label.clone())),
+				Box::new(crate::parser::AssemblyTimeValue::Reference(label.clone())),
 				operator,
 			),
 		);

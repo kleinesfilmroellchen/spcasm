@@ -11,7 +11,7 @@ use miette::SourceSpan;
 use smartstring::alias::String;
 use spcasm_derive::{Parse, VariantName};
 
-use super::reference::{self, GlobalLabel, Reference, ReferenceResolvable};
+use super::reference::{self, Label, Reference, ReferenceResolvable};
 use super::register::Register;
 use crate::error::AssemblyError;
 use crate::parser::program::span_to_string;
@@ -70,9 +70,17 @@ impl ReferenceResolvable for Instruction {
 	fn resolve_relative_labels(
 		&mut self,
 		direction: reference::RelativeReferenceDirection,
-		relative_labels: &std::collections::HashMap<std::num::NonZeroU64, Arc<RefCell<GlobalLabel>>>,
+		relative_labels: &std::collections::HashMap<std::num::NonZeroU64, Arc<RefCell<Label>>>,
 	) {
 		self.opcode.resolve_relative_labels(direction, relative_labels);
+	}
+
+	fn set_current_label(
+		&mut self,
+		current_label: &Option<Arc<RefCell<Label>>>,
+		source_code: &Arc<AssemblyCode>,
+	) -> Result<(), Box<AssemblyError>> {
+		self.opcode.set_current_label(current_label, source_code)
 	}
 }
 
@@ -306,11 +314,22 @@ impl ReferenceResolvable for Opcode {
 	fn resolve_relative_labels(
 		&mut self,
 		direction: reference::RelativeReferenceDirection,
-		relative_labels: &std::collections::HashMap<std::num::NonZeroU64, Arc<RefCell<GlobalLabel>>>,
+		relative_labels: &std::collections::HashMap<std::num::NonZeroU64, Arc<RefCell<Label>>>,
 	) {
 		for operand in self.first_operand.iter_mut().chain(self.second_operand.iter_mut()) {
 			operand.resolve_relative_labels(direction, relative_labels);
 		}
+	}
+
+	fn set_current_label(
+		&mut self,
+		current_label: &Option<Arc<RefCell<Label>>>,
+		source_code: &Arc<AssemblyCode>,
+	) -> Result<(), Box<AssemblyError>> {
+		for operand in self.first_operand.iter_mut().chain(self.second_operand.iter_mut()) {
+			operand.set_current_label(current_label, source_code)?;
+		}
+		Ok(())
 	}
 }
 
@@ -521,13 +540,6 @@ impl AddressingMode {
 		}
 	}
 
-	/// Set this global label as the parent for all the unresolved local labels.
-	pub fn set_global_label(&mut self, label: &Arc<RefCell<GlobalLabel>>) {
-		if let Some(number) = self.number_mut() {
-			number.set_global_label(label);
-		}
-	}
-
 	/// Return the number that this addressing mode references (mostly as an address), if any. The original number is
 	/// borrowed.
 	#[must_use]
@@ -720,7 +732,7 @@ impl ReferenceResolvable for AddressingMode {
 	fn resolve_relative_labels(
 		&mut self,
 		direction: reference::RelativeReferenceDirection,
-		relative_labels: &std::collections::HashMap<std::num::NonZeroU64, Arc<RefCell<GlobalLabel>>>,
+		relative_labels: &std::collections::HashMap<std::num::NonZeroU64, Arc<RefCell<Label>>>,
 	) {
 		match self {
 			AddressingMode::Immediate(number)
@@ -741,6 +753,15 @@ impl ReferenceResolvable for AddressingMode {
 			| AddressingMode::CarryFlag
 			| AddressingMode::Register(_) => (),
 		}
+	}
+
+	/// Set this global label as the parent for all the unresolved local labels.
+	fn set_current_label(
+		&mut self,
+		current_label: &Option<Arc<RefCell<Label>>>,
+		source_code: &Arc<AssemblyCode>,
+	) -> Result<(), Box<AssemblyError>> {
+		self.number_mut().map_or_else(|| Ok(()), |number| number.set_current_label(current_label, source_code))
 	}
 }
 

@@ -8,7 +8,7 @@ use smartstring::alias::String;
 
 use std::cell::RefCell;
 use std::collections::HashMap;
-use std::num::NonZeroU64;
+use std::num::{NonZeroU64, NonZeroUsize};
 use std::sync::{Weak, Arc};
 
 use crate::parser::{
@@ -19,7 +19,7 @@ use crate::parser::{
 	LabelUsageKind, 
 	Token,
 	Register,
-	reference::{Reference, LocalLabel, MacroParent, RelativeReferenceDirection},
+	reference::{Reference, MacroParent, RelativeReferenceDirection},
 	try_make_direct_page_addressing_mode,
 	source_range,
 	apply_brr_options,
@@ -346,26 +346,20 @@ InclusionRange: SourceSpan = {
 MultipleLabelsForInstruction: Vec<Reference> = LabelForInstruction+;
 
 LabelForInstruction: Reference = {
-	"." <identifier:"identifier"> ":"? "\n"* => Reference::Local(
-		// Create a new local label that might be merged in the future.
-		Arc::new(RefCell::new(LocalLabel {
-			name: identifier.0.clone(),
-			location: None,
-			span: identifier.1,
-			// Don't rely on forward-to-backward parsing order; we can't know the parent label here.
-			parent: Weak::new(),
-		}))
-	),
+	"." <identifier:"identifier"> ":"? "\n"* => Reference::UnresolvedLocalLabel {
+		name: identifier.0.clone(),
+		nesting_level: NonZeroUsize::try_from(1).unwrap(),
+		span: identifier.1,
+		value: None,
+	},
 	// Asar allows number-only identifiers, at least in local labels where ambiguity is not a problem.
-	"." <identifier:"number"> ":"? "\n"* => Reference::Local(
-		Arc::new(RefCell::new(LocalLabel {
-			name: identifier.1.clone(),
-			location: None,
-			span: identifier.2,
-			parent: Weak::new(),
-		}))
-	),
-	<identifier:"identifier"> ":" "\n"* => Reference::Global(environment.borrow_mut().get_global_label(&identifier.0, identifier.1, LabelUsageKind::AsDefinition)),
+	"." <identifier:"number"> ":"? "\n"* => Reference::UnresolvedLocalLabel {
+		name: identifier.1.clone(),
+		nesting_level: NonZeroUsize::try_from(1).unwrap(),
+		span: identifier.2,
+		value: None,
+	},
+	<identifier:"identifier"> ":" "\n"* => Reference::Label(environment.borrow_mut().get_global_label(&identifier.0, identifier.1, LabelUsageKind::AsDefinition)),
 	<plus:LabelingPlus> ":"? "\n"* => Reference::Relative {
 		direction: RelativeReferenceDirection::Forward,
 		id: plus.0,
@@ -391,20 +385,19 @@ LabelingPlus: (NonZeroU64, SourceSpan) = {
 };
 
 Reference: Reference = {
-	<dot:"."> <identifier:"identifier"> => Reference::Local(Arc::new(RefCell::new(LocalLabel {
+	<dot:"."> <identifier:"identifier"> => Reference::UnresolvedLocalLabel {
 		name: identifier.0.clone(),
-		location: None,
+		nesting_level: NonZeroUsize::try_from(1).unwrap(),
 		span: source_range(dot.into(), identifier.1.into()),
-		// Don't rely on forward-to-backward parsing order; we can't know the parent label here.
-		parent: Weak::new(),
-	}))),
-	<dot:"."> <identifier:"number"> => Reference::Local(Arc::new(RefCell::new(LocalLabel {
+		value: None,
+	},
+	<dot:"."> <identifier:"number"> => Reference::UnresolvedLocalLabel {
 		name: identifier.1.clone(),
-		location: None,
+		nesting_level: NonZeroUsize::try_from(1).unwrap(),
 		span: source_range(dot.into(), identifier.2.into()),
-		parent: Weak::new(),
-	}))),
-	<identifier:"identifier"> => Reference::Global(environment.borrow_mut().get_global_label(&identifier.0, identifier.1, LabelUsageKind::AsAddress)),
+		value: None,
+	},
+	<identifier:"identifier"> => Reference::Label(environment.borrow_mut().get_global_label(&identifier.0, identifier.1, LabelUsageKind::AsAddress)),
 	<start:"<"> <identifier:"identifier"> <end:">"> => Reference::MacroArgument {
 		name: identifier.0,
 		span: source_range(start.into(), end.into()),

@@ -12,7 +12,9 @@ use smartstring::alias::String;
 
 use self::instruction::{AddressingMode, Instruction, Opcode};
 use self::lexer::lex;
-use self::reference::{GlobalLabel, MacroParameters, MacroParent, ReferenceResolvable, Reference, RelativeReferenceDirection};
+use self::reference::{
+	Label, MacroParameters, MacroParent, Reference, ReferenceResolvable, RelativeReferenceDirection,
+};
 use crate::assembler::resolve_file;
 use crate::cli::{default_backend_options, BackendOptions};
 use crate::directive::DirectiveValue;
@@ -62,7 +64,7 @@ where
 #[derive(Debug)]
 pub struct Environment {
 	/// The list of global labels.
-	pub globals:        Vec<Arc<RefCell<GlobalLabel>>>,
+	pub globals:        Vec<Arc<RefCell<Label>>>,
 	/// The files included in this "tree" created by include statements.
 	pub(crate) files:   HashMap<PathBuf, Arc<RefCell<AssemblyFile>>>,
 	/// Error and warning options passed on the command line.
@@ -196,7 +198,7 @@ impl Environment {
 		name: &'_ str,
 		span: SourceSpan,
 		usage_kind: LabelUsageKind,
-	) -> Arc<RefCell<GlobalLabel>> {
+	) -> Arc<RefCell<Label>> {
 		if let Some(matching_reference) = self.globals.iter_mut().find(|reference| reference.borrow().name == name) {
 			let mut mutable_matching_reference = matching_reference.borrow_mut();
 			if usage_kind == LabelUsageKind::AsAddress && !mutable_matching_reference.used_as_address {
@@ -209,13 +211,8 @@ impl Environment {
 			}
 			matching_reference.clone()
 		} else {
-			let new_reference = Arc::new(RefCell::new(GlobalLabel {
-				name: name.into(),
-				location: None,
-				span,
-				used_as_address: usage_kind == LabelUsageKind::AsAddress,
-				locals: HashMap::new(),
-			}));
+			let new_reference = Label::new(name.into(), span);
+			new_reference.borrow_mut().used_as_address = usage_kind == LabelUsageKind::AsAddress;
 			self.globals.push(new_reference.clone());
 			new_reference
 		}
@@ -232,7 +229,7 @@ impl AssemblyFile {
 	/// All panics are programming errors.
 	#[allow(clippy::too_many_lines)]
 	pub fn fill_in_reference_links(&mut self) -> Result<(), Box<AssemblyError>> {
-		let mut current_global_label: Option<Arc<RefCell<GlobalLabel>>> = None;
+		let mut current_label: Option<Arc<RefCell<Label>>> = None;
 		// While we do the local label merging, also perform the backward relative resolution.
 		// The forward relative labels are resolved in a reverse pass afterwards.
 		let mut current_backward_relative_label_map = HashMap::new();
@@ -240,16 +237,8 @@ impl AssemblyFile {
 		for element in &mut self.content {
 			// First match for reference resolution in instruction position
 			match element {
-				ProgramElement::Label(Reference::Local(ref mut local)) => {
-					*local = reference::merge_local_into_parent(
-						local.clone(),
-						current_global_label.clone(),
-						&self.source_code,
-					)?;
-					local.borrow_mut().resolve_relative_labels(RelativeReferenceDirection::Backward, &current_backward_relative_label_map);
-				},
-				ProgramElement::Label(Reference::Global(ref global)) => {
-					current_global_label = Some(global.clone());
+				ProgramElement::Label(Reference::Label(ref label)) => {
+					current_label = Some(label.clone());
 				},
 				ProgramElement::Label(ref mal @ Reference::MacroArgument { ref span, .. }) =>
 					return Err(AssemblyError::UsingMacroArgumentOutsideMacro {
@@ -267,61 +256,30 @@ impl AssemblyFile {
 					// "Drop" the mutable borrow from id before *element is used to not confuse the borrow checker.
 					let id = *id;
 					// To reference the relative label until codegen, create a new local label for it.
-					let global_for_relative =  Arc::new(RefCell::new(GlobalLabel {
-						// This name is likely, but not guaranteed, to be unique! That's why we directly insert into the globals list.
-						name: format!("ref_-_{}_{}", id, span.offset()).into(),
-						span: *span,
-						used_as_address: true,
-						locals: HashMap::default(),
-						location: None,
-					}));
-					self.parent.upgrade().expect("parent disappeared").borrow_mut().globals.push(global_for_relative.clone());
-					*element = ProgramElement::Label(Reference::Global(global_for_relative.clone()));
+					// This name is likely, but not guaranteed, to be unique! That's why we directly insert into
+					// the globals list.
+					let global_for_relative = Label::new(format!("ref_-_{}_{}", id, span.offset()).into(), *span);
+					global_for_relative.borrow_mut().used_as_address = true;
+					self.parent
+						.upgrade()
+						.expect("parent disappeared")
+						.borrow_mut()
+						.globals
+						.push(global_for_relative.clone());
+					*element = ProgramElement::Label(Reference::Label(global_for_relative.clone()));
 					current_backward_relative_label_map.insert(id, global_for_relative);
 				},
 
-				ProgramElement::Directive(Directive { value, .. }) => {
-					value.set_global_label(&current_global_label, &self.source_code);
-					value.resolve_relative_labels(RelativeReferenceDirection::Backward, &current_backward_relative_label_map);
-				},
-				ProgramElement::Instruction(Instruction {
-					opcode: Opcode { first_operand, second_operand, .. },
-					..
-				}) if let Some(ref actual_global_label) = current_global_label => {
-					if let Some(mode) = first_operand.as_mut() {
-						mode.set_global_label(actual_global_label);
-						mode.resolve_relative_labels(RelativeReferenceDirection::Backward, &current_backward_relative_label_map);
-					}
-					if let Some(mode) = second_operand.as_mut() {
-						mode.set_global_label(actual_global_label);
-						mode.resolve_relative_labels(RelativeReferenceDirection::Backward, &current_backward_relative_label_map);
-					}
-				},
-				ProgramElement::UserDefinedMacroCall { 
-					arguments,
-					..
-				} if let Some(ref actual_global_label) = current_global_label => {
-					for argument in arguments {
-						argument.set_global_label(actual_global_label);
-						argument.resolve_relative_labels(RelativeReferenceDirection::Backward, &current_backward_relative_label_map);
-					}
-				},
-				ProgramElement::Instruction(Instruction {
-					opcode: Opcode { first_operand, second_operand, .. },
-					..
-				}) => {
-					if let Some(mode) = first_operand.as_mut() {
-						mode.resolve_relative_labels(RelativeReferenceDirection::Backward, &current_backward_relative_label_map);
-					}
-					if let Some(mode) = second_operand.as_mut() {
-						mode.resolve_relative_labels(RelativeReferenceDirection::Backward, &current_backward_relative_label_map);
-					}
-				}
-				
 				ProgramElement::UserDefinedMacroCall { .. }
 				| ProgramElement::IncludeSource { .. }
-				| ProgramElement::Label(Reference::MacroGlobal { .. } | Reference::Relative { .. }) => (),
+				| ProgramElement::Label(
+					Reference::MacroGlobal { .. } | Reference::Relative { .. } | Reference::UnresolvedLocalLabel { .. },
+				)
+				| ProgramElement::Directive(_)
+				| ProgramElement::Instruction(_) => (),
 			}
+			element.set_current_label(&current_label, &self.source_code)?;
+			element.resolve_relative_labels(RelativeReferenceDirection::Backward, &current_backward_relative_label_map);
 		}
 
 		let mut current_forward_relative_label_map = HashMap::new();
@@ -332,24 +290,23 @@ impl AssemblyFile {
 				id,
 				span,
 				..
-			}) = element {
+			}) = element
+			{
 				let id = *id;
 				// To reference the relative label until codegen, create a new local label for it.
-				let global_for_relative =  Arc::new(RefCell::new(GlobalLabel {
-					// This name is likely, but not guaranteed, to be unique! That's why we directly insert into the globals list.
-					name: format!("ref_+_{}_{}", id, span.offset()).into(),
-					span: *span,
-					used_as_address: true,
-					locals: HashMap::default(),
-					location: None,
-				}));
-				self.parent.upgrade().expect("parent disappeared").borrow_mut().globals.push(global_for_relative.clone());
-				*element = ProgramElement::Label(Reference::Global(global_for_relative.clone()));
+				let global_for_relative = Label::new(format!("ref_+_{}_{}", id, span.offset()).into(), *span);
+				global_for_relative.borrow_mut().used_as_address = true;
+				self.parent
+					.upgrade()
+					.expect("parent disappeared")
+					.borrow_mut()
+					.globals
+					.push(global_for_relative.clone());
+				*element = ProgramElement::Label(Reference::Label(global_for_relative.clone()));
 				current_forward_relative_label_map.insert(id, global_for_relative);
 			}
 			element.resolve_relative_labels(RelativeReferenceDirection::Forward, &current_forward_relative_label_map);
 		}
-
 
 		Ok(())
 	}
@@ -415,7 +372,7 @@ impl AssemblyFile {
 						.map_err(Self::to_asm_error(&reference.source_span(), &self.source_code))?;
 					// Prevent the clearing of current labels.
 					continue;
-				}
+				},
 				ProgramElement::Instruction(instruction) => segments
 					.add_element(ProgramElement::Instruction(instruction.clone()))
 					.map_err(Self::to_asm_error(&instruction.span, &self.source_code))?,
@@ -423,14 +380,12 @@ impl AssemblyFile {
 				ProgramElement::Directive(ref mut directive @ Directive { .. }) => {
 					// All BRR directives that go into the BRR sample directory need a label, so we add a unique label
 					// while we're here.
-					if matches!( &directive.value, DirectiveValue::Brr { directory: true, .. }) && current_labels.is_empty() {
-						let new_brr_label = Arc::new(RefCell::new(GlobalLabel {
-							name:            format!("brr_sample_{}", brr_label_number).into(),
-							location:        None,
-							locals:          HashMap::new(),
-							span:            directive.span,
-							used_as_address: true,
-						}));
+					if matches!(&directive.value, DirectiveValue::Brr { directory: true, .. })
+						&& current_labels.is_empty()
+					{
+						let new_brr_label =
+							Label::new(format!("brr_sample_{}", brr_label_number).into(), directive.span);
+						new_brr_label.borrow_mut().used_as_address = true;
 						brr_label_number += 1;
 
 						self.parent
@@ -441,12 +396,16 @@ impl AssemblyFile {
 							.globals
 							.push(new_brr_label.clone());
 						segments
-							.add_element(ProgramElement::Label(Reference::Global(new_brr_label.clone())))
+							.add_element(ProgramElement::Label(Reference::Label(new_brr_label.clone())))
 							.map_err(Self::to_asm_error(&new_brr_label.borrow().span, &self.source_code))?;
-						current_labels.push(Reference::Global(new_brr_label));
+						current_labels.push(Reference::Label(new_brr_label));
 					}
 
-					directive.perform_segment_operations_if_necessary(&mut segments, self.source_code.clone(), current_labels.first())?;
+					directive.perform_segment_operations_if_necessary(
+						&mut segments,
+						self.source_code.clone(),
+						current_labels.first(),
+					)?;
 					if !directive.value.is_symbolic() {
 						segments
 							.add_element(ProgramElement::Directive(directive.clone()))
@@ -744,15 +703,9 @@ impl AssemblyFile {
 								(formal_argument.clone(), actual_argument.clone())
 							})
 							.collect(),
-						GlobalLabel {
-							// We use a unique reference name just to make sure that we don't combine different
-							// references accidentally.
-							name:            format!("{}_global_label_{}", macro_name, index).into(),
-							locals:          HashMap::new(),
-							location:        None,
-							span:            *definition_span,
-							used_as_address: false,
-						},
+						// We use a unique reference name just to make sure that we don't combine different
+						// references accidentally.
+						Label::new(format!("{}_global_label_{}", macro_name, index).into(), *definition_span),
 					);
 					// FIXME: Doesn't handle macro-internal references correctly; also no support for the \@ special
 					// label.

@@ -10,7 +10,7 @@ pub use super::directive::Directive;
 pub use super::error::AssemblyError;
 pub use super::parser::Environment;
 use crate::cli::{default_backend_options, BackendOptions};
-use crate::parser::reference::GlobalLabel;
+use crate::parser::reference::Label;
 use crate::parser::ProgramElement;
 use crate::{AssemblyCode, Segments};
 
@@ -39,7 +39,7 @@ pub fn pretty_hex(bytes: &[u8], emphasis: Option<usize>) -> String {
 }
 
 /// Dumps the tree of references for debugging purposes
-pub fn dump_reference_tree(global_references: &[Arc<std::cell::RefCell<GlobalLabel>>]) {
+pub fn dump_reference_tree(global_references: &[Arc<std::cell::RefCell<Label>>]) {
 	for global in global_references {
 		let global = global.borrow();
 		let label_text = global
@@ -49,19 +49,19 @@ pub fn dump_reference_tree(global_references: &[Arc<std::cell::RefCell<GlobalLab
 			.map_or_else(|| "(unknown)".to_string(), |location| format!("{:04X}", location));
 
 		println!("{:<20} {:>8}", global.name, label_text);
-		let mut locals = global.locals.values().collect::<Vec<_>>();
+		let mut locals = global.children.values().collect::<Vec<_>>();
 		locals.sort_by_cached_key(|label| label.borrow().name.clone());
 		for local in locals {
-			let local = local.borrow();
-			let label_text = local
+			let borrowed_local = local.borrow();
+			let label_text = borrowed_local
 				.location
 				.as_ref()
 				.and_then(|location| {
-					location.try_value(local.span, Arc::new(AssemblyCode::new("", &String::new()))).ok()
+					location.try_value(borrowed_local.span, Arc::new(AssemblyCode::new("", &String::new()))).ok()
 				})
 				.map_or_else(|| "(unknown)".to_string(), |location| format!("{:04X}", location));
 
-			println!("  .{:<17} {:>8}", local.name, label_text);
+			println!("  {:<18} {:>8}", crate::parser::reference::Reference::Label(local.clone()), label_text);
 		}
 	}
 }

@@ -828,7 +828,7 @@ impl ReferenceType {
 			Self::MacroArgument => "macro argument",
 			Self::Relative => "'+'/'-' relative label",
 			Self::Local => "local label",
-			Self::Global => "global label",
+			Self::Global => "label",
 		}
 	}
 }
@@ -836,9 +836,9 @@ impl ReferenceType {
 impl From<Reference> for ReferenceType {
 	fn from(value: Reference) -> Self {
 		match value {
-			Reference::Global(_) => Self::Global,
-			Reference::Local(_) => Self::Local,
+			Reference::Label(_) => Self::Global,
 			Reference::Relative { .. } => Self::Relative,
+			Reference::UnresolvedLocalLabel { .. } => Self::Local,
 			Reference::MacroArgument { .. } => Self::MacroArgument,
 			Reference::MacroGlobal { .. } => Self::MacroGlobal,
 		}

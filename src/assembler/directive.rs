@@ -48,14 +48,12 @@ impl AssembledData {
 				}
 			},
 			DirectiveValue::AssignReference { ref mut reference, ref value } => match reference {
-				Reference::Local(reference) => {
-					reference.borrow_mut().location = Some(value.clone().try_resolve());
-				},
-				Reference::Global(ref mut global) => {
+				Reference::Label(ref mut global) => {
 					global.borrow_mut().location = Some(value.clone().try_resolve());
 				},
 				Reference::MacroArgument { ref span, .. }
 				| Reference::MacroGlobal { ref span, .. }
+				| Reference::UnresolvedLocalLabel { ref span, .. }
 				| Reference::Relative { ref span, .. } =>
 					return Err(AssemblyError::AssigningToReference {
 						kind:     reference.clone().into(),

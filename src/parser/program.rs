@@ -104,7 +104,7 @@ impl ReferenceResolvable for ProgramElement {
 	fn resolve_relative_labels(
 		&mut self,
 		direction: super::reference::RelativeReferenceDirection,
-		relative_labels: &std::collections::HashMap<std::num::NonZeroU64, Arc<RefCell<super::reference::GlobalLabel>>>,
+		relative_labels: &std::collections::HashMap<std::num::NonZeroU64, Arc<RefCell<super::reference::Label>>>,
 	) {
 		match self {
 			Self::Directive(directive) => directive.resolve_relative_labels(direction, relative_labels),
@@ -115,6 +115,25 @@ impl ReferenceResolvable for ProgramElement {
 					argument.resolve_relative_labels(direction, relative_labels);
 				},
 			Self::IncludeSource { .. } => (),
+		}
+	}
+
+	fn set_current_label(
+		&mut self,
+		current_label: &Option<Arc<RefCell<super::reference::Label>>>,
+		source_code: &Arc<AssemblyCode>,
+	) -> Result<(), Box<AssemblyError>> {
+		match self {
+			Self::Label(label) => label.set_current_label(current_label, source_code),
+			Self::Directive(directive) => directive.set_current_label(current_label, source_code),
+			Self::Instruction(instruction) => instruction.set_current_label(current_label, source_code),
+			Self::IncludeSource { .. } => Ok(()),
+			Self::UserDefinedMacroCall { arguments, .. } =>
+				try {
+					for argument in arguments {
+						argument.set_current_label(current_label, source_code)?;
+					}
+				},
 		}
 	}
 }

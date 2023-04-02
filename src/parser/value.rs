@@ -14,7 +14,7 @@ use num_derive::{FromPrimitive, ToPrimitive};
 use smartstring::alias::String;
 
 use super::instruction::MemoryAddress;
-use super::reference::{self, GlobalLabel, ReferenceResolvable, Reference, RelativeReferenceDirection};
+use super::reference::{self, Label, ReferenceResolvable, Reference, RelativeReferenceDirection};
 use crate::error::AssemblyError;
 use crate::AssemblyCode;
 
@@ -60,29 +60,6 @@ impl AssemblyTimeValue {
 		}
 	}
 
-	/// Sets the given global label as the parent for all unresolved local labels.
-	/// # Panics
-	/// All panics are programming errors.
-	pub fn set_global_label(&mut self, label: &Arc<RefCell<GlobalLabel>>) {
-		match self {
-			Self::Reference(Reference::Local(local)) =>
-				*local =
-					reference::merge_local_into_parent(local.clone(), Some(label.clone()), &Arc::default()).unwrap(),
-			Self::UnaryOperation(val, _) => val.set_global_label(label),
-			Self::BinaryOperation(lhs, rhs, _) => {
-				lhs.set_global_label(label);
-				rhs.set_global_label(label);
-			},
-			Self::Literal(..)
-			| Self::Reference(
-				Reference::Global(..)
-				| Reference::MacroArgument { .. }
-				| Reference::MacroGlobal { .. }
-				| Reference::Relative { .. },
-			) => (),
-		}
-	}
-
 	/// Extracts the concrete value, if possible.
 	/// # Errors
 	/// If the value cannot be resolved.
@@ -118,17 +95,8 @@ impl AssemblyTimeValue {
 	#[must_use]
 	pub fn try_resolve_impl(self, resolution_attempts: Vec<&Reference>) -> Self {
 		match self {
-			Self::Reference(ref reference @ Reference::Global(ref global)) if let Some(memory_location) = global.clone().borrow().location.clone() => {
+			Self::Reference(ref reference @ Reference::Label(ref global)) if let Some(memory_location) = global.clone().borrow().location.clone() => {
 				// Recursive reference definition, we need to abort.
-				if resolution_attempts.contains(&reference) {
-					self
-				} else {
-					let mut attempts_with_this = resolution_attempts;
-					attempts_with_this.push(reference);
-					memory_location.try_resolve_impl(attempts_with_this)
-				}
-			},
-			Self::Reference(ref reference @ Reference::Local(ref local)) if let Some(memory_location) = local.clone().borrow().location.clone() => {
 				if resolution_attempts.contains(&reference) {
 					self
 				} else {
@@ -155,11 +123,13 @@ impl AssemblyTimeValue {
 				(lhs, rhs) => Self::BinaryOperation(Box::new(lhs), Box::new(rhs), operator),
 			},
 			Self::Literal(..) 
-			| Self::Reference(Reference::Local(..) 
-			| Reference::Global(..) 
-			| Reference::MacroArgument { value: None, .. } 
-			| Reference::Relative { value: None, .. } 
-			| Reference::MacroGlobal { .. }) => self,
+			| Self::Reference(
+				| Reference::Label(..) 
+				| Reference::MacroArgument { value: None, .. } 
+				| Reference::Relative { value: None, .. } 
+				| Reference::MacroGlobal { .. }
+				| Reference::UnresolvedLocalLabel { .. }
+			) => self,
 		}
 	}
 
@@ -174,14 +144,13 @@ impl AssemblyTimeValue {
 		match self {
 			Self::Literal(value) => Some(*value),
 			Self::Reference(ref reference) => match reference {
-				Reference::Global(global_label) if let Some(ref value) = global_label.borrow().location => value.value_using_resolver(resolver),
-				Reference::Local(local) if let Some(ref value) = local.borrow().location => value.value_using_resolver(resolver),
+				Reference::Label(label) if let Some(ref value) = label.borrow().location => value.value_using_resolver(resolver),
 				Reference::MacroArgument { value: Some(value), .. }
 				| Reference::Relative { value: Some(value), .. } => value.value_using_resolver(resolver),
-				Reference::Local(_)
-				| Reference::Global(_)
+				| Reference::Label(_)
 				| Reference::MacroGlobal { .. }
 				| Reference::Relative { value: None, .. }
+				| Reference::UnresolvedLocalLabel { .. }
 				| Reference::MacroArgument { value: None, .. } => resolver(reference.clone()),
 			},
 			Self::UnaryOperation(number, operator) => number.value_using_resolver(resolver).map(|value| operator.execute(value)),
@@ -200,7 +169,7 @@ impl ReferenceResolvable for AssemblyTimeValue {
 			Self::Literal(_) => Ok(()),
 			Self::Reference(reference @ Reference::MacroGlobal { .. }) => {
 				let new_global = replacement_parent.borrow().global_label();
-				*reference = Reference::Global(new_global);
+				*reference = Reference::Label(new_global);
 				Ok(())
 			},
 			Self::Reference(reference) => reference.replace_macro_parent(replacement_parent, source_code),
@@ -212,7 +181,7 @@ impl ReferenceResolvable for AssemblyTimeValue {
 		}
 	}
 
-	fn resolve_relative_labels(&mut self, direction: RelativeReferenceDirection, relative_labels: &HashMap<NonZeroU64, Arc<RefCell<GlobalLabel>>>) {
+	fn resolve_relative_labels(&mut self, direction: RelativeReferenceDirection, relative_labels: &HashMap<NonZeroU64, Arc<RefCell<Label>>>) {
 		match self {
 			// Awkward match since the borrow checker is not smart enough for this.
 			Self::Reference(reference @ Reference::Relative { .. }) => {
@@ -221,7 +190,7 @@ impl ReferenceResolvable for AssemblyTimeValue {
 					_ => unreachable!(),
 				};
 				if let Some(new_reference) = relative_labels.get(&id).cloned() && own_direction == direction {
-					*reference = Reference::Global(new_reference);
+					*reference = Reference::Label(new_reference);
 				}
 			},
 			Self::Literal(_) => (),
@@ -234,6 +203,20 @@ impl ReferenceResolvable for AssemblyTimeValue {
 		}
 	}
 	
+	/// Sets the given global label as the parent for all unresolved local labels.
+	/// # Panics
+	/// All panics are programming errors.
+	fn set_current_label(&mut self, label: &Option<Arc<RefCell<Label>>>, source_code: &Arc<AssemblyCode>) -> Result<(), Box<AssemblyError>> {
+		match self {
+			Self::Reference(reference) => reference.set_current_label(label, source_code),
+			Self::UnaryOperation(val, _) => val.set_current_label(label, source_code),
+			Self::BinaryOperation(lhs, rhs, _) => {
+				lhs.set_current_label(label, source_code).and_then(|_|
+				rhs.set_current_label(label, source_code))
+			},
+			Self::Literal(..) => Ok(()),
+		}
+	}
 }
 
 impl From<MemoryAddress> for AssemblyTimeValue {
@@ -326,13 +309,23 @@ impl ReferenceResolvable for SizedAssemblyTimeValue {
 		) -> Result<(), Box<AssemblyError>> {
 		 self.value.replace_macro_parent(replacement_parent, source_code)
 	}
+
 	fn resolve_relative_labels(
 			&mut self,
 			direction: RelativeReferenceDirection,
-			relative_labels: &HashMap<NonZeroU64, Arc<RefCell<GlobalLabel>>>,
+			relative_labels: &HashMap<NonZeroU64, Arc<RefCell<Label>>>,
 		) {
 		 self.value.resolve_relative_labels(direction, relative_labels);
 	}
+
+	fn set_current_label(
+		&mut self,
+		current_label: &Option<Arc<RefCell<Label>>>,
+		source_code: &Arc<AssemblyCode>,
+	) -> Result<(), Box<AssemblyError>> {
+		self.value.set_current_label(current_label, source_code)
+	}
+	
 }
 
 /// Unary operators for assembly time calculations.

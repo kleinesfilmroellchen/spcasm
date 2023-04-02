@@ -17,7 +17,7 @@ use spcasm_derive::Parse;
 
 use crate::parser::instruction::MemoryAddress;
 use crate::parser::program::byte_vec_to_string;
-use crate::parser::reference::{GlobalLabel, MacroParent, Reference, ReferenceResolvable};
+use crate::parser::reference::{Label, MacroParent, Reference, ReferenceResolvable};
 use crate::parser::value::{Size, SizedAssemblyTimeValue};
 use crate::parser::{self, source_range, AssemblyTimeValue, ProgramElement};
 use crate::{AssemblyCode, AssemblyError, Segments};
@@ -126,9 +126,17 @@ impl ReferenceResolvable for Directive {
 	fn resolve_relative_labels(
 		&mut self,
 		direction: parser::reference::RelativeReferenceDirection,
-		relative_labels: &HashMap<NonZeroU64, Arc<RefCell<GlobalLabel>>>,
+		relative_labels: &HashMap<NonZeroU64, Arc<RefCell<Label>>>,
 	) {
 		self.value.resolve_relative_labels(direction, relative_labels);
+	}
+
+	fn set_current_label(
+		&mut self,
+		current_label: &Option<Arc<RefCell<Label>>>,
+		source_code: &Arc<AssemblyCode>,
+	) -> Result<(), Box<AssemblyError>> {
+		self.value.set_current_label(current_label, source_code)
 	}
 }
 
@@ -327,41 +335,6 @@ impl DirectiveValue {
 			| Self::Include { .. } => false,
 		}
 	}
-
-	/// Set this global label as the parent for all the unresolved local labels.
-	pub fn set_global_label(&mut self, label: &Option<Arc<RefCell<GlobalLabel>>>, source_code: &Arc<AssemblyCode>) {
-		if let Some(label) = label {
-			match self {
-				Self::Table { values, .. } =>
-					for value in values.iter_mut() {
-						value.value.set_global_label(label);
-					},
-				Self::AssignReference { reference, value } => {
-					if let Reference::Local(assigned_local) = reference {
-						*assigned_local = parser::reference::merge_local_into_parent(
-							assigned_local.clone(),
-							Some(label.clone()),
-							source_code,
-						)
-						.unwrap();
-					}
-					value.set_global_label(label);
-				},
-				Self::UserDefinedMacro { .. } // TODO: Multi-labeled instructions in user defined macros will probably not work correctly!
-				| Self::Include { .. }
-				| Self::SampleTable { .. }
-				| Self::Brr { .. }
-				| Self::String { .. }
-				| Self::SetDirectiveParameters { .. }
-				| Self::Fill { .. }
-				| Self::Placeholder
-				| Self::End
-				| Self::PushSection
-				| Self::PopSection
-				| Self::Org(_) => {},
-			}
-		}
-	}
 }
 
 impl ReferenceResolvable for DirectiveValue {
@@ -405,7 +378,7 @@ impl ReferenceResolvable for DirectiveValue {
 	fn resolve_relative_labels(
 		&mut self,
 		direction: parser::reference::RelativeReferenceDirection,
-		relative_labels: &HashMap<NonZeroU64, Arc<RefCell<GlobalLabel>>>,
+		relative_labels: &HashMap<NonZeroU64, Arc<RefCell<Label>>>,
 	) {
 		match self {
 			Self::Table { values, .. } =>
@@ -430,6 +403,37 @@ impl ReferenceResolvable for DirectiveValue {
 			| Self::Org(_)
 			| Self::UserDefinedMacro { .. } => (),
 			Self::AssignReference { value, .. } => value.resolve_relative_labels(direction, relative_labels),
+		}
+	}
+
+	fn set_current_label(
+		&mut self,
+		current_label: &Option<Arc<RefCell<Label>>>,
+		source_code: &Arc<AssemblyCode>,
+	) -> Result<(), Box<AssemblyError>> {
+		match self {
+			Self::Table { values, .. } =>
+				try {
+					for value in values.iter_mut() {
+						value.value.set_current_label(current_label, source_code)?;
+					}
+				},
+			Self::AssignReference { reference, value } => {
+				reference.set_current_label(current_label, source_code)?;
+				value.set_current_label(current_label, source_code)
+			},
+			Self::UserDefinedMacro { .. }
+			| Self::Include { .. }
+			| Self::SampleTable { .. }
+			| Self::Brr { .. }
+			| Self::String { .. }
+			| Self::SetDirectiveParameters { .. }
+			| Self::Fill { .. }
+			| Self::Placeholder
+			| Self::End
+			| Self::PushSection
+			| Self::PopSection
+			| Self::Org(_) => Ok(()),
 		}
 	}
 }

@@ -697,7 +697,7 @@ impl AssembledData {
 				current_global_label = datum
 					.labels
 					.last()
-					.filter(|label| matches!(label, Reference::Global(..)))
+					.filter(|label| matches!(label, Reference::Label(..)))
 					.cloned()
 					.or(current_global_label);
 				// Resolve the actual reference definition; i.e. if the below code executes, we're at the memory
@@ -709,21 +709,20 @@ impl AssembledData {
 					.filter_map(|resolved_reference| {
 						had_modifications |= true;
 						match *resolved_reference {
-							Reference::Global(..) | Reference::Local(..) | Reference::Relative { .. } =>
-								resolved_reference.resolve_to(
-									memory_address,
-									datum.instruction_location,
-									self.source_code.clone(),
-								),
+							Reference::Label(..) | Reference::Relative { .. } => resolved_reference.resolve_to(
+								memory_address,
+								datum.instruction_location,
+								self.source_code.clone(),
+							),
 							Reference::MacroArgument { value: Some(_), .. } => Ok(()),
-							Reference::MacroArgument { value: None, span, .. } =>
-								Err(AssemblyError::UnresolvedReference {
-									reference:          resolved_reference.to_string().into(),
-									reference_location: None,
-									usage_location:     span,
-									src:                self.source_code.clone(),
-								}
-								.into()),
+							Reference::MacroArgument { value: None, span, .. }
+							| Reference::UnresolvedLocalLabel { span, .. } => Err(AssemblyError::UnresolvedReference {
+								reference:          resolved_reference.to_string().into(),
+								reference_location: None,
+								usage_location:     span,
+								src:                self.source_code.clone(),
+							}
+							.into()),
 							Reference::MacroGlobal { span } => Err(AssemblyError::UnresolvedMacroGlobal {
 								usage_location: span,
 								src:            self.source_code.clone(),

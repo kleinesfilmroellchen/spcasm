@@ -118,3 +118,38 @@ impl ReferenceResolvable for ProgramElement {
 		}
 	}
 }
+
+impl std::fmt::Display for ProgramElement {
+	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+		match self {
+			Self::Label(label) => write!(f, "{} [label] {}", span_to_string(label.source_span()), label),
+			Self::Directive(directive) => write!(f, "{}", directive),
+			Self::Instruction(instruction) => write!(f, "{}", instruction),
+			Self::IncludeSource { file, span } => write!(f, "{} include \"{}\"", span_to_string(*span), file),
+			Self::UserDefinedMacroCall { macro_name, arguments, span } => write!(
+				f,
+				"{} [macro call] %{} ({}\n)",
+				span_to_string(*span),
+				macro_name,
+				arguments.iter().map(AssemblyTimeValue::to_string).intersperse(",\n\t".into()).collect::<String>(),
+			),
+		}
+	}
+}
+
+pub fn span_to_string(span: SourceSpan) -> String {
+	format!("({:<4}-{:<4})", span.offset(), span.offset() + span.len()).into()
+}
+
+pub fn byte_vec_to_string(vec: &Option<Vec<u8>>) -> std::string::String {
+	vec.as_ref().map_or_else(std::string::String::new, |expected_value| {
+		format!(
+			"(expected {})",
+			expected_value
+				.iter()
+				.map(|element| format!("{:02X}", element))
+				.intersperse(" ".to_string())
+				.collect::<String>()
+		)
+	})
+}

@@ -14,6 +14,7 @@ use spcasm_derive::{Parse, VariantName};
 use super::reference::{self, GlobalLabel, Reference, ReferenceResolvable};
 use super::register::Register;
 use crate::error::AssemblyError;
+use crate::parser::program::span_to_string;
 use crate::parser::AssemblyTimeValue;
 use crate::{AssemblyCode, VariantName};
 
@@ -72,6 +73,15 @@ impl ReferenceResolvable for Instruction {
 		relative_labels: &std::collections::HashMap<std::num::NonZeroU64, Arc<RefCell<GlobalLabel>>>,
 	) {
 		self.opcode.resolve_relative_labels(direction, relative_labels);
+	}
+}
+
+impl std::fmt::Display for Instruction {
+	fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+		write!(f, "{} {}", span_to_string(self.span), self.opcode)?;
+		#[cfg(test)]
+		write!(f, " {}", crate::parser::program::byte_vec_to_string(&self.expected_value))?;
+		Ok(())
 	}
 }
 
@@ -304,6 +314,18 @@ impl ReferenceResolvable for Opcode {
 	}
 }
 
+impl std::fmt::Display for Opcode {
+	fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+		write!(
+			f,
+			"{:5} {:>12} , {:>12}",
+			self.mnemonic,
+			self.first_operand.as_ref().map_or_else(|| "[none]".into(), AddressingMode::to_string),
+			self.second_operand.as_ref().map_or_else(|| "[none]".into(), AddressingMode::to_string),
+		)
+	}
+}
+
 /// Instruction mnemonics of the SPC700.
 #[allow(missing_docs, clippy::use_self)]
 #[derive(Clone, Debug, Copy, Eq, PartialEq, Hash, Parse, VariantName)]
@@ -443,7 +465,7 @@ impl Mnemonic {
 
 impl Display for Mnemonic {
 	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> Result<(), std::fmt::Error> {
-		write!(f, "{}", self.variant_name().to_uppercase())
+		f.pad(&self.variant_name().to_uppercase())
 	}
 }
 

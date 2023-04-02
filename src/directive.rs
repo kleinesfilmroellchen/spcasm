@@ -16,6 +16,7 @@ use smartstring::alias::String;
 use spcasm_derive::Parse;
 
 use crate::parser::instruction::MemoryAddress;
+use crate::parser::program::byte_vec_to_string;
 use crate::parser::reference::{GlobalLabel, MacroParent, Reference, ReferenceResolvable};
 use crate::parser::value::{Size, SizedAssemblyTimeValue};
 use crate::parser::{self, source_range, AssemblyTimeValue, ProgramElement};
@@ -128,6 +129,18 @@ impl ReferenceResolvable for Directive {
 		relative_labels: &HashMap<NonZeroU64, Arc<RefCell<GlobalLabel>>>,
 	) {
 		self.value.resolve_relative_labels(direction, relative_labels);
+	}
+}
+
+impl std::fmt::Display for Directive {
+	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+		write!(
+			f,
+			"{} {:?} {}",
+			parser::program::span_to_string(self.span),
+			self.value,
+			byte_vec_to_string(&self.expected_value),
+		)
 	}
 }
 

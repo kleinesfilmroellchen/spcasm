@@ -277,6 +277,12 @@ impl UpperHex for AssemblyTimeValue {
 	}
 }
 
+impl std::fmt::Display for AssemblyTimeValue {
+	fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+		write!(f, "{:X}", self)
+	}
+}
+
 /// Size of a value in memory. SPC-700 assembly uses 65c816 naming:
 /// - byte: 1 byte
 /// - word: 2 bytes

@@ -1,7 +1,7 @@
 //! Instruction/AST-related structs created in the parser and consumed in the assembler.
 #![allow(clippy::use_self)]
 
-use std::cell::RefCell;
+use parking_lot::RwLock;
 use std::fmt::{Display, Error, Formatter};
 use std::result::Result;
 use std::sync::Arc;
@@ -61,7 +61,7 @@ impl Instruction {
 impl ReferenceResolvable for Instruction {
 	fn replace_macro_parent(
 		&mut self,
-		replacement_parent: Arc<RefCell<reference::MacroParent>>,
+		replacement_parent: Arc<RwLock<reference::MacroParent>>,
 		source_code: &Arc<AssemblyCode>,
 	) -> Result<(), Box<AssemblyError>> {
 		self.opcode.replace_macro_parent(replacement_parent, source_code)
@@ -70,14 +70,14 @@ impl ReferenceResolvable for Instruction {
 	fn resolve_relative_labels(
 		&mut self,
 		direction: reference::RelativeReferenceDirection,
-		relative_labels: &std::collections::HashMap<std::num::NonZeroU64, Arc<RefCell<Label>>>,
+		relative_labels: &std::collections::HashMap<std::num::NonZeroU64, Arc<RwLock<Label>>>,
 	) {
 		self.opcode.resolve_relative_labels(direction, relative_labels);
 	}
 
 	fn set_current_label(
 		&mut self,
-		current_label: &Option<Arc<RefCell<Label>>>,
+		current_label: &Option<Arc<RwLock<Label>>>,
 		source_code: &Arc<AssemblyCode>,
 	) -> Result<(), Box<AssemblyError>> {
 		self.opcode.set_current_label(current_label, source_code)
@@ -302,7 +302,7 @@ impl Opcode {
 impl ReferenceResolvable for Opcode {
 	fn replace_macro_parent(
 		&mut self,
-		replacement_parent: Arc<RefCell<reference::MacroParent>>,
+		replacement_parent: Arc<RwLock<reference::MacroParent>>,
 		source_code: &Arc<AssemblyCode>,
 	) -> Result<(), Box<AssemblyError>> {
 		for operand in self.first_operand.iter_mut().chain(self.second_operand.iter_mut()) {
@@ -314,7 +314,7 @@ impl ReferenceResolvable for Opcode {
 	fn resolve_relative_labels(
 		&mut self,
 		direction: reference::RelativeReferenceDirection,
-		relative_labels: &std::collections::HashMap<std::num::NonZeroU64, Arc<RefCell<Label>>>,
+		relative_labels: &std::collections::HashMap<std::num::NonZeroU64, Arc<RwLock<Label>>>,
 	) {
 		for operand in self.first_operand.iter_mut().chain(self.second_operand.iter_mut()) {
 			operand.resolve_relative_labels(direction, relative_labels);
@@ -323,7 +323,7 @@ impl ReferenceResolvable for Opcode {
 
 	fn set_current_label(
 		&mut self,
-		current_label: &Option<Arc<RefCell<Label>>>,
+		current_label: &Option<Arc<RwLock<Label>>>,
 		source_code: &Arc<AssemblyCode>,
 	) -> Result<(), Box<AssemblyError>> {
 		for operand in self.first_operand.iter_mut().chain(self.second_operand.iter_mut()) {
@@ -705,7 +705,7 @@ impl AddressingMode {
 impl ReferenceResolvable for AddressingMode {
 	fn replace_macro_parent(
 		&mut self,
-		replacement_parent: Arc<RefCell<reference::MacroParent>>,
+		replacement_parent: Arc<RwLock<reference::MacroParent>>,
 		source_code: &Arc<AssemblyCode>,
 	) -> Result<(), Box<AssemblyError>> {
 		match self {
@@ -732,7 +732,7 @@ impl ReferenceResolvable for AddressingMode {
 	fn resolve_relative_labels(
 		&mut self,
 		direction: reference::RelativeReferenceDirection,
-		relative_labels: &std::collections::HashMap<std::num::NonZeroU64, Arc<RefCell<Label>>>,
+		relative_labels: &std::collections::HashMap<std::num::NonZeroU64, Arc<RwLock<Label>>>,
 	) {
 		match self {
 			AddressingMode::Immediate(number)
@@ -758,7 +758,7 @@ impl ReferenceResolvable for AddressingMode {
 	/// Set this global label as the parent for all the unresolved local labels.
 	fn set_current_label(
 		&mut self,
-		current_label: &Option<Arc<RefCell<Label>>>,
+		current_label: &Option<Arc<RwLock<Label>>>,
 		source_code: &Arc<AssemblyCode>,
 	) -> Result<(), Box<AssemblyError>> {
 		self.number_mut().map_or_else(|| Ok(()), |number| number.set_current_label(current_label, source_code))

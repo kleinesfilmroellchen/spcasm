@@ -3,10 +3,10 @@
 
 use miette::{SourceOffset, SourceSpan};
 use lalrpop_util::ParseError;
+use parking_lot::RwLock;
 
 use smartstring::alias::String;
 
-use std::cell::RefCell;
 use std::collections::HashMap;
 use std::num::{NonZeroU64, NonZeroUsize};
 use std::sync::{Weak, Arc};
@@ -30,7 +30,7 @@ use crate::directive::{DirectiveSymbol, Directive, DirectiveValue, DirectivePara
 use crate::error::AssemblyError;
 use crate::AssemblyCode;
 
-grammar<'env, 'src>(environment: &'env Arc<RefCell<Environment>>, source_code: &'src Arc<AssemblyCode>);
+grammar<'env, 'src>(environment: &'env Arc<RwLock<Environment>>, source_code: &'src Arc<AssemblyCode>);
 
 pub Program: Vec<ProgramElement> = "\n"* <line:( <Line> )*> => line.into_iter().flatten().collect();
 
@@ -240,7 +240,7 @@ IdentifierOptions = "identifier"*;
 ArchDirective: Directive = <directive:"arch"> <arch:"identifier"> =>? {
 	let architecture = arch.0;
 	if ["spc700", "spc700-raw"].contains(&&*architecture) {
-		environment.borrow().report_or_throw(AssemblyError::ArchitectureDirectiveIgnored {
+		environment.read_recursive().report_or_throw(AssemblyError::ArchitectureDirectiveIgnored {
 			src:      source_code.clone(),
 			location: source_range(directive.into(), arch.1.into()),
 		}).map_err(|error| ParseError::User { error: *error }).map(|_| Directive::default())
@@ -359,7 +359,7 @@ LabelForInstruction: Reference = {
 		span: identifier.2,
 		value: None,
 	},
-	<identifier:"identifier"> ":" "\n"* => Reference::Label(environment.borrow_mut().get_global_label(&identifier.0, identifier.1, LabelUsageKind::AsDefinition)),
+	<identifier:"identifier"> ":" "\n"* => Reference::Label(environment.write().get_global_label(&identifier.0, identifier.1, LabelUsageKind::AsDefinition)),
 	<plus:LabelingPlus> ":"? "\n"* => Reference::Relative {
 		direction: RelativeReferenceDirection::Forward,
 		id: plus.0,
@@ -397,7 +397,7 @@ Reference: Reference = {
 		span: source_range(dot.into(), identifier.2.into()),
 		value: None,
 	},
-	<identifier:"identifier"> => Reference::Label(environment.borrow_mut().get_global_label(&identifier.0, identifier.1, LabelUsageKind::AsAddress)),
+	<identifier:"identifier"> => Reference::Label(environment.write().get_global_label(&identifier.0, identifier.1, LabelUsageKind::AsAddress)),
 	<start:"<"> <identifier:"identifier"> <end:">"> => Reference::MacroArgument {
 		name: identifier.0,
 		span: source_range(start.into(), end.into()),

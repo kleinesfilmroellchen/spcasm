@@ -49,7 +49,7 @@ impl AssembledData {
 			},
 			DirectiveValue::AssignReference { ref mut reference, ref value } => match reference {
 				Reference::Label(ref mut global) => {
-					global.borrow_mut().location = Some(value.clone().try_resolve());
+					global.write().location = Some(value.clone().try_resolve());
 				},
 				Reference::MacroArgument { ref span, .. }
 				| Reference::MacroGlobal { ref span, .. }

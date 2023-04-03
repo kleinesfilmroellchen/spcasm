@@ -1,6 +1,6 @@
 //! AST of the entire assembly program.
 #![allow(clippy::module_name_repetitions, clippy::large_enum_variant)]
-use std::cell::RefCell;
+use parking_lot::RwLock;
 use std::sync::Arc;
 
 use miette::SourceSpan;
@@ -84,7 +84,7 @@ impl ProgramElement {
 impl ReferenceResolvable for ProgramElement {
 	fn replace_macro_parent(
 		&mut self,
-		replacement_parent: Arc<RefCell<MacroParent>>,
+		replacement_parent: Arc<RwLock<MacroParent>>,
 		source_code: &Arc<AssemblyCode>,
 	) -> Result<(), Box<AssemblyError>> {
 		match self {
@@ -104,7 +104,7 @@ impl ReferenceResolvable for ProgramElement {
 	fn resolve_relative_labels(
 		&mut self,
 		direction: super::reference::RelativeReferenceDirection,
-		relative_labels: &std::collections::HashMap<std::num::NonZeroU64, Arc<RefCell<super::reference::Label>>>,
+		relative_labels: &std::collections::HashMap<std::num::NonZeroU64, Arc<RwLock<super::reference::Label>>>,
 	) {
 		match self {
 			Self::Directive(directive) => directive.resolve_relative_labels(direction, relative_labels),
@@ -120,7 +120,7 @@ impl ReferenceResolvable for ProgramElement {
 
 	fn set_current_label(
 		&mut self,
-		current_label: &Option<Arc<RefCell<super::reference::Label>>>,
+		current_label: &Option<Arc<RwLock<super::reference::Label>>>,
 		source_code: &Arc<AssemblyCode>,
 	) -> Result<(), Box<AssemblyError>> {
 		match self {

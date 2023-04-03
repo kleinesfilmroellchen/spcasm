@@ -1,7 +1,7 @@
 //! Assembly directives and user-defined macros
 #![allow(clippy::module_name_repetitions)]
 
-use std::cell::RefCell;
+use parking_lot::RwLock;
 use std::collections::HashMap;
 use std::fmt::Display;
 use std::hash::Hash;
@@ -117,7 +117,7 @@ impl Default for Directive {
 impl ReferenceResolvable for Directive {
 	fn replace_macro_parent(
 		&mut self,
-		replacement_parent: Arc<RefCell<MacroParent>>,
+		replacement_parent: Arc<RwLock<MacroParent>>,
 		source_code: &Arc<AssemblyCode>,
 	) -> Result<(), Box<crate::AssemblyError>> {
 		self.value.replace_macro_parent(replacement_parent, source_code)
@@ -126,14 +126,14 @@ impl ReferenceResolvable for Directive {
 	fn resolve_relative_labels(
 		&mut self,
 		direction: parser::reference::RelativeReferenceDirection,
-		relative_labels: &HashMap<NonZeroU64, Arc<RefCell<Label>>>,
+		relative_labels: &HashMap<NonZeroU64, Arc<RwLock<Label>>>,
 	) {
 		self.value.resolve_relative_labels(direction, relative_labels);
 	}
 
 	fn set_current_label(
 		&mut self,
-		current_label: &Option<Arc<RefCell<Label>>>,
+		current_label: &Option<Arc<RwLock<Label>>>,
 		source_code: &Arc<AssemblyCode>,
 	) -> Result<(), Box<AssemblyError>> {
 		self.value.set_current_label(current_label, source_code)
@@ -265,7 +265,7 @@ pub enum DirectiveValue {
 	/// pullpc
 	PopSection,
 	/// macro
-	UserDefinedMacro { name: String, arguments: Arc<RefCell<MacroParent>>, body: Vec<ProgramElement> },
+	UserDefinedMacro { name: String, arguments: Arc<RwLock<MacroParent>>, body: Vec<ProgramElement> },
 	/// A variety of global parameters are changed with this directive.
 	SetDirectiveParameters(HashMap<DirectiveParameter, AssemblyTimeValue>),
 	/// fill, pad
@@ -340,7 +340,7 @@ impl DirectiveValue {
 impl ReferenceResolvable for DirectiveValue {
 	fn replace_macro_parent(
 		&mut self,
-		replacement_parent: Arc<RefCell<MacroParent>>,
+		replacement_parent: Arc<RwLock<MacroParent>>,
 		source_code: &Arc<AssemblyCode>,
 	) -> Result<(), Box<AssemblyError>> {
 		match self {
@@ -368,7 +368,7 @@ impl ReferenceResolvable for DirectiveValue {
 					body.first().map_or_else(|| (0, 0).into(), ProgramElement::span).into(),
 					body.last().map_or_else(|| (0, 0).into(), ProgramElement::span).into(),
 				),
-				outer:    replacement_parent.borrow().global_label().borrow().span,
+				outer:    replacement_parent.read().global_label().read().span,
 				src:      source_code.clone(),
 			}
 			.into()),
@@ -378,7 +378,7 @@ impl ReferenceResolvable for DirectiveValue {
 	fn resolve_relative_labels(
 		&mut self,
 		direction: parser::reference::RelativeReferenceDirection,
-		relative_labels: &HashMap<NonZeroU64, Arc<RefCell<Label>>>,
+		relative_labels: &HashMap<NonZeroU64, Arc<RwLock<Label>>>,
 	) {
 		match self {
 			Self::Table { values, .. } =>
@@ -408,7 +408,7 @@ impl ReferenceResolvable for DirectiveValue {
 
 	fn set_current_label(
 		&mut self,
-		current_label: &Option<Arc<RefCell<Label>>>,
+		current_label: &Option<Arc<RwLock<Label>>>,
 		source_code: &Arc<AssemblyCode>,
 	) -> Result<(), Box<AssemblyError>> {
 		match self {

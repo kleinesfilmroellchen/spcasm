@@ -1,7 +1,7 @@
 //! Assembly-time values.
 
 use core::fmt;
-use std::cell::RefCell;
+use parking_lot::RwLock;
 use std::collections::HashMap;
 use std::fmt::{Display, Error, Formatter, UpperHex, Write};
 use std::num::NonZeroU64;
@@ -95,7 +95,7 @@ impl AssemblyTimeValue {
 	#[must_use]
 	pub fn try_resolve_impl(self, resolution_attempts: Vec<&Reference>) -> Self {
 		match self {
-			Self::Reference(ref reference @ Reference::Label(ref global)) if let Some(memory_location) = global.clone().borrow().location.clone() => {
+			Self::Reference(ref reference @ Reference::Label(ref global)) if let Some(memory_location) = global.clone().read().location.clone() => {
 				// Recursive reference definition, we need to abort.
 				if resolution_attempts.contains(&reference) {
 					self
@@ -144,7 +144,7 @@ impl AssemblyTimeValue {
 		match self {
 			Self::Literal(value) => Some(*value),
 			Self::Reference(ref reference) => match reference {
-				Reference::Label(label) if let Some(ref value) = label.borrow().location => value.value_using_resolver(resolver),
+				Reference::Label(label) if let Some(ref value) = label.read().location => value.value_using_resolver(resolver),
 				Reference::MacroArgument { value: Some(value), .. }
 				| Reference::Relative { value: Some(value), .. } => value.value_using_resolver(resolver),
 				| Reference::Label(_)
@@ -162,13 +162,13 @@ impl AssemblyTimeValue {
 impl ReferenceResolvable for AssemblyTimeValue {
 	fn replace_macro_parent(
 		&mut self,
-		replacement_parent: Arc<RefCell<reference::MacroParent>>,
+		replacement_parent: Arc<RwLock<reference::MacroParent>>,
 		source_code: &Arc<AssemblyCode>,
 	) -> Result<(), Box<AssemblyError>> {
 		match self {
 			Self::Literal(_) => Ok(()),
 			Self::Reference(reference @ Reference::MacroGlobal { .. }) => {
-				let new_global = replacement_parent.borrow().global_label();
+				let new_global = replacement_parent.read().global_label();
 				*reference = Reference::Label(new_global);
 				Ok(())
 			},
@@ -181,7 +181,7 @@ impl ReferenceResolvable for AssemblyTimeValue {
 		}
 	}
 
-	fn resolve_relative_labels(&mut self, direction: RelativeReferenceDirection, relative_labels: &HashMap<NonZeroU64, Arc<RefCell<Label>>>) {
+	fn resolve_relative_labels(&mut self, direction: RelativeReferenceDirection, relative_labels: &HashMap<NonZeroU64, Arc<RwLock<Label>>>) {
 		match self {
 			// Awkward match since the borrow checker is not smart enough for this.
 			Self::Reference(reference @ Reference::Relative { .. }) => {
@@ -206,7 +206,7 @@ impl ReferenceResolvable for AssemblyTimeValue {
 	/// Sets the given global label as the parent for all unresolved local labels.
 	/// # Panics
 	/// All panics are programming errors.
-	fn set_current_label(&mut self, label: &Option<Arc<RefCell<Label>>>, source_code: &Arc<AssemblyCode>) -> Result<(), Box<AssemblyError>> {
+	fn set_current_label(&mut self, label: &Option<Arc<RwLock<Label>>>, source_code: &Arc<AssemblyCode>) -> Result<(), Box<AssemblyError>> {
 		match self {
 			Self::Reference(reference) => reference.set_current_label(label, source_code),
 			Self::UnaryOperation(val, _) => val.set_current_label(label, source_code),
@@ -304,7 +304,7 @@ impl Default for SizedAssemblyTimeValue {
 impl ReferenceResolvable for SizedAssemblyTimeValue {
 	fn replace_macro_parent(
 			&mut self,
-			replacement_parent: Arc<RefCell<reference::MacroParent>>,
+			replacement_parent: Arc<RwLock<reference::MacroParent>>,
 			source_code: &Arc<AssemblyCode>,
 		) -> Result<(), Box<AssemblyError>> {
 		 self.value.replace_macro_parent(replacement_parent, source_code)
@@ -313,14 +313,14 @@ impl ReferenceResolvable for SizedAssemblyTimeValue {
 	fn resolve_relative_labels(
 			&mut self,
 			direction: RelativeReferenceDirection,
-			relative_labels: &HashMap<NonZeroU64, Arc<RefCell<Label>>>,
+			relative_labels: &HashMap<NonZeroU64, Arc<RwLock<Label>>>,
 		) {
 		 self.value.resolve_relative_labels(direction, relative_labels);
 	}
 
 	fn set_current_label(
 		&mut self,
-		current_label: &Option<Arc<RefCell<Label>>>,
+		current_label: &Option<Arc<RwLock<Label>>>,
 		source_code: &Arc<AssemblyCode>,
 	) -> Result<(), Box<AssemblyError>> {
 		self.value.set_current_label(current_label, source_code)

@@ -1,12 +1,12 @@
 //! Parser infrastructure; Utility functions for LALRPOP driver code.
 
-use std::cell::RefCell;
 use std::collections::HashMap;
 use std::path::PathBuf;
 use std::result::Result;
 use std::sync::{Arc, Weak};
 
 use miette::{SourceOffset, SourceSpan};
+use parking_lot::RwLock;
 #[allow(unused)]
 use smartstring::alias::String;
 
@@ -64,9 +64,9 @@ where
 #[derive(Debug)]
 pub struct Environment {
 	/// The list of global labels.
-	pub globals:        Vec<Arc<RefCell<Label>>>,
+	pub globals:        Vec<Arc<RwLock<Label>>>,
 	/// The files included in this "tree" created by include statements.
-	pub(crate) files:   HashMap<PathBuf, Arc<RefCell<AssemblyFile>>>,
+	pub(crate) files:   HashMap<PathBuf, Arc<RwLock<AssemblyFile>>>,
 	/// Error and warning options passed on the command line.
 	pub(crate) options: Arc<dyn BackendOptions>,
 }
@@ -78,18 +78,14 @@ pub(crate) struct AssemblyFile {
 	/// Underlying source code and file name.
 	pub source_code: Arc<AssemblyCode>,
 	/// The environment that this file is parsed in.
-	pub parent:      Weak<RefCell<Environment>>,
+	pub parent:      Weak<RwLock<Environment>>,
 }
 
 impl Environment {
 	/// Creates an empty environment.
 	#[must_use]
-	pub fn new() -> Arc<RefCell<Self>> {
-		Arc::new(RefCell::new(Self {
-			globals: Vec::new(),
-			files:   HashMap::new(),
-			options: default_backend_options(),
-		}))
+	pub fn new() -> Arc<RwLock<Self>> {
+		Arc::new(RwLock::new(Self { globals: Vec::new(), files: HashMap::new(), options: default_backend_options() }))
 	}
 
 	/// Sets the user-provided error options.
@@ -113,20 +109,20 @@ impl Environment {
 	pub(crate) fn find_file_by_source(
 		&self,
 		source_code: &Arc<AssemblyCode>,
-	) -> Result<Option<Arc<RefCell<AssemblyFile>>>, Box<AssemblyError>> {
+	) -> Result<Option<Arc<RwLock<AssemblyFile>>>, Box<AssemblyError>> {
 		self.files
 			.get(&source_code.name)
 			// Keep around a tuple with the original Arc so we can return it at the end.
-			.map(|file| file.try_borrow().map(|borrowed_file| (file, borrowed_file)))
-			.transpose()
+			.map(|file|
+				file.try_read_recursive().map(|borrowed_file| (file, borrowed_file)))
 			.map(|maybe_file| {
 				maybe_file.map(|(file, _)| file.clone())
-			})
-			.map_err(|_| AssemblyError::IncludeCycle {
-				cycle_trigger_file: source_code.file_name(),
-				src:                source_code.clone(),
-				include:            (0, 0).into(),
-			}.into())
+				.ok_or_else(|| AssemblyError::IncludeCycle {
+					cycle_trigger_file: source_code.file_name(),
+					src:                source_code.clone(),
+					include:            (0, 0).into(),
+				}.into())
+			}).transpose()
 	}
 
 	/// Parse a program given a set of tokens straight from the lexer.
@@ -141,15 +137,16 @@ impl Environment {
 	/// # Errors
 	/// Whenever something goes wrong in parsing.
 	pub(crate) fn parse(
-		this: &Arc<RefCell<Self>>,
+		this: &Arc<RwLock<Self>>,
 		tokens: Vec<Token>,
 		source_code: &Arc<AssemblyCode>,
-	) -> Result<Arc<RefCell<AssemblyFile>>, Box<AssemblyError>> {
-		if let Some(already_parsed_file) = this.borrow().find_file_by_source(source_code)? {
+	) -> Result<Arc<RwLock<AssemblyFile>>, Box<AssemblyError>> {
+		if let Some(already_parsed_file) = this.read_recursive().find_file_by_source(source_code)? {
 			// If we're in a cycle, the already parsed file still has unresolved references.
 			// I'm not sure whether this can happen in the first place given that find_file_by_source can't borrow such
 			// a file and therefore won't return it, but let's better be safe than sorry.
-			return if already_parsed_file.try_borrow().is_ok_and(|file| file.has_unresolved_source_includes()) {
+			return if already_parsed_file.try_read_recursive().is_some_and(|file| file.has_unresolved_source_includes())
+			{
 				Err(AssemblyError::IncludeCycle {
 					cycle_trigger_file: source_code.file_name(),
 					src:                source_code.clone(),
@@ -167,22 +164,22 @@ impl Environment {
 			.parse(this, source_code, lexed)
 			.map_err(|err| AssemblyError::from_lalrpop(err, source_code.clone()))?;
 
-		let rc_file = Arc::new(RefCell::new(AssemblyFile {
+		let rc_file = Arc::new(RwLock::new(AssemblyFile {
 			content:     program,
 			source_code: source_code.clone(),
 			parent:      Arc::downgrade(this),
 		}));
-		let mut file = rc_file.borrow_mut();
+		let mut file = rc_file.write();
 
 		file.resolve_user_macro_arguments()?;
 		file.coerce_to_direct_page_addressing();
 
 		drop(file);
 		// Insert the file into the list of source files so that we can detect cycles...
-		this.borrow_mut().files.insert(source_code.name.clone(), rc_file.clone());
+		this.write().files.insert(source_code.name.clone(), rc_file.clone());
 
 		// ...once we start including source files here.
-		let mut file = rc_file.borrow_mut();
+		let mut file = rc_file.write();
 		file.resolve_source_includes()?;
 
 		file.expand_user_macros()?;
@@ -198,9 +195,9 @@ impl Environment {
 		name: &'_ str,
 		span: SourceSpan,
 		usage_kind: LabelUsageKind,
-	) -> Arc<RefCell<Label>> {
-		if let Some(matching_reference) = self.globals.iter_mut().find(|reference| reference.borrow().name == name) {
-			let mut mutable_matching_reference = matching_reference.borrow_mut();
+	) -> Arc<RwLock<Label>> {
+		if let Some(matching_reference) = self.globals.iter_mut().find(|reference| reference.read().name == name) {
+			let mut mutable_matching_reference = matching_reference.write();
 			if usage_kind == LabelUsageKind::AsAddress && !mutable_matching_reference.used_as_address {
 				mutable_matching_reference.used_as_address = true;
 			}
@@ -212,7 +209,7 @@ impl Environment {
 			matching_reference.clone()
 		} else {
 			let new_reference = Label::new(name.into(), span);
-			new_reference.borrow_mut().used_as_address = usage_kind == LabelUsageKind::AsAddress;
+			new_reference.write().used_as_address = usage_kind == LabelUsageKind::AsAddress;
 			self.globals.push(new_reference.clone());
 			new_reference
 		}
@@ -229,7 +226,7 @@ impl AssemblyFile {
 	/// All panics are programming errors.
 	#[allow(clippy::too_many_lines)]
 	pub fn fill_in_reference_links(&mut self) -> Result<(), Box<AssemblyError>> {
-		let mut current_label: Option<Arc<RefCell<Label>>> = None;
+		let mut current_label: Option<Arc<RwLock<Label>>> = None;
 		// While we do the local label merging, also perform the backward relative resolution.
 		// The forward relative labels are resolved in a reverse pass afterwards.
 		let mut current_backward_relative_label_map = HashMap::new();
@@ -259,11 +256,11 @@ impl AssemblyFile {
 					// This name is likely, but not guaranteed, to be unique! That's why we directly insert into
 					// the globals list.
 					let global_for_relative = Label::new(format!("ref_-_{}_{}", id, span.offset()).into(), *span);
-					global_for_relative.borrow_mut().used_as_address = true;
+					global_for_relative.write().used_as_address = true;
 					self.parent
 						.upgrade()
 						.expect("parent disappeared")
-						.borrow_mut()
+						.write()
 						.globals
 						.push(global_for_relative.clone());
 					*element = ProgramElement::Label(Reference::Label(global_for_relative.clone()));
@@ -295,13 +292,8 @@ impl AssemblyFile {
 				let id = *id;
 				// To reference the relative label until codegen, create a new local label for it.
 				let global_for_relative = Label::new(format!("ref_+_{}_{}", id, span.offset()).into(), *span);
-				global_for_relative.borrow_mut().used_as_address = true;
-				self.parent
-					.upgrade()
-					.expect("parent disappeared")
-					.borrow_mut()
-					.globals
-					.push(global_for_relative.clone());
+				global_for_relative.write().used_as_address = true;
+				self.parent.upgrade().expect("parent disappeared").write().globals.push(global_for_relative.clone());
 				*element = ProgramElement::Label(Reference::Label(global_for_relative.clone()));
 				current_forward_relative_label_map.insert(id, global_for_relative);
 			}
@@ -385,19 +377,19 @@ impl AssemblyFile {
 					{
 						let new_brr_label =
 							Label::new(format!("brr_sample_{}", brr_label_number).into(), directive.span);
-						new_brr_label.borrow_mut().used_as_address = true;
+						new_brr_label.write().used_as_address = true;
 						brr_label_number += 1;
 
 						self.parent
 							.upgrade()
 							.ok_or_else(|| panic!("parent disappeared"))
 							.unwrap()
-							.borrow_mut()
+							.write()
 							.globals
 							.push(new_brr_label.clone());
 						segments
 							.add_element(ProgramElement::Label(Reference::Label(new_brr_label.clone())))
-							.map_err(Self::to_asm_error(&new_brr_label.borrow().span, &self.source_code))?;
+							.map_err(Self::to_asm_error(&new_brr_label.read().span, &self.source_code))?;
 						current_labels.push(Reference::Label(new_brr_label));
 					}
 
@@ -462,7 +454,7 @@ impl AssemblyFile {
 		}
 
 		let max_coercion_passes =
-			self.parent.upgrade().expect("parent disappeared").borrow().options.maximum_reference_resolution_passes();
+			self.parent.upgrade().expect("parent disappeared").read().options.maximum_reference_resolution_passes();
 
 		// 1. (collect relevant objects)
 		let mut referenced_objects = Vec::<ReferencedObject>::new();
@@ -622,10 +614,10 @@ impl AssemblyFile {
 				child_include_path.push(self.source_code.name.clone());
 				child_include_path.append(&mut self.source_code.include_path.clone());
 
-				let tokens = lex(included_code.clone(), environment.borrow().options.as_ref())?;
+				let tokens = lex(included_code.clone(), environment.read().options.as_ref())?;
 				let included_file = Environment::parse(&environment, tokens, &included_code)?;
 
-				self.content.splice(index ..= index, included_file.borrow().content.clone());
+				self.content.splice(index ..= index, included_file.read().content.clone());
 				continue;
 			}
 			index += 1;
@@ -639,7 +631,7 @@ impl AssemblyFile {
 			.parent
 			.upgrade()
 			.expect("environment destroyed before assembly file")
-			.borrow()
+			.read()
 			.options
 			.maximum_macro_expansion_depth();
 
@@ -679,7 +671,7 @@ impl AssemblyFile {
 				let called_macro = user_macros.get(macro_name);
 				if let Some((definition_span, DirectiveValue::UserDefinedMacro { arguments, body, .. })) = called_macro
 				{
-					let arguments = arguments.borrow();
+					let arguments = arguments.read();
 					let formal_arguments = match &(arguments).parameters {
 						MacroParameters::Formal(formal_arguments) => formal_arguments,
 						MacroParameters::Actual(_) => unreachable!(),

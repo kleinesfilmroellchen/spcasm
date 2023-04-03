@@ -3,6 +3,7 @@
 use std::cmp::min;
 use std::sync::Arc;
 
+use parking_lot::RwLock;
 #[allow(unused)]
 use smartstring::alias::String;
 
@@ -15,7 +16,7 @@ use crate::parser::ProgramElement;
 use crate::{AssemblyCode, Segments};
 
 /// Assembler result type.
-pub type AssemblyResult = miette::Result<(std::sync::Arc<std::cell::RefCell<Environment>>, Vec<u8>)>;
+pub type AssemblyResult = miette::Result<(std::sync::Arc<RwLock<Environment>>, Vec<u8>)>;
 
 /// Pretty-print byte data as hexadecimal, similar to hex editors.
 #[must_use]
@@ -39,9 +40,9 @@ pub fn pretty_hex(bytes: &[u8], emphasis: Option<usize>) -> String {
 }
 
 /// Dumps the tree of references for debugging purposes
-pub fn dump_reference_tree(global_references: &[Arc<std::cell::RefCell<Label>>]) {
+pub fn dump_reference_tree(global_references: &[Arc<RwLock<Label>>]) {
 	for global in global_references {
-		let global = global.borrow();
+		let global = global.read();
 		let label_text = global
 			.location
 			.as_ref()
@@ -50,9 +51,9 @@ pub fn dump_reference_tree(global_references: &[Arc<std::cell::RefCell<Label>>])
 
 		println!("{:<20} {:>8}", global.name, label_text);
 		let mut locals = global.children.values().collect::<Vec<_>>();
-		locals.sort_by_cached_key(|label| label.borrow().name.clone());
+		locals.sort_by_cached_key(|label| label.read().name.clone());
 		for local in locals {
-			let borrowed_local = local.borrow();
+			let borrowed_local = local.read();
 			let label_text = borrowed_local
 				.location
 				.as_ref()
@@ -95,10 +96,10 @@ pub fn run_assembler_on_file(file_name: &str, options: Arc<dyn BackendOptions>) 
 /// Any assembler errors are propagated to the caller.
 pub fn run_assembler(source_code: &Arc<AssemblyCode>, options: Arc<dyn BackendOptions>) -> AssemblyResult {
 	let env = crate::Environment::new();
-	env.borrow_mut().set_error_options(options.clone());
+	env.write().set_error_options(options.clone());
 	let tokens = crate::parser::lexer::lex(source_code.clone(), options.as_ref()).map_err(AssemblyError::from)?;
 	let program = crate::Environment::parse(&env, tokens, source_code).map_err(AssemblyError::from)?;
-	let mut segmented_program = program.borrow_mut().split_into_segments().map_err(AssemblyError::from)?;
+	let mut segmented_program = program.write().split_into_segments().map_err(AssemblyError::from)?;
 	let assembled = crate::assembler::assemble_from_segments(&mut segmented_program, source_code, options)
 		.map_err(AssemblyError::from)?;
 	Ok((env, assembled))
@@ -113,10 +114,10 @@ pub fn run_assembler_into_segments(
 	options: Arc<dyn BackendOptions>,
 ) -> Result<(Segments<ProgramElement>, Segments<u8>), Box<AssemblyError>> {
 	let env = crate::Environment::new();
-	env.borrow_mut().set_error_options(options.clone());
+	env.write().set_error_options(options.clone());
 	let tokens = crate::parser::lexer::lex(source_code.clone(), options.as_ref()).map_err(AssemblyError::from)?;
 	let program = crate::Environment::parse(&env, tokens, source_code).map_err(AssemblyError::from)?;
-	let mut segmented_program = program.borrow_mut().split_into_segments().map_err(AssemblyError::from)?;
+	let mut segmented_program = program.write().split_into_segments().map_err(AssemblyError::from)?;
 	let assembled = crate::assembler::assemble_inside_segments(&mut segmented_program, source_code, options)
 		.map_err(AssemblyError::from)?;
 	Ok((segmented_program, assembled))

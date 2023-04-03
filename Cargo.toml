@@ -54,6 +54,7 @@ object = { version = "0.30", features = [
 	"write_std",
 	"elf",
 ], optional = true, default-features = false }
+parking_lot = "0.12"
 thiserror = "1"
 lalrpop-util = "0.19"
 wav = "1"

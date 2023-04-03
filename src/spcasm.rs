@@ -31,11 +31,11 @@ pub fn main() -> miette::Result<()> {
 	let (environment, assembled) = run_assembler(&code, options)?;
 
 	if args.dump_references {
-		dump_reference_tree(&environment.borrow().globals);
+		dump_reference_tree(&environment.read_recursive().globals);
 	}
 
 	if args.dump_ast {
-		dump_ast(&environment.borrow().files.get(&code.name).unwrap().borrow().content);
+		dump_ast(&environment.read_recursive().files.get(&code.name).unwrap().read_recursive().content);
 	}
 
 	if let Some(outfile) = args.output {

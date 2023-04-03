@@ -18,7 +18,10 @@ use crate::error::{AssemblyError, ErrorCodes};
 /// - ``CliOptions``: Only available and used in binary builds, created by clap.
 /// - ``DummyOptions``: Always available (used e.g. in tests), returns defaults that are equivalent to not overriding
 ///   anything on the command line.
-pub trait BackendOptions: std::fmt::Debug {
+///
+/// BackendOptions need to additionally implement Send and Sync (since they're used in multi-threaded contexts), and
+/// provide debug output.
+pub trait BackendOptions: std::fmt::Debug + Send + Sync {
 	/// Expands a marker "all" warning in the error or ignore list into all possible errors. This is so that the user
 	/// can specify --error all or --ignore all and get this behavior, but we don't need special casing for it in the
 	/// backend, which only works via matching discriminants.

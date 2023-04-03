@@ -97,7 +97,7 @@ pub fn run_assembler_on_file(file_name: &str, options: Arc<dyn BackendOptions>) 
 pub fn run_assembler(source_code: &Arc<AssemblyCode>, options: Arc<dyn BackendOptions>) -> AssemblyResult {
 	let env = crate::Environment::new();
 	env.write().set_error_options(options.clone());
-	let tokens = crate::parser::lexer::lex(source_code.clone(), options.as_ref()).map_err(AssemblyError::from)?;
+	let tokens = crate::parser::lexer::lex(source_code.clone(), &*options).map_err(AssemblyError::from)?;
 	let program = crate::Environment::parse(&env, tokens, source_code).map_err(AssemblyError::from)?;
 	let mut segmented_program = program.write().split_into_segments().map_err(AssemblyError::from)?;
 	let assembled = crate::assembler::assemble_from_segments(&mut segmented_program, source_code, options)
@@ -115,7 +115,7 @@ pub fn run_assembler_into_segments(
 ) -> Result<(Segments<ProgramElement>, Segments<u8>), Box<AssemblyError>> {
 	let env = crate::Environment::new();
 	env.write().set_error_options(options.clone());
-	let tokens = crate::parser::lexer::lex(source_code.clone(), options.as_ref()).map_err(AssemblyError::from)?;
+	let tokens = crate::parser::lexer::lex(source_code.clone(), &*options).map_err(AssemblyError::from)?;
 	let program = crate::Environment::parse(&env, tokens, source_code).map_err(AssemblyError::from)?;
 	let mut segmented_program = program.write().split_into_segments().map_err(AssemblyError::from)?;
 	let assembled = crate::assembler::assemble_inside_segments(&mut segmented_program, source_code, options)

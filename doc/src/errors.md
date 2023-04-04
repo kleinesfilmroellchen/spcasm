@@ -457,7 +457,7 @@ Error: spcasm::instruction::missing_second_operand
    ╰────
   help: Add any of the operands #immediate, (X), (X)+, (direct_page)+Y,
         (direct_page+X), X, Y, address, address+X, address+Y, direct_page,
-        direct_page+X to this instruction
+        direct_page+X, direct_page+Y to this instruction
 
 
 ```
@@ -747,8 +747,8 @@ Error: spcasm::syntax::invalid_number
    ╭─[tests/errors/parser-invalid-number.spcasmtest:1:1]
  1 │ org 0
  2 │ label = %134af
-   ·         ──┬──
-   ·           ╰── invalid digit found in string
+   ·         ───┬──
+   ·            ╰── invalid digit found in string
    ╰────
 
 
@@ -762,7 +762,7 @@ Error: spcasm::syntax::invalid_number
   × Invalid number: number too large to fit in target type
    ╭─[tests/errors/parser-too-large-number.spcasmtest:1:1]
  1 │ org $99999999999999999999999999999999999999
-   ·     ───────────────────┬──────────────────
+   ·     ───────────────────┬───────────────────
    ·                        ╰── number too large to fit in target type
    ╰────
 

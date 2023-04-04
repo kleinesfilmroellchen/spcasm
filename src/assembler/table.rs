@@ -113,6 +113,7 @@ lazy_static! {
 				(AddressingModeCategory::Address, (0xE5, append_second_as_16_bits)),
 				(AddressingModeCategory::XIndexed, (0xF5, append_second_as_16_bits)),
 				(AddressingModeCategory::YIndexed, (0xF6, append_second_as_16_bits)),
+				(AddressingModeCategory::DirectPageYIndexed, (0xF6, append_second_as_16_bits)),
 				(AddressingModeCategory::DirectPageXIndexedIndirect, (0xE7, append_second_as_8_bits)),
 				(AddressingModeCategory::DirectPageIndirectYIndexed, (0xF7, append_second_as_8_bits)),
 				(AddressingModeCategory::XRegister, (0x7D, two_operand_nop)),
@@ -157,10 +158,6 @@ lazy_static! {
 				(AddressingModeCategory::YRegister, (0xDB, append_first_as_8_bits)),
 			])),
 
-			(AddressingModeCategory::DirectPageYIndexed, EntryOrSecondOperandTable::from([
-				(AddressingModeCategory::XRegister, (0xD9, append_first_as_8_bits as TwoOperandSegmentAction)),
-			])),
-
 			(AddressingModeCategory::Address, EntryOrSecondOperandTable::from([
 				(AddressingModeCategory::ARegister, (0xC5, append_first_as_16_bits as TwoOperandSegmentAction)),
 				(AddressingModeCategory::XRegister, (0xC9, append_first_as_16_bits)),
@@ -172,6 +169,11 @@ lazy_static! {
 			])),
 
 			(AddressingModeCategory::YIndexed, EntryOrSecondOperandTable::from([
+				(AddressingModeCategory::ARegister, (0xD6, append_first_as_16_bits as TwoOperandSegmentAction)),
+			])),
+
+			(AddressingModeCategory::DirectPageYIndexed, EntryOrSecondOperandTable::from([
+				(AddressingModeCategory::XRegister, (0xD9, append_first_as_8_bits as TwoOperandSegmentAction)),
 				(AddressingModeCategory::ARegister, (0xD6, append_first_as_16_bits as TwoOperandSegmentAction)),
 			])),
 

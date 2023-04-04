@@ -44,7 +44,7 @@ pub(crate) fn assemble_from_segments(
 /// # Errors
 /// Unencodeable instructions will cause errors.
 #[allow(clippy::trivially_copy_pass_by_ref)]
-pub(crate) fn assemble_inside_segments(
+pub fn assemble_inside_segments(
 	segments: &mut Segments<ProgramElement>,
 	source_code: &Arc<AssemblyCode>,
 	options: Arc<dyn BackendOptions>,

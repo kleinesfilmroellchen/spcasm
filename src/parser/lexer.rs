@@ -64,11 +64,16 @@ pub fn lex(source_code: Arc<AssemblyCode>, options: &dyn BackendOptions) -> Resu
 			'\'' => {
 				let start_index = index;
 				index += 1;
-				let mut end_index = index;
 				let chr = match chars.next() {
 					Some('\'') => Err(AssemblyError::UnexpectedCharacter { chr: '\'', location: (index, 1).into(), src: source_code.clone() }.into()),
-					Some('\\') => next_escape_sequence(&mut chars, source_code.clone(), &mut end_index),
-					Some(chr) => Ok(chr),
+					Some('\\') => {
+						index += 1;
+						next_escape_sequence(&mut chars, source_code.clone(), &mut index)
+					},
+					Some(chr) => {
+						index += 1;
+						Ok(chr)
+					},
 					None => Err(AssemblyError::UnexpectedEndOfTokens {
 						expected: vec!["\"".into()],
 						location: (source_code.text.len() - 1, 0).into(),
@@ -77,11 +82,12 @@ pub fn lex(source_code: Arc<AssemblyCode>, options: &dyn BackendOptions) -> Resu
 				}?;
 				let end = chars.next();
 				if let Some(end) = end && end != '\'' {
-					return Err(AssemblyError::UnexpectedCharacter { chr: end, location: (end_index, 1).into(), src: source_code.clone() }.into());
+					return Err(AssemblyError::UnexpectedCharacter { chr: end, location: (index, 1).into(), src: source_code.clone() }.into());
 				} else if end.is_none() {
-					return Err(AssemblyError::UnexpectedEndOfTokens { expected: vec!["'".into()], location: (end_index, 1).into(), src: source_code.clone() }.into());
+					return Err(AssemblyError::UnexpectedEndOfTokens { expected: vec!["'".into()], location: (index, 1).into(), src: source_code.clone() }.into());
 				}
-				end_index += 1;
+				index += 1;
+				let end_index = index;
 				tokens.push(Token::Number(chr as MemoryAddress, source_code.text[start_index..=end_index].into(), (start_index, end_index - start_index).into()));
 			},
 			start_of_identifier!() => {
@@ -239,16 +245,12 @@ fn next_number(
 	while let Some(chr) = chars.peek() && chr.is_alphanumeric() {
 		number_chars.push(chars.next().unwrap());
 	}
+	let location = (start_index, number_chars.len() + usize::from(radix != 10)).into();
 	i64::from_str_radix(&number_chars, radix.into())
 		.map_or_else(
 			|error| {
 				if must_be_number {
-					Err(AssemblyError::InvalidNumber {
-						error,
-						location: (start_index, number_chars.len()).into(),
-						src: source_code.clone(),
-					}
-					.into())
+					Err(AssemblyError::InvalidNumber { error, location, src: source_code.clone() }.into())
 				} else {
 					AssemblyError::NumberIdentifier {
 						text: number_chars.clone(),
@@ -257,14 +259,14 @@ fn next_number(
 						src: source_code.clone(),
 					}
 					.report_or_throw(options)
-					.map(|_| Token::Identifier(number_chars.clone(), (start_index, number_chars.len()).into()))
+					.map(|_| Token::Identifier(number_chars.clone(), location))
 				}
 			},
 			|number| {
 				Ok(Token::Number(
 					number,
-					source_code.text[start_index .. start_index + number_chars.len()].into(),
-					(start_index, number_chars.len()).into(),
+					source_code.text[start_index .. start_index + number_chars.len() + usize::from(radix != 10)].into(),
+					location,
 				))
 			},
 		)

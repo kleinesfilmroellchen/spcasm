@@ -322,6 +322,7 @@ fn coverage() {
 		crate::Environment::new(),
 		crate::parser::LabelUsageKind::AsAddress.clone(),
 		crate::parser::AssemblyFile {
+			tokens:      Vec::new(),
 			content:     Vec::new(),
 			parent:      std::sync::Weak::new(),
 			source_code: code.into(),

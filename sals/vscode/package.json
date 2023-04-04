@@ -1,0 +1,118 @@
+{
+  "name": "sals-vscode",
+  "description": "VSCode extension for sals, the SPC700 language server",
+  "version": "0.0.1",
+  "repository": {
+    "url": "https://github.com/kleinesfilmroellchen/spcasm"
+  },
+  "engines": {
+    "vscode": "^1.77.0"
+  },
+  "dependencies": {
+    "vscode-languageclient": "^8.1.0"
+  },
+  "devDependencies": {
+    "@types/node": "^18.15.11",
+    "@types/vscode": "^1.77.0",
+    "@vscode/test-electron": "^2.3.0",
+    "esbuild-wasm": "^0.17.15",
+    "typescript": "^5.0.3",
+    "vscode-test": "^1.6.1"
+  },
+  "main": "./dist/extension.js",
+  "scripts": {
+    "vscode:prepublish": "yarn run esbuild-base -- --minify",
+    "server-compile-win": "cross install --locked --force --no-track --target x86_64-pc-windows-msvc --bin sals --profile=spcasm-release --root dist --path ..",
+    "server-compile-nowin": "cross install --locked --force --no-track --target x86_64-unknown-linux-gnu --bin sals --profile=spcasm-release --root dist --path .. && cross install --locked --force --no-track --target x86_64-apple-darwin --bin sals --profile=spcasm-release --root dist --path .. && cross install --locked --force --no-track --target aarch64-apple-darwin --bin sals --profile=spcasm-release --root dist --path ..",
+    "esbuild-base": "esbuild ./src/extension.ts --bundle --outfile=./dist/extension.js --external:vscode --format=cjs --platform=node",
+    "esbuild": "yarn run esbuild-base -- --sourcemap && cargo -C .. build",
+    "esbuild-watch": "yarn run esbuild-base -- --sourcemap --watch"
+  },
+  "activationEvents": [
+    "onLanguage:spc700"
+  ],
+  "contributes": {
+    "languages": [
+      {
+        "id": "spc700",
+        "aliases": [
+          "SPC700 Assembly",
+          "spc-700",
+          "SPC700",
+          "ssmp",
+          "s-smp"
+        ],
+        "extensions": [
+          ".asm",
+          ".spcasm",
+          ".s",
+          ".spc"
+        ],
+        "configuration": "./language-configuration.json"
+      }
+    ],
+    "grammars": [
+      {
+        "language": "spc700",
+        "scopeName": "source.spc700",
+        "path": "./syntax.tmLanguage.json"
+      }
+    ],
+    "semanticTokenScopes": [
+      {
+        "language": "spc700",
+        "scopes": {
+          "punctuation": [
+            "punctuation.spc700"
+          ],
+          "operator": [
+            "keyword.operator.spc700"
+          ]
+        }
+      }
+    ],
+    "configuration": {
+      "type": "object",
+      "title": "sals",
+      "properties": {
+        "sals.trace.server": {
+          "scope": "window",
+          "type": "string",
+          "enum": [
+            "off",
+            "messages",
+            "verbose"
+          ],
+          "default": "verbose",
+          "description": "Traces the communication between VS Code and the sals language server."
+        },
+        "sals.executable.override": {
+          "scope": "window",
+          "type": "boolean",
+          "default": false,
+          "title": "Override sals executable",
+          "description": "The sals package comes bundled with an up-to-date server executable. This setting lets you override that executable with a path to your own executable."
+        },
+        "sals.executable.path": {
+          "scope": "window",
+          "ignoreSync": true,
+          "type": "string",
+          "default": "sals",
+          "title": "sals executable path",
+          "description": "Path to the sals server executable. Only used if the sals executable override is enabled."
+        }
+      }
+    },
+    "commands": [
+      {
+        "command": "sals.restart",
+        "title": "sals: Restart language server"
+      }
+    ]
+  },
+  "configurationDefaults": {
+    "spc700": {
+      "editor.semanticHighlighting.enabled": true
+    }
+  }
+}

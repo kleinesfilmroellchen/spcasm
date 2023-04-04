@@ -86,6 +86,17 @@ impl Reference {
 		}
 	}
 
+	pub fn name(&self) -> String {
+		match self {
+			Reference::Label(label) => label.read_recursive().name.clone(),
+			Reference::UnresolvedLocalLabel { name, .. } => name.clone(),
+			Reference::Relative { direction, id, .. } =>
+				direction.string().repeat(usize::try_from(u64::from(*id)).unwrap()).into(),
+			Reference::MacroArgument { name, .. } => name.clone(),
+			Reference::MacroGlobal { .. } => "\\@".into(),
+		}
+	}
+
 	pub fn set_location(&mut self, location: AssemblyTimeValue) {
 		match self {
 			Self::Label(global) => global.write().location = Some(location),

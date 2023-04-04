@@ -1,5 +1,5 @@
 [workspace]
-members = [".", "spcasm_derive", "spcasm-web"]
+members = [".", "spcasm_derive", "spcasm-web", "sals"]
 
 [package]
 name = "spcasm"

@@ -23,3 +23,6 @@ out.gif
 tests/yoshi.brr
 tests/yoshi-test-generated.wav
 tests/test-output
+
+node_modules
+/sals/vscode/dist

@@ -66,19 +66,58 @@ pub struct Environment {
 	/// The list of global labels.
 	pub globals:        Vec<Arc<RwLock<Label>>>,
 	/// The files included in this "tree" created by include statements.
-	pub(crate) files:   HashMap<PathBuf, Arc<RwLock<AssemblyFile>>>,
+	pub files:   HashMap<PathBuf, Arc<RwLock<AssemblyFile>>>,
 	/// Error and warning options passed on the command line.
-	pub(crate) options: Arc<dyn BackendOptions>,
+	pub options: Arc<dyn BackendOptions>,
 }
 
+/// The AST and associated information for one file.
 #[derive(Debug)]
-pub(crate) struct AssemblyFile {
+pub struct AssemblyFile {
 	/// Parsed contents.
 	pub content:     Vec<ProgramElement>,
 	/// Underlying source code and file name.
 	pub source_code: Arc<AssemblyCode>,
 	/// The environment that this file is parsed in.
 	pub parent:      Weak<RwLock<Environment>>,
+	/// The tokens that were parsed for this file.
+	pub tokens:      Vec<Token>,
+}
+
+impl AssemblyFile {
+	/// Returns the token at the given offset, if any.
+	pub fn token_at(&self, offset: usize) -> Option<Token> {
+		self.tokens.iter().find_map(|token| {
+			let span = token.source_span();
+			if span.offset() <= offset && span.offset() + span.len() > offset {
+				Some(token.clone())
+			} else {
+				None
+			}
+		})
+	}
+
+	/// Returns the definitions of the given identifier string, if it is defined as a symbol anywhere.
+	/// Note that things like local labels and relative references can be defined in multiple places.
+	pub fn get_definition_spans_of(&self, identifier: &str) -> Vec<SourceSpan> {
+		self.content
+			.iter()
+			.filter_map(|element| match element {
+				ProgramElement::Label(label) if &label.name() == identifier => Some(label.source_span()),
+				ProgramElement::Directive(Directive {
+					value: DirectiveValue::AssignReference { reference, .. },
+					span,
+					..
+				}) if &reference.name() == identifier => Some(*span),
+				ProgramElement::Directive(Directive {
+					value: DirectiveValue::UserDefinedMacro { name, .. },
+					span,
+					..
+				}) if name == identifier => Some(*span),
+				_ => None,
+			})
+			.collect()
+	}
 }
 
 impl Environment {
@@ -136,7 +175,7 @@ impl Environment {
 	///
 	/// # Errors
 	/// Whenever something goes wrong in parsing.
-	pub(crate) fn parse(
+	pub fn parse(
 		this: &Arc<RwLock<Self>>,
 		tokens: Vec<Token>,
 		source_code: &Arc<AssemblyCode>,
@@ -159,15 +198,16 @@ impl Environment {
 		}
 
 		let lexed = lalrpop_adaptor::preprocess_token_stream(tokens);
-		let lexed = lalrpop_adaptor::LalrpopAdaptor::from(lexed);
+		let lalrpop_lexed = lalrpop_adaptor::LalrpopAdaptor::from(lexed.clone());
 		let program = crate::asm::ProgramParser::new()
-			.parse(this, source_code, lexed)
+			.parse(this, source_code, lalrpop_lexed)
 			.map_err(|err| AssemblyError::from_lalrpop(err, source_code.clone()))?;
 
 		let rc_file = Arc::new(RwLock::new(AssemblyFile {
 			content:     program,
 			source_code: source_code.clone(),
 			parent:      Arc::downgrade(this),
+			tokens:      lexed,
 		}));
 		let mut file = rc_file.write();
 
@@ -808,7 +848,7 @@ impl Into<SourceSpan> for SpanOrOffset {
 pub fn source_range(start: SpanOrOffset, end: SpanOrOffset) -> SourceSpan {
 	let start: SourceSpan = start.into();
 	let end: SourceSpan = end.into();
-	(start.offset(), end.offset() + end.len() - start.offset()).into()
+	(start.offset(), (end.offset() + end.len()).saturating_sub(start.offset())).into()
 }
 
 /// Apply the given list of options to a BRR directive, and report errors if necessary. This function is called from

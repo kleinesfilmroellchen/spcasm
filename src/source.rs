@@ -12,10 +12,12 @@ use crate::AssemblyError;
 /// The source code for an assembly error.
 #[derive(Debug, Clone, Default, Eq, PartialEq)]
 pub struct AssemblyCode {
-	pub(crate) text:         String,
+	/// The text content of the assembly code.
+	pub text:         String,
 	/// The source code location must be canonicalized!
-	pub(crate) name:         PathBuf,
-	pub(crate) include_path: Vec<PathBuf>,
+	pub name:         PathBuf,
+	/// The include path of the file.
+	pub include_path: Vec<PathBuf>,
 }
 
 impl AssemblyCode {
@@ -61,6 +63,17 @@ impl AssemblyCode {
 		Self {
 			text:         text.chars().filter(|c| c != &'\r').collect(),
 			name:         PathBuf::from(name.to_string()),
+			include_path: Vec::new(),
+		}
+	}
+
+	/// Create a new source code struct from source code text and a file system path.
+	#[must_use]
+	#[allow(clippy::missing_const_for_fn)]
+	pub fn new_from_path(text: &str, name: &Path) -> Self {
+		Self {
+			text:         text.chars().filter(|c| c != &'\r').collect(),
+			name:         name.to_owned(),
 			include_path: Vec::new(),
 		}
 	}

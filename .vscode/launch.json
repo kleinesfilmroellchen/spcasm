@@ -16,7 +16,7 @@
 				}
 			},
 			"args": [
-				"examples/test.spcasm"
+				"tests/opcodes.s"
 			],
 			"cwd": "${workspaceFolder}"
 		},
@@ -26,10 +26,7 @@
 			"name": "Debug spcasm tests",
 			"cargo": {
 				"args": [
-					"test",
-					"--no-run",
-					"--bin=spcasm",
-					"--package=spcasm"
+					"nextest"
 				],
 				"filter": {
 					"name": "spcasm",
@@ -38,6 +35,29 @@
 			},
 			"args": [],
 			"cwd": "${workspaceFolder}"
+		},
+		{
+			"name": "Test sals in extension host",
+			"type": "extensionHost",
+			"request": "launch",
+			"runtimeExecutable": "${execPath}",
+			"args": [
+				"--extensionDevelopmentPath=${workspaceRoot}/sals",
+				"${workspaceRoot}/tests/opcodes.s"
+			],
+			"outFiles": [
+				"${workspaceRoot}/sals/vscode/dist/**/*.js"
+			],
+			"env": {
+				"SERVER_PATH": "${workspaceRoot}/target/debug/sals"
+			}
+		},
+		{
+			"name": "Attach to sals server",
+			"request": "attach",
+			"type": "lldb",
+			"program": "${workspaceRoot}/target/debug/sals",
+			"pid": "${command:pickMyProcess}"
 		}
 	]
 }

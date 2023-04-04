@@ -41,7 +41,11 @@ pub fn pretty_hex(bytes: &[u8], emphasis: Option<usize>) -> String {
 
 /// Dumps the tree of references for debugging purposes
 pub fn dump_reference_tree(global_references: &[Arc<RwLock<Label>>]) {
-	for global in global_references {
+	dump_reference_tree_impl(&mut global_references.iter(), 0);
+}
+
+fn dump_reference_tree_impl(references: &mut dyn Iterator<Item = &Arc<RwLock<Label>>>, level: usize) {
+	for global in references {
 		let global = global.read();
 		let label_text = global
 			.location
@@ -49,21 +53,23 @@ pub fn dump_reference_tree(global_references: &[Arc<RwLock<Label>>]) {
 			.and_then(|location| location.try_value(global.span, Arc::new(AssemblyCode::new("", &String::new()))).ok())
 			.map_or_else(|| "(unknown)".to_string(), |location| format!("{:04X}", location));
 
-		println!("{:<20} {:>8}", global.name, label_text);
+		println!(
+			"{:<40} {:>8}",
+			format!("{}{}{}", if level > 0 { " " } else { "" }, ".".repeat(level), global.name),
+			label_text
+		);
 		let mut locals = global.children.values().collect::<Vec<_>>();
-		locals.sort_by_cached_key(|label| label.read().name.clone());
-		for local in locals {
-			let borrowed_local = local.read();
-			let label_text = borrowed_local
+		locals.sort_by_cached_key(|label| {
+			label
+				.read()
 				.location
 				.as_ref()
 				.and_then(|location| {
-					location.try_value(borrowed_local.span, Arc::new(AssemblyCode::new("", &String::new()))).ok()
+					location.try_value(global.span, Arc::new(AssemblyCode::new("", &String::new()))).ok()
 				})
-				.map_or_else(|| "(unknown)".to_string(), |location| format!("{:04X}", location));
-
-			println!("  {:<18} {:>8}", crate::parser::reference::Reference::Label(local.clone()), label_text);
-		}
+				.map_or_else(|| "(unknown)".to_string(), |location| format!("{:04X}", location))
+		});
+		dump_reference_tree_impl(&mut locals.into_iter(), level + 1);
 	}
 }
 

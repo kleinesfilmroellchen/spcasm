@@ -1,13 +1,13 @@
 ```trycmd
 $ spcasm -w all -d -f hex-dump tests/opcodes.s -
-start                    0000
-data                     0013
-reltarget                015E
-  .subtarget             015F
-another_global           0189
-  .selftarget            018E
-  .subtarget             018A
-global_selftarget        0190
+start                                        0000
+data                                         0013
+reltarget                                    015E
+ .subtarget                                  015F
+another_global                               0189
+ .subtarget                                  018A
+ .selftarget                                 018E
+global_selftarget                            0190
  E8 10 E6 BF E4 32 F4 A1 E5 02 45 F5 20 33 F6 00
  FF E7 40 F7 20 CD 60 F8 9A F9 2E E9 00 2F 8D 0F
  EB 48 FB 01 EC 00 21 E8 13 E4 13 F4 13 F6 13 00
@@ -51,13 +51,13 @@ $ spcasm -w all -f elf tests/opcodes.s tests/test-output
 
 ```trycmd
 $ spcasm -w all -d -f plain tests/opcodes.s tests/test-output
-start                    0000
-data                     0013
-reltarget                015E
-  .subtarget             015F
-another_global           0189
-  .selftarget            018E
-  .subtarget             018A
-global_selftarget        0190
+start                                        0000
+data                                         0013
+reltarget                                    015E
+ .subtarget                                  015F
+another_global                               0189
+ .subtarget                                  018A
+ .selftarget                                 018E
+global_selftarget                            0190
 
 ```

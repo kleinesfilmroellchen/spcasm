@@ -234,9 +234,6 @@ impl AssemblyFile {
 		for element in &mut self.content {
 			// First match for reference resolution in instruction position
 			match element {
-				ProgramElement::Label(Reference::Label(ref label)) => {
-					current_label = Some(label.clone());
-				},
 				ProgramElement::Label(ref mal @ Reference::MacroArgument { ref span, .. }) =>
 					return Err(AssemblyError::UsingMacroArgumentOutsideMacro {
 						name:     mal.to_string().into(),
@@ -270,12 +267,19 @@ impl AssemblyFile {
 				ProgramElement::UserDefinedMacroCall { .. }
 				| ProgramElement::IncludeSource { .. }
 				| ProgramElement::Label(
-					Reference::MacroGlobal { .. } | Reference::Relative { .. } | Reference::UnresolvedLocalLabel { .. },
+					Reference::Label(_)
+					| Reference::MacroGlobal { .. }
+					| Reference::Relative { .. }
+					| Reference::UnresolvedLocalLabel { .. },
 				)
 				| ProgramElement::Directive(_)
 				| ProgramElement::Instruction(_) => (),
 			}
 			element.set_current_label(&current_label, &self.source_code)?;
+			// If we just (newly) resolved this element to a label, set it as the current label.
+			if let ProgramElement::Label(Reference::Label(ref label)) = element {
+				current_label = Some(label.clone());
+			}
 			element.resolve_relative_labels(RelativeReferenceDirection::Backward, &current_backward_relative_label_map);
 		}
 

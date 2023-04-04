@@ -61,3 +61,16 @@ nop
 nop
 +: nop
 bra -
+
+stuff:
+nop
+.thing:
+..lol
+bra .thing ;= 2F FE
+bra ..lol ;= 2F FC
+bra .other ;= 2F 00
+
+.other
+nop
+..lol:
+bra ..lol ;= 2F FE

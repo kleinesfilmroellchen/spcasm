@@ -53,7 +53,7 @@ jobs:
         uses: actions-rs/clippy-check@v1.0.7
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
-          args: --verbose --no-default-features
+          args: --workspace --tests --verbose --no-default-features
   fmt:
     runs-on: ubuntu-latest
     steps:
@@ -64,4 +64,4 @@ jobs:
           toolchain: nightly
           components: rustfmt
       - name: Check code format
-        run: cargo fmt --check --verbose
+        run: cargo fmt --all --check --verbose

@@ -63,6 +63,14 @@ fn ansi_to_html(text: &str) -> String {
 					3 => replacement_text.push_str(" class=\"ansi-italic\""),
 					4 => replacement_text.push_str(" class=\"ansi-underline\""),
 					// Set foreground color
+					30 => replacement_text.push_str(&format!(" class=\"ansi-fg-black\"")),
+					31 => replacement_text.push_str(&format!(" class=\"ansi-fg-red\"")),
+					32 => replacement_text.push_str(&format!(" class=\"ansi-fg-green\"")),
+					33 => replacement_text.push_str(&format!(" class=\"ansi-fg-yellow\"")),
+					34 => replacement_text.push_str(&format!(" class=\"ansi-fg-blue\"")),
+					35 => replacement_text.push_str(&format!(" class=\"ansi-fg-magenta\"")),
+					36 => replacement_text.push_str(&format!(" class=\"ansi-fg-cyan\"")),
+					37 => replacement_text.push_str(&format!(" class=\"ansi-fg-white\"")),
 					38 => {
 						let two = numbers.next().unwrap();
 						assert!(two == 2, "5;n not supported");

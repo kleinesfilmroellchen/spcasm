@@ -114,7 +114,7 @@ impl LanguageServer for Backend {
 						semantic_tokens_options:            SemanticTokensOptions {
 							work_done_progress_options: WorkDoneProgressOptions { work_done_progress: Some(false) },
 							legend:                     SemanticTokensLegend {
-								token_types:     SEMANTIC_TOKEN_TYPES.map(|x| x.into()).into(),
+								token_types:     SEMANTIC_TOKEN_TYPES.map(std::convert::Into::into).into(),
 								token_modifiers: Vec::new(),
 							},
 							range:                      Some(false),
@@ -149,7 +149,7 @@ impl LanguageServer for Backend {
 			text:    params.text_document.text,
 			version: params.text_document.version,
 		})
-		.await
+		.await;
 	}
 
 	async fn did_change(&self, params: DidChangeTextDocumentParams) {
@@ -159,7 +159,7 @@ impl LanguageServer for Backend {
 				text:    params.content_changes[0].text.clone(),
 				version: params.text_document.version,
 			})
-			.await
+			.await;
 		} else {
 			self.client
 				.log_message(
@@ -170,7 +170,7 @@ impl LanguageServer for Backend {
 						params.content_changes.len(),
 					),
 				)
-				.await
+				.await;
 		}
 	}
 
@@ -254,16 +254,16 @@ impl LanguageServer for Backend {
 					}
 					let start_location = source_offset_to_lsp_position(token.source_span().offset(), &text)?;
 					// https://github.com/microsoft/vscode-extension-samples/blob/5ae1f7787122812dcc84e37427ca90af5ee09f14/semantic-tokens-sample/vscode.proposed.d.ts#L71
-					let delta_start = if start_location.line != last_token_line {
-						start_location.character
-					} else {
+					let delta_start = if start_location.line == last_token_line {
 						start_location.character - last_token_column
+					} else {
+						start_location.character
 					};
 					let semantic_token = Some(SemanticToken {
 						delta_line: start_location.line - last_token_line,
 						delta_start,
-						length: token.source_span().len() as u32,
-						token_type: SpcasmTokenType::from(token).into(),
+						length: u32::try_from(token.source_span().len()).ok()?,
+						token_type: SpcasmTokenType::from(token).try_into().ok()?,
 						token_modifiers_bitset: 0,
 					});
 					last_token_line = start_location.line;
@@ -361,7 +361,7 @@ impl Backend {
 				.map_err(AssemblyError::from)?;
 			};
 			if let Err(error) = result {
-				let diagnostics = assembly_error_to_lsp_diagnostics(error, &text);
+				let diagnostics = assembly_error_to_lsp_diagnostics(&error, &text);
 				self.client.publish_diagnostics(uri.clone(), diagnostics, Some(version)).await;
 			} else {
 				// Clears existing diagnostics.

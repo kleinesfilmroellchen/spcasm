@@ -24,6 +24,7 @@ pub const SEMANTIC_TOKEN_TYPES: [SpcasmTokenType; 10] = [
 ];
 
 impl From<&Token> for SpcasmTokenType {
+	#[allow(clippy::match_same_arms)]
 	fn from(token: &Token) -> Self {
 		match token {
 			Token::Mnemonic(_, _) => SemanticTokenType::FUNCTION,
@@ -88,8 +89,11 @@ impl Deref for SpcasmTokenType {
 	}
 }
 
-impl From<SpcasmTokenType> for u32 {
-	fn from(typ: SpcasmTokenType) -> Self {
-		SEMANTIC_TOKEN_TYPES.iter().position(|global_type| **global_type == *typ).unwrap() as Self
+impl TryFrom<SpcasmTokenType> for u32 {
+	type Error = ();
+
+	fn try_from(typ: SpcasmTokenType) -> Result<Self, Self::Error> {
+		Self::try_from(SEMANTIC_TOKEN_TYPES.iter().position(|global_type| **global_type == *typ).ok_or(())?)
+			.map_err(|_| ())
 	}
 }

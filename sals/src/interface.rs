@@ -41,11 +41,11 @@ pub fn lsp_position_to_source_offset(position: Position, text: &str) -> usize {
 
 /// Note that since every miette-based assembly error can contain multiple labeled spans, it can map to multiple
 /// diagnostics for each span.
-pub fn assembly_error_to_lsp_diagnostics(error: AssemblyError, text: &str) -> Vec<tower_lsp::lsp_types::Diagnostic> {
+pub fn assembly_error_to_lsp_diagnostics(error: &AssemblyError, text: &str) -> Vec<tower_lsp::lsp_types::Diagnostic> {
 	error
 		.labels()
 		// Poor miette design; an iterator can be empty so why isn't the type of `labels()` just `Box<dyn Iterator<Item = LabeledSpan>>`?
-		.unwrap_or(Box::new(Vec::new().into_iter()))
+		.unwrap_or_else(|| Box::new(Vec::new().into_iter()))
 		.filter_map(|label| {
 			// FIXME: Fit the extended help message in somewhere.
 			Some(tower_lsp::lsp_types::Diagnostic {
@@ -66,7 +66,7 @@ pub fn assembly_error_to_lsp_diagnostics(error: AssemblyError, text: &str) -> Ve
 		.collect()
 }
 
-pub fn miette_severity_to_lsp_severity(severity: miette::Severity) -> DiagnosticSeverity {
+pub const fn miette_severity_to_lsp_severity(severity: miette::Severity) -> DiagnosticSeverity {
 	match severity {
 		miette::Severity::Advice => DiagnosticSeverity::INFORMATION,
 		miette::Severity::Warning => DiagnosticSeverity::WARNING,

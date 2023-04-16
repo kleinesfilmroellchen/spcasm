@@ -1,4 +1,7 @@
+#![doc = include_str!("../README.md")]
 #![feature(try_blocks)]
+#![deny(missing_docs, unused, clippy::all, clippy::pedantic, clippy::nursery)]
+#![allow(clippy::wildcard_imports)]
 
 use std::path::Path;
 use std::sync::Arc;
@@ -6,7 +9,6 @@ use std::sync::Arc;
 use interface::*;
 use parking_lot::RwLock;
 use semantic_token::*;
-use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use spcasm::cli::BackendOptions;
 use spcasm::parser::Token;
@@ -112,7 +114,7 @@ impl LanguageServer for Backend {
 						semantic_tokens_options:            SemanticTokensOptions {
 							work_done_progress_options: WorkDoneProgressOptions { work_done_progress: Some(false) },
 							legend:                     SemanticTokensLegend {
-								token_types:     SEMANTIC_TOKEN_TYPES.map(|x| x.clone().into()).into(),
+								token_types:     SEMANTIC_TOKEN_TYPES.map(|x| x.into()).into(),
 								token_modifiers: Vec::new(),
 							},
 							range:                      Some(false),
@@ -194,7 +196,7 @@ impl LanguageServer for Backend {
 				.read()
 				.token_at(lsp_position_to_source_offset(params.text_document_position_params.position, &source_code))
 				.and_then(|token| match token {
-					Token::Identifier(text, _) => Some(text.clone()),
+					Token::Identifier(text, _) => Some(text),
 					_ => None,
 				})?;
 
@@ -213,7 +215,7 @@ impl LanguageServer for Backend {
 				})
 				.collect::<Vec<_>>();
 
-			self.client.log_message(MessageType::INFO, &format!("{:?}", spans)).await;
+			self.client.log_message(MessageType::INFO, &format!("{spans:?}")).await;
 			match spans.len() {
 				0 => None,
 				1 => Some(GotoDefinitionResponse::Scalar(spans[0].clone())),
@@ -230,7 +232,7 @@ impl LanguageServer for Backend {
 	}
 
 	async fn semantic_tokens_full(&self, params: SemanticTokensParams) -> Result<Option<SemanticTokensResult>> {
-		self.client.log_message(MessageType::LOG, format!("semantic tokens full {:?}!", params)).await;
+		self.client.log_message(MessageType::LOG, format!("semantic tokens full {params:?}!")).await;
 		let uri = &params.text_document.uri.to_file_path().map_err(|_| tower_lsp::jsonrpc::Error {
 			code:    tower_lsp::jsonrpc::ErrorCode::InvalidParams,
 			data:    None,
@@ -285,10 +287,7 @@ impl LanguageServer for Backend {
 		params: SemanticTokensRangeParams,
 	) -> Result<Option<SemanticTokensRangeResult>> {
 		self.client
-			.log_message(
-				MessageType::WARNING,
-				format!("semantic tokens range {:?} recieved but not supported.", params),
-			)
+			.log_message(MessageType::WARNING, format!("semantic tokens range {params:?} recieved but not supported."))
 			.await;
 		Ok(None)
 	}
@@ -327,10 +326,6 @@ impl LanguageServer for Backend {
 		Ok(None)
 	}
 }
-#[derive(Debug, Deserialize, Serialize)]
-struct InlayHintParams {
-	path: String,
-}
 
 enum CustomNotification {}
 
@@ -349,7 +344,7 @@ struct TextDocumentItem {
 impl Backend {
 	async fn on_change(&self, TextDocumentItem { uri, text, version }: TextDocumentItem) {
 		if let Ok(path) = &uri.to_file_path() {
-			self.client.log_message(MessageType::INFO, format!("document path: {:?}", path)).await;
+			self.client.log_message(MessageType::INFO, format!("document path: {path:?}")).await;
 			let source_code = Arc::new(AssemblyCode::new_from_path(&text, path));
 			self.environment.write().files.remove(&source_code.name);
 			let result = try {
@@ -373,7 +368,7 @@ impl Backend {
 				self.client.publish_diagnostics(uri.clone(), Vec::new(), Some(version)).await;
 			}
 		} else {
-			self.client.log_message(MessageType::ERROR, format!("invalid document URI: {}", uri)).await;
+			self.client.log_message(MessageType::ERROR, format!("invalid document URI: {uri}")).await;
 		}
 	}
 }

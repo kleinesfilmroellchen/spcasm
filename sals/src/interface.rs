@@ -9,27 +9,29 @@ use tower_lsp::lsp_types::*;
 //        These converter functions have linear runtime in the number of lines and could benefit from cached line
 //        storage, but I don't want to put that inside spcasm itself which doesn't need it.
 
+/// Convert the source code offset in the given source code to an LSP position. This function does not return anything
+/// in the following cases:
+/// - The offset is past the end of the text.
+/// - The offset(s) overflow a 32-bit unsigned integer, in which case LSP could not handle the Position.
 pub fn source_offset_to_lsp_position(offset: usize, text: &str) -> Option<Position> {
 	// Classic use of prefix sums for line offsets.
 	let (line_number, line_end_offset, line) = text
 		.lines()
 		.scan(0, |sum, line| {
-			*sum += line.chars().count() + 1;
+			*sum += u32::try_from(line.chars().count()).ok()? + 1;
 			Some((*sum, line))
 		})
 		.enumerate()
-		.find_map(
-			|(line_index, (line_end_offset, line))| {
-				if line_end_offset > offset {
-					Some((line_index, line_end_offset, line))
-				} else {
-					None
-				}
-			},
-		)?;
+		.find_map(|(line_index, (line_end_offset, line))| {
+			if line_end_offset as usize > offset {
+				Some((u32::try_from(line_index).ok()?, line_end_offset, line))
+			} else {
+				None
+			}
+		})?;
 
-	let column = line.chars().count() + 1 - (line_end_offset - offset);
-	Some(Position::new(line_number as u32, column as u32))
+	let column = u32::try_from(line.chars().count()).ok()? + 1 - (line_end_offset - u32::try_from(offset).ok()?);
+	Some(Position::new(line_number, column))
 }
 
 pub fn lsp_position_to_source_offset(position: Position, text: &str) -> usize {
@@ -51,8 +53,8 @@ pub fn assembly_error_to_lsp_diagnostics(error: AssemblyError, text: &str) -> Ve
 					source_offset_to_lsp_position(label.offset(), text)?,
 					source_offset_to_lsp_position(label.offset() + label.len(), text)?,
 				),
-				severity:            Some(miette_severity_to_lsp_severity(error.severity().expect(&format!("spcasm bug: error {:?} without severity", error)))),
-				code:                Some(NumberOrString::String(error.code().expect(&format!("spcasm bug: error {:?} without error code", error)).to_string())),
+				severity:            Some(miette_severity_to_lsp_severity(error.severity().unwrap_or_else(|| panic!("spcasm bug: error {error:?} without severity")))),
+				code:                Some(NumberOrString::String(error.code().unwrap_or_else(|| panic!("spcasm bug: error {error:?} without error code")).to_string())),
 				code_description:    None,
 				source:              Some("spcasm".into()),
 				message:             error.to_string(),

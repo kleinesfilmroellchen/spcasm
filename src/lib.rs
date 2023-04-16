@@ -1,7 +1,4 @@
-//! SPC700 assembler.
-//!
-//! spcasm is both a library and two binaries: spcasm and brr.
-
+#![doc = include_str!("../README.md")]
 #![feature(
 	test,
 	result_flattening,

@@ -45,6 +45,7 @@ fn negative_1_filter_0_roundtrip() {
 }
 
 #[test]
+#[allow(clippy::unusual_byte_groupings)]
 fn header_decode() {
 	const plain: u8 = 0b0001_00_00;
 	const shift_negative_1: u8 = 0b0000_00_00;

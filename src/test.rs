@@ -94,7 +94,7 @@ fn asar_opcode_test() -> Result<(), Box<AssemblyError>> {
 				default_backend_options(),
 			)?;
 			let only_segment = assembled.segments.first_entry().expect("no segment present").remove();
-			let expected_output = extract_asar_expected_output(&test_file).into_iter().map(|v| Some(v)).collect();
+			let expected_output = extract_asar_expected_output(&test_file).into_iter().map(Some).collect::<Vec<_>>();
 			assert_segments_are_equal(0, &expected_output, 0, &only_segment, file_name);
 		},
 		Err(why) => {
@@ -124,7 +124,7 @@ fn test_file(file: &str) {
 
 fn assert_segments_are_equal(
 	parsed_segment_start: MemoryAddress,
-	expected_segment: &Vec<Option<u8>>,
+	expected_segment: &[Option<u8>],
 	assembled_segment_start: MemoryAddress,
 	assembled: &Vec<u8>,
 	file: &str,
@@ -195,6 +195,7 @@ fn extract_asar_expected_output(file: &str) -> Vec<u8> {
 }
 
 #[test]
+#[allow(clippy::redundant_clone, clippy::too_many_lines)]
 fn coverage() {
 	use std::collections::BTreeMap;
 	use std::sync::Weak;

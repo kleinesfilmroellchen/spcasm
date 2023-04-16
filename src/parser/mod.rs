@@ -64,7 +64,7 @@ where
 #[derive(Debug)]
 pub struct Environment {
 	/// The list of global labels.
-	pub globals:        Vec<Arc<RwLock<Label>>>,
+	pub globals: Vec<Arc<RwLock<Label>>>,
 	/// The files included in this "tree" created by include statements.
 	pub files:   HashMap<PathBuf, Arc<RwLock<AssemblyFile>>>,
 	/// Error and warning options passed on the command line.
@@ -86,6 +86,7 @@ pub struct AssemblyFile {
 
 impl AssemblyFile {
 	/// Returns the token at the given offset, if any.
+	#[must_use]
 	pub fn token_at(&self, offset: usize) -> Option<Token> {
 		self.tokens.iter().find_map(|token| {
 			let span = token.source_span();
@@ -99,16 +100,17 @@ impl AssemblyFile {
 
 	/// Returns the definitions of the given identifier string, if it is defined as a symbol anywhere.
 	/// Note that things like local labels and relative references can be defined in multiple places.
+	#[must_use]
 	pub fn get_definition_spans_of(&self, identifier: &str) -> Vec<SourceSpan> {
 		self.content
 			.iter()
 			.filter_map(|element| match element {
-				ProgramElement::Label(label) if &label.name() == identifier => Some(label.source_span()),
+				ProgramElement::Label(label) if label.name() == identifier => Some(label.source_span()),
 				ProgramElement::Directive(Directive {
 					value: DirectiveValue::AssignReference { reference, .. },
 					span,
 					..
-				}) if &reference.name() == identifier => Some(*span),
+				}) if reference.name() == identifier => Some(*span),
 				ProgramElement::Directive(Directive {
 					value: DirectiveValue::UserDefinedMacro { name, .. },
 					span,
@@ -395,6 +397,10 @@ impl AssemblyFile {
 
 	/// Splits the AST into segments which (still) contain ``ProgramElements``. This is an initial step in laying out
 	/// segments and their contents, and also helps to catch user segmenting errors early.
+	///
+	/// # Errors
+	/// Any error that occurs during segment splitting.
+	#[allow(clippy::missing_panics_doc)]
 	pub fn split_into_segments(&self) -> Result<Segments<ProgramElement>, Box<AssemblyError>> {
 		let mut segments = Segments::default();
 		let mut brr_label_number = 0;
@@ -670,6 +676,9 @@ impl AssemblyFile {
 	}
 
 	/// Expands calls to user-defined macros.
+	///
+	/// # Errors
+	/// Any errors relating to macro calls and macro definitions.
 	pub fn expand_user_macros(&mut self) -> Result<(), Box<AssemblyError>> {
 		let maximum_macro_expansion_depth = self
 			.parent

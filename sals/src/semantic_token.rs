@@ -90,6 +90,6 @@ impl Deref for SpcasmTokenType {
 
 impl From<SpcasmTokenType> for u32 {
 	fn from(typ: SpcasmTokenType) -> Self {
-		SEMANTIC_TOKEN_TYPES.iter().position(|global_type| **global_type == *typ).unwrap() as u32
+		SEMANTIC_TOKEN_TYPES.iter().position(|global_type| **global_type == *typ).unwrap() as Self
 	}
 }

@@ -8,7 +8,7 @@ use miette::{Result, SourceSpan};
 #[allow(unused)]
 use smartstring::alias::String;
 
-use crate::cli::{default_backend_options, BackendOptions};
+use crate::cli::{default_backend_options, Frontend};
 use crate::error::AssemblyError;
 use crate::parser::instruction::{AddressingMode, Instruction, MemoryAddress, Opcode};
 use crate::parser::reference::{Reference, Resolvable};
@@ -32,7 +32,7 @@ use table::{EntryOrFirstOperandTable, EntryOrSecondOperandTable, TwoOperandEntry
 pub(crate) fn assemble_from_segments(
 	segments: &mut Segments<ProgramElement>,
 	source_code: &Arc<AssemblyCode>,
-	options: Arc<dyn BackendOptions>,
+	options: Arc<dyn Frontend>,
 ) -> Result<Vec<u8>, Box<AssemblyError>> {
 	assemble_to_data(segments, source_code, options)?.combine_segments()
 }
@@ -47,7 +47,7 @@ pub(crate) fn assemble_from_segments(
 pub fn assemble_inside_segments(
 	segments: &mut Segments<ProgramElement>,
 	source_code: &Arc<AssemblyCode>,
-	options: Arc<dyn BackendOptions>,
+	options: Arc<dyn Frontend>,
 ) -> Result<Segments<u8>, Box<AssemblyError>> {
 	assemble_to_data(segments, source_code, options)?.resolve_segments()
 }
@@ -56,7 +56,7 @@ pub fn assemble_inside_segments(
 fn assemble_to_data(
 	segments: &mut Segments<ProgramElement>,
 	source_code: &Arc<AssemblyCode>,
-	options: Arc<dyn BackendOptions>,
+	options: Arc<dyn Frontend>,
 ) -> Result<AssembledData, Box<AssemblyError>> {
 	let mut data = AssembledData::new(source_code.clone());
 	let maximum_reference_resolution_passes = options.maximum_reference_resolution_passes();
@@ -226,7 +226,7 @@ pub struct AssembledData {
 	/// Assembler subroutines use this as a flag to signal an end of assembly as soon as possible.
 	should_stop:     bool,
 	/// Options that command line received; used for determining what to do with warnings.
-	options:         Arc<dyn BackendOptions>,
+	options:         Arc<dyn Frontend>,
 }
 
 impl AssembledData {
@@ -289,7 +289,7 @@ impl AssembledData {
 	}
 
 	/// Change the error options for assembler warning and error reporting.
-	pub fn set_error_options(&mut self, options: Arc<dyn BackendOptions>) -> &mut Self {
+	pub fn set_error_options(&mut self, options: Arc<dyn Frontend>) -> &mut Self {
 		self.options = options;
 		self
 	}

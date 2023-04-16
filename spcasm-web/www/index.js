@@ -5,7 +5,7 @@ import * as spcasm from "spcasm-web";
 // Creates an options object from the UI input.
 function createOptions() {
   return {
-    silence_all: true,
+    silence_all: false,
     silenced: [],
     max_reference_resolution_passes: Number(
       document.querySelector("#max-reference-resolution-passes").value

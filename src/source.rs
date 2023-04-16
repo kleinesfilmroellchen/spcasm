@@ -43,14 +43,14 @@ impl AssemblyCode {
 	pub fn from_file_or_assembly_error(file_name: &str) -> Result<Arc<Self>, Box<AssemblyError>> {
 		Self::from_file(file_name).map_err(|os_error| {
 			AssemblyError::FileNotFound {
-				os_error,
+				os_error:  Arc::new(os_error),
 				file_name: file_name.to_string().into(),
-				src: std::sync::Arc::new(Self {
+				src:       std::sync::Arc::new(Self {
 					name: std::path::PathBuf::from("<<arguments>>"),
 					text: file_name.to_string().into(),
 					..Default::default()
 				}),
-				location: (0, file_name.len()).into(),
+				location:  (0, file_name.len()).into(),
 			}
 			.into()
 		})

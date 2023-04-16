@@ -12,7 +12,7 @@ use super::instruction::{MemoryAddress, Mnemonic};
 use super::register::Register;
 use super::token::Token;
 use super::Parse;
-use crate::cli::BackendOptions;
+use crate::cli::Frontend;
 use crate::directive::DirectiveSymbol;
 use crate::error::AssemblyError;
 use crate::AssemblyCode;
@@ -25,7 +25,7 @@ macro_rules! start_of_identifier {
 /// # Errors
 /// Errors are returned for any syntactical error at the token level, e.g. invalid number literals.
 #[allow(clippy::missing_panics_doc, clippy::too_many_lines)]
-pub fn lex(source_code: Arc<AssemblyCode>, options: &dyn BackendOptions) -> Result<Vec<Token>, Box<AssemblyError>> {
+pub fn lex(source_code: Arc<AssemblyCode>, options: &dyn Frontend) -> Result<Vec<Token>, Box<AssemblyError>> {
 	let mut chars = source_code.text.chars().peekable();
 	let code_length = source_code.text.len();
 	let mut index = 0usize;
@@ -238,7 +238,7 @@ fn next_number(
 	radix: u8,
 	start_index: usize,
 	source_code: &Arc<AssemblyCode>,
-	options: &dyn BackendOptions,
+	options: &dyn Frontend,
 ) -> Result<(Token, usize), Box<AssemblyError>> {
 	let mut number_chars: String =
 		first_char.map_or_else(std::string::String::default, std::string::String::from).into();

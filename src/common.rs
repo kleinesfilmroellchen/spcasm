@@ -10,7 +10,7 @@ use smartstring::alias::String;
 pub use super::directive::Directive;
 pub use super::error::AssemblyError;
 pub use super::parser::Environment;
-use crate::cli::{default_backend_options, BackendOptions};
+use crate::cli::{default_backend_options, Frontend};
 use crate::parser::reference::Label;
 use crate::parser::ProgramElement;
 use crate::{AssemblyCode, Segments};
@@ -90,7 +90,7 @@ pub fn run_assembler_with_default_options(file_name: &str) -> AssemblyResult {
 /// Run the assembler on a single file.
 /// # Errors
 /// Any assembler errors are propagated to the caller.
-pub fn run_assembler_on_file(file_name: &str, options: Arc<dyn BackendOptions>) -> AssemblyResult {
+pub fn run_assembler_on_file(file_name: &str, options: Arc<dyn Frontend>) -> AssemblyResult {
 	let source_code = AssemblyCode::from_file_or_assembly_error(file_name).map_err(AssemblyError::from)?;
 	run_assembler(&source_code, options)
 }
@@ -100,15 +100,32 @@ pub fn run_assembler_on_file(file_name: &str, options: Arc<dyn BackendOptions>) 
 ///
 /// # Errors
 /// Any assembler errors are propagated to the caller.
-pub fn run_assembler(source_code: &Arc<AssemblyCode>, options: Arc<dyn BackendOptions>) -> AssemblyResult {
+pub fn run_assembler(source_code: &Arc<AssemblyCode>, options: Arc<dyn Frontend>) -> AssemblyResult {
+	let result = try {
+		let (env, mut segmented_program) = run_assembler_into_symbolic_segments(source_code, options.clone())?;
+		let assembled = crate::assembler::assemble_from_segments(&mut segmented_program, source_code, options.clone())?;
+		Ok((env, assembled))
+	};
+	if let Err(ref why) = result && !options.is_ignored(why) {
+		options.report_diagnostic(why.clone());
+	}
+	result.map_err(AssemblyError::from)?
+}
+
+/// Run the assembler on the given source code and return the segmented AST as well as the environment.
+///
+/// # Errors
+/// Any assembler errors are propagated to the caller.
+pub fn run_assembler_into_symbolic_segments(
+	source_code: &Arc<AssemblyCode>,
+	options: Arc<dyn Frontend>,
+) -> Result<(Arc<RwLock<Environment>>, Segments<ProgramElement>), Box<AssemblyError>> {
 	let env = crate::Environment::new();
 	env.write().set_error_options(options.clone());
-	let tokens = crate::parser::lexer::lex(source_code.clone(), &*options).map_err(AssemblyError::from)?;
-	let program = crate::Environment::parse(&env, tokens, source_code).map_err(AssemblyError::from)?;
-	let mut segmented_program = program.write().split_into_segments().map_err(AssemblyError::from)?;
-	let assembled = crate::assembler::assemble_from_segments(&mut segmented_program, source_code, options)
-		.map_err(AssemblyError::from)?;
-	Ok((env, assembled))
+	let tokens = crate::parser::lexer::lex(source_code.clone(), &*options)?;
+	let program = crate::Environment::parse(&env, tokens, source_code)?;
+	let segmented_program = program.write().split_into_segments()?;
+	Ok((env, segmented_program))
 }
 
 /// Run the assembler on the given source code and return the segments, both assembled and in AST form.
@@ -117,13 +134,9 @@ pub fn run_assembler(source_code: &Arc<AssemblyCode>, options: Arc<dyn BackendOp
 /// Any assembler errors are propagated to the caller.
 pub fn run_assembler_into_segments(
 	source_code: &Arc<AssemblyCode>,
-	options: Arc<dyn BackendOptions>,
+	options: Arc<dyn Frontend>,
 ) -> Result<(Segments<ProgramElement>, Segments<u8>), Box<AssemblyError>> {
-	let env = crate::Environment::new();
-	env.write().set_error_options(options.clone());
-	let tokens = crate::parser::lexer::lex(source_code.clone(), &*options).map_err(AssemblyError::from)?;
-	let program = crate::Environment::parse(&env, tokens, source_code).map_err(AssemblyError::from)?;
-	let mut segmented_program = program.write().split_into_segments().map_err(AssemblyError::from)?;
+	let (_, mut segmented_program) = run_assembler_into_symbolic_segments(source_code, options.clone())?;
 	let assembled = crate::assembler::assemble_inside_segments(&mut segmented_program, source_code, options)
 		.map_err(AssemblyError::from)?;
 	Ok((segmented_program, assembled))

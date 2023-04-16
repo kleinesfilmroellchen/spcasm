@@ -13,20 +13,14 @@ use smartstring::alias::String;
 
 use crate::error::{AssemblyError, ErrorCodes};
 
-/// Interface for retrieving backend-relevant assembler options. The implementations are specific to the particular
-/// frontend. Currently there are two frontend implementations in spcasm itself:
-/// - ``CliOptions``: Only available and used in binary builds, created by clap.
-/// - ``DummyOptions``: Always available (used e.g. in tests), returns defaults that are equivalent to not overriding
-///   anything on the command line.
+/// Interface between the assembler backend and any kind of frontend. There currently are three main frontends: the
+/// spcasm compiler command line program, the spcasm-web website in Wasm, and the sals language server. Each frontend
+/// has different requirements for how the backend should react in various situations, especially error conditions. The
+/// backend passes a reference to the frontend around and calls into it during assembly.
 ///
-/// `BackendOptions` need to additionally implement Send and Sync (since they're used in multi-threaded contexts), and
+/// `Frontend` need to additionally implement Send and Sync (since it's used in multi-threaded contexts), and
 /// provide debug output.
-pub trait BackendOptions: std::fmt::Debug + Send + Sync {
-	/// Expands a marker "all" warning in the error or ignore list into all possible errors. This is so that the user
-	/// can specify --error all or --ignore all and get this behavior, but we don't need special casing for it in the
-	/// backend, which only works via matching discriminants.
-	fn expand_all(&mut self);
-
+pub trait Frontend: std::fmt::Debug + Send + Sync {
 	/// Returns whether the given warning is ignored, i.e. the user must not be informed of it.
 	fn is_ignored(&self, warning: &AssemblyError) -> bool;
 	/// Returns whether the given warning was turned into an error, i.e. it stops the assembler.
@@ -36,11 +30,18 @@ pub trait BackendOptions: std::fmt::Debug + Send + Sync {
 	fn maximum_macro_expansion_depth(&self) -> usize;
 	/// Returns the maximum number of reference resolution passes.
 	fn maximum_reference_resolution_passes(&self) -> usize;
+
+	/// Signals a diagnostic to the frontend. The frontend can decide whether it wants to output the diagnostic
+	/// directly, collect it internally, etc. Note that the backend takes `is_error` and `is_ignored` into account; in
+	/// particular, it will not pass ignored diagnostics to this function.
+	/// 
+	/// Note that many backend functions will also return error(s) reported through here.
+	fn report_diagnostic(&self, diagnostic: AssemblyError);
 }
 
-/// Returns a ``BackendOptions`` implementation with default behavior.
+/// Returns a `Frontend` implementation with default behavior.
 #[must_use]
-pub fn default_backend_options() -> Arc<dyn BackendOptions> {
+pub fn default_backend_options() -> Arc<dyn Frontend> {
 	Arc::new(DummyOptions {})
 }
 
@@ -72,8 +73,11 @@ pub struct CliOptions {
 }
 
 #[cfg(feature = "binaries")]
-impl BackendOptions for CliOptions {
-	fn expand_all(&mut self) {
+impl CliOptions {
+	/// Expands a marker "all" warning in the error or ignore list into all possible errors. This is so that the user
+	/// can specify --error all or --ignore all and get this behavior, but we don't need special casing for it in the
+	/// backend, which only works via matching discriminants.
+	pub fn expand_all(&mut self) {
 		let all_warnings_and_errors = AssemblyError::all_codes();
 		for list in [&mut self.ignore, &mut self.error] {
 			if list.contains(&std::mem::discriminant(&AssemblyError::AllMarker {}).into()) {
@@ -81,7 +85,10 @@ impl BackendOptions for CliOptions {
 			}
 		}
 	}
+}
 
+#[cfg(feature = "binaries")]
+impl Frontend for CliOptions {
 	fn is_error(&self, warning: &AssemblyError) -> bool {
 		// Always rethrow errors.
 		warning.severity().is_some_and(|s| s == miette::Severity::Error) || {
@@ -102,17 +109,17 @@ impl BackendOptions for CliOptions {
 	fn maximum_macro_expansion_depth(&self) -> usize {
 		self.macro_recursion_limit
 	}
+
+	fn report_diagnostic(&self, diagnostic: AssemblyError) {
+		println!("{:?}", miette::Report::new(diagnostic));
+	}
 }
 
 /// Dummy backend options that mirror command-line defaults.
 #[derive(Default, Debug, Clone, Copy, Eq, PartialEq)]
 pub struct DummyOptions {}
 
-impl BackendOptions for DummyOptions {
-	fn expand_all(&mut self) {
-		// noop
-	}
-
+impl Frontend for DummyOptions {
 	fn is_error(&self, _warning: &AssemblyError) -> bool {
 		false
 	}
@@ -127,6 +134,10 @@ impl BackendOptions for DummyOptions {
 
 	fn maximum_macro_expansion_depth(&self) -> usize {
 		1000
+	}
+
+	fn report_diagnostic(&self, _diagnostic: AssemblyError) {
+		// noop
 	}
 }
 

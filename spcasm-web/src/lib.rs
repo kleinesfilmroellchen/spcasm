@@ -9,7 +9,7 @@ use miette::{GraphicalReportHandler, GraphicalTheme};
 use once_cell::sync::Lazy;
 use options::WebOptions;
 use regex::{Captures, Regex};
-use spcasm::{pretty_hex, run_assembler, AssemblyCode, AssemblyError};
+use spcasm::{pretty_hex, run_assembler, AssemblyCode};
 use wasm_bindgen::prelude::*;
 use wasm_bindgen::JsCast;
 use web_sys::HtmlElement;
@@ -17,6 +17,7 @@ use web_sys::HtmlElement;
 mod options;
 
 #[allow(unused)]
+#[macro_export]
 macro_rules! log {
 	( $( $t:tt )* ) => {
 		web_sys::console::log_1(&format!( $( $t )* ).into())
@@ -107,7 +108,7 @@ fn set_panic_hook() {
 pub fn on_assembly_change(options: JsValue) {
 	set_panic_hook();
 
-	let options: WebOptions = serde_wasm_bindgen::from_value(options).unwrap();
+	let options: Arc<WebOptions> = Arc::new(serde_wasm_bindgen::from_value(options).unwrap());
 
 	let document = web_sys::window().unwrap().document().unwrap();
 	let code_input = document.query_selector("code.assembly-source").unwrap().unwrap();
@@ -126,7 +127,7 @@ pub fn on_assembly_change(options: JsValue) {
 	let source = Arc::new(AssemblyCode::new(&code_text, &"<<input>>".into()));
 
 	let start_time = js_sys::Date::now();
-	let assembler_result = run_assembler(&source, Arc::new(options));
+	let assembler_result = run_assembler(&source, options.clone());
 
 	let end_time = js_sys::Date::now();
 	let elapsed_time = end_time - start_time;
@@ -137,10 +138,11 @@ pub fn on_assembly_change(options: JsValue) {
 			output.set_inner_html(&htmlify(&binary_text));
 			"Assembly compiled successfully."
 		},
-		Err(why) => {
+		Err(_) => {
 			let mut rendered = String::new();
-			let why = why.downcast::<AssemblyError>().expect("no AssemblyError found");
-			report_handler.render_report(&mut rendered, &why).expect("couldn't render report");
+			for error in options.diagnostics.read().unwrap().iter() {
+				report_handler.render_report(&mut rendered, error).expect("couldn't render report");
+			}
 			output.set_inner_html(&htmlify(&rendered));
 			"Couldn't compile assembly."
 		},

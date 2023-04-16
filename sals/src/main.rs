@@ -7,10 +7,10 @@ use std::path::Path;
 use std::sync::Arc;
 
 use interface::*;
-use parking_lot::RwLock;
+use parking_lot::{Mutex, RwLock};
 use semantic_token::*;
 use serde_json::Value;
-use spcasm::cli::BackendOptions;
+use spcasm::cli::Frontend;
 use spcasm::parser::Token;
 use spcasm::{AssemblyCode, AssemblyError, Environment};
 use tower_lsp::jsonrpc::Result;
@@ -26,24 +26,34 @@ shadow_rs::shadow!(buildinfo);
 #[derive(Debug)]
 struct Backend {
 	client:      Client,
+	frontend:    Arc<ServerFrontend>,
 	environment: Arc<RwLock<Environment>>,
 }
 
-#[derive(Debug, Clone, Copy)]
-struct ServerOptions();
+#[derive(Debug)]
+struct ServerFrontend {
+	collected_diagnostics: Mutex<Vec<AssemblyError>>,
+}
 
-impl BackendOptions for ServerOptions {
-	fn expand_all(&mut self) {
-		// No-op.
+impl ServerFrontend {
+	pub fn clear_diagnostics(&self) {
+		self.collected_diagnostics.lock().clear();
 	}
+}
 
+impl Default for ServerFrontend {
+	fn default() -> Self {
+		Self { collected_diagnostics: Mutex::new(Vec::new()) }
+	}
+}
+
+impl Frontend for ServerFrontend {
 	fn is_error(&self, _warning: &spcasm::AssemblyError) -> bool {
 		false
 	}
 
 	fn is_ignored(&self, _warning: &spcasm::AssemblyError) -> bool {
-		// IMPORTANT! If this is not `true`, the server prints to stdout, destroying the LSP connection.
-		true
+		false
 	}
 
 	fn maximum_macro_expansion_depth(&self) -> usize {
@@ -52,6 +62,10 @@ impl BackendOptions for ServerOptions {
 
 	fn maximum_reference_resolution_passes(&self) -> usize {
 		100
+	}
+
+	fn report_diagnostic(&self, diagnostic: AssemblyError) {
+		self.collected_diagnostics.lock().push(diagnostic);
 	}
 }
 
@@ -345,18 +359,20 @@ impl Backend {
 	async fn on_change(&self, TextDocumentItem { uri, text, version }: TextDocumentItem) {
 		if let Ok(path) = &uri.to_file_path() {
 			self.client.log_message(MessageType::INFO, format!("document path: {path:?}")).await;
+			// Clear frontend diagnostics.
+			self.frontend.clear_diagnostics();
 			let source_code = Arc::new(AssemblyCode::new_from_path(&text, path));
 			self.environment.write().files.remove(&source_code.name);
 			let result = try {
-				let tokens = spcasm::parser::lexer::lex(source_code.clone(), &*self.environment.read().options)
-					.map_err(AssemblyError::from)?;
+				let tokens =
+					spcasm::parser::lexer::lex(source_code.clone(), &*self.frontend).map_err(AssemblyError::from)?;
 				let program =
 					Environment::parse(&self.environment, tokens, &source_code).map_err(AssemblyError::from)?;
 				let mut segmented_program = program.write().split_into_segments().map_err(AssemblyError::from)?;
 				let _assembled = spcasm::assembler::assemble_inside_segments(
 					&mut segmented_program,
 					&source_code,
-					self.environment.read().options.clone(),
+					self.frontend.clone(),
 				)
 				.map_err(AssemblyError::from)?;
 			};
@@ -381,8 +397,9 @@ async fn main() {
 	let stdout = tokio::io::stdout();
 
 	let environment = Environment::new();
-	environment.write().set_error_options(Arc::new(ServerOptions()));
-	let (service, socket) = LspService::build(|client| Backend { client, environment }).finish();
+	let frontend = Arc::new(ServerFrontend::default());
+	environment.write().set_error_options(frontend.clone());
+	let (service, socket) = LspService::build(|client| Backend { client, environment, frontend }).finish();
 
 	Server::new(stdin, stdout, socket).serve(service).await;
 }

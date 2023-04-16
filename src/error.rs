@@ -11,7 +11,7 @@ use smartstring::alias::String;
 use spcasm_derive::ErrorCodes;
 use thiserror::Error;
 
-use crate::cli::BackendOptions;
+use crate::cli::Frontend;
 use crate::directive::DirectiveSymbol;
 use crate::parser::instruction::{MemoryAddress, Mnemonic};
 use crate::parser::reference::Reference;
@@ -24,7 +24,7 @@ pub trait ErrorCodes {
 }
 
 /// All types of errors that the assembler can report to the user.
-#[derive(Error, Debug, Diagnostic, ErrorCodes)]
+#[derive(Error, Debug, Clone, Diagnostic, ErrorCodes)]
 #[allow(clippy::module_name_repetitions, missing_docs)]
 pub enum AssemblyError {
 	/// Marker error for allowing the user to pass --ignore all or --error all on the CLI.
@@ -210,8 +210,9 @@ pub enum AssemblyError {
 	#[error("File \"{file_name}\" was not found")]
 	#[diagnostic(code(spcasm::io::file_not_found), severity(Error))]
 	FileNotFound {
+		/// https://github.com/rust-lang/rust/issues/24135 - std::io::Error is not clonable for performance and implementation detail reasons.
 		#[source]
-		os_error:  std::io::Error,
+		os_error:  Arc<std::io::Error>,
 		file_name: String,
 		#[source_code]
 		src:       Arc<AssemblyCode>,
@@ -744,11 +745,11 @@ impl AssemblyError {
 	/// Report or throw this warning (or error), depending on what the user specified on the command line. On non-clap
 	/// builds, this always reports the error.
 	#[allow(clippy::trivially_copy_pass_by_ref)]
-	pub(crate) fn report_or_throw(self, options: &dyn BackendOptions) -> Result<(), Box<Self>> {
+	pub(crate) fn report_or_throw(self, options: &dyn Frontend) -> Result<(), Box<Self>> {
 		if options.is_error(&self) {
 			return Err(self.into());
 		} else if !options.is_ignored(&self) {
-			println!("{:?}", miette::Report::new(self));
+			options.report_diagnostic(self);
 		}
 		Ok(())
 	}

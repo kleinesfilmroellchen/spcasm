@@ -11,9 +11,6 @@ use crate::{cli, dump_ast, dump_reference_tree, elf, run_assembler, AssemblyCode
 pub fn main() -> miette::Result<()> {
 	use clap::Parser;
 
-	use crate::cli::BackendOptions;
-
-
 	#[cfg(feature = "dep:human-panic")]
 	human_panic::setup_panic!(human_panic::metadata!());
 	miette::set_hook(Box::new(|_| {
@@ -28,35 +25,36 @@ pub fn main() -> miette::Result<()> {
 
 	let options = std::sync::Arc::new(args.warning_flags);
 	let code = AssemblyCode::from_file_or_assembly_error(&file_name.to_string_lossy()).map_err(AssemblyError::from)?;
-	let (environment, assembled) = run_assembler(&code, options)?;
+	// Errors are already reported, so we only need to handle the success case.
+	if let Ok((environment, assembled)) = run_assembler(&code, options) {
+		if args.dump_references {
+			dump_reference_tree(&environment.read_recursive().globals);
+		}
 
-	if args.dump_references {
-		dump_reference_tree(&environment.read_recursive().globals);
-	}
+		if args.dump_ast {
+			dump_ast(&environment.read_recursive().files.get(&code.name).unwrap().read_recursive().content);
+		}
 
-	if args.dump_ast {
-		dump_ast(&environment.read_recursive().files.get(&code.name).unwrap().read_recursive().content);
-	}
-
-	if let Some(outfile) = args.output {
-		let mut outfile: Box<dyn Write> = if outfile.to_string_lossy() == "-" {
-			Box::new(std::io::stdout())
-		} else {
-			Box::new(
-				File::options()
-					.create(true)
-					.truncate(true)
-					.write(true)
-					.open(outfile)
-					.expect("Couldn't open output file"),
-			)
-		};
-		match args.output_format {
-			cli::OutputFormat::Elf => elf::write_to_elf(&mut outfile, &assembled).unwrap(),
-			cli::OutputFormat::Plain => outfile.write_all(&assembled).unwrap(),
-			cli::OutputFormat::HexDump =>
-				outfile.write_fmt(format_args!("{}", crate::pretty_hex(&assembled, None))).unwrap(),
-		};
+		if let Some(outfile) = args.output {
+			let mut outfile: Box<dyn Write> = if outfile.to_string_lossy() == "-" {
+				Box::new(std::io::stdout())
+			} else {
+				Box::new(
+					File::options()
+						.create(true)
+						.truncate(true)
+						.write(true)
+						.open(outfile)
+						.expect("Couldn't open output file"),
+				)
+			};
+			match args.output_format {
+				cli::OutputFormat::Elf => elf::write_to_elf(&mut outfile, &assembled).unwrap(),
+				cli::OutputFormat::Plain => outfile.write_all(&assembled).unwrap(),
+				cli::OutputFormat::HexDump =>
+					outfile.write_fmt(format_args!("{}", crate::pretty_hex(&assembled, None))).unwrap(),
+			};
+		}
 	}
 	Ok(())
 }

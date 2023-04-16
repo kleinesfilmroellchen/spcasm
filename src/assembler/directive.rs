@@ -1,6 +1,7 @@
 //! Directive assembly functions.
 
 use std::fs::File;
+use std::sync::Arc;
 
 use miette::SourceSpan;
 use num_traits::{FromPrimitive, ToPrimitive};
@@ -66,10 +67,10 @@ impl AssembledData {
 			DirectiveValue::Include { ref file, range } => {
 				let binary_file = resolve_file(&self.source_code, file);
 				let mut binary_data = std::fs::read(binary_file).map_err(|os_error| AssemblyError::FileNotFound {
-					os_error,
+					os_error:  Arc::new(os_error),
 					file_name: file.clone(),
-					src: self.source_code.clone(),
-					location: directive.span,
+					src:       self.source_code.clone(),
+					location:  directive.span,
 				})?;
 
 				binary_data = self.slice_data_if_necessary(file, directive.span, binary_data, range)?;
@@ -130,10 +131,10 @@ impl AssembledData {
 		// Resolve the audio file's path relative to the source file.
 		let actual_path = resolve_file(&self.source_code, file_name);
 		let file = File::open(actual_path).map_err(|os_error| AssemblyError::FileNotFound {
-			os_error,
+			os_error:  Arc::new(os_error),
 			file_name: file_name.to_string().into(),
-			src: self.source_code.clone(),
-			location: directive.span,
+			src:       self.source_code.clone(),
+			location:  directive.span,
 		})?;
 		let mut sample_data =
 			wav::read_wav_for_brr(file).map_err(|error_text| AssemblyError::AudioProcessingError {

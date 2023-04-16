@@ -16,7 +16,7 @@ use self::reference::{
 	Label, MacroParameters, MacroParent, Reference, ReferenceResolvable, RelativeReferenceDirection,
 };
 use crate::assembler::resolve_file;
-use crate::cli::{default_backend_options, BackendOptions};
+use crate::cli::{default_backend_options, Frontend};
 use crate::directive::DirectiveValue;
 use crate::error::AssemblyError;
 use crate::parser::instruction::MemoryAddress;
@@ -68,7 +68,7 @@ pub struct Environment {
 	/// The files included in this "tree" created by include statements.
 	pub files:   HashMap<PathBuf, Arc<RwLock<AssemblyFile>>>,
 	/// Error and warning options passed on the command line.
-	pub options: Arc<dyn BackendOptions>,
+	pub options: Arc<dyn Frontend>,
 }
 
 /// The AST and associated information for one file.
@@ -130,7 +130,7 @@ impl Environment {
 	}
 
 	/// Sets the user-provided error options.
-	pub fn set_error_options(&mut self, options: Arc<dyn BackendOptions>) {
+	pub fn set_error_options(&mut self, options: Arc<dyn Frontend>) {
 		self.options = options;
 	}
 
@@ -655,10 +655,10 @@ impl AssemblyFile {
 				let file: String = resolve_file(&self.source_code, file).to_string_lossy().into();
 				let mut included_code =
 					AssemblyCode::from_file(&file).map_err(|os_error| AssemblyError::FileNotFound {
-						os_error,
+						os_error:  Arc::new(os_error),
 						file_name: file,
-						src: self.source_code.clone(),
-						location: span,
+						src:       self.source_code.clone(),
+						location:  span,
 					})?;
 				let child_include_path = &mut unsafe { Arc::get_mut_unchecked(&mut included_code) }.include_path;
 				child_include_path.push(self.source_code.name.clone());

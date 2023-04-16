@@ -1,27 +1,31 @@
 //! User-defined options specified through the web interface.
 
-use miette::Diagnostic;
+use std::sync::RwLock;
+
+use miette::{Diagnostic, Severity};
 use serde::{Deserialize, Serialize};
-use spcasm::cli::BackendOptions;
+use spcasm::cli::Frontend;
+use spcasm::AssemblyError;
 
 #[allow(clippy::module_name_repetitions)]
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct WebOptions {
 	pub silence_all:                     bool,
 	pub silenced:                        Vec<String>,
 	pub max_reference_resolution_passes: usize,
 	pub max_macro_expansion_depth:       usize,
+	#[serde(skip)]
+	pub diagnostics:                     RwLock<Vec<AssemblyError>>,
 }
 
-impl BackendOptions for WebOptions {
-	fn expand_all(&mut self) {}
-
-	fn is_error(&self, _: &spcasm::AssemblyError) -> bool {
+impl Frontend for WebOptions {
+	fn is_error(&self, _: &AssemblyError) -> bool {
 		false
 	}
 
-	fn is_ignored(&self, warning: &spcasm::AssemblyError) -> bool {
-		self.silence_all || self.silenced.contains(&warning.code().unwrap().to_string())
+	fn is_ignored(&self, warning: &AssemblyError) -> bool {
+		warning.severity().unwrap() != Severity::Error
+			&& (self.silence_all || self.silenced.contains(&warning.code().unwrap().to_string()))
 	}
 
 	fn maximum_reference_resolution_passes(&self) -> usize {
@@ -30,5 +34,10 @@ impl BackendOptions for WebOptions {
 
 	fn maximum_macro_expansion_depth(&self) -> usize {
 		self.max_macro_expansion_depth
+	}
+
+	fn report_diagnostic(&self, diagnostic: AssemblyError) {
+		super::log!("pushed new diagnostic: {:?}", diagnostic);
+		self.diagnostics.write().unwrap().push(diagnostic);
 	}
 }

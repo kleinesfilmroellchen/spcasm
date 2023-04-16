@@ -58,6 +58,11 @@ impl FakeDefaultForIgnoredValues for std::io::Error {
 		std::io::ErrorKind::Other.into()
 	}
 }
+impl FakeDefaultForIgnoredValues for Arc<std::io::Error> {
+	fn default() -> Self {
+		Arc::new(std::io::ErrorKind::Other.into())
+	}
+}
 
 impl FakeDefaultForIgnoredValues for ParseIntError {
 	fn default() -> Self {

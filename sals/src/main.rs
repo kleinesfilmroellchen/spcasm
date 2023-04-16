@@ -3,8 +3,9 @@
 use std::path::Path;
 use std::sync::Arc;
 
-use miette::Diagnostic;
+use interface::*;
 use parking_lot::RwLock;
+use semantic_token::*;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use spcasm::cli::BackendOptions;
@@ -15,20 +16,10 @@ use tower_lsp::lsp_types::notification::Notification;
 use tower_lsp::lsp_types::*;
 use tower_lsp::{Client, LanguageServer, LspService, Server};
 
-shadow_rs::shadow!(buildinfo);
+mod interface;
+mod semantic_token;
 
-const SEMANTIC_TOKEN_TYPES: [SemanticTokenType; 10] = [
-	SemanticTokenType::NUMBER,
-	SemanticTokenType::PARAMETER,
-	SemanticTokenType::VARIABLE,
-	SemanticTokenType::FUNCTION,
-	SemanticTokenType::OPERATOR,
-	SemanticTokenType::MACRO,
-	SemanticTokenType::KEYWORD,
-	SemanticTokenType::COMMENT,
-	SemanticTokenType::STRING,
-	SemanticTokenType::new("punctuation"),
-];
+shadow_rs::shadow!(buildinfo);
 
 #[derive(Debug)]
 struct Backend {
@@ -121,7 +112,7 @@ impl LanguageServer for Backend {
 						semantic_tokens_options:            SemanticTokensOptions {
 							work_done_progress_options: WorkDoneProgressOptions { work_done_progress: Some(false) },
 							legend:                     SemanticTokensLegend {
-								token_types:     SEMANTIC_TOKEN_TYPES.into(),
+								token_types:     SEMANTIC_TOKEN_TYPES.map(|x| x.clone().into()).into(),
 								token_modifiers: Vec::new(),
 							},
 							range:                      Some(false),
@@ -270,7 +261,7 @@ impl LanguageServer for Backend {
 						delta_line: start_location.line - last_token_line,
 						delta_start,
 						length: token.source_span().len() as u32,
-						token_type: semantic_token_to_index(&spcasm_token_to_semantic_token_type(&token)),
+						token_type: SpcasmTokenType::from(token).into(),
 						token_modifiers_bitset: 0,
 					});
 					last_token_line = start_location.line;
@@ -399,118 +390,4 @@ async fn main() {
 	let (service, socket) = LspService::build(|client| Backend { client, environment }).finish();
 
 	Server::new(stdin, stdout, socket).serve(service).await;
-}
-
-// FIXME: VSCode and the LSP insist on using line and column positioning instead of raw offsets.
-//        Some reasoning is given in https://github.com/Microsoft/language-server-protocol/issues/96, but I'm not convinced.
-//        These converter functions have linear runtime in the number of lines and could benefit from cached line
-//        storage, but I don't want to put that inside spcasm itself which doesn't need it.
-
-fn source_offset_to_lsp_position(offset: usize, text: &str) -> Option<Position> {
-	// Classic use of prefix sums for line offsets.
-	let (line_number, line_end_offset, line) = text
-		.lines()
-		.scan(0, |sum, line| {
-			*sum += line.chars().count() + 1;
-			Some((*sum, line))
-		})
-		.enumerate()
-		.find_map(
-			|(line_index, (line_end_offset, line))| {
-				if line_end_offset > offset {
-					Some((line_index, line_end_offset, line))
-				} else {
-					None
-				}
-			},
-		)?;
-
-	let column = line.chars().count() + 1 - (line_end_offset - offset);
-	Some(Position::new(line_number as u32, column as u32))
-}
-
-fn lsp_position_to_source_offset(position: Position, text: &str) -> usize {
-	text.lines().take(position.line as usize).map(|line| line.chars().count() + 1).sum::<usize>()
-		+ (position.character as usize)
-}
-
-/// Note that since every miette-based assembly error can contain multiple labeled spans, it can map to multiple
-/// diagnostics for each span.
-fn assembly_error_to_lsp_diagnostics(error: AssemblyError, text: &str) -> Vec<tower_lsp::lsp_types::Diagnostic> {
-	error
-		.labels()
-		// Poor miette design; an iterator can be empty so why isn't the type of `labels()` just `Box<dyn Iterator<Item = LabeledSpan>>`?
-		.unwrap_or(Box::new(Vec::new().into_iter()))
-		.filter_map(|label| {
-			// FIXME: Fit the extended help message in somewhere.
-			Some(tower_lsp::lsp_types::Diagnostic {
-				range: Range::new(
-					source_offset_to_lsp_position(label.offset(), text)?,
-					source_offset_to_lsp_position(label.offset() + label.len(), text)?,
-				),
-				severity:            Some(miette_severity_to_lsp_severity(error.severity().expect(&format!("spcasm bug: error {:?} without severity", error)))),
-				code:                Some(NumberOrString::String(error.code().expect(&format!("spcasm bug: error {:?} without error code", error)).to_string())),
-				code_description:    None,
-				source:              Some("spcasm".into()),
-				message:             error.to_string(),
-				related_information: None,
-				tags:                None,
-				data:                None,
-			})
-		})
-		.collect()
-}
-
-fn miette_severity_to_lsp_severity(severity: miette::Severity) -> DiagnosticSeverity {
-	match severity {
-		miette::Severity::Advice => DiagnosticSeverity::INFORMATION,
-		miette::Severity::Warning => DiagnosticSeverity::WARNING,
-		miette::Severity::Error => DiagnosticSeverity::ERROR,
-	}
-}
-
-fn spcasm_token_to_semantic_token_type(token: &spcasm::parser::Token) -> SemanticTokenType {
-	match token {
-		Token::Mnemonic(_, _) => SemanticTokenType::FUNCTION,
-		Token::Identifier(_, _) => SemanticTokenType::FUNCTION,
-		Token::SpecialIdentifier(_, _) => SemanticTokenType::PARAMETER,
-		Token::Register(_, _) => SemanticTokenType::KEYWORD,
-		Token::PlusRegister(_, _) => SemanticTokenType::KEYWORD,
-		Token::Directive(_, _) => SemanticTokenType::FUNCTION,
-		Token::Number(_, _, _) => SemanticTokenType::NUMBER,
-		Token::String(_, _) => SemanticTokenType::STRING,
-		Token::Hash(_) => SemanticTokenType::OPERATOR,
-		Token::Comma(_) => SemanticTokenType::new("punctuation"),
-		Token::Plus(_) => SemanticTokenType::OPERATOR,
-		Token::RelativeLabelPlus(_, _) => SemanticTokenType::OPERATOR,
-		Token::Minus(_) => SemanticTokenType::OPERATOR,
-		Token::RelativeLabelMinus(_, _) => SemanticTokenType::OPERATOR,
-		Token::RangeMinus(_) => SemanticTokenType::OPERATOR,
-		Token::Star(_) => SemanticTokenType::OPERATOR,
-		Token::DoubleStar(_) => SemanticTokenType::OPERATOR,
-		Token::Slash(_) => SemanticTokenType::OPERATOR,
-		Token::Pipe(_) => SemanticTokenType::OPERATOR,
-		Token::Ampersand(_) => SemanticTokenType::OPERATOR,
-		Token::Tilde(_) => SemanticTokenType::OPERATOR,
-		Token::Caret(_) => SemanticTokenType::OPERATOR,
-		Token::OpenParenthesis(_) => SemanticTokenType::new("punctuation"),
-		Token::CloseParenthesis(_) => SemanticTokenType::new("punctuation"),
-		Token::OpenIndexingParenthesis(_) => SemanticTokenType::OPERATOR,
-		Token::CloseIndexingParenthesis(_) => SemanticTokenType::OPERATOR,
-		Token::Colon(_) => SemanticTokenType::new("punctuation"),
-		Token::Period(_) => SemanticTokenType::new("punctuation"),
-		Token::OpenAngleBracket(_) => SemanticTokenType::OPERATOR,
-		Token::DoubleOpenAngleBracket(_) => SemanticTokenType::OPERATOR,
-		Token::CloseAngleBracket(_) => SemanticTokenType::OPERATOR,
-		Token::DoubleCloseAngleBracket(_) => SemanticTokenType::OPERATOR,
-		Token::Percent(_) => SemanticTokenType::new("punctuation"),
-		Token::ExplicitDirectPage(_) => SemanticTokenType::OPERATOR,
-		Token::Equals(_) => SemanticTokenType::OPERATOR,
-		Token::Newline(_) => SemanticTokenType::COMMENT,
-		Token::TestComment(_, _) => SemanticTokenType::COMMENT,
-	}
-}
-
-fn semantic_token_to_index(typ: &SemanticTokenType) -> u32 {
-	SEMANTIC_TOKEN_TYPES.iter().position(|global_type| global_type == typ).unwrap() as u32
 }

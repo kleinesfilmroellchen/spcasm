@@ -53,7 +53,7 @@ jobs:
         uses: actions-rs/clippy-check@v1.0.7
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
-          args: --workspace --tests --verbose --no-default-features
+          args: --workspace --tests --verbose --all-features
   fmt:
     runs-on: ubuntu-latest
     steps:

@@ -87,6 +87,7 @@ extern "C" {
 	fn output_width() -> f64;
 }
 
+#[allow(clippy::missing_const_for_fn)]
 fn set_panic_hook() {
 	#[cfg(feature = "console_error_panic_hook")]
 	console_error_panic_hook::set_once();

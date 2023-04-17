@@ -5,8 +5,8 @@ use miette::SourceSpan;
 use smartstring::alias::String;
 
 use super::AssembledData;
-use crate::parser::reference::Reference;
-use crate::parser::AssemblyTimeValue;
+use crate::sema::reference::Reference;
+use crate::sema::AssemblyTimeValue;
 use crate::AssemblyError;
 
 /// An entire sample table, can have at maximum 256 entries.

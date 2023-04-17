@@ -1,9 +1,9 @@
 //! AST of the entire assembly program.
 #![allow(clippy::module_name_repetitions, clippy::large_enum_variant)]
-use parking_lot::RwLock;
 use std::sync::Arc;
 
 use miette::SourceSpan;
+use parking_lot::RwLock;
 #[allow(unused)]
 use smartstring::alias::String;
 
@@ -11,7 +11,7 @@ use super::instruction::Instruction;
 use super::reference::{MacroParent, Reference, ReferenceResolvable};
 use super::{AssemblyTimeValue, Directive};
 use crate::parser::source_range;
-use crate::{AssemblyCode, AssemblyError};
+use crate::{AssemblyCode, AssemblyError, span_to_string};
 
 /// A program element of an assembled program. A list of program elements makes an assembled program itself.
 #[derive(Clone, Debug)]
@@ -154,21 +154,4 @@ impl std::fmt::Display for ProgramElement {
 			),
 		}
 	}
-}
-
-pub fn span_to_string(span: SourceSpan) -> String {
-	format!("({:<4}-{:<4})", span.offset(), span.offset() + span.len()).into()
-}
-
-pub fn byte_vec_to_string(vec: &Option<Vec<u8>>) -> std::string::String {
-	vec.as_ref().map_or_else(std::string::String::new, |expected_value| {
-		format!(
-			"(expected {})",
-			expected_value
-				.iter()
-				.map(|element| format!("{:02X}", element))
-				.intersperse(" ".to_string())
-				.collect::<String>()
-		)
-	})
 }

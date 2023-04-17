@@ -8,8 +8,8 @@ use smartstring::alias::String;
 use test::Bencher;
 
 use crate::cli::default_backend_options;
-use crate::parser::instruction::MemoryAddress;
-use crate::parser::ProgramElement;
+use crate::sema::instruction::MemoryAddress;
+use crate::sema::ProgramElement;
 use crate::{dump_reference_tree, pretty_hex, AssemblyError, Segments};
 
 #[bench]
@@ -201,8 +201,8 @@ fn coverage() {
 	use std::sync::Weak;
 
 	use crate::default_hacks::FakeDefaultForIgnoredValues;
-	use crate::parser::value::BinaryOperator;
 	use crate::parser::Token;
+	use crate::sema::value::BinaryOperator;
 
 	<i64 as FakeDefaultForIgnoredValues>::default();
 	miette::SourceSpan::default();
@@ -210,7 +210,7 @@ fn coverage() {
 	std::num::ParseIntError::default();
 	crate::parser::Token::default();
 	crate::directive::DirectiveSymbol::default();
-	crate::parser::instruction::Mnemonic::default();
+	crate::sema::instruction::Mnemonic::default();
 	crate::error::TokenOrString::default();
 
 	let code = crate::AssemblyCode::new("\r\n", &"hello".into()).clone();
@@ -221,12 +221,12 @@ fn coverage() {
 
 	let _ = format!(
 		"{:X}, {:X}, {1:?}",
-		crate::parser::AssemblyTimeValue::from(34),
-		crate::parser::AssemblyTimeValue::BinaryOperation(Box::new(32.into()), Box::new(7.into()), BinaryOperator::And,),
+		crate::sema::AssemblyTimeValue::from(34),
+		crate::sema::AssemblyTimeValue::BinaryOperation(Box::new(32.into()), Box::new(7.into()), BinaryOperator::And,),
 	);
 
-	let label = crate::parser::reference::Reference::Label(std::sync::Arc::new(
-		crate::parser::reference::Label {
+	let label = crate::sema::reference::Reference::Label(std::sync::Arc::new(
+		crate::sema::reference::Label {
 			children:        BTreeMap::new(),
 			location:        None,
 			name:            "example".into(),
@@ -236,8 +236,8 @@ fn coverage() {
 		}
 		.into(),
 	));
-	let macro_parent = crate::parser::reference::MacroParent::new_formal(None, (0, 0).into());
-	let macro_parameter = crate::parser::reference::Reference::MacroArgument {
+	let macro_parent = crate::sema::reference::MacroParent::new_formal(None, (0, 0).into());
+	let macro_parameter = crate::sema::reference::Reference::MacroArgument {
 		name:         "test".into(),
 		value:        None,
 		span:         (0, 0).into(),
@@ -267,15 +267,15 @@ fn coverage() {
 	] {
 		let _ = format!(
 			"{:X}",
-			crate::parser::AssemblyTimeValue::BinaryOperation(
-				Box::new(crate::parser::AssemblyTimeValue::Reference(label.clone())),
-				Box::new(crate::parser::AssemblyTimeValue::Reference(label.clone())),
+			crate::sema::AssemblyTimeValue::BinaryOperation(
+				Box::new(crate::sema::AssemblyTimeValue::Reference(label.clone())),
+				Box::new(crate::sema::AssemblyTimeValue::Reference(label.clone())),
 				operator,
 			),
 		);
 	}
 
-	assert_eq!(crate::parser::AssemblyTimeValue::from(34), crate::parser::AssemblyTimeValue::from(34));
+	assert_eq!(crate::sema::AssemblyTimeValue::from(34), crate::sema::AssemblyTimeValue::from(34));
 
 	for token in [
 		Token::Ampersand(0.into()),
@@ -298,31 +298,31 @@ fn coverage() {
 		Token::Identifier("something".into(), 0.into()),
 		Token::Minus(0.into()),
 		Token::Newline(0.into()),
-		Token::Mnemonic(crate::parser::instruction::Mnemonic::Adc, 0.into()),
+		Token::Mnemonic(crate::sema::instruction::Mnemonic::Adc, 0.into()),
 		Token::Percent(0.into()),
 		Token::Period(0.into()),
 		Token::Pipe(0.into()),
 		Token::Plus(0.into()),
-		Token::PlusRegister(crate::parser::Register::A, 0.into()),
+		Token::PlusRegister(crate::sema::Register::A, 0.into()),
 		Token::Slash(0.into()),
 		Token::Star(0.into()),
 		Token::String(Vec::new(), 0.into()),
 		Token::TestComment(Vec::new(), 0.into()),
 		Token::Tilde(0.into()),
 		Token::Number(0, "897".into(), 0.into()),
-		Token::Register(crate::parser::Register::X, 0.into()),
+		Token::Register(crate::sema::Register::X, 0.into()),
 	] {
 		assert_eq!(token, token);
 		assert_ne!(token, Token::TestComment(vec![5, 6, 7], 0.into()));
 		let _ = format!("{0} {0:?}", token);
 	}
 
-	assert_eq!(crate::parser::LabelUsageKind::AsAddress, crate::parser::LabelUsageKind::AsAddress);
+	assert_eq!(crate::sema::LabelUsageKind::AsAddress, crate::sema::LabelUsageKind::AsAddress);
 	let _ = format!(
 		"{:?} {:?} {:?} {:?} {:?} {:?} {:?}",
 		crate::Environment::new(),
-		crate::parser::LabelUsageKind::AsAddress.clone(),
-		crate::parser::AssemblyFile {
+		crate::sema::LabelUsageKind::AsAddress.clone(),
+		crate::sema::AssemblyFile {
 			tokens:      Vec::new(),
 			content:     Vec::new(),
 			parent:      std::sync::Weak::new(),
@@ -336,13 +336,13 @@ fn coverage() {
 			== crate::assembler::sample_table::SampleEntry { start_address: 0.into() }.clone(),
 	);
 
-	assert_eq!(crate::parser::ProgramElement::Directive(crate::Directive::default()).span(), (0, 0).into());
-	let macro_call = crate::parser::ProgramElement::UserDefinedMacroCall {
+	assert_eq!(crate::sema::ProgramElement::Directive(crate::Directive::default()).span(), (0, 0).into());
+	let macro_call = crate::sema::ProgramElement::UserDefinedMacroCall {
 		macro_name: "".into(),
 		arguments:  Vec::new(),
 		span:       (0, 5).into(),
 	};
-	let include_source = crate::parser::ProgramElement::IncludeSource { file: "".into(), span: (0, 0).into() };
+	let include_source = crate::sema::ProgramElement::IncludeSource { file: "".into(), span: (0, 0).into() };
 	format!("{:?} {:?}", macro_call, include_source);
 	assert_eq!(macro_call.span(), (0, 5).into());
 	assert_eq!(macro_call.assembled_size(), 0);

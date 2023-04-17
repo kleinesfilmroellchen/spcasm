@@ -8,13 +8,12 @@ use miette::SourceOffset;
 #[allow(unused)]
 use smartstring::alias::String;
 
-use super::instruction::{MemoryAddress, Mnemonic};
-use super::register::Register;
-use super::token::Token;
-use super::Parse;
+use super::{Parse, Token};
 use crate::cli::Frontend;
 use crate::directive::DirectiveSymbol;
 use crate::error::AssemblyError;
+use crate::sema::instruction::{MemoryAddress, Mnemonic};
+use crate::sema::register::Register;
 use crate::AssemblyCode;
 
 macro_rules! start_of_identifier {

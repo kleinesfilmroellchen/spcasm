@@ -11,21 +11,24 @@ use std::collections::HashMap;
 use std::num::{NonZeroU64, NonZeroUsize};
 use std::sync::{Weak, Arc};
 
-use crate::parser::{
+use crate::sema::{
 	instruction::{Instruction, Mnemonic, AddressingMode, Opcode, MemoryAddress},
 	Environment,
 	AssemblyTimeValue,
 	value::{UnaryOperator, BinaryOperator, Size, SizedAssemblyTimeValue},
 	LabelUsageKind, 
-	Token,
 	Register,
 	reference::{Reference, MacroParent, RelativeReferenceDirection},
-	try_make_direct_page_addressing_mode,
-	source_range,
-	apply_brr_options,
-	apply_sample_table_options,
 	program::ProgramElement,
 };
+use crate::parser::{
+	Token,
+	source_range,
+	try_make_direct_page_addressing_mode,
+	apply_brr_options,
+	apply_sample_table_options
+};
+
 use crate::directive::{DirectiveSymbol, Directive, DirectiveValue, DirectiveParameter, FillOperation};
 use crate::error::AssemblyError;
 use crate::AssemblyCode;

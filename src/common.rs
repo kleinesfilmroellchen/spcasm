@@ -3,17 +3,17 @@
 use std::cmp::min;
 use std::sync::Arc;
 
-use miette::{Diagnostic, Severity};
+use miette::{Diagnostic, Severity, SourceSpan};
 use parking_lot::RwLock;
 #[allow(unused)]
 use smartstring::alias::String;
 
 pub use super::directive::Directive;
 pub use super::error::AssemblyError;
-pub use super::parser::Environment;
+pub use super::sema::Environment;
 use crate::cli::{default_backend_options, Frontend};
-use crate::parser::reference::Label;
-use crate::parser::ProgramElement;
+use crate::sema::reference::Label;
+use crate::sema::ProgramElement;
 use crate::{AssemblyCode, Segments};
 
 /// Assembler result type.
@@ -77,6 +77,25 @@ fn dump_reference_tree_impl(references: &mut dyn Iterator<Item = &Arc<RwLock<Lab
 /// Dumps the program AST (abstract syntax tree) for debugging purposes.
 pub fn dump_ast(ast: &[ProgramElement]) {
 	println!("AST:\n{}", ast.iter().map(ProgramElement::to_string).intersperse("\n".into()).collect::<String>());
+}
+
+/// Pseudo-`Display` implementation for `SourceSpan`.
+pub fn span_to_string(span: SourceSpan) -> String {
+	format!("({:<4}-{:<4})", span.offset(), span.offset() + span.len()).into()
+}
+
+/// Pseudo-`Display` implementation for the expected output of a program element.
+pub fn byte_vec_to_string(vec: &Option<Vec<u8>>) -> std::string::String {
+	vec.as_ref().map_or_else(std::string::String::new, |expected_value| {
+		format!(
+			"(expected {})",
+			expected_value
+				.iter()
+				.map(|element| format!("{:02X}", element))
+				.intersperse(" ".to_string())
+				.collect::<String>()
+		)
+	})
 }
 
 /// Run the assembler on a single file. No errors options are provided; this is mainly intended for non-clap builds

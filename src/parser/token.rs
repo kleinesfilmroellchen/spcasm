@@ -8,8 +8,8 @@ use miette::{SourceOffset, SourceSpan};
 use smartstring::alias::String;
 
 use crate::directive::DirectiveSymbol;
-use crate::parser::instruction::Mnemonic;
-use crate::parser::Register;
+use crate::sema::instruction::Mnemonic;
+use crate::sema::Register;
 use crate::{AssemblyCode, AssemblyError};
 
 /// Assembly language tokens.

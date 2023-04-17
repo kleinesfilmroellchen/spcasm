@@ -13,9 +13,9 @@ use thiserror::Error;
 
 use crate::cli::Frontend;
 use crate::directive::DirectiveSymbol;
-use crate::parser::instruction::{MemoryAddress, Mnemonic};
-use crate::parser::reference::Reference;
 use crate::parser::Token;
+use crate::sema::instruction::{MemoryAddress, Mnemonic};
+use crate::sema::reference::Reference;
 use crate::AssemblyCode;
 
 #[allow(clippy::module_name_repetitions)]

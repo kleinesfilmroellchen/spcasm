@@ -1,12 +1,12 @@
 //! Instruction/AST-related structs created in the parser and consumed in the assembler.
 #![allow(clippy::use_self)]
 
-use parking_lot::RwLock;
 use std::fmt::{Display, Error, Formatter};
 use std::result::Result;
 use std::sync::Arc;
 
 use miette::SourceSpan;
+use parking_lot::RwLock;
 #[allow(unused)]
 use smartstring::alias::String;
 use spcasm_derive::{Parse, VariantName};
@@ -14,9 +14,9 @@ use spcasm_derive::{Parse, VariantName};
 use super::reference::{self, Label, Reference, ReferenceResolvable};
 use super::register::Register;
 use crate::error::AssemblyError;
-use crate::parser::program::span_to_string;
-use crate::parser::AssemblyTimeValue;
-use crate::{AssemblyCode, VariantName};
+use crate::sema::AssemblyTimeValue;
+#[allow(unused)]
+use crate::{byte_vec_to_string, span_to_string, AssemblyCode, VariantName};
 
 /// Types for representing data and memory addresses (this is overkill).
 pub type MemoryAddress = i64;
@@ -88,7 +88,7 @@ impl std::fmt::Display for Instruction {
 	fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
 		write!(f, "{} {}", span_to_string(self.span), self.opcode)?;
 		#[cfg(test)]
-		write!(f, " {}", crate::parser::program::byte_vec_to_string(&self.expected_value))?;
+		write!(f, " {}", byte_vec_to_string(&self.expected_value))?;
 		Ok(())
 	}
 }

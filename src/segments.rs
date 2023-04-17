@@ -9,7 +9,7 @@ use smartstring::alias::String;
 
 use crate::assembler::sample_table::SampleTable;
 use crate::directive::DirectiveParameterTable;
-use crate::parser::instruction::MemoryAddress;
+use crate::sema::instruction::MemoryAddress;
 
 /// Handles binary segments and assembler state. The type of data contained within each segment is the generic
 /// parameter; the assembler uses memory values and other analysis passes use other kinds of information per assembled

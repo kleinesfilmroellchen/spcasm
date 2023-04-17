@@ -1,7 +1,6 @@
 //! Assembly directives and user-defined macros
 #![allow(clippy::module_name_repetitions)]
 
-use parking_lot::RwLock;
 use std::collections::HashMap;
 use std::fmt::Display;
 use std::hash::Hash;
@@ -11,16 +10,17 @@ use std::sync::Arc;
 use miette::SourceSpan;
 use num_derive::ToPrimitive;
 use num_traits::{FromPrimitive, ToPrimitive};
+use parking_lot::RwLock;
 #[allow(unused)]
 use smartstring::alias::String;
 use spcasm_derive::Parse;
 
-use crate::parser::instruction::MemoryAddress;
-use crate::parser::program::byte_vec_to_string;
-use crate::parser::reference::{Label, MacroParent, Reference, ReferenceResolvable};
-use crate::parser::value::{Size, SizedAssemblyTimeValue};
-use crate::parser::{self, source_range, AssemblyTimeValue, ProgramElement};
-use crate::{AssemblyCode, AssemblyError, Segments};
+use crate::parser::source_range;
+use crate::sema::instruction::MemoryAddress;
+use crate::sema::reference::{Label, MacroParent, Reference, ReferenceResolvable};
+use crate::sema::value::{Size, SizedAssemblyTimeValue};
+use crate::sema::{self, AssemblyTimeValue, ProgramElement};
+use crate::{byte_vec_to_string, span_to_string, AssemblyCode, AssemblyError, Segments};
 
 /// An assembly directive, often confusingly referred to as a "macro". spcasm uses the term "macro" to specifically mean
 /// user-defined macros, and "directive" to mean builtin commands (i.e. directives) to the assembler.
@@ -125,7 +125,7 @@ impl ReferenceResolvable for Directive {
 
 	fn resolve_relative_labels(
 		&mut self,
-		direction: parser::reference::RelativeReferenceDirection,
+		direction: sema::reference::RelativeReferenceDirection,
 		relative_labels: &HashMap<NonZeroU64, Arc<RwLock<Label>>>,
 	) {
 		self.value.resolve_relative_labels(direction, relative_labels);
@@ -142,13 +142,7 @@ impl ReferenceResolvable for Directive {
 
 impl std::fmt::Display for Directive {
 	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-		write!(
-			f,
-			"{} {:?} {}",
-			parser::program::span_to_string(self.span),
-			self.value,
-			byte_vec_to_string(&self.expected_value),
-		)
+		write!(f, "{} {:?} {}", span_to_string(self.span), self.value, byte_vec_to_string(&self.expected_value),)
 	}
 }
 
@@ -377,7 +371,7 @@ impl ReferenceResolvable for DirectiveValue {
 
 	fn resolve_relative_labels(
 		&mut self,
-		direction: parser::reference::RelativeReferenceDirection,
+		direction: sema::reference::RelativeReferenceDirection,
 		relative_labels: &HashMap<NonZeroU64, Arc<RwLock<Label>>>,
 	) {
 		match self {

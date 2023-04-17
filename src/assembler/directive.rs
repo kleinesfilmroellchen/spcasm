@@ -11,10 +11,10 @@ use smartstring::alias::String;
 use super::{resolve_file, AssembledData};
 use crate::brr::wav;
 use crate::directive::{DirectiveValue, FillOperation};
-use crate::parser::instruction::MemoryAddress;
-use crate::parser::reference::Reference;
-use crate::parser::value::{Size, SizedAssemblyTimeValue};
-use crate::parser::AssemblyTimeValue;
+use crate::sema::instruction::MemoryAddress;
+use crate::sema::reference::Reference;
+use crate::sema::value::{Size, SizedAssemblyTimeValue};
+use crate::sema::AssemblyTimeValue;
 use crate::{brr, AssemblyError, Directive};
 
 impl AssembledData {

@@ -364,8 +364,7 @@ impl Backend {
 			let source_code = Arc::new(AssemblyCode::new_from_path(&text, path));
 			self.environment.write().files.remove(&source_code.name);
 			let result = try {
-				let tokens =
-					spcasm::parser::lexer::lex(source_code.clone(), &*self.frontend).map_err(AssemblyError::from)?;
+				let tokens = spcasm::parser::lex(source_code.clone(), &*self.frontend).map_err(AssemblyError::from)?;
 				let program =
 					Environment::parse(&self.environment, tokens, &source_code).map_err(AssemblyError::from)?;
 				let mut segmented_program = program.write().split_into_segments().map_err(AssemblyError::from)?;

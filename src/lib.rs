@@ -52,15 +52,10 @@ w_error!(mod directive);
 #[cfg(feature = "binaries")]
 w_error!(pub mod elf);
 w_error!(mod error);
-w_error!(mod lalrpop_adaptor);
+w_error!(pub mod sema);
 w_error!(pub mod parser);
 w_error!(mod segments);
 w_error!(mod source);
-
-lalrpop_mod!(
-	#[allow(missing_docs, unused, clippy::all, clippy::pedantic, clippy::nursery)]
-	asm
-);
 
 #[cfg(feature = "binaries")]
 shadow_rs::shadow!(buildinfo);

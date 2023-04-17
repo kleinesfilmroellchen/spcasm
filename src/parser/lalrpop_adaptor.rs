@@ -6,9 +6,10 @@ use std::vec::IntoIter;
 #[allow(unused)]
 use smartstring::alias::String;
 
+use super::{source_range, Token};
 use crate::error::AssemblyError;
-use crate::parser::reference::RelativeReferenceDirection;
-use crate::parser::{source_range, Register, Token};
+use crate::sema::reference::RelativeReferenceDirection;
+use crate::sema::Register;
 
 /// An API adaptor that allows us to pass the Vec<Token> we lexed into LALRPOP.
 pub struct LalrpopAdaptor(IntoIter<Token>);

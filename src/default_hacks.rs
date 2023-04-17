@@ -13,7 +13,7 @@ use smartstring::alias::String;
 
 use crate::directive::DirectiveSymbol;
 use crate::error::{ReferenceType, TokenOrString};
-use crate::parser::instruction::Mnemonic;
+use crate::sema::instruction::Mnemonic;
 use crate::parser::Token;
 use crate::AssemblyCode;
 

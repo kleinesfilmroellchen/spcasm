@@ -1,5 +1,4 @@
 //! Instruction/AST-related structs created in the parser and consumed in the assembler.
-#![allow(clippy::use_self)]
 
 use std::fmt::{Display, Error, Formatter};
 use std::result::Result;
@@ -670,23 +669,23 @@ impl AddressingMode {
 	#[must_use]
 	pub fn assembled_size(self) -> u8 {
 		match self {
-			AddressingMode::IndirectX
-			| AddressingMode::IndirectY
-			| AddressingMode::IndirectXAutoIncrement
-			| AddressingMode::CarryFlag
-			| AddressingMode::Register(_) => 0,
-			AddressingMode::Immediate(_)
-			| AddressingMode::DirectPageXIndexedIndirect(_)
-			| AddressingMode::DirectPageIndirectYIndexed(_)
-			| AddressingMode::DirectPage(_)
-			| AddressingMode::DirectPageXIndexed(_)
-			| AddressingMode::DirectPageBit(_, _) // bit will be merged into opcode byte, so it needs no extra space
-			| AddressingMode::DirectPageYIndexed(_) => 1,
-			AddressingMode::AddressBit(_, _)
-			| AddressingMode::NegatedAddressBit(_, _)
-			| AddressingMode::Address(_)
-			| AddressingMode::XIndexed(_)
-			| AddressingMode::YIndexed(_) => 2,
+			Self::IndirectX
+			| Self::IndirectY
+			| Self::IndirectXAutoIncrement
+			| Self::CarryFlag
+			| Self::Register(_) => 0,
+			Self::Immediate(_)
+			| Self::DirectPageXIndexedIndirect(_)
+			| Self::DirectPageIndirectYIndexed(_)
+			| Self::DirectPage(_)
+			| Self::DirectPageXIndexed(_)
+			| Self::DirectPageBit(_, _) // bit will be merged into opcode byte, so it needs no extra space
+			| Self::DirectPageYIndexed(_) => 1,
+			Self::AddressBit(_, _)
+			| Self::NegatedAddressBit(_, _)
+			| Self::Address(_)
+			| Self::XIndexed(_)
+			| Self::YIndexed(_) => 2,
 		}
 	}
 
@@ -709,23 +708,23 @@ impl ReferenceResolvable for AddressingMode {
 		source_code: &Arc<AssemblyCode>,
 	) -> Result<(), Box<AssemblyError>> {
 		match self {
-			AddressingMode::Immediate(number)
-			| AddressingMode::DirectPage(number)
-			| AddressingMode::DirectPageXIndexed(number)
-			| AddressingMode::DirectPageYIndexed(number)
-			| AddressingMode::Address(number)
-			| AddressingMode::XIndexed(number)
-			| AddressingMode::YIndexed(number)
-			| AddressingMode::DirectPageXIndexedIndirect(number)
-			| AddressingMode::DirectPageIndirectYIndexed(number)
-			| AddressingMode::DirectPageBit(number, _)
-			| AddressingMode::AddressBit(number, _)
-			| AddressingMode::NegatedAddressBit(number, _) => number.replace_macro_parent(replacement_parent, source_code),
-			AddressingMode::IndirectX
-			| AddressingMode::IndirectY
-			| AddressingMode::IndirectXAutoIncrement
-			| AddressingMode::CarryFlag
-			| AddressingMode::Register(_) => Ok(()),
+			Self::Immediate(number)
+			| Self::DirectPage(number)
+			| Self::DirectPageXIndexed(number)
+			| Self::DirectPageYIndexed(number)
+			| Self::Address(number)
+			| Self::XIndexed(number)
+			| Self::YIndexed(number)
+			| Self::DirectPageXIndexedIndirect(number)
+			| Self::DirectPageIndirectYIndexed(number)
+			| Self::DirectPageBit(number, _)
+			| Self::AddressBit(number, _)
+			| Self::NegatedAddressBit(number, _) => number.replace_macro_parent(replacement_parent, source_code),
+			Self::IndirectX
+			| Self::IndirectY
+			| Self::IndirectXAutoIncrement
+			| Self::CarryFlag
+			| Self::Register(_) => Ok(()),
 		}
 	}
 
@@ -735,23 +734,23 @@ impl ReferenceResolvable for AddressingMode {
 		relative_labels: &std::collections::HashMap<std::num::NonZeroU64, Arc<RwLock<Label>>>,
 	) {
 		match self {
-			AddressingMode::Immediate(number)
-			| AddressingMode::DirectPage(number)
-			| AddressingMode::DirectPageXIndexed(number)
-			| AddressingMode::DirectPageYIndexed(number)
-			| AddressingMode::Address(number)
-			| AddressingMode::XIndexed(number)
-			| AddressingMode::YIndexed(number)
-			| AddressingMode::DirectPageXIndexedIndirect(number)
-			| AddressingMode::DirectPageIndirectYIndexed(number)
-			| AddressingMode::DirectPageBit(number, _)
-			| AddressingMode::AddressBit(number, _)
-			| AddressingMode::NegatedAddressBit(number, _) => number.resolve_relative_labels(direction, relative_labels),
-			AddressingMode::IndirectX
-			| AddressingMode::IndirectY
-			| AddressingMode::IndirectXAutoIncrement
-			| AddressingMode::CarryFlag
-			| AddressingMode::Register(_) => (),
+			Self::Immediate(number)
+			| Self::DirectPage(number)
+			| Self::DirectPageXIndexed(number)
+			| Self::DirectPageYIndexed(number)
+			| Self::Address(number)
+			| Self::XIndexed(number)
+			| Self::YIndexed(number)
+			| Self::DirectPageXIndexedIndirect(number)
+			| Self::DirectPageIndirectYIndexed(number)
+			| Self::DirectPageBit(number, _)
+			| Self::AddressBit(number, _)
+			| Self::NegatedAddressBit(number, _) => number.resolve_relative_labels(direction, relative_labels),
+			Self::IndirectX
+			| Self::IndirectY
+			| Self::IndirectXAutoIncrement
+			| Self::CarryFlag
+			| Self::Register(_) => (),
 		}
 	}
 

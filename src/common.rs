@@ -80,6 +80,7 @@ pub fn dump_ast(ast: &[ProgramElement]) {
 }
 
 /// Pseudo-`Display` implementation for `SourceSpan`.
+#[must_use]
 pub fn span_to_string(span: SourceSpan) -> String {
 	format!("({:<4}-{:<4})", span.offset(), span.offset() + span.len()).into()
 }

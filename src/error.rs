@@ -440,7 +440,8 @@ pub enum AssemblyError {
 		help(
 			"Because the directive argument can determine a reference's position, resolving the argument value is not \
 			 generally possible. For this reason, references are not allowed to be used in a directive argument."
-		)
+		),
+		severity(Error)
 	)]
 	ReferencesInDirectiveArgument {
 		directive: DirectiveSymbol,

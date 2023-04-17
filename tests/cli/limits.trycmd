@@ -6,7 +6,7 @@ $ spcasm -w all -r 40 tests/opcodes.s
 ```trycmd
 $ spcasm -r 1 tests/user-macro.spcasmtest
 ? 1
-Error: spcasm::user_macro::recursive_use
+spcasm::user_macro::recursive_use
 
   × Maximum recursion depth 1 was exceeded while expanding user macro
   │ 'has_argument'
@@ -31,7 +31,7 @@ Error: spcasm::user_macro::recursive_use
 ```trycmd
 $ spcasm -r 0 tests/user-macro.spcasmtest
 ? 1
-Error: spcasm::user_macro::recursive_use
+spcasm::user_macro::recursive_use
 
   × Maximum recursion depth 0 was exceeded while expanding user macro
   │ 'do_nothing'
@@ -66,7 +66,7 @@ $ spcasm -w all -l 1 tests/opcodes.s
 ```trycmd
 $ spcasm -w all -l 0 tests/opcodes.s
 ? 1
-Error: spcasm::reference::unresolved
+spcasm::reference::unresolved
 
   × Reference 'data' can not be resolved to a value
     ╭─[tests/opcodes.s:10:1]

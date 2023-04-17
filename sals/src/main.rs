@@ -399,7 +399,7 @@ async fn main() {
 	let environment = Environment::new();
 	let frontend = Arc::new(ServerFrontend::default());
 	environment.write().set_error_options(frontend.clone());
-	let (service, socket) = LspService::build(|client| Backend { client, environment, frontend }).finish();
+	let (service, socket) = LspService::build(|client| Backend { client, frontend, environment }).finish();
 
 	Server::new(stdin, stdout, socket).serve(service).await;
 }

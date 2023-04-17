@@ -60,7 +60,7 @@ impl FakeDefaultForIgnoredValues for std::io::Error {
 }
 impl FakeDefaultForIgnoredValues for Arc<std::io::Error> {
 	fn default() -> Self {
-		Arc::new(std::io::ErrorKind::Other.into())
+		Self::new(std::io::ErrorKind::Other.into())
 	}
 }
 

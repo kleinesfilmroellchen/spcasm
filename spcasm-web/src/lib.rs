@@ -132,20 +132,18 @@ pub fn on_assembly_change(options: JsValue) {
 	let end_time = js_sys::Date::now();
 	let elapsed_time = end_time - start_time;
 
-	let status_text = match assembler_result {
-		Ok((_environment, binary)) => {
-			let binary_text = pretty_hex(&binary, None);
-			output.set_inner_html(&htmlify(&binary_text));
-			"Assembly compiled successfully."
-		},
-		Err(_) => {
-			let mut rendered = String::new();
-			for error in options.diagnostics.read().unwrap().iter() {
-				report_handler.render_report(&mut rendered, error).expect("couldn't render report");
-			}
-			output.set_inner_html(&htmlify(&rendered));
-			"Couldn't compile assembly."
-		},
+	let status_text = if let Ok((_environment, binary)) = assembler_result {
+		let binary_text = pretty_hex(&binary, None);
+		output.set_inner_html(&htmlify(&binary_text));
+		"Assembly compiled successfully."
+	} else {
+		let mut rendered = String::new();
+		#[allow(clippy::significant_drop_in_scrutinee)] // noone else can actually access the frontend object
+		for error in options.diagnostics.read().unwrap().iter() {
+			report_handler.render_report(&mut rendered, error).expect("couldn't render report");
+		}
+		output.set_inner_html(&htmlify(&rendered));
+		"Couldn't compile assembly."
 	};
 	status_paragraph.set_inner_html(&htmlify(&format!("{status_text} ({}ms)", elapsed_time.floor() as i64)));
 }

@@ -3,6 +3,7 @@
 use std::cmp::min;
 use std::sync::Arc;
 
+use miette::{Diagnostic, Severity};
 use parking_lot::RwLock;
 #[allow(unused)]
 use smartstring::alias::String;
@@ -54,8 +55,8 @@ fn dump_reference_tree_impl(references: &mut dyn Iterator<Item = &Arc<RwLock<Lab
 			.map_or_else(|| "(unknown)".to_string(), |location| format!("{:04X}", location));
 
 		println!(
-			"{:<40} {:>8}",
-			format!("{}{}{}", if level > 0 { " " } else { "" }, ".".repeat(level), global.name),
+			"{:_<70}{:>8}",
+			format!("{}{}{} ", if level > 0 { " " } else { "" }, ".".repeat(level), global.name),
 			label_text
 		);
 		let mut locals = global.children.values().collect::<Vec<_>>();
@@ -100,22 +101,24 @@ pub fn run_assembler_on_file(file_name: &str, options: Arc<dyn Frontend>) -> Ass
 ///
 /// # Errors
 /// Any assembler errors are propagated to the caller.
+#[allow(clippy::needless_pass_by_value)]
 pub fn run_assembler(source_code: &Arc<AssemblyCode>, options: Arc<dyn Frontend>) -> AssemblyResult {
-	let result = try {
+	let result: Result<_, AssemblyError> = try {
 		let (env, mut segmented_program) = run_assembler_into_symbolic_segments(source_code, options.clone())?;
 		let assembled = crate::assembler::assemble_from_segments(&mut segmented_program, source_code, options.clone())?;
-		Ok((env, assembled))
+		(env, assembled)
 	};
-	if let Err(ref why) = result && !options.is_ignored(why) {
+	if let Err(ref why ) = result && (why.severity().is_some_and(|severity| severity == Severity::Error) || !options.is_ignored(why)) {
 		options.report_diagnostic(why.clone());
 	}
-	result.map_err(AssemblyError::from)?
+	result.map_err(miette::Report::from)
 }
 
 /// Run the assembler on the given source code and return the segmented AST as well as the environment.
 ///
 /// # Errors
 /// Any assembler errors are propagated to the caller.
+#[allow(clippy::needless_pass_by_value, clippy::type_complexity)]
 pub fn run_assembler_into_symbolic_segments(
 	source_code: &Arc<AssemblyCode>,
 	options: Arc<dyn Frontend>,

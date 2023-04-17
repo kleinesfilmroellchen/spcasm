@@ -55,6 +55,8 @@ pub fn main() -> miette::Result<()> {
 					outfile.write_fmt(format_args!("{}", crate::pretty_hex(&assembled, None))).unwrap(),
 			};
 		}
+		Ok(())
+	} else {
+		std::process::exit(1);
 	}
-	Ok(())
 }

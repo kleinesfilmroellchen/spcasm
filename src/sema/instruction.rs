@@ -720,11 +720,8 @@ impl ReferenceResolvable for AddressingMode {
 			| Self::DirectPageBit(number, _)
 			| Self::AddressBit(number, _)
 			| Self::NegatedAddressBit(number, _) => number.replace_macro_parent(replacement_parent, source_code),
-			Self::IndirectX
-			| Self::IndirectY
-			| Self::IndirectXAutoIncrement
-			| Self::CarryFlag
-			| Self::Register(_) => Ok(()),
+			Self::IndirectX | Self::IndirectY | Self::IndirectXAutoIncrement | Self::CarryFlag | Self::Register(_) =>
+				Ok(()),
 		}
 	}
 
@@ -746,11 +743,8 @@ impl ReferenceResolvable for AddressingMode {
 			| Self::DirectPageBit(number, _)
 			| Self::AddressBit(number, _)
 			| Self::NegatedAddressBit(number, _) => number.resolve_relative_labels(direction, relative_labels),
-			Self::IndirectX
-			| Self::IndirectY
-			| Self::IndirectXAutoIncrement
-			| Self::CarryFlag
-			| Self::Register(_) => (),
+			Self::IndirectX | Self::IndirectY | Self::IndirectXAutoIncrement | Self::CarryFlag | Self::Register(_) =>
+				(),
 		}
 	}
 

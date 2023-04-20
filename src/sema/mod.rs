@@ -308,6 +308,8 @@ impl AssemblyFile {
 
 		let mut current_forward_relative_label_map = HashMap::new();
 		// Reverse iteration to resolve forward references.
+		// Also use this second pass to resolve hierarchical local label shorthands (`global_local` for referencing
+		// `global: .local: ...`)
 		for element in self.content.iter_mut().rev() {
 			if let ProgramElement::Label(Reference::Relative {
 				direction: RelativeReferenceDirection::Forward,

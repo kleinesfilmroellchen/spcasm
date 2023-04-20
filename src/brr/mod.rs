@@ -399,14 +399,14 @@ impl Block {
 	/// -1.
 	#[inline]
 	#[must_use]
-	pub const fn perform_shift(&self, sample: DecodedSample) -> DecodedSample {
+	pub fn perform_shift(&self, sample: DecodedSample) -> DecodedSample {
 		Self::perform_shift_with(self.header.real_shift, sample)
 	}
 
 	/// Executes the given shift on the given sample, taking care to shift right by 1 if the shift amount is -1.
 	#[inline]
 	#[must_use]
-	pub const fn perform_shift_with(shift: i8, sample: DecodedSample) -> DecodedSample {
+	pub fn perform_shift_with(shift: i8, sample: DecodedSample) -> DecodedSample {
 		if shift == 0 {
 			Some(sample)
 		} else if shift > 0 {
@@ -414,6 +414,7 @@ impl Block {
 		} else {
 			sample.checked_shr(shift.unsigned_abs() as u32)
 		}
+		// FIXME: unwrap_or suddenly became non-const in 1.71 nightly, make function const again once that is fixed.
 		.unwrap_or(if sample > 0 { DecodedSample::MAX } else { DecodedSample::MIN })
 	}
 

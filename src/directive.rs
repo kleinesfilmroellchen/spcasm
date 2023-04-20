@@ -445,7 +445,7 @@ pub enum DirectiveParameter {
 
 // Special perfect hash for DirectiveParameters.
 impl Hash for DirectiveParameter {
-	fn hash<H: ~const std::hash::Hasher>(&self, state: &mut H) {
+	fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
 		state.write_u8(self.to_u8().expect("unreachable"));
 	}
 }

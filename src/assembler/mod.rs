@@ -122,7 +122,7 @@ pub struct AssembledData {
 }
 
 impl AssembledData {
-	const DEFAULT_VEC: &'static Vec<Reference> = &Vec::default();
+	const DEFAULT_VEC: &'static Vec<Reference> = &Vec::new();
 
 	/// Combine the segments into one binary stream. The result has correct memory addresses, so the first byte is
 	/// memory address 0 etc.

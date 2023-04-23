@@ -9,6 +9,7 @@ use clap::Args;
 #[cfg(feature = "binaries")]
 use miette::Diagnostic;
 use miette::Severity;
+use parking_lot::RwLock;
 #[allow(unused)]
 use smartstring::alias::String;
 
@@ -41,7 +42,7 @@ pub trait Frontend: std::fmt::Debug + Send + Sync {
 	/// ``report_diagnostic_impl``.
 	fn report_diagnostic(&self, diagnostic: AssemblyError) {
 		// Pass on anything that is either an error or not ignored.
-		if diagnostic.severity().is_some_and(|severity| severity == Severity::Error) || !self.is_ignored(&diagnostic) {
+		if diagnostic.severity().is_some_and(|severity| severity == Severity::Error) || self.is_error(&diagnostic) || !self.is_ignored(&diagnostic) {
 			self.report_diagnostic_impl(diagnostic);
 		}
 	}
@@ -54,7 +55,7 @@ pub fn default_backend_options() -> Arc<dyn Frontend> {
 }
 
 /// Backend options created by clap in binary builds.
-#[derive(Debug, Clone, Eq, PartialEq, Default, Args)]
+#[derive(Debug, Default, Args)]
 #[cfg(feature = "binaries")]
 #[allow(clippy::module_name_repetitions)]
 pub struct CliOptions {
@@ -78,6 +79,9 @@ pub struct CliOptions {
 	/// Any recursion exceeding this value will cause a specific error.
 	#[arg(long, short = 'r', default_value = "1000")]
 	pub(crate) macro_recursion_limit: usize,
+
+	#[clap(skip = RwLock::new(false))]
+	pub(crate) had_error: RwLock<bool>,
 }
 
 #[cfg(feature = "binaries")]
@@ -119,6 +123,9 @@ impl Frontend for CliOptions {
 	}
 
 	fn report_diagnostic_impl(&self, diagnostic: AssemblyError) {
+		if self.is_error(&diagnostic) {
+			*self.had_error.write() = true;
+		}
 		println!("{:?}", miette::Report::new(diagnostic));
 	}
 }

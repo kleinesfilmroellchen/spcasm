@@ -26,13 +26,17 @@ pub fn main() -> miette::Result<()> {
 	let options = std::sync::Arc::new(args.warning_flags);
 	let code = AssemblyCode::from_file_or_assembly_error(&file_name.to_string_lossy()).map_err(AssemblyError::from)?;
 	// Errors are already reported, so we only need to handle the success case.
-	if let Ok((environment, assembled)) = run_assembler(&code, options) {
+	if let Ok((environment, assembled)) = run_assembler(&code, options.clone()) {
 		if args.dump_references {
 			dump_reference_tree(&environment.read_recursive().globals);
 		}
 
 		if args.dump_ast {
 			dump_ast(&environment.read_recursive().files.get(&code.name).unwrap().read_recursive().content);
+		}
+
+		if *options.had_error.read() {
+			std::process::exit(1);
 		}
 
 		if let Some(outfile) = args.output {

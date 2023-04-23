@@ -64,6 +64,7 @@ spcasm has a whole collection of features targeted at compatibility with the pop
 
 ```trycmd
 $ spcasm -W value_too_large tests/parse.spcasmtest
+? 1
 spcasm::value_too_large
 
   ⚠ The value `FFFFFFFFFFFFFF4D` is being used as a 8-bit operand here, but it

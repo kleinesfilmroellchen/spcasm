@@ -243,10 +243,11 @@ IdentifierOptions = "identifier"*;
 ArchDirective: Directive = <directive:"arch"> <arch:"identifier"> =>? {
 	let architecture = arch.0;
 	if ["spc700", "spc700-raw"].contains(&&*architecture) {
-		environment.read_recursive().report_or_throw(AssemblyError::ArchitectureDirectiveIgnored {
+		environment.read_recursive().options.report_diagnostic(AssemblyError::ArchitectureDirectiveIgnored {
 			src:      source_code.clone(),
 			location: source_range(directive.into(), arch.1.into()),
-		}).map_err(|error| ParseError::User { error: *error }).map(|_| Directive::default())
+		});
+		Ok(Directive::default())
 	} else {
 		Err(AssemblyError::InvalidArchitectureDirective {
 			arch:     architecture,

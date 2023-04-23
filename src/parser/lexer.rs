@@ -251,14 +251,13 @@ fn next_number(
 				if must_be_number {
 					Err(AssemblyError::InvalidNumber { error, location, src: source_code.clone() }.into())
 				} else {
-					AssemblyError::NumberIdentifier {
+					options.report_diagnostic(AssemblyError::NumberIdentifier {
 						text: number_chars.clone(),
 						error,
 						location: (start_index, number_chars.len()).into(),
 						src: source_code.clone(),
-					}
-					.report_or_throw(options)
-					.map(|_| Token::Identifier(number_chars.clone(), location))
+					});
+					Ok(Token::Identifier(number_chars.clone(), location))
 				}
 			},
 			|number| {

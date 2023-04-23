@@ -66,16 +66,6 @@ impl Environment {
 		self.options = options;
 	}
 
-	/// Report or throw an error depending on what command-line options this assembly data object knows about. If error
-	/// options are not available (on non-clap builds, e.g. tests), this always reports the error.
-	/// # Errors
-	/// The provided error is re-thrown if the error options specify to do so. On non-clap builds, this function never
-	/// errors.
-	#[allow(clippy::unnecessary_wraps, clippy::unused_self)]
-	pub(crate) fn report_or_throw(&self, error: AssemblyError) -> Result<(), Box<AssemblyError>> {
-		error.report_or_throw(&*self.options)
-	}
-
 	/// Searches for an existing parsed file in this environment given that file's source code.
 	/// Note that the source code does not have to be the identical object in memory, it just has to compare equal.
 	/// See ``AssemblyCode::eq`` for the equality semantics of the source code objects.

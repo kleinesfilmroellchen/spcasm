@@ -11,7 +11,6 @@ use smartstring::alias::String;
 use spcasm_derive::ErrorCodes;
 use thiserror::Error;
 
-use crate::cli::Frontend;
 use crate::directive::DirectiveSymbol;
 use crate::parser::Token;
 use crate::sema::instruction::{MemoryAddress, Mnemonic};
@@ -782,18 +781,6 @@ impl AssemblyError {
 				Self::DanglingTokens { location: (start, end - start).into(), src },
 			ParseError::User { error } => error,
 		}
-	}
-
-	/// Report or throw this warning (or error), depending on what the user specified on the command line. On non-clap
-	/// builds, this always reports the error.
-	#[allow(clippy::trivially_copy_pass_by_ref)]
-	pub(crate) fn report_or_throw(self, options: &dyn Frontend) -> Result<(), Box<Self>> {
-		if options.is_error(&self) {
-			return Err(self.into());
-		} else if !options.is_ignored(&self) {
-			options.report_diagnostic_impl(self);
-		}
-		Ok(())
 	}
 
 	pub(crate) fn from_number_error(location: SourceSpan, src: Arc<AssemblyCode>) -> Self {

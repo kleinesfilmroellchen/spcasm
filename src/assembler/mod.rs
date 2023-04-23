@@ -190,15 +190,6 @@ impl AssembledData {
 		self
 	}
 
-	/// Report or throw an error depending on what command-line options this assembly data object knows about. If error
-	/// options are not available (on non-clap builds, e.g. tests), this always reports the error.
-	/// # Errors
-	/// The provided error is re-thrown if the error options specify to do so. On non-clap builds, this function never
-	/// errors.
-	pub fn report_or_throw(&self, error: AssemblyError) -> Result<(), Box<AssemblyError>> {
-		error.report_or_throw(&*self.options)
-	}
-
 	/// Assemble a single instruction. This function uses the codegen table `table::assembly_table`.
 	#[allow(clippy::unnecessary_wraps, clippy::too_many_lines)]
 	fn assemble_instruction(
@@ -398,13 +389,13 @@ impl AssembledData {
 		labels: &[Reference],
 		span: SourceSpan,
 	) -> Result<(), Box<AssemblyError>> {
-		if (value & 0xFF) != value {
-			self.report_or_throw(AssemblyError::ValueTooLarge {
+		if <MemoryAddress as TryInto<u8>>::try_into(value).is_err() {
+			self.options.report_diagnostic(AssemblyError::ValueTooLarge {
 				value,
 				location: span,
 				src: self.source_code.clone(),
 				size: 8,
-			})?;
+			});
 		}
 		self.append((value & 0xFF) as u8, labels, span)
 	}
@@ -632,8 +623,7 @@ impl AssembledData {
 						}
 						.err()
 					})
-					.find_map(|err| err.report_or_throw(&*self.options).err())
-					.map_or_else(|| Ok(()), Err)?;
+					.for_each(|err| self.options.report_diagnostic(*err));
 				// Resolve a reference used as a memory address, e.g. in an instruction operand like a jump target.
 				had_modifications |= datum.try_resolve(memory_address, &self.source_code, &*self.options);
 			}

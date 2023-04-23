@@ -362,7 +362,7 @@ impl ReferenceResolvable for DirectiveValue {
 					body.first().map_or_else(|| (0, 0).into(), ProgramElement::span).into(),
 					body.last().map_or_else(|| (0, 0).into(), ProgramElement::span).into(),
 				),
-				outer:    replacement_parent.read().global_label().read().span,
+				outer:    replacement_parent.read().global_label().read().source_span(),
 				src:      source_code.clone(),
 			}
 			.into()),

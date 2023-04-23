@@ -230,8 +230,8 @@ fn coverage() {
 			children:        BTreeMap::new(),
 			location:        None,
 			name:            "example".into(),
-			used_as_address: true,
-			span:            (0, 0).into(),
+			usage_spans:     Vec::new(),
+			definition_span: Some((0, 0).into()),
 			parent:          Weak::new(),
 		}
 		.into(),

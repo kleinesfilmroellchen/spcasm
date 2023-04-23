@@ -138,7 +138,7 @@ spcasm::directive::invalid_directive_option
    ·         │              ╰── Invalid option specified here
    ·         ╰── `brr` directive defined here
    ╰────
-  help: The valid options are `nodirectory`, `autotrim`
+  help: The valid options are `nodirectory`, `autotrim`.
 
 
 ```
@@ -159,7 +159,7 @@ spcasm::directive::invalid_range
    ·                       ─┬─
    ·                        ╰── In this range
    ╰────
-  help: Switch the range limits around: `2-4`
+  help: Switch the range limits around: `2-4`.
 
 
 ```
@@ -231,7 +231,7 @@ spcasm::directive::range_out_of_bounds
    · ────────────────┬────────────────
    ·                 ╰── Out of bounds range defined here
    ╰────
-  help: The input's length is 6
+  help: The input's length is 6.
 
 
 ```
@@ -321,7 +321,7 @@ $ spcasm tests/errors/sample-table-unaligned.spcasmtest
 ? 1
 spcasm::directive::unaligned_sample_table
 
-  × Sample table at address 0057 is not correctly aligned
+  × Sample table at address `0057` is not correctly aligned
    ╭─[tests/errors/sample-table-unaligned.spcasmtest:1:1]
  1 │ org $56
  2 │ db $aa
@@ -576,7 +576,7 @@ spcasm::reference::missing_global
    ·       ╰── Local label defined here
  3 │     nop
    ╰────
-  help: Add a global label before defining this local label
+  help: Add a global label before defining this local label.
 
 
 ```
@@ -815,7 +815,7 @@ $ spcasm tests/errors/parser-unexpected-char.spcasmtest
 ? 1
 spcasm::syntax::unexpected_character
 
-  × Unexpected character ö
+  × Unexpected character "ö"
    ╭─[tests/errors/parser-unexpected-char.spcasmtest:1:1]
  1 │ ö
    · ▲

@@ -311,6 +311,22 @@ pub enum AssemblyError {
 		src:                Arc<AssemblyCode>,
 	},
 
+	#[error("Reference '{reference}' was defined more than once")]
+	#[diagnostic(
+		code(spcasm::reference::redefine),
+		severity(Error),
+		help("Local references are a convenient way to safely reuse common names like '.loop' or '.end'.")
+	)]
+	RedefinedReference {
+		reference:          String,
+		#[label("'{reference}' first defined here…")]
+		reference_location: SourceSpan,
+		#[label("… and later redefined here")]
+		redefine_location:  SourceSpan,
+		#[source_code]
+		src:                Arc<AssemblyCode>,
+	},
+
 	#[error("Reference '\\@' can not be resolved to a value")]
 	#[diagnostic(
 		code(spcasm::reference::unresolved),

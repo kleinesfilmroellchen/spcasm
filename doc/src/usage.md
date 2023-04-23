@@ -24,25 +24,25 @@ Options:
 
   -l, --reference-pass-limit <REFERENCE_PASS_LIMIT>
           Limit for the number of reference resolution passes spcasm will perform.
-
+          
           Usually 2-3 passes are enough and very high pass numbers often indicate infinite loops. If
           this number of passes is exceeded during reference resolution, spcasm will report
           unresolved references as normal.
-
+          
           [default: 10]
 
   -r, --macro-recursion-limit <MACRO_RECURSION_LIMIT>
           Limit for the number of recursive macro calls allowed by spcasm.
-
+          
           Increase this limit carefully; very high recursion amounts are usually caused by
           infinitely recursive macros. Any recursion exceeding this value will cause a specific
           error.
-
+          
           [default: 1000]
 
   -f, --output-format <OUTPUT_FORMAT>
           Format to output to
-
+          
           [default: elf]
 
           Possible values:
@@ -56,7 +56,7 @@ Options:
   -a, --dump-ast
           Dump the program's abstract syntax tree. This is a debugging feature and most likely not
           useful to the end user.
-
+          
           WARNING: This option will, in specific circumstances, loop forever trying to print
           recursive data structures. This can happen on well-formed programs.
 
@@ -210,7 +210,7 @@ Options:
   -c, --compression <COMPRESSION>
           Compression level to use; higher levels mean better audio fidelity. 0: Only use filter 0,
           1: Use all filters with non-wrapping optimal shift, 2: Use all filters with optimal shift.
-
+          
           [default: 2]
 
   -f, --filter [<FILTER>]

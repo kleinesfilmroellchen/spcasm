@@ -164,28 +164,43 @@ impl Environment {
 	}
 
 	/// Lookup a global label in this environment, and create it if necessary.
+	///
+	/// # Errors
+	/// If the label is already defined, and the label usage kind is for a definition, a redefinition error is returned.
 	pub fn get_global_label(
 		&mut self,
 		name: &'_ str,
 		span: SourceSpan,
 		usage_kind: LabelUsageKind,
-	) -> Arc<RwLock<Label>> {
+		source_code: &Arc<AssemblyCode>,
+	) -> Result<Arc<RwLock<Label>>, AssemblyError> {
 		if let Some(matching_reference) = self.globals.iter_mut().find(|reference| reference.read().name == name) {
 			let mut mutable_matching_reference = matching_reference.write();
-			if usage_kind == LabelUsageKind::AsAddress && !mutable_matching_reference.used_as_address {
-				mutable_matching_reference.used_as_address = true;
-			}
-			// If the caller flags this use of the reference as its definition, we override the reference's position
-			// with what we were just given.
+			// If the caller flags this use of the reference as its definition, we check that this is the first
+			// definition.
 			if usage_kind == LabelUsageKind::AsDefinition {
-				mutable_matching_reference.span = span;
+				if mutable_matching_reference.has_definition() {
+					return Err(AssemblyError::RedefinedReference {
+						redefine_location:  span,
+						reference_location: mutable_matching_reference.source_span(),
+						reference:          mutable_matching_reference.to_string().into(),
+						src:                source_code.clone(),
+					});
+				} else {
+					mutable_matching_reference.definition_span = Some(span);
+				}
+			} else {
+				mutable_matching_reference.usage_spans.push(span);
 			}
-			matching_reference.clone()
+			Ok(matching_reference.clone())
 		} else {
-			let new_reference = Label::new(name.into(), span);
-			new_reference.write().used_as_address = usage_kind == LabelUsageKind::AsAddress;
+			let new_reference = if usage_kind == LabelUsageKind::AsDefinition {
+				Label::new_with_definition(name.into(), span)
+			} else {
+				Label::new_with_use(name.into(), span)
+			};
 			self.globals.push(new_reference.clone());
-			new_reference
+			Ok(new_reference)
 		}
 	}
 }
@@ -275,8 +290,8 @@ impl AssemblyFile {
 					// To reference the relative label until codegen, create a new local label for it.
 					// This name is likely, but not guaranteed, to be unique! That's why we directly insert into
 					// the globals list.
-					let global_for_relative = Label::new(format!("ref_-_{}_{}", id, span.offset()).into(), *span);
-					global_for_relative.write().used_as_address = true;
+					let global_for_relative =
+						Label::new_with_definition(format!("ref_-_{}_{}", id, span.offset()).into(), *span);
 					self.parent
 						.upgrade()
 						.expect("parent disappeared")
@@ -320,8 +335,8 @@ impl AssemblyFile {
 			{
 				let id = *id;
 				// To reference the relative label until codegen, create a new local label for it.
-				let global_for_relative = Label::new(format!("ref_+_{}_{}", id, span.offset()).into(), *span);
-				global_for_relative.write().used_as_address = true;
+				let global_for_relative =
+					Label::new_with_definition(format!("ref_+_{}_{}", id, span.offset()).into(), *span);
 				self.parent.upgrade().expect("parent disappeared").write().globals.push(global_for_relative.clone());
 				*element = ProgramElement::Label(Reference::Label(global_for_relative.clone()));
 				current_forward_relative_label_map.insert(id, global_for_relative);
@@ -408,9 +423,10 @@ impl AssemblyFile {
 					if matches!(&directive.value, DirectiveValue::Brr { directory: true, .. })
 						&& current_labels.is_empty()
 					{
-						let new_brr_label =
-							Label::new(format!("brr_sample_{}", brr_label_number).into(), directive.span);
-						new_brr_label.write().used_as_address = true;
+						let new_brr_label = Label::new_with_definition(
+							format!("brr_sample_{}", brr_label_number).into(),
+							directive.span,
+						);
 						brr_label_number += 1;
 
 						self.parent
@@ -422,7 +438,7 @@ impl AssemblyFile {
 							.push(new_brr_label.clone());
 						segments
 							.add_element(ProgramElement::Label(Reference::Label(new_brr_label.clone())))
-							.map_err(Self::to_asm_error(&new_brr_label.read().span, &self.source_code))?;
+							.map_err(Self::to_asm_error(&new_brr_label.read().source_span(), &self.source_code))?;
 						current_labels.push(Reference::Label(new_brr_label));
 					}
 
@@ -733,7 +749,10 @@ impl AssemblyFile {
 							.collect(),
 						// We use a unique reference name just to make sure that we don't combine different
 						// references accidentally.
-						Label::new(format!("{}_global_label_{}", macro_name, index).into(), *definition_span),
+						Label::new_with_definition(
+							format!("{}_global_label_{}", macro_name, index).into(),
+							*definition_span,
+						),
 					);
 					// FIXME: Doesn't handle macro-internal references correctly; also no support for the \@ special
 					// label.

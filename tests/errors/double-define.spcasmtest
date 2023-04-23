@@ -1,0 +1,6 @@
+org 0
+
+here:
+	nop
+here:
+	bra here

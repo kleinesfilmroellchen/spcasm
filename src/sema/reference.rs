@@ -78,7 +78,7 @@ pub enum Reference {
 impl Reference {
 	pub fn source_span(&self) -> SourceSpan {
 		match self {
-			Self::Label(global) => global.read().span,
+			Self::Label(global) => global.read().source_span(),
 			Self::MacroArgument { span, .. }
 			| Self::UnresolvedLocalLabel { span, .. }
 			| Self::Relative { span, .. }
@@ -198,7 +198,7 @@ impl ReferenceResolvable for Reference {
 impl Display for Reference {
 	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
 		f.pad(&match self {
-			Self::Label(label) => format!("{}{}", ".".repeat(label.read().nesting_count()), label.read().name),
+			Self::Label(label) => label.read().to_string(),
 			Self::UnresolvedLocalLabel { name, nesting_level, .. } =>
 				format!("{}{}", ".".repeat((*nesting_level).into()), name),
 			Self::MacroArgument { name, .. } => format!("<{}>", name),
@@ -292,9 +292,9 @@ pub struct Label {
 	/// Resolved memory location of the reference, if any.
 	pub location:        Option<AssemblyTimeValue>,
 	/// Source code location where this reference is defined.
-	pub span:            SourceSpan,
-	/// Whether anyone references this label as an address.
-	pub used_as_address: bool,
+	pub definition_span: Option<SourceSpan>,
+	/// All source code locations where the label is used.
+	pub usage_spans:     Vec<SourceSpan>,
 	/// Child labels belonging to this label.
 	pub children:        BTreeMap<String, Arc<RwLock<Label>>>,
 	/// Parent label of this label. If not set, this label is global.
@@ -313,14 +313,42 @@ impl Label {
 		self.nesting_count() == 0
 	}
 
-	/// Creates a new label with the given name and source code location.
-	pub fn new(name: String, span: SourceSpan) -> Arc<RwLock<Self>> {
+	/// Returns whether the label is defined somewhere.
+	/// Otherwise, the label was just used as part of an expression, such as a jump target or an address to load from.
+	pub fn has_definition(&self) -> bool {
+		self.definition_span.is_some()
+	}
+
+	/// Returns this label's source span, which is usually the definition span. As a fallback, the first usage span is
+	/// used.
+	///
+	/// # Errors
+	/// If no source span exists at all, this label was created programmatically in an incorrect way and the program
+	/// panics.
+	pub fn source_span(&self) -> SourceSpan {
+		self.definition_span.or_else(|| self.usage_spans.first().cloned()).expect("label without any source spans")
+	}
+
+	/// Creates a new label with the given name and definition location.
+	pub fn new_with_definition(name: String, span: SourceSpan) -> Arc<RwLock<Self>> {
 		Arc::new(RwLock::new(Self {
 			children: BTreeMap::default(),
 			location: None,
-			span,
+			definition_span: Some(span),
 			name,
-			used_as_address: false,
+			usage_spans: Vec::default(),
+			parent: Weak::default(),
+		}))
+	}
+
+	/// Creates a new label with the given name and one usage location.
+	pub fn new_with_use(name: String, span: SourceSpan) -> Arc<RwLock<Self>> {
+		Arc::new(RwLock::new(Self {
+			children: BTreeMap::default(),
+			location: None,
+			definition_span: None,
+			name,
+			usage_spans: vec![span],
 			parent: Weak::default(),
 		}))
 	}
@@ -382,6 +410,12 @@ impl Resolvable for Label {
 	}
 }
 
+impl Display for Label {
+	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+		f.pad(&format!("{}{}", ".".repeat(self.nesting_count()), self.name))
+	}
+}
+
 /// The structure holding all of the data for the macro arguments.
 #[derive(Debug, Clone)]
 pub struct MacroParent {
@@ -397,12 +431,12 @@ impl MacroParent {
 	pub fn new_formal(parameters: Option<Vec<(String, SourceSpan)>>, span: SourceSpan) -> Arc<RwLock<Self>> {
 		Arc::new(RwLock::new(Self {
 			label:      Arc::new(RwLock::new(Label {
-				name: "macro global placeholder".into(),
-				location: None,
-				span,
-				used_as_address: false,
-				children: BTreeMap::new(),
-				parent: Weak::new(),
+				name:            "macro global placeholder".into(),
+				location:        None,
+				definition_span: Some(span),
+				usage_spans:     Vec::default(),
+				children:        BTreeMap::new(),
+				parent:          Weak::new(),
 			})),
 			parameters: MacroParameters::Formal(parameters.unwrap_or_default()),
 		}))
@@ -523,7 +557,7 @@ pub fn create_local_at_this_position(
 		let local_label = mutable_parent
 			.children
 			.entry(local_name.clone())
-			.or_insert_with(|| Label::new(local_name, local_location))
+			.or_insert_with(|| Label::new_with_definition(local_name, local_location))
 			.clone();
 		let mut mutable_label = local_label.write();
 		mutable_label.parent = Arc::downgrade(&parent_label);

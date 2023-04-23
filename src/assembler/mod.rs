@@ -93,7 +93,7 @@ fn assemble_to_data(
 	}
 
 	let mut pass_count = 0;
-	while pass_count < maximum_reference_resolution_passes && data.execute_reference_resolution_pass()? {
+	while pass_count < maximum_reference_resolution_passes && data.execute_reference_resolution_pass() {
 		pass_count += 1;
 	}
 	Ok(data)
@@ -580,7 +580,7 @@ impl AssembledData {
 	/// # Errors
 	/// Any warnings and warning-promoted errors from resolution are passed on.
 	#[allow(clippy::missing_panics_doc)]
-	fn execute_reference_resolution_pass(&mut self) -> Result<bool, Box<AssemblyError>> {
+	fn execute_reference_resolution_pass(&mut self) -> bool {
 		let mut had_modifications = true;
 		for (segment_start, segment_data) in &mut self.segments.segments {
 			let mut current_global_label = None;
@@ -628,6 +628,6 @@ impl AssembledData {
 				had_modifications |= datum.try_resolve(memory_address, &self.source_code, &*self.options);
 			}
 		}
-		Ok(had_modifications)
+		had_modifications
 	}
 }

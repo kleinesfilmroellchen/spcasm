@@ -114,9 +114,8 @@ impl MemoryValue {
 			Self::Number { value, byte_index, is_highest_byte } => match value.try_resolve() {
 				AssemblyTimeValue::Literal(value) => {
 					let unmasked_value = value >> (byte_index * 8);
-					match unmasked_value.try_into() {
-						Ok(byte) => Self::Resolved(byte),
-						Err(_) => {
+					unmasked_value.try_into().map_or_else(
+						|_| {
 							if is_highest_byte {
 								frontend.report_diagnostic(AssemblyError::ValueTooLarge {
 									value,
@@ -127,16 +126,16 @@ impl MemoryValue {
 							}
 							Self::Resolved((unmasked_value & 0xFF) as u8)
 						},
-					}
+						Self::Resolved,
+					)
 				},
 				resolved => Self::Number { value: resolved, byte_index, is_highest_byte },
 			},
 			Self::NumberRelative(number) => match number.clone().try_resolve() {
 				AssemblyTimeValue::Literal(reference_memory_address) => {
 					let relative_offset = reference_memory_address - (own_memory_address + 1);
-					match <MemoryAddress as TryInto<i8>>::try_into(relative_offset) {
-						Ok(byte) => Self::Resolved(byte as u8),
-						Err(_) => {
+					<MemoryAddress as TryInto<i8>>::try_into(relative_offset).map_or_else(
+						|_| {
 							frontend.report_diagnostic(AssemblyError::RelativeOffsetTooLarge {
 								location:        source_span,
 								src:             source_code.clone(),
@@ -146,7 +145,8 @@ impl MemoryValue {
 							});
 							Self::Resolved((relative_offset & 0xFF) as u8)
 						},
-					}
+						|byte| Self::Resolved(byte as u8),
+					)
 				},
 				resolved => Self::NumberRelative(resolved),
 			},

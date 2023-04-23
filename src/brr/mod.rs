@@ -407,12 +407,10 @@ impl Block {
 	#[inline]
 	#[must_use]
 	pub fn perform_shift_with(shift: i8, sample: DecodedSample) -> DecodedSample {
-		if shift == 0 {
-			Some(sample)
-		} else if shift > 0 {
-			sample.checked_shl(shift.unsigned_abs() as u32)
-		} else {
-			sample.checked_shr(shift.unsigned_abs() as u32)
+		match shift {
+			0 => Some(sample),
+			1.. => sample.checked_shl(u32::from(shift.unsigned_abs())),
+			_ => sample.checked_shr(u32::from(shift.unsigned_abs())),
 		}
 		// FIXME: unwrap_or suddenly became non-const in 1.71 nightly, make function const again once that is fixed.
 		.unwrap_or(if sample > 0 { DecodedSample::MAX } else { DecodedSample::MIN })

@@ -315,7 +315,7 @@ impl Label {
 
 	/// Returns whether the label is defined somewhere.
 	/// Otherwise, the label was just used as part of an expression, such as a jump target or an address to load from.
-	pub fn has_definition(&self) -> bool {
+	pub const fn has_definition(&self) -> bool {
 		self.definition_span.is_some()
 	}
 
@@ -326,7 +326,7 @@ impl Label {
 	/// If no source span exists at all, this label was created programmatically in an incorrect way and the program
 	/// panics.
 	pub fn source_span(&self) -> SourceSpan {
-		self.definition_span.or_else(|| self.usage_spans.first().cloned()).expect("label without any source spans")
+		self.definition_span.or_else(|| self.usage_spans.first().copied()).expect("label without any source spans")
 	}
 
 	/// Creates a new label with the given name and definition location.

@@ -167,6 +167,7 @@ impl Environment {
 	///
 	/// # Errors
 	/// If the label is already defined, and the label usage kind is for a definition, a redefinition error is returned.
+	#[allow(clippy::result_large_err)] // simplifies lalrpop action code
 	pub fn get_global_label(
 		&mut self,
 		name: &'_ str,
@@ -186,9 +187,8 @@ impl Environment {
 						reference:          mutable_matching_reference.to_string().into(),
 						src:                source_code.clone(),
 					});
-				} else {
-					mutable_matching_reference.definition_span = Some(span);
 				}
+				mutable_matching_reference.definition_span = Some(span);
 			} else {
 				mutable_matching_reference.usage_spans.push(span);
 			}

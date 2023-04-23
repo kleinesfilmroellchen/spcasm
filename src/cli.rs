@@ -6,9 +6,9 @@ use std::sync::Arc;
 
 #[cfg(feature = "binaries")]
 use clap::Args;
-#[cfg(feature = "binaries")]
 use miette::Diagnostic;
 use miette::Severity;
+#[allow(unused)]
 use parking_lot::RwLock;
 #[allow(unused)]
 use smartstring::alias::String;

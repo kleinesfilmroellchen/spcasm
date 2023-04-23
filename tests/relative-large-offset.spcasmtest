@@ -1,0 +1,9 @@
+org $200
+
+start:
+	nop
+
+fillbyte 0
+fill $100
+
+	bra start

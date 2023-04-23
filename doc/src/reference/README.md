@@ -198,6 +198,20 @@ fill_with_x:
     ret
 ```
 
+You can also define more deeply nested local labels with `..twice_nested`, `...thrice_nested`, etc. Their parent label is the most recent label with a higher level, so they do not need to be nested precisely:
+
+```asm
+global:
+
+.once_local ; Child of global
+
+...thrice_nested ; Child of once_local
+
+..twice_nested ; Child of once_local
+
+...thrice_nested ; Child of twice_nested
+```
+
 It is also possible to define a reference to a fixed value, or one computed from other references, etc. For this, a simple assignment syntax is supported:
 
 ```asm

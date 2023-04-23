@@ -104,6 +104,45 @@ spcasm::value_too_large
 
 In most places, numbers have a limited size, often 8 or 16 bits. However, user-specified numbers are initially limited much higher, to 64-bit signed numbers, in order to allow computations that involve large intermediate values. When using those large numbers in these bit-limited places, the higher bits are simply cut off or truncated. This can be surprising depending on what exact instruction or directive the number is used in, so spcasm issues a specific warning by default.
 
+### spcasm::relative_offset_too_large
+
+```trycmd
+$ spcasm -W relative_offset_too_large tests/relative-large-offset.spcasmtest
+? 1
+spcasm::relative_offset_too_large
+
+  ⚠ The relative offset to address `0200` is out of range, the result will
+  │ be wrong.
+   ╭─[tests/relative-large-offset.spcasmtest:1:1]
+ 1 │ org $200
+ 2 │ 
+ 3 │ start:
+   · ──┬──
+   ·   ╰── Target address `0200`
+ 4 │     nop
+ 5 │ 
+ 6 │ fillbyte 0
+ 7 │ fill $100
+ 8 │ 
+ 9 │     bra start
+   ·     ────┬───
+   ·         ╰── Difference of -259 to current address
+   ╰────
+  help: The current address is `0302` and therefore the difference is -259.
+        This difference exceeds the range [-128, 127] and will wrap around,
+        probably leading to incorrect code. If you are using a relative
+        jump, consider using a trampoline to cover larger jump distances.
+
+
+```
+
+Relative offsets encoded as signed two's-complement in an 8-bit number have a range from -128 to +127, both inclusive. These kinds of offsets are primarily used in branching instructions, which do not encode an absolute address to jump to (unlike jump instructions), but encode an offset from the next instruction address, since branches rarely need to jump more than a couple dozen instructions forward or backward. If the distance to the target address is too large, however, the value will overflow 8 bits in various ways and lead to a highly incorrect relative offset. This warning is especially important since it does not only inform you about incorrect data (like `spcasm::value_too_large`), but about incorrect / misassembled code which will not behave like you expect it to.
+
+Concerning branch instructions in particular, depending on your code situation there are several solutions to this problem:
+
+- If you can move code around, such as when the target of the branch is actually in another subroutine, you can move the branch target and the branch instruction closer together.
+- If some code between the instruction and its target can be extracted to a subroutine, you can move that subroutine far behind or before this code and therefore decrease the distance.
+- If the code positions are rather rigid, but you can insert a couple of instructions less than +-127 bytes from the branch source, you can insert a trampoline. This is a static jump instruction that jumps to the actual target, and the branch instruction jumps to this trampoline. Therefore, the conditional jump is executed in two steps, and you can even group multiple trampoline jump statements together. The surrounding code of the trampoline must be careful not to actually execute it; this is less of a problem when the trampoline is inserted in between two subroutines.
 
 ### spcasm::syntax::number_identifier
 
@@ -619,6 +658,36 @@ spcasm::reference::missing_global
 ```
 
 Local labels always have a scope defined as the range between their "parent" global label and the next global label after them. The parent specifically is the global label directly before the local label. Therefore, any local label must be preceded by a global label that is its parent; a local label as the first label of a file is not allowed. An easy solution is to define a dummy label at the beginning of the file that is never used but provides an initial scope for local labels.
+
+#### spcasm::reference::redefine
+
+```trycmd
+$ spcasm -w all tests/errors/double-define.spcasmtest
+? 1
+spcasm::reference::redefine
+
+  × Reference 'here' was defined more than once
+   ╭─[tests/errors/double-define.spcasmtest:1:1]
+ 1 │ org 0
+ 2 │ 
+ 3 │ here:
+   · ──┬─
+   ·   ╰── 'here' first defined here…
+ 4 │     nop
+ 5 │ here:
+   · ──┬─
+   ·   ╰── … and later redefined here
+ 6 │     bra here
+   ╰────
+  help: Local references are a convenient way to safely reuse common names
+        like '.loop' or '.end'.
+
+
+```
+
+Defining a reference with the same name more than once is ambiguous and not allowed. Some assemblers allow this and have different behavior for which reference they actually use when; spcasm would *in theory probably* always use the first definition in source code order. However, this is not considered a useful feature and therefore disallowed.
+
+Some common names, such as `loop`, `end`, `return`, `continue`, `again`, `else`, ... should be usable more than once in the program without ambiguity. The [local label system](reference/README.md#labels-and-references) of spcasm and other assemblers allow you to use local labels (leading `.` before the label name) for these instead, so they only have to be unique within a global label.
 
 #### spcasm::reference::unresolved
 

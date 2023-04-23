@@ -36,7 +36,8 @@ Note: No known assembly code causes this message anymore, since spcasm gained th
 ### spcasm::arch::valid
 
 ```trycmd
-$ spcasm tests/opcodes.s
+$ spcasm -w all -W arch::valid tests/opcodes.s
+? 1
 spcasm::arch::valid
 
   ☞ Legal architecture directive ignored
@@ -62,7 +63,41 @@ spcasm has a whole collection of features targeted at compatibility with the pop
 ### spcasm::value_too_large
 
 ```trycmd
-$ spcasm tests/parse.spcasmtest
+$ spcasm -W value_too_large tests/parse.spcasmtest
+spcasm::value_too_large
+
+  ⚠ The value `FFFFFFFFFFFFFF4D` is being used as a 8-bit operand here, but it
+  │ is larger than this. The extra upper bits are truncated.
+    ╭─[tests/parse.spcasmtest:27:1]
+ 27 │ mov a, # 8 >>2 ;= E8 02
+ 28 │ mov a , #$ff &%11 ;= E8 03
+ 29 │  mov a,# $0F |$f0 ;= E8 FF
+ 30 │ mov a ,#~%10110010 ;= E8 4D
+    · ─────────────┬─────────────
+    ·              ╰── 8-bit operand
+ 31 │ mov a, #$9f ^ $78 ^$9F ;= E8 78
+ 32 │ mov a,#6**3 ;= E8 D8
+ 33 │ 
+    ╰────
+  help: If this was intentional, explicitly truncate the value.
+
+spcasm::value_too_large
+
+  ⚠ The value `ABCD` is being used as a 8-bit operand here, but it is larger
+  │ than this. The extra upper bits are truncated.
+    ╭─[tests/parse.spcasmtest:32:1]
+ 32 │ mov a,#6**3 ;= E8 D8
+ 33 │ 
+ 34 │ + mov a,$abcd    ;= E5 CD AB
+ 35 │ mov.b a,$abcd  ;= E4 CD
+    · ───────────┬───────────
+    ·            ╰── 8-bit operand
+ 36 │ 
+ 37 │ db 'x', '/x67', '//', '/"', '/''
+ 38 │ 
+    ╰────
+  help: If this was intentional, explicitly truncate the value.
+
 
 ```
 
@@ -72,7 +107,8 @@ In most places, numbers have a limited size, often 8 or 16 bits. However, user-s
 ### spcasm::syntax::number_identifier
 
 ```trycmd
-$ spcasm tests/number-identifier.spcasmtest
+$ spcasm -w all -W syntax::number_identifier tests/number-identifier.spcasmtest
+? 1
 spcasm::syntax::number_identifier
 
   ⚠ "07x" was expected to be a number, but it is parsed as an identifier
@@ -99,7 +135,7 @@ In Asar, identifiers can start with numbers, and in fact can consist entirely of
 ### spcasm::arch::invalid
 
 ```trycmd
-$ spcasm tests/errors/unsupported-arch.spcasmtest
+$ spcasm -w all tests/errors/unsupported-arch.spcasmtest
 ? 1
 spcasm::arch::invalid
 
@@ -127,7 +163,7 @@ This category contains directive-related errors.
 #### spcasm::directive::invalid_directive_option
 
 ```trycmd
-$ spcasm tests/errors/invalid-brr-option.spcasmtest
+$ spcasm -w all tests/errors/invalid-brr-option.spcasmtest
 ? 1
 spcasm::directive::invalid_directive_option
 
@@ -148,7 +184,7 @@ Some directives accept options as identifiers, but the one you used was not one 
 #### spcasm::directive::invalid_range
 
 ```trycmd
-$ spcasm tests/errors/parser-invalid-range.spcasmtest
+$ spcasm -w all tests/errors/parser-invalid-range.spcasmtest
 ? 1
 spcasm::directive::invalid_range
 
@@ -169,7 +205,7 @@ For range specifications, like when including binary files, the Asar style range
 #### spcasm::math_pri_unsupported
 
 ```trycmd
-$ spcasm tests/errors/math-pri.spcasmtest
+$ spcasm -w all tests/errors/math-pri.spcasmtest
 ? 1
 spcasm::directive::math_pri_unsupported
 
@@ -198,7 +234,7 @@ spcasm::directive::math_pri_unsupported
 #### spcasm::directive::missing_fill_pad_parameter
 
 ```trycmd
-$ spcasm tests/errors/missing-fill-value.spcasmtest
+$ spcasm -w all tests/errors/missing-fill-value.spcasmtest
 ? 1
 spcasm::directive::missing_fill_pad_parameter
 
@@ -220,7 +256,7 @@ The `fill`, `fill align`, and `pad` directives have the value to be used for fil
 #### spcasm::directive::range_out_of_bounds
 
 ```trycmd
-$ spcasm tests/errors/range-out-of-bounds.spcasmtest
+$ spcasm -w all tests/errors/range-out-of-bounds.spcasmtest
 ? 1
 spcasm::directive::range_out_of_bounds
 
@@ -241,7 +277,7 @@ When providing a range for a binary file that is included, the range is allowed 
 #### spcasm::directive::references_as_argument
 
 ```trycmd
-$ spcasm tests/errors/label-in-org.spcasmtest
+$ spcasm -w all tests/errors/label-in-org.spcasmtest
 ? 1
 spcasm::directive::references_as_argument
 
@@ -288,7 +324,7 @@ Therefore, for now, spcasm disallows the use of references in these cases entire
 ### spcasm::directive::sample_table_too_large
 
 ```trycmd
-$ spcasm tests/errors/sample-table-too-large.spcasmtest
+$ spcasm -w all tests/errors/sample-table-too-large.spcasmtest
 ? 1
 spcasm::directive::sample_table_too_large
 
@@ -317,7 +353,7 @@ Similar to how the hardware sample table (or "directory") must be page aligned (
 #### spcasm::directive::unaligned_sample_table
 
 ```trycmd
-$ spcasm tests/errors/sample-table-unaligned.spcasmtest
+$ spcasm -w all tests/errors/sample-table-unaligned.spcasmtest
 ? 1
 spcasm::directive::unaligned_sample_table
 
@@ -346,7 +382,7 @@ This error only happens with the `noalign` option, as spcasm sensibly aligns the
 ### spcasm::include_cycle
 
 ```trycmd
-$ spcasm tests/errors/circular-include.spcasmtest
+$ spcasm -w all tests/errors/circular-include.spcasmtest
 ? 1
 spcasm::include_cycle
 
@@ -389,7 +425,7 @@ This category contains errors pertaining to instructions.
 #### spcasm::instruction::invalid_addressing_mode
 
 ```trycmd
-$ spcasm tests/errors/addressing-mode.spcasmtest
+$ spcasm -w all tests/errors/addressing-mode.spcasmtest
 ? 1
 spcasm::instruction::invalid_addressing_mode
 
@@ -421,7 +457,7 @@ Note: This is a theoretical error the lexer can produce, but because invalid con
 #### spcasm::instruction::missing_operand
 
 ```trycmd
-$ spcasm tests/errors/missing-operand.spcasmtest
+$ spcasm -w all tests/errors/missing-operand.spcasmtest
 ? 1
 spcasm::instruction::missing_operand
 
@@ -444,7 +480,7 @@ Similar to [instruction::operand_not_allowed](#spcasminstructionoperandnotallowe
 #### spcasm::instruction::missing_second_operand
 
 ```trycmd
-$ spcasm tests/errors/missing-second-operand.spcasmtest
+$ spcasm -w all tests/errors/missing-second-operand.spcasmtest
 ? 1
 spcasm::instruction::missing_second_operand
 
@@ -467,7 +503,7 @@ Similar to [instruction::missing_operand](#spcasminstructionmissingoperand). Som
 #### spcasm::instruction::operand_not_allowed
 
 ```trycmd
-$ spcasm tests/errors/no-operand.spcasmtest
+$ spcasm -w all tests/errors/no-operand.spcasmtest
 ? 1
 spcasm::instruction::operand_not_allowed
 
@@ -488,7 +524,7 @@ Similar to [instruction::two_operands_not_allowed](#spcasminstructiontwooperands
 #### spcasm::instruction::two_operands_not_allowed
 
 ```trycmd
-$ spcasm tests/errors/two-operands.spcasmtest
+$ spcasm -w all tests/errors/two-operands.spcasmtest
 ? 1
 spcasm::instruction::two_operands_not_allowed
 
@@ -513,7 +549,7 @@ This category contains I/O related errors.
 #### spcasm::io::audio_processing_error
 
 ```trycmd
-$ spcasm tests/errors/audio-processing.spcasmtest
+$ spcasm -w all tests/errors/audio-processing.spcasmtest
 ? 1
 spcasm::io::audio_processing_error
 
@@ -539,7 +575,7 @@ Known unsupported WAV features include all WAV extensions which compress audio, 
 #### spcasm::io::file_not_found
 
 ```notrycmd
-$ spcasm tests/errors/file-not-found.spcasmtest
+$ spcasm -w all tests/errors/file-not-found.spcasmtest
 ? 1
 Error: spcasm::io::file_not_found
 
@@ -564,7 +600,7 @@ This category concerns itself with the use of references.
 #### spcasm::reference::missing_global
 
 ```trycmd
-$ spcasm tests/errors/missing-global.spcasmtest
+$ spcasm -w all tests/errors/missing-global.spcasmtest
 ? 1
 spcasm::reference::missing_global
 
@@ -586,7 +622,7 @@ Local labels always have a scope defined as the range between their "parent" glo
 #### spcasm::reference::unresolved
 
 ```trycmd
-$ spcasm tests/errors/unresolved-label.spcasmtest
+$ spcasm -w all tests/errors/unresolved-label.spcasmtest
 ? 1
 spcasm::reference::unresolved
 
@@ -623,7 +659,7 @@ This category contains errors relating to segment use.
 #### spcasm::segment::empty_stack
 
 ```trycmd
-$ spcasm tests/errors/empty-segment-stack.spcasmtest
+$ spcasm -w all tests/errors/empty-segment-stack.spcasmtest
 ? 1
 spcasm::segment::empty_stack
 
@@ -646,7 +682,7 @@ The segment stack stores segments for later reuse and is manipulated with `pushp
 #### spcasm::segment::mismatch
 
 ```trycmd
-$ spcasm tests/errors/segment-mismatch.spcasmtest
+$ spcasm -w all tests/errors/segment-mismatch.spcasmtest
 ? 1
 spcasm::segment::mismatch
 
@@ -665,7 +701,7 @@ When assembling different segments together, there must not be any overlap betwe
 #### spcasm::segment::missing
 
 ```trycmd
-$ spcasm tests/errors/missing-segment-after-pop.spcasmtest
+$ spcasm -w all tests/errors/missing-segment-after-pop.spcasmtest
 ? 1
 spcasm::segment::missing
 
@@ -697,7 +733,7 @@ Note: This is a theoretical error forwarded from the parser backend. It is not k
 #### spcasm::syntax::expected_token
 
 ```trycmd
-$ spcasm tests/errors/parser-dangling.spcasmtest
+$ spcasm -w all tests/errors/parser-dangling.spcasmtest
 ? 1
 spcasm::syntax::expected_token
 
@@ -718,7 +754,7 @@ The most common type of syntax error. "Token" in programming language lingo is t
 #### spcasm::syntax::invalid_bit_index
 
 ```trycmd
-$ spcasm tests/errors/parser-bit-index.spcasmtest
+$ spcasm -w all tests/errors/parser-bit-index.spcasmtest
 ? 1
 spcasm::syntax::invalid_bit_index
 
@@ -739,7 +775,7 @@ Some addressing modes contain an intra-byte bit index; this has to be between 0 
 #### spcasm::syntax::invalid_number
 
 ```trycmd
-$ spcasm tests/errors/parser-invalid-number.spcasmtest
+$ spcasm -w all tests/errors/parser-invalid-number.spcasmtest
 ? 1
 spcasm::syntax::invalid_number
 
@@ -755,7 +791,7 @@ spcasm::syntax::invalid_number
 ```
 
 ```trycmd
-$ spcasm tests/errors/parser-too-large-number.spcasmtest
+$ spcasm -w all tests/errors/parser-too-large-number.spcasmtest
 ? 1
 spcasm::syntax::invalid_number
 
@@ -788,7 +824,7 @@ Test comments are only used in spcasm's testing system, so you won't see this er
 #### spcasm::syntax::missing_token
 
 ```trycmd
-$ spcasm tests/errors/parser-missing-token.spcasmtest
+$ spcasm -w all tests/errors/parser-missing-token.spcasmtest
 ? 1
 spcasm::syntax::missing_token
 
@@ -811,7 +847,7 @@ A similar error to [expected_token](#spcasmsyntaxexpectedtoken), though in this 
 #### spcasm::syntax::unexpected_character
 
 ```trycmd
-$ spcasm tests/errors/parser-unexpected-char.spcasmtest
+$ spcasm -w all tests/errors/parser-unexpected-char.spcasmtest
 ? 1
 spcasm::syntax::unexpected_character
 
@@ -844,7 +880,7 @@ Note: This error is theoretical, macro arguments currently cause undefined refer
 #### spcasm::reference::assign_invalid
 
 ```trycmd
-$ spcasm tests/errors/assign-to-argument.spcasmtest
+$ spcasm -w all tests/errors/assign-to-argument.spcasmtest
 ? 1
 spcasm::reference::assign_invalid
 
@@ -876,7 +912,7 @@ Some references cannot be assigned a value directly, though the reasons vary:
 #### spcasm::user_macro::incorrect_number_of_arguments
 
 ```trycmd
-$ spcasm tests/errors/too-few-arguments.spcasmtest
+$ spcasm -w all tests/errors/too-few-arguments.spcasmtest
 ? 1
 spcasm::user_macro::incorrect_number_of_arguments
 
@@ -902,7 +938,7 @@ Any macro must be called exactly with the number of arguments that it was define
 #### spcasm::user_macro::recursive_definition
 
 ```trycmd
-$ spcasm tests/errors/recursive-definition.spcasmtest
+$ spcasm -w all tests/errors/recursive-definition.spcasmtest
 ? 1
 spcasm::user_macro::recursive_definition
 
@@ -933,7 +969,7 @@ A user-defined macro cannot be defined within another user-defined macro. That s
 #### spcasm::user_macro::recursive_use
 
 ```trycmd
-$ spcasm tests/errors/recursive-macro.spcasmtest
+$ spcasm -w all tests/errors/recursive-macro.spcasmtest
 ? 1
 spcasm::user_macro::recursive_use
 
@@ -962,7 +998,7 @@ Macros may be called within other macros, but they must at some point fully reso
 #### spcasm::user_macro::undefined
 
 ```trycmd
-$ spcasm tests/errors/undefined-macro.spcasmtest
+$ spcasm -w all tests/errors/undefined-macro.spcasmtest
 ? 1
 spcasm::user_macro::undefined
 
@@ -985,7 +1021,7 @@ Evidently, a macro must be defined with the exact name of its usage. Note that s
 #### spcasm::user_macro::undefined_argument
 
 ```trycmd
-$ spcasm tests/errors/undefined-macro-argument.spcasmtest
+$ spcasm -w all tests/errors/undefined-macro-argument.spcasmtest
 ? 1
 spcasm::user_macro::undefined_argument
 

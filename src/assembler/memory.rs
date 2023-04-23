@@ -4,6 +4,7 @@ use std::sync::Arc;
 
 use miette::SourceSpan;
 
+use crate::cli::Frontend;
 use crate::sema::instruction::MemoryAddress;
 use crate::sema::reference::Reference;
 use crate::sema::AssemblyTimeValue;
@@ -26,15 +27,22 @@ impl LabeledMemoryValue {
 	/// resolved.
 	/// * `own_memory_address`: The actual location in memory that this value is at. Some resolution strategies need
 	///   this.
+	///
+	/// Returns whether the resolution attempt changed anything.
 	#[inline]
 	#[must_use]
-	pub fn try_resolve(&mut self, own_memory_address: MemoryAddress) -> bool {
+	pub fn try_resolve(
+		&mut self,
+		own_memory_address: MemoryAddress,
+		src: &Arc<AssemblyCode>,
+		frontend: &dyn Frontend,
+	) -> bool {
 		if let MemoryValue::Resolved(_) = self.value {
 			false
 		} else {
 			// FIXME: I can't figure out how to do this without copying first.
 			let value_copy = self.value.clone();
-			self.value = value_copy.try_resolve(own_memory_address);
+			self.value = value_copy.try_resolve(own_memory_address, self.instruction_location, src, frontend);
 			true
 		}
 	}
@@ -47,8 +55,9 @@ impl LabeledMemoryValue {
 		&self,
 		own_memory_address: MemoryAddress,
 		src: &Arc<AssemblyCode>,
+		frontend: &dyn Frontend,
 	) -> Result<u8, Box<AssemblyError>> {
-		self.value.try_resolved(own_memory_address).map_err(|number| {
+		self.value.try_resolved(own_memory_address, self.instruction_location, src, frontend).map_err(|number| {
 			{
 				let first_reference = number
 					.first_reference()
@@ -71,9 +80,17 @@ impl LabeledMemoryValue {
 pub enum MemoryValue {
 	/// Resolved data.
 	Resolved(u8),
-	/// Some byte of an (unresolved) number. The u8 is the byte index, where 0 means the lowest byte, 1 means the
-	/// second-lowest byte etc.
-	Number(AssemblyTimeValue, u8),
+	/// Some byte of an (unresolved) number.
+	Number {
+		/// The unresolved value.
+		value:           AssemblyTimeValue,
+		/// The byte that will be used from the value. 0 means the lowest byte, 1 means the
+		/// second-lowest byte etc.
+		byte_index:      u8,
+		/// Whether this number is the highest byte of a sequence of memory values referencing the same data; used for
+		/// diagnostics since too large source values should only be reported once by the value with the highest byte.
+		is_highest_byte: bool,
+	},
 	/// An (unresolved) number. The resolved memory value will be the difference between this memory value's location
 	/// plus one and the number's location.
 	NumberRelative(AssemblyTimeValue),
@@ -85,23 +102,57 @@ pub enum MemoryValue {
 
 impl MemoryValue {
 	#[allow(clippy::match_wildcard_for_single_variants)]
-	fn try_resolve(self, own_memory_address: MemoryAddress) -> Self {
+	fn try_resolve(
+		self,
+		own_memory_address: MemoryAddress,
+		source_span: SourceSpan,
+		source_code: &Arc<AssemblyCode>,
+		frontend: &dyn Frontend,
+	) -> Self {
 		match self {
 			Self::Resolved(_) => self,
-			Self::Number(number, byte) => match number.try_resolve() {
-				AssemblyTimeValue::Literal(memory_location) =>
-					Self::Resolved(((memory_location & (0xFF << (byte * 8))) >> (byte * 8)) as u8),
-				resolved => Self::Number(resolved, byte),
+			Self::Number { value, byte_index, is_highest_byte } => match value.try_resolve() {
+				AssemblyTimeValue::Literal(value) => {
+					let unmasked_value = value >> (byte_index * 8);
+					match unmasked_value.try_into() {
+						Ok(byte) => Self::Resolved(byte),
+						Err(_) => {
+							if is_highest_byte {
+								frontend.report_diagnostic(AssemblyError::ValueTooLarge {
+									value,
+									size: (byte_index + 1) * 8,
+									location: source_span,
+									src: source_code.clone(),
+								});
+							}
+							Self::Resolved((unmasked_value & 0xFF) as u8)
+						},
+					}
+				},
+				resolved => Self::Number { value: resolved, byte_index, is_highest_byte },
 			},
-			Self::NumberRelative(number) => match number.try_resolve() {
+			Self::NumberRelative(number) => match number.clone().try_resolve() {
 				AssemblyTimeValue::Literal(reference_memory_address) => {
-					let resolved_data = (reference_memory_address - (own_memory_address + 1)) as u8;
-					Self::Resolved(resolved_data)
+					let relative_offset = reference_memory_address - (own_memory_address + 1);
+					match <MemoryAddress as TryInto<i8>>::try_into(relative_offset) {
+						Ok(byte) => Self::Resolved(byte as u8),
+						Err(_) => {
+							frontend.report_diagnostic(AssemblyError::RelativeOffsetTooLarge {
+								location:        source_span,
+								src:             source_code.clone(),
+								target:          reference_memory_address,
+								address:         own_memory_address,
+								target_location: number.first_reference().map(|reference| reference.source_span()),
+							});
+							Self::Resolved((relative_offset & 0xFF) as u8)
+						},
+					}
 				},
 				resolved => Self::NumberRelative(resolved),
 			},
 			Self::NumberHighByteWithContainedBitIndex(number, bit_index) => match number.try_resolve() {
 				AssemblyTimeValue::Literal(reference_memory_address) => {
+					// TODO: perform byte size check
 					let resolved_data = ((reference_memory_address & 0x1F00) >> 8) as u8 | (bit_index << 5);
 					Self::Resolved(resolved_data)
 				},
@@ -111,10 +162,16 @@ impl MemoryValue {
 	}
 
 	#[allow(clippy::missing_const_for_fn)]
-	fn try_resolved(&self, own_memory_address: MemoryAddress) -> Result<u8, AssemblyTimeValue> {
-		match self.clone().try_resolve(own_memory_address) {
+	fn try_resolved(
+		&self,
+		own_memory_address: MemoryAddress,
+		source_span: SourceSpan,
+		source_code: &Arc<AssemblyCode>,
+		frontend: &dyn Frontend,
+	) -> Result<u8, AssemblyTimeValue> {
+		match self.clone().try_resolve(own_memory_address, source_span, source_code, frontend) {
 			Self::Resolved(value) => Ok(value),
-			Self::Number(number, ..)
+			Self::Number { value: number, .. }
 			| Self::NumberHighByteWithContainedBitIndex(number, ..)
 			| Self::NumberRelative(number) => Err(number),
 		}

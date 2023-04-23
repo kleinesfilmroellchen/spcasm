@@ -64,7 +64,7 @@ impl Frontend for ServerFrontend {
 		100
 	}
 
-	fn report_diagnostic(&self, diagnostic: AssemblyError) {
+	fn report_diagnostic_impl(&self, diagnostic: AssemblyError) {
 		self.collected_diagnostics.lock().push(diagnostic);
 	}
 }

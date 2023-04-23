@@ -8,6 +8,7 @@ use std::sync::Arc;
 use clap::Args;
 #[cfg(feature = "binaries")]
 use miette::Diagnostic;
+use miette::Severity;
 #[allow(unused)]
 use smartstring::alias::String;
 
@@ -31,12 +32,19 @@ pub trait Frontend: std::fmt::Debug + Send + Sync {
 	/// Returns the maximum number of reference resolution passes.
 	fn maximum_reference_resolution_passes(&self) -> usize;
 
+	/// Not for public use; this function forces the frontend to receive a diagnostic no matter what its ignore status
+	/// is.
+	fn report_diagnostic_impl(&self, diagnostic: AssemblyError);
+
 	/// Signals a diagnostic to the frontend. The frontend can decide whether it wants to output the diagnostic
-	/// directly, collect it internally, etc. Note that the backend takes `is_error` and `is_ignored` into account; in
-	/// particular, it will not pass ignored diagnostics to this function.
-	/// 
-	/// Note that many backend functions will also return error(s) reported through here.
-	fn report_diagnostic(&self, diagnostic: AssemblyError);
+	/// directly, collect it internally, etc. This function will not pass ignored diagnostics on to
+	/// ``report_diagnostic_impl``.
+	fn report_diagnostic(&self, diagnostic: AssemblyError) {
+		// Pass on anything that is either an error or not ignored.
+		if diagnostic.severity().is_some_and(|severity| severity == Severity::Error) || !self.is_ignored(&diagnostic) {
+			self.report_diagnostic_impl(diagnostic);
+		}
+	}
 }
 
 /// Returns a `Frontend` implementation with default behavior.
@@ -110,7 +118,7 @@ impl Frontend for CliOptions {
 		self.macro_recursion_limit
 	}
 
-	fn report_diagnostic(&self, diagnostic: AssemblyError) {
+	fn report_diagnostic_impl(&self, diagnostic: AssemblyError) {
 		println!("{:?}", miette::Report::new(diagnostic));
 	}
 }
@@ -136,7 +144,7 @@ impl Frontend for DummyOptions {
 		1000
 	}
 
-	fn report_diagnostic(&self, _diagnostic: AssemblyError) {
+	fn report_diagnostic_impl(&self, _diagnostic: AssemblyError) {
 		// noop
 	}
 }

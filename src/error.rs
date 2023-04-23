@@ -711,6 +711,27 @@ pub enum AssemblyError {
 		src:      Arc<AssemblyCode>,
 	},
 
+	#[error("The relative offset to address `{target:04X}` is out of range, the result will be wrong.")]
+	#[diagnostic(
+		code(spcasm::relative_offset_too_large),
+		help(
+			"The current address is `{address:04X}` and therefore the difference is {}. This difference exceeds the \
+			 range [-128, 127] and will wrap around, probably leading to incorrect code. If you are using a relative \
+			 jump, consider using a trampoline to cover larger jump distances.", target-(address+1)
+		),
+		severity(Warning)
+	)]
+	RelativeOffsetTooLarge {
+		target:          MemoryAddress,
+		address:         MemoryAddress,
+		#[label("Difference of {} to current address", target-(address+1))]
+		location:        SourceSpan,
+		#[label("Target address `{target:04X}`")]
+		target_location: Option<SourceSpan>,
+		#[source_code]
+		src:             Arc<AssemblyCode>,
+	},
+
 	#[error("This reference '{name}' has an 8-bit value, did you want to use it in direct page addressing?")]
 	#[diagnostic(
 		code(spcasm::reference::non_direct_page),
@@ -770,7 +791,7 @@ impl AssemblyError {
 		if options.is_error(&self) {
 			return Err(self.into());
 		} else if !options.is_ignored(&self) {
-			options.report_diagnostic(self);
+			options.report_diagnostic_impl(self);
 		}
 		Ok(())
 	}

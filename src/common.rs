@@ -3,7 +3,7 @@
 use std::cmp::min;
 use std::sync::Arc;
 
-use miette::{Diagnostic, Severity, SourceSpan};
+use miette::SourceSpan;
 use parking_lot::RwLock;
 #[allow(unused)]
 use smartstring::alias::String;
@@ -51,7 +51,9 @@ fn dump_reference_tree_impl(references: &mut dyn Iterator<Item = &Arc<RwLock<Lab
 		let label_text = global
 			.location
 			.as_ref()
-			.and_then(|location| location.try_value(global.source_span(), Arc::new(AssemblyCode::new("", &String::new()))).ok())
+			.and_then(|location| {
+				location.try_value(global.source_span(), Arc::new(AssemblyCode::new("", &String::new()))).ok()
+			})
 			.map_or_else(|| "(unknown)".to_string(), |location| format!("{:04X}", location));
 
 		println!(
@@ -128,8 +130,8 @@ pub fn run_assembler(source_code: &Arc<AssemblyCode>, options: Arc<dyn Frontend>
 		let assembled = crate::assembler::assemble_from_segments(&mut segmented_program, source_code, options.clone())?;
 		(env, assembled)
 	};
-	if let Err(ref why ) = result && (why.severity().is_some_and(|severity| severity == Severity::Error) || !options.is_ignored(why)) {
-		options.report_diagnostic(why.clone());
+	if let Err(ref why) = result {
+		options.report_diagnostic_impl(why.clone());
 	}
 	result.map_err(miette::Report::from)
 }

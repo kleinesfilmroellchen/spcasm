@@ -167,7 +167,11 @@ impl AssembledData {
 				.iter()
 				.enumerate()
 				.map(|(address, lmv)| {
-					lmv.try_as_resolved(MemoryAddress::try_from(address).unwrap() + start_address, &self.source_code)
+					lmv.try_as_resolved(
+						MemoryAddress::try_from(address).unwrap() + start_address,
+						&self.source_code,
+						&*self.options,
+					)
 				})
 				.try_collect::<Vec<u8>>()
 		})
@@ -315,6 +319,7 @@ impl AssembledData {
 							BinaryOperator::Or,
 						),
 						0,
+						true,
 						current_labels,
 						*span,
 					),
@@ -441,13 +446,14 @@ impl AssembledData {
 		&mut self,
 		value: AssemblyTimeValue,
 		byte: u8,
+		is_highest_byte: bool,
 		labels: &[Reference],
 		span: SourceSpan,
 	) -> Result<(), Box<AssemblyError>> {
 		let src = self.source_code.clone();
 		self.segments.current_segment_mut().map_err(|_| AssemblyError::MissingSegment { location: span, src })?.push(
 			LabeledMemoryValue {
-				value:                MemoryValue::Number(value, byte),
+				value:                MemoryValue::Number { value, byte_index: byte, is_highest_byte },
 				labels:               labels.to_owned(),
 				instruction_location: span,
 			},
@@ -465,8 +471,8 @@ impl AssembledData {
 		labels: &[Reference],
 		span: SourceSpan,
 	) -> Result<(), Box<AssemblyError>> {
-		self.append_8_bits_unresolved(value.clone(), 0, labels, span)?;
-		self.append_8_bits_unresolved(value, 1, &Vec::default(), span)
+		self.append_8_bits_unresolved(value.clone(), 0, false, labels, span)?;
+		self.append_8_bits_unresolved(value, 1, true, &Vec::default(), span)
 	}
 
 	/// Appends an unresolved value to the current segment. The value is sized, which determines how many bytes are
@@ -481,16 +487,18 @@ impl AssembledData {
 		span: SourceSpan,
 	) -> Result<(), Box<AssemblyError>> {
 		match value.size {
-			Size::Byte => self.append_8_bits_unresolved(value.value, 0, labels, span),
+			Size::Byte => self.append_8_bits_unresolved(value.value, 0, false, labels, span),
 			Size::Word => self.append_16_bits_unresolved(value.value, labels, span),
 			Size::Long => {
-				self.append_16_bits_unresolved(value.value.clone(), labels, span)?;
-				self.append_8_bits_unresolved(value.value, 2, &Vec::default(), span)
+				self.append_8_bits_unresolved(value.value.clone(), 0, false, labels, span)?;
+				self.append_8_bits_unresolved(value.value.clone(), 1, false, &Vec::default(), span)?;
+				self.append_8_bits_unresolved(value.value, 2, true, &Vec::default(), span)
 			},
 			Size::DWord => {
-				self.append_16_bits_unresolved(value.value.clone(), labels, span)?;
-				self.append_8_bits_unresolved(value.value.clone(), 2, &Vec::default(), span)?;
-				self.append_8_bits_unresolved(value.value, 3, &Vec::default(), span)
+				self.append_8_bits_unresolved(value.value.clone(), 0, false, labels, span)?;
+				self.append_8_bits_unresolved(value.value.clone(), 1, false, &Vec::default(), span)?;
+				self.append_8_bits_unresolved(value.value.clone(), 2, false, &Vec::default(), span)?;
+				self.append_8_bits_unresolved(value.value, 3, true, &Vec::default(), span)
 			},
 		}
 	}
@@ -554,14 +562,15 @@ impl AssembledData {
 		self.segments.current_segment_mut().map_err(|_| AssemblyError::MissingSegment { location: span, src })?.push(
 			LabeledMemoryValue {
 				// Synthesize the (bit_index << 5) | value which is needed for bit indices in opcodes.
-				value:                MemoryValue::Number(
-					AssemblyTimeValue::BinaryOperation(
+				value:                MemoryValue::Number {
+					value:           AssemblyTimeValue::BinaryOperation(
 						value.into(),
 						AssemblyTimeValue::Literal(MemoryAddress::from(bit_index) << 5).into(),
 						BinaryOperator::Or,
 					),
-					0,
-				),
+					byte_index:      0,
+					is_highest_byte: true,
+				},
 				labels:               labels.to_owned(),
 				instruction_location: span,
 			},
@@ -626,7 +635,7 @@ impl AssembledData {
 					.find_map(|err| err.report_or_throw(&*self.options).err())
 					.map_or_else(|| Ok(()), Err)?;
 				// Resolve a reference used as a memory address, e.g. in an instruction operand like a jump target.
-				had_modifications |= datum.try_resolve(memory_address);
+				had_modifications |= datum.try_resolve(memory_address, &self.source_code, &*self.options);
 			}
 		}
 		Ok(had_modifications)

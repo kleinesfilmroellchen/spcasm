@@ -36,7 +36,7 @@ impl Frontend for WebOptions {
 		self.max_macro_expansion_depth
 	}
 
-	fn report_diagnostic(&self, diagnostic: AssemblyError) {
+	fn report_diagnostic_impl(&self, diagnostic: AssemblyError) {
 		super::log!("pushed new diagnostic: {:?}", diagnostic);
 		self.diagnostics.write().unwrap().push(diagnostic);
 	}

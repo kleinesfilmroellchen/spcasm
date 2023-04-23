@@ -117,3 +117,7 @@ inherits = "release"
 lto = "thin"
 opt-level = 3
 incremental = true
+
+# Cross configuration
+[package.metadata.cross.target.x86_64-unknown-linux-gnu]
+pre-build = ["apt-get update && apt-get install -y openssl clang"] # openssl seems to be outdated otherwise

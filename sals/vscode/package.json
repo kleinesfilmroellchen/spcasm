@@ -22,8 +22,7 @@
   "main": "./dist/extension.js",
   "scripts": {
     "vscode:prepublish": "yarn run esbuild-base -- --minify",
-    "server-compile-win": "cross install --locked --force --no-track --target x86_64-pc-windows-msvc --bin sals --profile=spcasm-release --root dist --path ..",
-    "server-compile-nowin": "cross install --locked --force --no-track --target x86_64-unknown-linux-gnu --bin sals --profile=spcasm-release --root dist --path .. && cross install --locked --force --no-track --target x86_64-apple-darwin --bin sals --profile=spcasm-release --root dist --path .. && cross install --locked --force --no-track --target aarch64-apple-darwin --bin sals --profile=spcasm-release --root dist --path ..",
+    "server-compile": "cargo install --locked --force --no-track --bin sals --profile=spcasm-release --root dist --path ..",
     "esbuild-base": "esbuild ./src/extension.ts --bundle --outfile=./dist/extension.js --external:vscode --format=cjs --platform=node",
     "esbuild": "yarn run esbuild-base -- --sourcemap && cargo -C .. build",
     "esbuild-watch": "yarn run esbuild-base -- --sourcemap --watch"

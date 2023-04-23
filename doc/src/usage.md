@@ -24,25 +24,25 @@ Options:
 
   -l, --reference-pass-limit <REFERENCE_PASS_LIMIT>
           Limit for the number of reference resolution passes spcasm will perform.
-          
+
           Usually 2-3 passes are enough and very high pass numbers often indicate infinite loops. If
           this number of passes is exceeded during reference resolution, spcasm will report
           unresolved references as normal.
-          
+
           [default: 10]
 
   -r, --macro-recursion-limit <MACRO_RECURSION_LIMIT>
           Limit for the number of recursive macro calls allowed by spcasm.
-          
+
           Increase this limit carefully; very high recursion amounts are usually caused by
           infinitely recursive macros. Any recursion exceeding this value will cause a specific
           error.
-          
+
           [default: 1000]
 
   -f, --output-format <OUTPUT_FORMAT>
           Format to output to
-          
+
           [default: elf]
 
           Possible values:
@@ -56,7 +56,7 @@ Options:
   -a, --dump-ast
           Dump the program's abstract syntax tree. This is a debugging feature and most likely not
           useful to the end user.
-          
+
           WARNING: This option will, in specific circumstances, loop forever trying to print
           recursive data structures. This can happen on well-formed programs.
 
@@ -81,6 +81,12 @@ There may also be hints and warnings (identifiable by the pointing finger or exc
 [All errors, warning and advice messages are documented here in detail.](errors.md)
 
 spcasm uses some terminology which might be unfamiliar to you if you haven't written much assembly code so far, and which is also used inconsistently across assemblers and tools. The [Terminology](terminology.md) page provides a brief glossary explaining what those terms mean.
+
+spcasm follows some simple markup conventions within its output:
+
+- \`backticks\` mark code snippets within explanatory text (just like Markdown and other markup languages). It is also used for invalid syntax in parser and lexer errors.
+- 'single quotes' mark reference names, including macro names, macro arguments, etc.
+- "double quotes" mark file names, as those are usually given within strings anyways. They also mark invalid syntax in parser errors.
 
 ## brr
 
@@ -204,7 +210,7 @@ Options:
   -c, --compression <COMPRESSION>
           Compression level to use; higher levels mean better audio fidelity. 0: Only use filter 0,
           1: Use all filters with non-wrapping optimal shift, 2: Use all filters with optimal shift.
-          
+
           [default: 2]
 
   -f, --filter [<FILTER>]

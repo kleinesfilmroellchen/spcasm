@@ -457,7 +457,7 @@ pub enum AssemblyError {
 	#[error("There is no global label defined before the local label '{local_label}'")]
 	#[diagnostic(
 		code(spcasm::reference::missing_global),
-		help("Add a global label before defining this local label"),
+		help("Add a global label before defining this local label."),
 		severity(Error)
 	)]
 	MissingGlobalLabel {
@@ -471,7 +471,7 @@ pub enum AssemblyError {
 	#[error("{start} is greater than {end}")]
 	#[diagnostic(
 		code(spcasm::directive::invalid_range),
-		help("Switch the range limits around: `{end}-{start}`"),
+		help("Switch the range limits around: `{end}-{start}`."),
 		severity(Error)
 	)]
 	StartAboveEnd {
@@ -486,7 +486,7 @@ pub enum AssemblyError {
 	#[error("The range {start}-{end} is out of bounds for the input file \"{file}\"")]
 	#[diagnostic(
 		code(spcasm::directive::range_out_of_bounds),
-		help("The input's length is {file_len}"),
+		help("The input's length is {file_len}."),
 		severity(Error)
 	)]
 	RangeOutOfBounds {
@@ -503,7 +503,7 @@ pub enum AssemblyError {
 	#[error("Invalid option `{option}` for directive `{directive}`")]
 	#[diagnostic(
 		code(spcasm::directive::invalid_directive_option),
-		help("The valid options are {}",
+		help("The valid options are {}.",
 			.valid_options.iter().map(|option| format!("`{}`, ", option)).collect::<String>().strip_suffix(", ").unwrap_or_default()),
 		severity(Error)
 	)]
@@ -549,7 +549,7 @@ pub enum AssemblyError {
 		directive_location: SourceSpan,
 	},
 
-	#[error("Sample table at address {memory_address:04X} is not correctly aligned")]
+	#[error("Sample table at address `{memory_address:04X}` is not correctly aligned")]
 	#[diagnostic(
 		code(spcasm::directive::unaligned_sample_table),
 		help(
@@ -566,7 +566,7 @@ pub enum AssemblyError {
 		location:       SourceSpan,
 	},
 
-	#[error("Expected {expected}")]
+	#[error("Expected \"{expected}\"")]
 	#[diagnostic(code(spcasm::syntax::expected_token), severity(Error))]
 	ExpectedToken {
 		expected: TokenOrString,
@@ -626,7 +626,7 @@ pub enum AssemblyError {
 		src:      Arc<AssemblyCode>,
 	},
 
-	#[error("Unexpected character {chr}")]
+	#[error("Unexpected character \"{chr}\"")]
 	#[diagnostic(code(spcasm::syntax::unexpected_character), severity(Error))]
 	UnexpectedCharacter {
 		chr:      char,
@@ -678,10 +678,14 @@ pub enum AssemblyError {
 	},
 
 	#[error(
-		"The value {value:02X} is being used as a {size}-bit operand here, but it is larger than this. The extra \
+		"The value `{value:02X}` is being used as a {size}-bit operand here, but it is larger than this. The extra \
 		 upper bits are truncated."
 	)]
-	#[diagnostic(code(spcasm::value_too_large), help("Remove these upper bits"), severity(Warning))]
+	#[diagnostic(
+		code(spcasm::value_too_large),
+		help("If this was intentional, explicitly truncate the value."),
+		severity(Warning)
+	)]
 	ValueTooLarge {
 		value:    MemoryAddress,
 		size:     u8,
@@ -691,7 +695,7 @@ pub enum AssemblyError {
 		src:      Arc<AssemblyCode>,
 	},
 
-	#[error("This reference \"{name}\" has an 8-bit value, did you want to use it in direct page addressing?")]
+	#[error("This reference '{name}' has an 8-bit value, did you want to use it in direct page addressing?")]
 	#[diagnostic(
 		code(spcasm::reference::non_direct_page),
 		help("Use a forced direct page addressing mnemonic by suffixing `.b`"),

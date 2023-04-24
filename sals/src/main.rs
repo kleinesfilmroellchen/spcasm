@@ -358,11 +358,20 @@ struct TextDocumentItem {
 impl Backend {
 	async fn on_change(&self, TextDocumentItem { uri, text, version }: TextDocumentItem) {
 		if let Ok(path) = &uri.to_file_path() {
-			self.client.log_message(MessageType::INFO, format!("document path: {path:?}")).await;
+			self.client.log_message(MessageType::LOG, format!("document path: {path:?}")).await;
 			// Clear frontend diagnostics.
 			self.frontend.clear_diagnostics();
 			let source_code = Arc::new(AssemblyCode::new_from_path(&text, path));
-			self.environment.write().files.remove(&source_code.name);
+
+			// Reset relevant parts of the environment: This file as well as the global list (to avoid redefinition
+			// errors). Do this in a separate block to ensure the borrow checker that environment does not leak into the
+			// returned `Future`.
+			{
+				let mut environment = self.environment.write();
+				environment.files.remove(&source_code.name);
+				environment.globals.clear();
+			}
+
 			let result = try {
 				let tokens = spcasm::parser::lex(source_code.clone(), &*self.frontend).map_err(AssemblyError::from)?;
 				let program =

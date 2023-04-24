@@ -44,12 +44,13 @@ fn errors() {
 		let error_source = error_source.unwrap().path();
 		let error_source = &*error_source.to_string_lossy();
 		if error_source.ends_with(".spcasmtest") {
+			println!("checking {} for errors ...", error_source);
 			let result = super::run_assembler_with_default_options(error_source);
 			let _ = super::run_assembler_into_segments(
 				&crate::AssemblyCode::from_file_or_assembly_error(error_source).unwrap(),
 				default_backend_options(),
 			);
-			println!("checking {} for errors ...\n{:?}", error_source, result);
+			println!("{:?}", result);
 			assert!(result.is_err());
 		} else {
 			println!("skipping file {} (not an error test)", error_source);

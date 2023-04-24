@@ -338,8 +338,8 @@ impl AssemblyFile {
 		// `global: .local: ...`
 		let strong_parent = self.parent.upgrade().expect("parent disappeared");
 		let global_labels = &strong_parent.read().globals;
-		for element in self.content.iter_mut() {
-			element.resolve_pseudo_labels(&global_labels);
+		for element in &mut self.content {
+			element.resolve_pseudo_labels(global_labels);
 		}
 
 		Ok(())

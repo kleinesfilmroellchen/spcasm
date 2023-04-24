@@ -75,7 +75,7 @@ impl ReferenceResolvable for Instruction {
 	}
 
 	fn resolve_pseudo_labels(&mut self, global_labels: &[Arc<RwLock<Label>>]) {
-		self.opcode.resolve_pseudo_labels(global_labels)
+		self.opcode.resolve_pseudo_labels(global_labels);
 	}
 
 	fn set_current_label(

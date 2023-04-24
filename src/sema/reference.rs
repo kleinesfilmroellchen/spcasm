@@ -174,8 +174,7 @@ impl ReferenceResolvable for Reference {
 	fn resolve_pseudo_labels(&mut self, global_labels: &[Arc<RwLock<Label>>]) {
 		match self {
 			Self::Label(this_label) => {
-				if !this_label.read_recursive().has_definition() {
-					println!("for label {}", this_label.read_recursive().name);
+				if !this_label.try_read().is_some_and(|label| label.has_definition()) {
 					// Keep a list of possibly matching labels, as a pair of (pseudo_name, label).
 					// Repeatedly extend that list with the children of candidates where the pseudo_name matches a
 					// prefix of our name.
@@ -183,15 +182,20 @@ impl ReferenceResolvable for Reference {
 						.iter()
 						.cloned()
 						.filter_map(|label| {
-							// Hack to force a drop of the read lock before label is moved later.
-							let name = {
-								let name = label.read_recursive().name.clone();
-								name
-							};
-							if this_label.read_recursive().name.starts_with(name.as_str()) {
-								Some((name, label))
-							} else {
+							// Recursive labels; will error later but we do not want to deadlock.
+							if label.is_locked() {
 								None
+							} else {
+								// Hack to force a drop of the read lock before label is moved later.
+								let name = {
+									let name = label.read().name.clone();
+									name
+								};
+								if this_label.read().name.starts_with(name.as_str()) {
+									Some((name, label))
+								} else {
+									None
+								}
 							}
 						})
 						.collect::<Vec<_>>();
@@ -201,16 +205,14 @@ impl ReferenceResolvable for Reference {
 						candidates = Vec::new();
 
 						for (label_name, candidate) in old_labels {
-							println!("considering candidate {} => {:?}", label_name, candidate);
-							if this_label.read_recursive().name == label_name && candidate.read_recursive().has_definition() {
-								println!("found equivalent label {:?}", candidate);
+							if this_label.read().name == label_name && candidate.read().has_definition() {
 								*this_label = candidate;
 								return;
 							}
 
-							for (child_name, child_label) in candidate.read_recursive().children.iter() {
+							for (child_name, child_label) in &candidate.read().children {
 								let combined_name = format!("{}_{}", label_name, child_name);
-								if this_label.read_recursive().name.starts_with(&combined_name) {
+								if this_label.read().name.starts_with(&combined_name) {
 									candidates.push((combined_name.into(), child_label.clone()));
 								}
 							}
@@ -219,7 +221,9 @@ impl ReferenceResolvable for Reference {
 				}
 				// Only try to borrow mutably globals and locals. If there are circular references, this borrowing will
 				// fail and we can stop resolving, since there will be a resolution error later on anyways.
-				this_label.try_write().map(|mut reference| reference.resolve_pseudo_labels(global_labels));
+				if let Some(mut reference) = this_label.try_write() {
+					reference.resolve_pseudo_labels(global_labels);
+				}
 			},
 			Self::MacroArgument { value, .. } =>
 				if let Some(value) = value.as_mut() {

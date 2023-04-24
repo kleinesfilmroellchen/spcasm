@@ -131,6 +131,10 @@ impl ReferenceResolvable for Directive {
 		self.value.resolve_relative_labels(direction, relative_labels);
 	}
 
+	fn resolve_pseudo_labels(&mut self, global_labels: &[Arc<RwLock<Label>>]) {
+		self.value.resolve_pseudo_labels(global_labels);
+	}
+
 	fn set_current_label(
 		&mut self,
 		current_label: &Option<Arc<RwLock<Label>>>,
@@ -397,6 +401,33 @@ impl ReferenceResolvable for DirectiveValue {
 			| Self::Org(_)
 			| Self::UserDefinedMacro { .. } => (),
 			Self::AssignReference { value, .. } => value.resolve_relative_labels(direction, relative_labels),
+		}
+	}
+
+	fn resolve_pseudo_labels(&mut self, global_labels: &[Arc<RwLock<Label>>]) {
+		match self {
+			Self::Table { values, .. } =>
+				for value in values {
+					value.value.resolve_pseudo_labels(global_labels);
+				},
+			Self::Fill { parameter, value, .. } => {
+				parameter.resolve_pseudo_labels(global_labels);
+				if let Some(value) = value.as_mut() {
+					value.resolve_pseudo_labels(global_labels);
+				}
+			},
+			Self::String { .. }
+			| Self::Include { .. }
+			| Self::End
+			| Self::PushSection
+			| Self::Placeholder
+			| Self::Brr { .. }
+			| Self::SampleTable { .. }
+			| Self::SetDirectiveParameters { .. }
+			| Self::PopSection
+			| Self::Org(_)
+			| Self::UserDefinedMacro { .. } => (),
+			Self::AssignReference { value, .. } => value.resolve_pseudo_labels(global_labels),
 		}
 	}
 

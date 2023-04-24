@@ -202,6 +202,18 @@ impl ReferenceResolvable for AssemblyTimeValue {
 			},
 		}
 	}
+
+	fn resolve_pseudo_labels(&mut self, global_labels: &[Arc<RwLock<Label>>]) {
+		match self {
+			Self::Literal(_) => (),
+			Self::Reference(reference) => reference.resolve_pseudo_labels(global_labels),
+			Self::UnaryOperation(number, _) => number.resolve_pseudo_labels(global_labels),
+			Self::BinaryOperation(lhs, rhs, _) => {
+				lhs.resolve_pseudo_labels(global_labels);
+				rhs.resolve_pseudo_labels(global_labels);
+			},
+		}
+	}
 	
 	/// Sets the given global label as the parent for all unresolved local labels.
 	/// # Panics
@@ -307,7 +319,7 @@ impl ReferenceResolvable for SizedAssemblyTimeValue {
 			replacement_parent: Arc<RwLock<reference::MacroParent>>,
 			source_code: &Arc<AssemblyCode>,
 		) -> Result<(), Box<AssemblyError>> {
-		 self.value.replace_macro_parent(replacement_parent, source_code)
+		self.value.replace_macro_parent(replacement_parent, source_code)
 	}
 
 	fn resolve_relative_labels(
@@ -315,7 +327,11 @@ impl ReferenceResolvable for SizedAssemblyTimeValue {
 			direction: RelativeReferenceDirection,
 			relative_labels: &HashMap<NonZeroU64, Arc<RwLock<Label>>>,
 		) {
-		 self.value.resolve_relative_labels(direction, relative_labels);
+		self.value.resolve_relative_labels(direction, relative_labels);
+	}
+
+	fn resolve_pseudo_labels(&mut self, global_labels: &[Arc<RwLock<Label>>]) {
+		self.value.resolve_pseudo_labels(global_labels);
 	}
 
 	fn set_current_label(

@@ -334,6 +334,14 @@ impl AssemblyFile {
 			element.resolve_relative_labels(RelativeReferenceDirection::Forward, &current_forward_relative_label_map);
 		}
 
+		// Final forward iteration to resolve sub-label reference syntax, e.g. `global_local` for the label hierarchy
+		// `global: .local: ...`
+		let strong_parent = self.parent.upgrade().expect("parent disappeared");
+		let global_labels = &strong_parent.read().globals;
+		for element in self.content.iter_mut() {
+			element.resolve_pseudo_labels(&global_labels);
+		}
+
 		Ok(())
 	}
 

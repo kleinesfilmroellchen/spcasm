@@ -11,7 +11,7 @@ use super::instruction::Instruction;
 use super::reference::{MacroParent, Reference, ReferenceResolvable};
 use super::{AssemblyTimeValue, Directive};
 use crate::parser::source_range;
-use crate::{AssemblyCode, AssemblyError, span_to_string};
+use crate::{span_to_string, AssemblyCode, AssemblyError};
 
 /// A program element of an assembled program. A list of program elements makes an assembled program itself.
 #[derive(Clone, Debug)]
@@ -113,6 +113,19 @@ impl ReferenceResolvable for ProgramElement {
 			Self::UserDefinedMacroCall { arguments, .. } =>
 				for argument in arguments {
 					argument.resolve_relative_labels(direction, relative_labels);
+				},
+			Self::IncludeSource { .. } => (),
+		}
+	}
+
+	fn resolve_pseudo_labels(&mut self, global_labels: &[Arc<RwLock<super::reference::Label>>]) {
+		match self {
+			Self::Directive(directive) => directive.resolve_pseudo_labels(global_labels),
+			Self::Label(reference) => reference.resolve_pseudo_labels(global_labels),
+			Self::Instruction(instruction) => instruction.resolve_pseudo_labels(global_labels),
+			Self::UserDefinedMacroCall { arguments, .. } =>
+				for argument in arguments {
+					argument.resolve_pseudo_labels(global_labels);
 				},
 			Self::IncludeSource { .. } => (),
 		}

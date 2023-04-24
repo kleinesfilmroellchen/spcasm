@@ -74,6 +74,10 @@ impl ReferenceResolvable for Instruction {
 		self.opcode.resolve_relative_labels(direction, relative_labels);
 	}
 
+	fn resolve_pseudo_labels(&mut self, global_labels: &[Arc<RwLock<Label>>]) {
+		self.opcode.resolve_pseudo_labels(global_labels)
+	}
+
 	fn set_current_label(
 		&mut self,
 		current_label: &Option<Arc<RwLock<Label>>>,
@@ -317,6 +321,12 @@ impl ReferenceResolvable for Opcode {
 	) {
 		for operand in self.first_operand.iter_mut().chain(self.second_operand.iter_mut()) {
 			operand.resolve_relative_labels(direction, relative_labels);
+		}
+	}
+
+	fn resolve_pseudo_labels(&mut self, global_labels: &[Arc<RwLock<Label>>]) {
+		for operand in self.first_operand.iter_mut().chain(self.second_operand.iter_mut()) {
+			operand.resolve_pseudo_labels(global_labels);
 		}
 	}
 
@@ -743,6 +753,25 @@ impl ReferenceResolvable for AddressingMode {
 			| Self::DirectPageBit(number, _)
 			| Self::AddressBit(number, _)
 			| Self::NegatedAddressBit(number, _) => number.resolve_relative_labels(direction, relative_labels),
+			Self::IndirectX | Self::IndirectY | Self::IndirectXAutoIncrement | Self::CarryFlag | Self::Register(_) =>
+				(),
+		}
+	}
+
+	fn resolve_pseudo_labels(&mut self, global_labels: &[Arc<RwLock<Label>>]) {
+		match self {
+			Self::Immediate(number)
+			| Self::DirectPage(number)
+			| Self::DirectPageXIndexed(number)
+			| Self::DirectPageYIndexed(number)
+			| Self::Address(number)
+			| Self::XIndexed(number)
+			| Self::YIndexed(number)
+			| Self::DirectPageXIndexedIndirect(number)
+			| Self::DirectPageIndirectYIndexed(number)
+			| Self::DirectPageBit(number, _)
+			| Self::AddressBit(number, _)
+			| Self::NegatedAddressBit(number, _) => number.resolve_pseudo_labels(global_labels),
 			Self::IndirectX | Self::IndirectY | Self::IndirectXAutoIncrement | Self::CarryFlag | Self::Register(_) =>
 				(),
 		}

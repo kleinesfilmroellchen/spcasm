@@ -171,6 +171,64 @@ impl ReferenceResolvable for Reference {
 		}
 	}
 
+	fn resolve_pseudo_labels(&mut self, global_labels: &[Arc<RwLock<Label>>]) {
+		match self {
+			Self::Label(this_label) => {
+				if !this_label.read_recursive().has_definition() {
+					println!("for label {}", this_label.read_recursive().name);
+					// Keep a list of possibly matching labels, as a pair of (pseudo_name, label).
+					// Repeatedly extend that list with the children of candidates where the pseudo_name matches a
+					// prefix of our name.
+					let mut candidates = global_labels
+						.iter()
+						.cloned()
+						.filter_map(|label| {
+							// Hack to force a drop of the read lock before label is moved later.
+							let name = {
+								let name = label.read_recursive().name.clone();
+								name
+							};
+							if this_label.read_recursive().name.starts_with(name.as_str()) {
+								Some((name, label))
+							} else {
+								None
+							}
+						})
+						.collect::<Vec<_>>();
+
+					while !candidates.is_empty() {
+						let old_labels = candidates;
+						candidates = Vec::new();
+
+						for (label_name, candidate) in old_labels {
+							println!("considering candidate {} => {:?}", label_name, candidate);
+							if this_label.read_recursive().name == label_name && candidate.read_recursive().has_definition() {
+								println!("found equivalent label {:?}", candidate);
+								*this_label = candidate;
+								return;
+							}
+
+							for (child_name, child_label) in candidate.read_recursive().children.iter() {
+								let combined_name = format!("{}_{}", label_name, child_name);
+								if this_label.read_recursive().name.starts_with(&combined_name) {
+									candidates.push((combined_name.into(), child_label.clone()));
+								}
+							}
+						}
+					}
+				}
+				// Only try to borrow mutably globals and locals. If there are circular references, this borrowing will
+				// fail and we can stop resolving, since there will be a resolution error later on anyways.
+				this_label.try_write().map(|mut reference| reference.resolve_pseudo_labels(global_labels));
+			},
+			Self::MacroArgument { value, .. } =>
+				if let Some(value) = value.as_mut() {
+					value.resolve_pseudo_labels(global_labels);
+				},
+			Self::MacroGlobal { .. } | Self::Relative { .. } | Self::UnresolvedLocalLabel { .. } => (),
+		}
+	}
+
 	fn set_current_label(
 		&mut self,
 		current_label: &Option<Arc<RwLock<Label>>>,
@@ -377,6 +435,12 @@ impl ReferenceResolvable for Label {
 		}
 	}
 
+	fn resolve_pseudo_labels(&mut self, global_labels: &[Arc<RwLock<Label>>]) {
+		if let Some(location) = self.location.as_mut() {
+			location.resolve_pseudo_labels(global_labels);
+		}
+	}
+
 	fn set_current_label(
 		&mut self,
 		_current_label: &Option<Arc<RwLock<Label>>>,
@@ -501,6 +565,10 @@ pub trait ReferenceResolvable {
 		direction: RelativeReferenceDirection,
 		relative_labels: &HashMap<NonZeroU64, Arc<RwLock<Label>>>,
 	);
+
+	/// Resolve all labels accessed with pseudo syntax, e.g. `global_local` for the hierarchy `global: .local: ...`.
+	/// This is an Asar compatibility feature and its use is discouraged.
+	fn resolve_pseudo_labels(&mut self, global_labels: &[Arc<RwLock<Label>>]);
 
 	/// Resolve all pseudo-local labels into real labels by using the current label to figure out their parents.
 	fn set_current_label(

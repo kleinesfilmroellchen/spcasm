@@ -357,6 +357,8 @@ pub struct Label {
 	pub definition_span: Option<SourceSpan>,
 	/// All source code locations where the label is used.
 	pub usage_spans:     Vec<SourceSpan>,
+	/// Whether this is a synthetic label. Synthetic labels are transparent to label hierarchy resolution.
+	pub synthetic:    bool,
 	/// Child labels belonging to this label.
 	pub children:        BTreeMap<String, Arc<RwLock<Label>>>,
 	/// Parent label of this label. If not set, this label is global.
@@ -397,6 +399,20 @@ impl Label {
 			children: BTreeMap::default(),
 			location: None,
 			definition_span: Some(span),
+			synthetic: false,
+			name,
+			usage_spans: Vec::default(),
+			parent: Weak::default(),
+		}))
+	}
+
+	/// Creates a new synthetic label with the given name and definition location.
+	pub fn new_synthetic(name: String, span: SourceSpan) -> Arc<RwLock<Self>> {
+		Arc::new(RwLock::new(Self {
+			children: BTreeMap::default(),
+			location: None,
+			definition_span: Some(span),
+			synthetic: true,
 			name,
 			usage_spans: Vec::default(),
 			parent: Weak::default(),
@@ -409,6 +425,7 @@ impl Label {
 			children: BTreeMap::default(),
 			location: None,
 			definition_span: None,
+			synthetic: false,
 			name,
 			usage_spans: vec![span],
 			parent: Weak::default(),
@@ -501,6 +518,7 @@ impl MacroParent {
 			label:      Arc::new(RwLock::new(Label {
 				name:            "macro global placeholder".into(),
 				location:        None,
+				synthetic:    true,
 				definition_span: Some(span),
 				usage_spans:     Vec::default(),
 				children:        BTreeMap::new(),

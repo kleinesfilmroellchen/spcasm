@@ -230,6 +230,7 @@ fn coverage() {
 		crate::sema::reference::Label {
 			children:        BTreeMap::new(),
 			location:        None,
+			synthetic:       true,
 			name:            "example".into(),
 			usage_spans:     Vec::new(),
 			definition_span: Some((0, 0).into()),

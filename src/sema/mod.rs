@@ -280,8 +280,10 @@ impl AssemblyFile {
 					// To reference the relative label until codegen, create a new local label for it.
 					// This name is likely, but not guaranteed, to be unique! That's why we directly insert into
 					// the globals list.
-					let global_for_relative =
-						Label::new_with_definition(format!("ref_-_{}_{}", id, span.offset()).into(), *span);
+					let global_for_relative = Label::new_synthetic(
+						format!("{}_{}", "-".repeat(u64::from(id) as usize), span.offset()).into(),
+						*span,
+					);
 					self.parent
 						.upgrade()
 						.expect("parent disappeared")
@@ -304,8 +306,8 @@ impl AssemblyFile {
 				| ProgramElement::Instruction(_) => (),
 			}
 			element.set_current_label(&current_label, &self.source_code)?;
-			// If we just (newly) resolved this element to a label, set it as the current label.
-			if let ProgramElement::Label(Reference::Label(ref label)) = element {
+			// Set any non-synthetic label as the current label.
+			if let ProgramElement::Label(Reference::Label(ref label)) = element && !label.read().synthetic {
 				current_label = Some(label.clone());
 			}
 			element.resolve_relative_labels(RelativeReferenceDirection::Backward, &current_backward_relative_label_map);
@@ -325,8 +327,10 @@ impl AssemblyFile {
 			{
 				let id = *id;
 				// To reference the relative label until codegen, create a new local label for it.
-				let global_for_relative =
-					Label::new_with_definition(format!("ref_+_{}_{}", id, span.offset()).into(), *span);
+				let global_for_relative = Label::new_synthetic(
+					format!("{}_{}", "+".repeat(u64::from(id) as usize), span.offset()).into(),
+					*span,
+				);
 				self.parent.upgrade().expect("parent disappeared").write().globals.push(global_for_relative.clone());
 				*element = ProgramElement::Label(Reference::Label(global_for_relative.clone()));
 				current_forward_relative_label_map.insert(id, global_for_relative);
@@ -421,10 +425,8 @@ impl AssemblyFile {
 					if matches!(&directive.value, DirectiveValue::Brr { directory: true, .. })
 						&& current_labels.is_empty()
 					{
-						let new_brr_label = Label::new_with_definition(
-							format!("brr_sample_{}", brr_label_number).into(),
-							directive.span,
-						);
+						let new_brr_label =
+							Label::new_synthetic(format!("brr_sample_{}", brr_label_number).into(), directive.span);
 						brr_label_number += 1;
 
 						self.parent
@@ -746,7 +748,7 @@ impl AssemblyFile {
 							})
 							.collect(),
 						// We use a unique reference name just to make sure that we don't combine different
-						// references accidentally.
+						// references accidentally. This is not a synthetic label!
 						Label::new_with_definition(
 							format!("{}_global_label_{}", macro_name, index).into(),
 							*definition_span,

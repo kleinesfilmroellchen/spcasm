@@ -482,6 +482,8 @@ impl AssemblyFile {
 	/// 3. Repeatedly find references (or reference-based calculations) that do not lie in the direct page anymore, and
 	/// update instructions and positions. Repeat until no changes happen or the reference resolution limit is reached.
 	/// 4. Modify instructions accordingly
+	/// 
+	/// TODO: This function is very hot; >20% of runtime. Optimize the optimizer :^)
 	#[allow(clippy::too_many_lines)]
 	fn optimize_direct_page_labels(&self, segments: &mut Segments<ProgramElement>) {
 		/// Do the more complex direct page coercing with references. We only consider references in the direct page if

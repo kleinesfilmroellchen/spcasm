@@ -136,7 +136,6 @@ impl Environment {
 		let mut file = rc_file.write();
 
 		file.resolve_user_macro_arguments()?;
-		file.coerce_to_direct_page_addressing();
 
 		drop(file);
 		// Insert the file into the list of source files so that we can detect cycles...
@@ -148,6 +147,7 @@ impl Environment {
 
 		file.expand_user_macros()?;
 		file.fill_in_reference_links()?;
+		file.coerce_to_direct_page_addressing();
 		drop(file);
 
 		Ok(rc_file)

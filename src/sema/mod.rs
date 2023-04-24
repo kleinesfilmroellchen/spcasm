@@ -281,7 +281,7 @@ impl AssemblyFile {
 					// This name is likely, but not guaranteed, to be unique! That's why we directly insert into
 					// the globals list.
 					let global_for_relative = Label::new_synthetic(
-						format!("{}_{}", "-".repeat(u64::from(id) as usize), span.offset()).into(),
+						format!("{}_{}", "-".repeat(usize::try_from(u64::from(id)).unwrap()), span.offset()).into(),
 						*span,
 					);
 					self.parent
@@ -328,7 +328,7 @@ impl AssemblyFile {
 				let id = *id;
 				// To reference the relative label until codegen, create a new local label for it.
 				let global_for_relative = Label::new_synthetic(
-					format!("{}_{}", "+".repeat(u64::from(id) as usize), span.offset()).into(),
+					format!("{}_{}", "+".repeat(usize::try_from(u64::from(id)).unwrap()), span.offset()).into(),
 					*span,
 				);
 				self.parent.upgrade().expect("parent disappeared").write().globals.push(global_for_relative.clone());

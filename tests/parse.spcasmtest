@@ -45,7 +45,7 @@ bytelabel: byte 0
 MOV a,(40+X)
 MOV a,40
 MOV a,+(40)
-MOV a,- -((40))
+MOV a,- (-((40)))
 
 asciiz "h\\af1234\n\t\r\" \""
 textlabel: ascii "\x08\xff\x1D'\'"

@@ -138,14 +138,14 @@ pub fn preprocess_token_stream(tokens: Vec<Token>) -> Vec<Token> {
 							break true;
 						} else {
 							// Didn't find a relative + / - token.
-							collected_tokens.push(further_token);
+							final_token = Some(further_token);
 							break false;
 						}
 					} else {
 						break true;
 					}
 				};
-				if was_uniform {
+				if was_uniform || collected_tokens.len() > 1 {
 					let plus_amount = NonZeroU64::new(u64::try_from(collected_tokens.len()).unwrap()).unwrap();
 					let source_span =
 						source_range(offset.into(), collected_tokens.last().unwrap().source_span().into());
@@ -153,11 +153,11 @@ pub fn preprocess_token_stream(tokens: Vec<Token>) -> Vec<Token> {
 						RelativeReferenceDirection::Backward => Token::RelativeLabelMinus(plus_amount, source_span),
 						RelativeReferenceDirection::Forward => Token::RelativeLabelPlus(plus_amount, source_span),
 					});
-					if let Some(final_token) = final_token {
-						result.push(final_token);
-					}
 				} else {
 					result.append(&mut collected_tokens);
+				}
+				if let Some(final_token) = final_token {
+					result.push(final_token);
 				}
 				continue;
 			},

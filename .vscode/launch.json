@@ -16,7 +16,10 @@
 				}
 			},
 			"args": [
-				"tests/opcodes.s"
+				"tests/opcodes.s",
+				"-f",
+				"hex-dump",
+				"-"
 			],
 			"cwd": "${workspaceFolder}"
 		},
@@ -26,14 +29,15 @@
 			"name": "Debug spcasm tests",
 			"cargo": {
 				"args": [
-					"nextest"
+					"test",
+					"--no-run",
+					"--lib"
 				],
 				"filter": {
 					"name": "spcasm",
-					"kind": "bin"
+					"kind": "lib"
 				}
 			},
-			"args": [],
 			"cwd": "${workspaceFolder}"
 		},
 		{

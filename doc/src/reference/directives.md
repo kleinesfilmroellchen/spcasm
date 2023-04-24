@@ -133,7 +133,7 @@ The options are a list of identifiers like with `brr`. Currently, these options 
 
 In general, `sampletable` provides sane and easy defaults for quickly generating a sample table. If you have more specific needs, like overlapping samples, specific sample orderings, overlong or misaligned tables, you should manually specify the sample table(s) instead.
 
-## `end`
+## `endasm`
 
 This directive takes no arguments and will stop the assembler as soon as possible. Due to how segments work in spcasm, this directive might not immediately stop assembly for the entire binary, but it will definitely stop assembly within its segment. This is an old feature inherited from more primitive assemblers and its use is discouraged.
 

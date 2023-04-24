@@ -65,6 +65,6 @@ db $BB
 
 bra -7
 
-end
+endasm
 ; This should not be in the final assembly.
 adc a,#7 ;= FF FF

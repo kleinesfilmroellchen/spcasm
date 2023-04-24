@@ -167,7 +167,7 @@ pub enum DirectiveSymbol {
 	Incbin,
 	Include,
 	Incsrc,
-	End,
+	EndAsm,
 	Pushpc,
 	Pullpc,
 	Arch,
@@ -200,7 +200,7 @@ impl Display for DirectiveSymbol {
 			Self::SampleTable => "sampletable",
 			Self::Incbin => "incbin",
 			Self::Include | Self::Incsrc => "include",
-			Self::End => "end",
+			Self::EndAsm => "endasm",
 			Self::Pushpc => "pushpc",
 			Self::Pullpc => "pullpc",
 			Self::Arch => "arch",
@@ -256,7 +256,7 @@ pub enum DirectiveValue {
 	AssignReference { reference: Reference, value: AssemblyTimeValue },
 	/// incbin <file name>
 	Include { file: String, range: Option<SourceSpan> },
-	/// end
+	/// endasm
 	End,
 	/// pushpc
 	PushSection,

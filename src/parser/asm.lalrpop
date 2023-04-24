@@ -177,7 +177,7 @@ Directive: Directive = {
 		span: source_range(directive.into(), text.1.into()),
 		expected_value: None,
 	},
-	"end" => Directive {
+	"endasm" => Directive {
 		value: DirectiveValue::End,
 		span: <>,
 		expected_value: None,
@@ -564,7 +564,7 @@ extern {
 		"incbin" => Token::Directive(DirectiveSymbol::Incbin, <SourceSpan>),
 		"include" => Token::Directive(DirectiveSymbol::Include, <SourceSpan>),
 		"incsrc" => Token::Directive(DirectiveSymbol::Incsrc, <SourceSpan>),
-		"end" => Token::Directive(DirectiveSymbol::End, <SourceSpan>),
+		"endasm" => Token::Directive(DirectiveSymbol::EndAsm, <SourceSpan>),
 		"brr" => Token::Directive(DirectiveSymbol::Brr, <SourceSpan>),
 		"sampletable" => Token::Directive(DirectiveSymbol::SampleTable, <SourceSpan>),
 		"pushpc" => Token::Directive(DirectiveSymbol::Pushpc, <SourceSpan>),

@@ -197,6 +197,7 @@ impl Token {
 		match identifier {
 			"offset" => Ok("offset"),
 			"align" => Ok("align"),
+			"startpos" => Ok("startpos"),
 			_ => Err(AssemblyError::ExpectedToken {
 				expected: String::from("identifier").into(),
 				actual: Self::Identifier(identifier.into(), span),

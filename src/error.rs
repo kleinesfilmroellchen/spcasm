@@ -47,6 +47,23 @@ pub enum AssemblyError {
 		location: SourceSpan,
 	},
 
+	#[error("startpos directive ignored")]
+	#[diagnostic(
+		code(spcasm::startpos_ignored),
+		severity(Advice),
+		help(
+			"spcasm supports `startpos` directives for compatibility with the `spc700-inline` mode of the Asar \
+			 multi-architecture assembler. This directive instructs Asar to insert special loader commands on the \
+			 SNES side, but since spcasm does not concern itself with those, they are ignored."
+		)
+	)]
+	StartposDirectiveIgnored {
+		#[source_code]
+		src:      Arc<AssemblyCode>,
+		#[label("`startpos` directive")]
+		location: SourceSpan,
+	},
+
 	#[error("Unknown architecture `{arch}` specified")]
 	#[diagnostic(
 		code(spcasm::arch::invalid),

@@ -199,6 +199,7 @@ Directive: Directive = {
 		}).map_err(|error| ParseError::User { error })
 	},
 	ArchDirective,
+	StartposDirective,
 	FillAlignDirective,
 	FillAmountDirective,
 	PadDirective,
@@ -255,6 +256,14 @@ ArchDirective: Directive = <directive:"arch"> <arch:"identifier"> =>? {
 			location: source_range(directive.into(), arch.1.into()),
 		}).map_err(|error| ParseError::User { error })
 	}
+};
+
+StartposDirective: Directive = <directive:"startpos"> AssemblyTimeValue => {
+	environment.read_recursive().options.report_diagnostic(AssemblyError::StartposDirectiveIgnored {
+		src:      source_code.clone(),
+		location: directive,
+	});
+	Directive::default()
 };
 
 FillAlignDirective: Directive = <directive:"fill"> <align_keyword:"align"> <alignment:AssemblyTimeValue> <offset:OffsetSpecifier?> => {
@@ -563,6 +572,7 @@ extern {
 		"arch" => Token::Directive(DirectiveSymbol::Arch, <SourceSpan>),
 		"offset" => Token::SpecialIdentifier("offset", <SourceSpan>),
 		"align" => Token::SpecialIdentifier("align", <SourceSpan>),
+		"startpos" => Token::SpecialIdentifier("startpos", <SourceSpan>),
 		"fill" => Token::Directive(DirectiveSymbol::Fill, <SourceSpan>),
 		"fillbyte" => Token::Directive(DirectiveSymbol::FillByte, <SourceSpan>),
 		"fillword" => Token::Directive(DirectiveSymbol::FillWord, <SourceSpan>),

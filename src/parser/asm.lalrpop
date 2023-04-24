@@ -310,7 +310,8 @@ UserDefinedMacroArguments: Vec<(String, SourceSpan)> = {
 	"," <Comma<"identifier">> => <>,
 };
 
-AssemblyTimeValueList = Comma<AssemblyTimeValue>;
+AssemblyTimeValueList = { Comma<AssemblyTimeValue>, Comma<AssemblyTimeValueWithHashPrefix> };
+AssemblyTimeValueWithHashPrefix = "#" <AssemblyTimeValue>;
 
 /// Allows both vasm and asar syntax; note that asar requires an end point.
 /// vasm: `, start [, length]`

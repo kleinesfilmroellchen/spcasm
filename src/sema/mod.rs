@@ -409,9 +409,17 @@ impl AssemblyFile {
 			match element {
 				ProgramElement::Label(reference) => {
 					current_labels.push(reference.clone());
-					segments
-						.add_element(ProgramElement::Label(reference.clone()))
-						.map_err(Self::to_asm_error(&reference.source_span(), &self.source_code))?;
+					if segments.add_element(ProgramElement::Label(reference.clone())).is_err() {
+						// Missing segment at label insertion point; the label will be undefined but that doesn't
+						// matter.
+						self.parent.upgrade().unwrap().read().options.report_diagnostic(
+							AssemblyError::ReferenceOutsideSegment {
+								reference: reference.name(),
+								location:  reference.source_span(),
+								src:       self.source_code.clone(),
+							},
+						);
+					}
 					// Prevent the clearing of current labels.
 					continue;
 				},

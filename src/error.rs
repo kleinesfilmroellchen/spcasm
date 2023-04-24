@@ -294,6 +294,20 @@ pub enum AssemblyError {
 		src:      Arc<AssemblyCode>,
 	},
 
+	#[error("'{reference}' was defined outside a segment and will have no value")]
+	#[diagnostic(
+		code(spcasm::reference::outside_segment),
+		severity(Warning),
+		help("If you want this reference to have a value, start a segment before it with `org <memory address>`.")
+	)]
+	ReferenceOutsideSegment {
+		reference: String,
+		#[label("Reference defined here, outside segments")]
+		location:  SourceSpan,
+		#[source_code]
+		src:       Arc<AssemblyCode>,
+	},
+
 	#[error("There is no segment on the stack")]
 	#[diagnostic(
 		code(spcasm::segment::empty_stack),

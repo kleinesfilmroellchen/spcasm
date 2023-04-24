@@ -272,11 +272,12 @@ fn main() {
 					},
 				);
 			}
-			let mut output_file =
+			let mut output_file = std::io::BufWriter::new(
 				File::options().write(true).create(true).append(false).open(output).unwrap_or_else(|error| {
 					eprintln!("error opening output: {}", error);
 					std::process::exit(1);
-				});
+				}),
+			);
 			output_file.write_all(&encoded).unwrap_or_else(|error| {
 				eprintln!("error while writing output: {}", error);
 				std::process::exit(1);
@@ -301,10 +302,10 @@ fn main() {
 			let header = ::wav::Header::new(WAV_FORMAT_PCM, 1, 32_000, 16);
 
 			let mut output_file =
-				File::options().write(true).create(true).append(false).open(output).unwrap_or_else(|error| {
+				std::io::BufWriter::new(File::options().write(true).create(true).append(false).open(output).unwrap_or_else(|error| {
 					eprintln!("error opening output: {}", error);
 					std::process::exit(1);
-				});
+				}));
 
 			::wav::write(header, &samples.into(), &mut output_file).unwrap_or_else(|error| {
 				eprintln!("error writing output: {}", error);

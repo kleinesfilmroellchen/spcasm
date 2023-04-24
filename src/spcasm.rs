@@ -43,14 +43,14 @@ pub fn main() -> miette::Result<()> {
 			let mut outfile: Box<dyn Write> = if outfile.to_string_lossy() == "-" {
 				Box::new(std::io::stdout())
 			} else {
-				Box::new(
+				Box::new(std::io::BufWriter::new(
 					File::options()
 						.create(true)
 						.truncate(true)
 						.write(true)
 						.open(outfile)
 						.expect("Couldn't open output file"),
-				)
+				))
 			};
 			match args.output_format {
 				cli::OutputFormat::Elf => elf::write_to_elf(&mut outfile, &assembled).unwrap(),

@@ -1,6 +1,7 @@
 //! WAV file handling and conversion.
 
 use std::fs::File;
+use std::io::BufReader;
 
 #[allow(unused)]
 use smartstring::alias::String;
@@ -15,8 +16,8 @@ const i24max: f64 = (0xff_ffff - 1) as f64;
 ///
 /// # Errors
 /// Any errors from the WAV support library are passed on, as well as some custom errors.
-pub fn read_wav_for_brr(mut file: File) -> Result<Vec<DecodedSample>, String> {
-	let (header, data) = wav_read(&mut file).map_err(|err| String::from(err.to_string()))?;
+pub fn read_wav_for_brr(file: File) -> Result<Vec<DecodedSample>, String> {
+	let (header, data) = wav_read(&mut BufReader::new(file)).map_err(|err| String::from(err.to_string()))?;
 	convert_sample_format(data, header.channel_count)
 }
 

@@ -178,45 +178,48 @@ impl ReferenceResolvable for Reference {
 					// Keep a list of possibly matching labels, as a pair of (pseudo_name, label).
 					// Repeatedly extend that list with the children of candidates where the pseudo_name matches a
 					// prefix of our name.
-					let mut candidates = global_labels
-						.iter()
-						.cloned()
-						.filter_map(|label| {
-							// Recursive labels; will error later but we do not want to deadlock.
-							if label.is_locked() {
-								None
+					let global_candidates = global_labels.iter().cloned().filter_map(|label| {
+						// Recursive labels; will error later but we do not want to deadlock.
+						if label.is_locked() {
+							None
+						} else {
+							// Hack to force a drop of the read lock before label is moved later.
+							let name = {
+								let name = label.read().name.clone();
+								name
+							};
+							if this_label.read().name.starts_with(name.as_str()) {
+								Some((name, label))
 							} else {
-								// Hack to force a drop of the read lock before label is moved later.
-								let name = {
-									let name = label.read().name.clone();
-									name
-								};
-								if this_label.read().name.starts_with(name.as_str()) {
-									Some((name, label))
-								} else {
-									None
+								None
+							}
+						}
+					});
+
+					let mut candidates: Vec<(String, _)> = Vec::new();
+					macro_rules! run_check_on_labels {
+						($labels:expr) => {
+							for (label_name, candidate) in $labels {
+								if this_label.read().name == label_name && candidate.read().has_definition() {
+									*this_label = candidate;
+									return;
+								}
+
+								for (child_name, child_label) in &candidate.read().children {
+									let combined_name = format!("{}_{}", label_name, child_name);
+									if this_label.read().name.starts_with(&combined_name) {
+										candidates.push((combined_name.into(), child_label.clone()));
+									}
 								}
 							}
-						})
-						.collect::<Vec<_>>();
+						};
+					}
 
+					run_check_on_labels!(global_candidates);
 					while !candidates.is_empty() {
 						let old_labels = candidates;
 						candidates = Vec::new();
-
-						for (label_name, candidate) in old_labels {
-							if this_label.read().name == label_name && candidate.read().has_definition() {
-								*this_label = candidate;
-								return;
-							}
-
-							for (child_name, child_label) in &candidate.read().children {
-								let combined_name = format!("{}_{}", label_name, child_name);
-								if this_label.read().name.starts_with(&combined_name) {
-									candidates.push((combined_name.into(), child_label.clone()));
-								}
-							}
-						}
+						run_check_on_labels!(old_labels);
 					}
 				}
 				// Only try to borrow mutably globals and locals. If there are circular references, this borrowing will

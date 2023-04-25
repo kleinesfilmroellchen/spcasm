@@ -540,7 +540,6 @@ impl AssemblyFile {
 							&& !references.iter().all(|(_, value)| value.is_resolved())
 							&& opcode.can_use_direct_page_addressing()
 						{
-							// println!("handling element {:#?}", element);
 							referenced_objects.push(ReferencedObject {
 								address:       offset + *segment_start,
 								segment_start: *segment_start,
@@ -604,8 +603,11 @@ impl AssemblyFile {
 
 			let mut address_offset = 0;
 			let mut last_segment = None;
-			for ReferencedObject { address, object, segment_start } in &mut referenced_objects {
-				if let Some(last_segment) = last_segment && *segment_start != last_segment {
+			let mut index: isize = 0;
+			while index < referenced_objects.len().try_into().unwrap() {
+				let ReferencedObject { address, object, segment_start } = &mut referenced_objects[index as usize];
+				let segment_start = *segment_start;
+				if let Some(last_segment) = last_segment && segment_start != last_segment {
 					address_offset = 0;
 				}
 				*address += address_offset;
@@ -620,10 +622,14 @@ impl AssemblyFile {
 						change = true;
 						*is_short = false;
 						address_offset += 1;
+						// This object was just unoptimized, no need to consider it in future runs.
+						referenced_objects.remove(index as usize);
+						index -= 1;
 					},
 					_ => {},
 				}
-				last_segment = Some(*segment_start);
+				last_segment = Some(segment_start);
+				index += 1;
 			}
 
 			iteration += 1;

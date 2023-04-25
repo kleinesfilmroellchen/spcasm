@@ -31,7 +31,14 @@ impl AssemblyCode {
 			path = std::env::current_dir()?.join(path);
 		}
 		path = uniform_canonicalize(&path)?;
-		let contents = std::fs::read_to_string(&path)?.chars().filter(|c| c != &'\r').collect();
+
+		// Optimization: Pre-allocate the String with the known size of the source code.
+		let text = std::fs::read_to_string(&path)?;
+		let text_size = text.len();
+		let mut contents = String::new();
+		<String as Extend<char>>::extend_reserve(&mut contents, text_size);
+		contents.extend(text.chars().filter(|c| c != &'\r'));
+
 		Ok(Arc::new(Self { name: path, text: contents, include_path: Vec::new() }))
 	}
 

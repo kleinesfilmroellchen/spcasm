@@ -482,7 +482,7 @@ impl AssemblyFile {
 	/// 3. Repeatedly find references (or reference-based calculations) that do not lie in the direct page anymore, and
 	/// update instructions and positions. Repeat until no changes happen or the reference resolution limit is reached.
 	/// 4. Modify instructions accordingly
-	/// 
+	///
 	/// TODO: This function is very hot; >20% of runtime. Optimize the optimizer :^)
 	#[allow(clippy::too_many_lines)]
 	fn optimize_direct_page_labels(&self, segments: &mut Segments<ProgramElement>) {
@@ -586,14 +586,14 @@ impl AssemblyFile {
 
 			let all_references = referenced_objects
 				.iter()
-				.filter(|ReferencedObject { object: candidate, .. }| {
-					matches!(candidate, InstructionOrReference::Reference(_))
+				.filter_map(|ReferencedObject { object: candidate, address, .. }| match candidate {
+					InstructionOrReference::Reference(reference) => Some((*address, reference.clone())),
+					_ => None,
 				})
-				.cloned()
 				.collect::<Vec<_>>();
 			let find_value_for_reference = |queried_reference| {
-				for ReferencedObject { address, object, .. } in &all_references {
-					if let InstructionOrReference::Reference(candidate) = object && candidate == &queried_reference {
+				for (address, candidate) in &all_references {
+					if candidate == &queried_reference {
 						return Some(*address);
 					}
 				}

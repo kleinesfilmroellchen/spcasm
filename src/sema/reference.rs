@@ -290,6 +290,12 @@ impl PartialEq for Reference {
 	}
 }
 
+impl PartialEq<Arc<RwLock<Label>>> for Reference {
+	fn eq(&self, other: &Arc<RwLock<Label>>) -> bool {
+		self == &Reference::Label(other.clone())
+	}
+}
+
 impl Resolvable for Reference {
 	#[must_use]
 	fn is_resolved(&self) -> bool {
@@ -358,7 +364,7 @@ pub struct Label {
 	/// All source code locations where the label is used.
 	pub usage_spans:     Vec<SourceSpan>,
 	/// Whether this is a synthetic label. Synthetic labels are transparent to label hierarchy resolution.
-	pub synthetic:    bool,
+	pub synthetic:       bool,
 	/// Child labels belonging to this label.
 	pub children:        BTreeMap<String, Arc<RwLock<Label>>>,
 	/// Parent label of this label. If not set, this label is global.
@@ -518,7 +524,7 @@ impl MacroParent {
 			label:      Arc::new(RwLock::new(Label {
 				name:            "macro global placeholder".into(),
 				location:        None,
-				synthetic:    true,
+				synthetic:       true,
 				definition_span: Some(span),
 				usage_spans:     Vec::default(),
 				children:        BTreeMap::new(),

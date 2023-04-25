@@ -589,7 +589,7 @@ impl AssemblyFile {
 				.iter()
 				.filter_map(|ReferencedObject { object: candidate, address, .. }| match candidate {
 					InstructionOrReference::Reference(reference) => Some((*address, reference.clone())),
-					_ => None,
+					InstructionOrReference::Instruction { .. } => None,
 				})
 				.collect::<Vec<_>>();
 			let find_value_for_reference = |queried_reference| {
@@ -604,6 +604,7 @@ impl AssemblyFile {
 			let mut address_offset = 0;
 			let mut last_segment = None;
 			let mut index: isize = 0;
+			#[allow(clippy::cast_sign_loss)]
 			while index < referenced_objects.len().try_into().unwrap() {
 				let ReferencedObject { address, object, segment_start } = &mut referenced_objects[index as usize];
 				let segment_start = *segment_start;

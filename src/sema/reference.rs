@@ -292,7 +292,7 @@ impl PartialEq for Reference {
 
 impl PartialEq<Arc<RwLock<Label>>> for Reference {
 	fn eq(&self, other: &Arc<RwLock<Label>>) -> bool {
-		self == &Reference::Label(other.clone())
+		self == &Self::Label(other.clone())
 	}
 }
 

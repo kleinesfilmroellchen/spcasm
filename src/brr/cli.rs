@@ -301,11 +301,12 @@ fn main() {
 
 			let header = ::wav::Header::new(WAV_FORMAT_PCM, 1, 32_000, 16);
 
-			let mut output_file =
-				std::io::BufWriter::new(File::options().write(true).create(true).append(false).open(output).unwrap_or_else(|error| {
+			let mut output_file = std::io::BufWriter::new(
+				File::options().write(true).create(true).append(false).open(output).unwrap_or_else(|error| {
 					eprintln!("error opening output: {}", error);
 					std::process::exit(1);
-				}));
+				}),
+			);
 
 			::wav::write(header, &samples.into(), &mut output_file).unwrap_or_else(|error| {
 				eprintln!("error writing output: {}", error);

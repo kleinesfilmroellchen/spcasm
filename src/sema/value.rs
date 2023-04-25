@@ -159,11 +159,9 @@ impl AssemblyTimeValue {
 	}
 
 	/// Returns whether this value is resolved.
+	#[must_use]
 	pub fn is_resolved(&self) -> bool {
-		match self.clone().try_resolve() {
-			AssemblyTimeValue::Literal(_) => true,
-			_ => false,
-		}
+		matches!(self.clone().try_resolve(), Self::Literal(_))
 	}
 }
 

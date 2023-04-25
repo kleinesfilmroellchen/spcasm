@@ -28,7 +28,23 @@ pub fn main() -> miette::Result<()> {
 	// Errors are already reported, so we only need to handle the success case.
 	if let Ok((environment, assembled)) = run_assembler(&code, options.clone()) {
 		if args.dump_references {
-			dump_reference_tree(&environment.read_recursive().globals);
+			let mut references = environment.read_recursive().globals.values().cloned().collect::<Vec<_>>();
+			references.sort_by_cached_key(|reference| {
+				reference
+					.read()
+					.location
+					.as_ref()
+					.and_then(|location| {
+						location
+							.try_value(
+								reference.read_recursive().source_span(),
+								std::sync::Arc::new(AssemblyCode::new("", &String::new())),
+							)
+							.ok()
+					})
+					.map_or_else(|| "(unknown)".to_string(), |location| format!("{:04X}", location))
+			});
+			dump_reference_tree(&references);
 		}
 
 		if args.dump_ast {

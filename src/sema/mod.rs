@@ -47,7 +47,7 @@ pub enum LabelUsageKind {
 #[derive(Debug)]
 pub struct Environment {
 	/// The list of global labels.
-	pub globals: Vec<Arc<RwLock<Label>>>,
+	pub globals: HashMap<String, Arc<RwLock<Label>>>,
 	/// The files included in this "tree" created by include statements.
 	pub files:   HashMap<PathBuf, Arc<RwLock<AssemblyFile>>>,
 	/// Error and warning options passed on the command line.
@@ -58,7 +58,11 @@ impl Environment {
 	/// Creates an empty environment.
 	#[must_use]
 	pub fn new() -> Arc<RwLock<Self>> {
-		Arc::new(RwLock::new(Self { globals: Vec::new(), files: HashMap::new(), options: default_backend_options() }))
+		Arc::new(RwLock::new(Self {
+			globals: HashMap::new(),
+			files:   HashMap::new(),
+			options: default_backend_options(),
+		}))
 	}
 
 	/// Sets the user-provided error options.
@@ -165,7 +169,7 @@ impl Environment {
 		usage_kind: LabelUsageKind,
 		source_code: &Arc<AssemblyCode>,
 	) -> Result<Arc<RwLock<Label>>, AssemblyError> {
-		if let Some(matching_reference) = self.globals.iter_mut().find(|reference| reference.read().name == name) {
+		if let Some(matching_reference) = self.globals.get(name) {
 			let mut mutable_matching_reference = matching_reference.write();
 			// If the caller flags this use of the reference as its definition, we check that this is the first
 			// definition.
@@ -189,7 +193,7 @@ impl Environment {
 			} else {
 				Label::new_with_use(name.into(), span)
 			};
-			self.globals.push(new_reference.clone());
+			self.globals.insert(name.into(), new_reference.clone());
 			Ok(new_reference)
 		}
 	}
@@ -280,16 +284,15 @@ impl AssemblyFile {
 					// To reference the relative label until codegen, create a new local label for it.
 					// This name is likely, but not guaranteed, to be unique! That's why we directly insert into
 					// the globals list.
-					let global_for_relative = Label::new_synthetic(
-						format!("{}_{}", "-".repeat(usize::try_from(u64::from(id)).unwrap()), span.offset()).into(),
-						*span,
-					);
+					let label_name: String =
+						format!("{}_{}", "-".repeat(usize::try_from(u64::from(id)).unwrap()), span.offset()).into();
+					let global_for_relative = Label::new_synthetic(label_name.clone(), *span);
 					self.parent
 						.upgrade()
 						.expect("parent disappeared")
 						.write()
 						.globals
-						.push(global_for_relative.clone());
+						.insert(label_name, global_for_relative.clone());
 					*element = ProgramElement::Label(Reference::Label(global_for_relative.clone()));
 					current_backward_relative_label_map.insert(id, global_for_relative);
 				},
@@ -327,11 +330,15 @@ impl AssemblyFile {
 			{
 				let id = *id;
 				// To reference the relative label until codegen, create a new local label for it.
-				let global_for_relative = Label::new_synthetic(
-					format!("{}_{}", "+".repeat(usize::try_from(u64::from(id)).unwrap()), span.offset()).into(),
-					*span,
-				);
-				self.parent.upgrade().expect("parent disappeared").write().globals.push(global_for_relative.clone());
+				let label_name: String =
+					format!("{}_{}", "+".repeat(usize::try_from(u64::from(id)).unwrap()), span.offset()).into();
+				let global_for_relative = Label::new_synthetic(label_name.clone(), *span);
+				self.parent
+					.upgrade()
+					.expect("parent disappeared")
+					.write()
+					.globals
+					.insert(label_name, global_for_relative.clone());
 				*element = ProgramElement::Label(Reference::Label(global_for_relative.clone()));
 				current_forward_relative_label_map.insert(id, global_for_relative);
 			}
@@ -341,9 +348,9 @@ impl AssemblyFile {
 		// Final forward iteration to resolve sub-label reference syntax, e.g. `global_local` for the label hierarchy
 		// `global: .local: ...`
 		let strong_parent = self.parent.upgrade().expect("parent disappeared");
-		let global_labels = &strong_parent.read().globals;
+		let global_labels: Vec<_> = strong_parent.read().globals.values().cloned().collect();
 		for element in &mut self.content {
-			element.resolve_pseudo_labels(global_labels);
+			element.resolve_pseudo_labels(&global_labels);
 		}
 
 		Ok(())
@@ -433,8 +440,8 @@ impl AssemblyFile {
 					if matches!(&directive.value, DirectiveValue::Brr { directory: true, .. })
 						&& current_labels.is_empty()
 					{
-						let new_brr_label =
-							Label::new_synthetic(format!("brr_sample_{}", brr_label_number).into(), directive.span);
+						let label_name: String = format!("brr_sample_{}", brr_label_number).into();
+						let new_brr_label = Label::new_synthetic(label_name.clone(), directive.span);
 						brr_label_number += 1;
 
 						self.parent
@@ -443,7 +450,7 @@ impl AssemblyFile {
 							.unwrap()
 							.write()
 							.globals
-							.push(new_brr_label.clone());
+							.insert(label_name, new_brr_label.clone());
 						segments
 							.add_element(ProgramElement::Label(Reference::Label(new_brr_label.clone())))
 							.map_err(Self::to_asm_error(&new_brr_label.read().source_span(), &self.source_code))?;

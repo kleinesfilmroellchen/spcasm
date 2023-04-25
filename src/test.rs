@@ -113,7 +113,7 @@ fn test_file(file: &str) {
 	.unwrap();
 	let (environment, _) = super::run_assembler_with_default_options(file).unwrap();
 
-	dump_reference_tree(&environment.read_recursive().globals);
+	dump_reference_tree(&environment.read_recursive().globals.values().cloned().collect::<Vec<_>>());
 
 	let expected_binary = assemble_expected_binary(parsed);
 	for ((parsed_segment_start, expected_segment), (assembled_segment_start, assembled)) in

@@ -157,6 +157,14 @@ impl AssemblyTimeValue {
 			Self::BinaryOperation(lhs, rhs, operator) => lhs.value_using_resolver(resolver).and_then(|lhs|rhs.value_using_resolver(resolver).map(|rhs| operator.execute(lhs, rhs))),
 		}
 	}
+
+	/// Returns whether this value is resolved.
+	pub fn is_resolved(&self) -> bool {
+		match self.clone().try_resolve() {
+			AssemblyTimeValue::Literal(_) => true,
+			_ => false,
+		}
+	}
 }
 
 impl ReferenceResolvable for AssemblyTimeValue {

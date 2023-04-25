@@ -537,8 +537,10 @@ impl AssemblyFile {
 					ProgramElement::Instruction(Instruction { opcode, .. }) => {
 						let references = opcode.references_and_calculations();
 						if opcode.has_long_address()
-							&& !references.is_empty() && opcode.can_use_direct_page_addressing()
+							&& !references.iter().all(|(_, value)| value.is_resolved())
+							&& opcode.can_use_direct_page_addressing()
 						{
+							// println!("handling element {:#?}", element);
 							referenced_objects.push(ReferencedObject {
 								address:       offset + *segment_start,
 								segment_start: *segment_start,

@@ -30,6 +30,16 @@ mov a , #$ff &%11 ;= E8 03
 mov a ,#~%10110010 ;= E8 4D
 mov a, #$9f ^ $78 ^$9F ;= E8 78
 mov a,#6**3 ;= E8 D8
+mov a,#(3 == 5) ;= E8 00
+mov a,#(4==4) ;= E8 01
+mov a,#(3 != 5) ;= E8 01
+mov a,#(3 != 3) ;= E8 00
+mov a,#(7 >2) ;= E8 01
+mov a,#(7 >8) ;= E8 00
+mov a,#(7 >= 8) ;= E8 00
+mov a,#(7 >=7) ;= E8 01
+mov a,#(7<2) ;= E8 00
+mov a,#(7 <=12) ;= E8 01
 
 + mov a,$abcd    ;= E5 CD AB
 mov.b a,$abcd  ;= E4 CD

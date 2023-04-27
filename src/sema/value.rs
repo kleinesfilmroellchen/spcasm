@@ -404,6 +404,18 @@ pub enum BinaryOperator {
 	Xor,
 	/// expr ** expr
 	Exponentiation,
+	/// expr == expr
+	Equals,
+	/// expr != expr
+	NotEquals,
+	/// expr >= expr
+	GreaterEquals,
+	/// expr <= expr
+	LessEquals,
+	/// expr > expr
+	Greater,
+	/// expr < expr
+	Less,
 }
 
 impl BinaryOperator {
@@ -421,9 +433,21 @@ impl BinaryOperator {
 			Self::And => lhs & rhs,
 			Self::Or => lhs | rhs,
 			Self::Xor => lhs ^ rhs,
+			Self::Equals => Self::bool_into_i64(lhs == rhs),
+			Self::NotEquals => Self::bool_into_i64(lhs != rhs),
+			Self::Less => Self::bool_into_i64(lhs < rhs),
+			Self::LessEquals => Self::bool_into_i64(lhs <= rhs),
+			Self::Greater => Self::bool_into_i64(lhs > rhs),
+			Self::GreaterEquals => Self::bool_into_i64(lhs >= rhs),
 			#[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
 			Self::Exponentiation => lhs.pow(rhs as u32),
 		}
+	}
+
+	/// TODO: Remove once const trait impls are stabilized and Into is const for bool -> i64.
+	#[must_use]
+	const fn bool_into_i64(this: bool) -> i64 {
+		if this { 1 } else { 0 }
 	}
 }
 
@@ -441,6 +465,12 @@ impl Display for BinaryOperator {
 			Self::Or => "|",
 			Self::Xor => "^",
 			Self::Exponentiation => "**",
+			Self::Equals => "==",
+			Self::NotEquals => "!=",
+			Self::Less => "<",
+			Self::LessEquals => "<=",
+			Self::Greater => ">",
+			Self::GreaterEquals => ">=",
 		})
 	}
 }

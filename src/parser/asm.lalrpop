@@ -450,6 +450,12 @@ LabelAssignment: Directive = <mut reference:ReferenceAsDefinition> <eq:"="> <val
 };
 
 AssemblyTimeValue: AssemblyTimeValue = {
+	<lhs:AssemblyTimeValue> "==" <rhs:Or> => AssemblyTimeValue::BinaryOperation(Box::new(lhs), Box::new(rhs), BinaryOperator::Equals),
+	<lhs:AssemblyTimeValue> "!=" <rhs:Or> => AssemblyTimeValue::BinaryOperation(Box::new(lhs), Box::new(rhs), BinaryOperator::NotEquals),
+	<lhs:AssemblyTimeValue> "<=" <rhs:Or> => AssemblyTimeValue::BinaryOperation(Box::new(lhs), Box::new(rhs), BinaryOperator::LessEquals),
+	<lhs:AssemblyTimeValue> ">=" <rhs:Or> => AssemblyTimeValue::BinaryOperation(Box::new(lhs), Box::new(rhs), BinaryOperator::GreaterEquals),
+	<lhs:AssemblyTimeValue> ">" <rhs:Or> => AssemblyTimeValue::BinaryOperation(Box::new(lhs), Box::new(rhs), BinaryOperator::Greater),
+	<lhs:AssemblyTimeValue> "<" <rhs:Or> => AssemblyTimeValue::BinaryOperation(Box::new(lhs), Box::new(rhs), BinaryOperator::Less),
 	Or,
 };
 
@@ -615,6 +621,10 @@ extern {
 		"." => Token::Period(<SourceOffset>),
 		".b" => Token::ExplicitDirectPage(<SourceSpan>),
 		"=" => Token::Equals(<SourceOffset>),
+		"==" => Token::DoubleEquals(<SourceSpan>),
+		"<=" => Token::OpenAngleBracketEquals(<SourceSpan>),
+		">=" => Token::CloseAngleBracketEquals(<SourceSpan>),
+		"!=" => Token::ExclamationEquals(<SourceSpan>),
 		"\n" => Token::Newline(<SourceOffset>),
 		// Do this once/if LALRPOP supports it
 		// #[cfg(test)]

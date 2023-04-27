@@ -85,6 +85,14 @@ pub enum Token {
 	ExplicitDirectPage(SourceSpan),
 	/// '='
 	Equals(SourceOffset),
+	/// '>='
+	OpenAngleBracketEquals(SourceSpan),
+	/// '<='
+	CloseAngleBracketEquals(SourceSpan),
+	/// '!='
+	ExclamationEquals(SourceSpan),
+	/// '=='
+	DoubleEquals(SourceSpan),
 	/// ASCII newline (\n).
 	Newline(SourceOffset),
 	/// Comments used for testing purposes.
@@ -119,6 +127,10 @@ impl PartialEq for Token {
 			| (Self::OpenAngleBracket(..), Self::OpenAngleBracket(..))
 			| (Self::DoubleOpenAngleBracket(..), Self::DoubleOpenAngleBracket(..))
 			| (Self::DoubleCloseAngleBracket(..), Self::DoubleCloseAngleBracket(..))
+			| (Self::CloseAngleBracketEquals(..), Self::CloseAngleBracketEquals(..))
+			| (Self::OpenAngleBracketEquals(..), Self::OpenAngleBracketEquals(..))
+			| (Self::ExclamationEquals(..), Self::ExclamationEquals(..))
+			| (Self::DoubleEquals(..), Self::DoubleEquals(..))
 			| (Self::RelativeLabelMinus(..), Self::RelativeLabelMinus(..))
 			| (Self::RelativeLabelPlus(..), Self::RelativeLabelPlus(..))
 			| (Self::Percent(..), Self::Percent(..))
@@ -176,6 +188,10 @@ impl Token {
 			| Self::DoubleStar(location)
 			| Self::DoubleOpenAngleBracket(location)
 			| Self::DoubleCloseAngleBracket(location)
+			| Self::OpenAngleBracketEquals(location)
+			| Self::CloseAngleBracketEquals(location)
+			| Self::DoubleEquals(location)
+			| Self::ExclamationEquals(location)
 			| Self::RelativeLabelMinus(_, location)
 			| Self::RelativeLabelPlus(_, location)
 			| Self::Mnemonic(_, location)
@@ -239,6 +255,10 @@ impl Display for Token {
 			Self::CloseAngleBracket(..) => "'>'".to_string(),
 			Self::DoubleOpenAngleBracket(..) => "'<<'".to_string(),
 			Self::DoubleCloseAngleBracket(..) => "'>>'".to_string(),
+			Self::OpenAngleBracketEquals(..) => "'>='".to_string(),
+			Self::CloseAngleBracketEquals(..) => "'<='".to_string(),
+			Self::ExclamationEquals(..) => "'!='".to_string(),
+			Self::DoubleEquals(..) => "'=='".to_string(),
 			Self::Percent(..) => "'%'".to_string(),
 			Self::Equals(..) => "'='".to_string(),
 			Self::CloseParenthesis(..) | Self::CloseIndexingParenthesis(..) => "')'".to_string(),

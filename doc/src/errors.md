@@ -63,7 +63,7 @@ spcasm has a whole collection of features targeted at compatibility with the pop
 ### spcasm::value_too_large
 
 ```trycmd
-$ spcasm -W value_too_large tests/parse.spcasmtest
+$ spcasm -W value_too_large -w relative_offset_too_large tests/parse.spcasmtest
 ? 1
 spcasm::value_too_large
 
@@ -78,7 +78,7 @@ spcasm::value_too_large
     ·              ╰── 8-bit operand
  31 │ mov a, #$9f ^ $78 ^$9F ;= E8 78
  32 │ mov a,#6**3 ;= E8 D8
- 33 │ 
+ 33 │ mov a,#(3 == 5) ;= E8 00
     ╰────
   help: If this was intentional, explicitly truncate the value.
 
@@ -86,16 +86,16 @@ spcasm::value_too_large
 
   ⚠ The value `ABCD` is being used as a 8-bit operand here, but it is larger
   │ than this. The extra upper bits are truncated.
-    ╭─[tests/parse.spcasmtest:32:1]
- 32 │ mov a,#6**3 ;= E8 D8
- 33 │ 
- 34 │ + mov a,$abcd    ;= E5 CD AB
- 35 │ mov.b a,$abcd  ;= E4 CD
+    ╭─[tests/parse.spcasmtest:42:1]
+ 42 │ mov a,#(7 <=12) ;= E8 01
+ 43 │ 
+ 44 │ + mov a,$abcd    ;= E5 CD AB
+ 45 │ mov.b a,$abcd  ;= E4 CD
     · ───────────┬───────────
     ·            ╰── 8-bit operand
- 36 │ 
- 37 │ db 'x', '/x67', '//', '/"', '/''
- 38 │ 
+ 46 │ 
+ 47 │ db 'x', '/x67', '//', '/"', '/''
+ 48 │ 
     ╰────
   help: If this was intentional, explicitly truncate the value.
 

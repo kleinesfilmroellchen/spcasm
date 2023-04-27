@@ -137,6 +137,26 @@ pub fn lex(source_code: Arc<AssemblyCode>, options: &dyn Frontend) -> Result<Vec
 				let identifier_span = (start_index, identifier.len() + 1).into();
 				tokens.push(Token::Identifier(identifier, identifier_span));
 			},
+			'!' if chars.peek().is_some_and(|chr|chr == &'=') => {
+				chars.next();
+				index += 2;
+				tokens.push(Token::ExclamationEquals((index - 2, 2).into()));
+			},
+			'=' if chars.peek().is_some_and(|chr|chr == &'=') => {
+				chars.next();
+				index += 2;
+				tokens.push(Token::DoubleEquals((index - 2, 2).into()));
+			},
+			'<' if chars.peek().is_some_and(|chr|chr == &'=') => {
+				chars.next();
+				index += 2;
+				tokens.push(Token::OpenAngleBracketEquals((index - 2, 2).into()));
+			},
+			'>' if chars.peek().is_some_and(|chr|chr == &'=') => {
+				chars.next();
+				index += 2;
+				tokens.push(Token::CloseAngleBracketEquals((index - 2, 2).into()));
+			},
 			'-' => {
 				let start = index;
 				index += 1;

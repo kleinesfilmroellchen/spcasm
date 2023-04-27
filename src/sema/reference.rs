@@ -175,12 +175,10 @@ impl ReferenceResolvable for Reference {
 		match self {
 			Self::Label(this_label) => {
 				if !this_label.try_read().is_some_and(|label| label.has_definition()) {
-					let this_label_read = this_label.read();
-
 					// Keep a list of possibly matching labels, as a pair of (pseudo_name, label).
 					// Repeatedly extend that list with the children of candidates where the pseudo_name matches a
 					// prefix of our name.
-					let global_candidates = global_labels.iter().filter_map(|label| {
+					let global_candidates = global_labels.iter().cloned().filter_map(|label| {
 						// Recursive labels; will error later but we do not want to deadlock.
 						if label.is_locked() {
 							None
@@ -190,7 +188,7 @@ impl ReferenceResolvable for Reference {
 								let name = label.read().name.clone();
 								name
 							};
-							if this_label_read.name.starts_with(name.as_str()) {
+							if this_label.read().name.starts_with(name.as_str()) {
 								Some((name, label))
 							} else {
 								None
@@ -202,15 +200,14 @@ impl ReferenceResolvable for Reference {
 					macro_rules! run_check_on_labels {
 						($labels:expr) => {
 							for (label_name, candidate) in $labels {
-								if this_label_read.name == label_name && candidate.read().has_definition() {
-									drop(this_label_read);
-									*this_label = candidate.clone();
+								if this_label.read().name == label_name && candidate.read().has_definition() {
+									*this_label = candidate;
 									return;
 								}
 
 								for (child_name, child_label) in &candidate.read().children {
 									let combined_name = format!("{}_{}", label_name, child_name);
-									if this_label_read.name.starts_with(&combined_name) {
+									if this_label.read().name.starts_with(&combined_name) {
 										candidates.push((combined_name.into(), child_label.clone()));
 									}
 								}

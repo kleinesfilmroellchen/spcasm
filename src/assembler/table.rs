@@ -512,6 +512,7 @@ lazy_static! {
 
 		table.insert(Mnemonic::Jmp, EntryOrFirstOperandTable::from([
 			(AddressingModeCategory::Address, EntryOrSecondOperandTable::Entry(0x5F, append_one_as_16_bits as SingleOperandSegmentAction)),
+			(AddressingModeCategory::DirectPage, EntryOrSecondOperandTable::Entry(0x5F, append_one_as_16_bits as SingleOperandSegmentAction)),
 			(AddressingModeCategory::DirectPageXIndexedIndirect, EntryOrSecondOperandTable::Entry(0x1F, append_one_as_16_bits)),
 			(AddressingModeCategory::XIndexed, EntryOrSecondOperandTable::Entry(0x1F, append_one_as_16_bits)),
 		]));

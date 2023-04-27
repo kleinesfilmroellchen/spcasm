@@ -75,5 +75,8 @@ nop
 ..lol:
 bra ..lol ;= 2F FE
 
+pseudo_tests:
+bra stuff_other_lol ;= 2F FC
+
 jmp zero_local_cool ;= 5F AA 00
 jmp later_on_nonassigned_local ;= 5F 0C 00

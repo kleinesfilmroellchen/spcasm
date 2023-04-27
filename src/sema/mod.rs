@@ -21,7 +21,7 @@ use crate::error::AssemblyError;
 use crate::parser::lexer::lex;
 use crate::parser::{lalrpop_adaptor, Token};
 use crate::sema::instruction::MemoryAddress;
-use crate::{AssemblyCode, Directive, Segments};
+use crate::{AssemblyCode, Change, Directive, Segments};
 
 pub mod instruction;
 pub(crate) mod program;
@@ -704,7 +704,7 @@ impl AssemblyFile {
 	///
 	/// # Errors
 	/// Any errors relating to macro calls and macro definitions.
-	pub fn expand_user_macros(&mut self) -> Result<(), Box<AssemblyError>> {
+	pub(super) fn expand_user_macros(&mut self) -> Result<Change, Box<AssemblyError>> {
 		let maximum_macro_expansion_depth = self
 			.parent
 			.upgrade()
@@ -812,6 +812,6 @@ impl AssemblyFile {
 			let _: usize = macro_end_stack.drain_filter(|end_index| *end_index < index).count();
 		}
 
-		Ok(())
+		Ok(Change::Unmodified)
 	}
 }

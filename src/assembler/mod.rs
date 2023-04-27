@@ -8,6 +8,7 @@ use miette::{Result, SourceSpan};
 #[allow(unused)]
 use smartstring::alias::String;
 
+use crate::change::Change;
 use crate::cli::{default_backend_options, Frontend};
 use crate::error::AssemblyError;
 use crate::sema::instruction::{AddressingMode, Instruction, MemoryAddress, Opcode};
@@ -55,6 +56,32 @@ pub fn assemble_inside_segments(
 	assemble_to_data(segments, source_code, options)?.resolve_segments()
 }
 
+/// Assembles a [`ProgramElement`] inside a loop.
+#[macro_export]
+macro_rules! assemble_element {
+	($data:ident, $program_element:ident, $current_labels:ident) => {{
+		let result: Result<(), Box<AssemblyError>> = try {
+			match $program_element {
+				$crate::sema::program::ProgramElement::Label(label) => {
+					$current_labels.push(label.clone());
+					continue;
+				},
+				$crate::sema::program::ProgramElement::Instruction(instruction) =>
+					$data.assemble_instruction(instruction, &$current_labels)?,
+				$crate::sema::program::ProgramElement::Directive(directive) =>
+					$data.assemble_directive(directive, &mut $current_labels)?,
+				$crate::sema::program::ProgramElement::IncludeSource { .. } =>
+					unreachable!("there should not be any remaining unincluded source code at assembly time"),
+				$crate::sema::program::ProgramElement::UserDefinedMacroCall { .. } =>
+					unreachable!("there should not be unexpanded user macros at assembly time"),
+			}
+		};
+		result
+	}};
+}
+
+pub use assemble_element;
+
 #[allow(clippy::trivially_copy_pass_by_ref)]
 fn assemble_to_data(
 	segments: &mut Segments<ProgramElement>,
@@ -68,32 +95,16 @@ fn assemble_to_data(
 
 	for (segment_start, segment_content) in &mut segments.segments {
 		data.segments.new_segment(*segment_start);
-		let mut current_labels = Vec::default();
-		for program_element in segment_content {
-			match program_element {
-				ProgramElement::Label(label) => {
-					current_labels.push(label.clone());
-					continue;
-				},
-				ProgramElement::Instruction(instruction) => data.assemble_instruction(instruction, &current_labels)?,
-				ProgramElement::Directive(directive) => data.assemble_directive(directive, &current_labels)?,
-				ProgramElement::IncludeSource { .. } =>
-					unreachable!("there should not be any remaining unincluded source code at assembly time"),
-				ProgramElement::UserDefinedMacroCall { .. } =>
-					unreachable!("there should not be unexpanded user macros at assembly time"),
-			}
-			if data.should_stop {
-				break;
-			}
-			current_labels.clear();
-		}
+		data.assemble_all_from_list(segment_content)?;
 		if data.should_stop {
 			break;
 		}
 	}
 
 	let mut pass_count = 0;
-	while pass_count < maximum_reference_resolution_passes && data.execute_reference_resolution_pass() {
+	while pass_count < maximum_reference_resolution_passes
+		&& data.execute_reference_resolution_pass() == Change::Modified
+	{
 		pass_count += 1;
 	}
 	Ok(data)
@@ -188,6 +199,18 @@ impl AssembledData {
 	pub fn set_error_options(&mut self, options: Arc<dyn Frontend>) -> &mut Self {
 		self.options = options;
 		self
+	}
+
+	pub(super) fn assemble_all_from_list(&mut self, list: &mut Vec<ProgramElement>) -> Result<(), Box<AssemblyError>> {
+		let mut current_labels = Vec::default();
+		for program_element in list {
+			assemble_element!(self, program_element, current_labels)?;
+			if self.should_stop {
+				break;
+			}
+			current_labels.clear();
+		}
+		Ok(())
 	}
 
 	/// Assemble a single instruction. This function uses the codegen table `table::assembly_table`.
@@ -580,8 +603,8 @@ impl AssembledData {
 	/// # Errors
 	/// Any warnings and warning-promoted errors from resolution are passed on.
 	#[allow(clippy::missing_panics_doc)]
-	fn execute_reference_resolution_pass(&mut self) -> bool {
-		let mut had_modifications = true;
+	fn execute_reference_resolution_pass(&mut self) -> Change {
+		let mut had_modifications = Change::Unmodified;
 		for (segment_start, segment_data) in &mut self.segments.segments {
 			let mut current_global_label = None;
 			for (offset, datum) in segment_data.iter_mut().enumerate() {
@@ -599,7 +622,7 @@ impl AssembledData {
 					.iter_mut()
 					.filter(|existing_reference| !existing_reference.is_resolved())
 					.filter_map(|resolved_reference| {
-						had_modifications |= true;
+						had_modifications |= Change::Modified;
 						match *resolved_reference {
 							Reference::Label(..) | Reference::Relative { .. } => resolved_reference.resolve_to(
 								memory_address,

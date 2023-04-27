@@ -1,0 +1,19 @@
+org 0
+
+if 0
+	nop ;= FF
+endif
+
+if 1
+	nop ;= 00
+else
+	nop ;= FF
+endif
+
+if 1 == 2
+	nop ;= FF
+elseif 2 == 3
+	nop ;= FF 
+else
+	nop ;= 00
+endif

@@ -28,6 +28,7 @@ use smartstring::alias::String;
 #[macro_use] extern crate lalrpop_util;
 #[macro_use] extern crate lazy_static;
 
+pub(crate) use change::Change;
 #[allow(clippy::wildcard_imports)]
 pub use common::*;
 pub use segments::Segments;
@@ -55,6 +56,7 @@ w_error!(pub mod sema);
 w_error!(pub mod parser);
 w_error!(mod segments);
 w_error!(mod source);
+w_error!(mod change);
 
 #[cfg(feature = "binaries")]
 shadow_rs::shadow!(buildinfo);

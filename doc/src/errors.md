@@ -901,9 +901,9 @@ spcasm::syntax::missing_token
   × Expected any of "/n", "%", "+", "+++", "-", "---", "-range-", ".",
   │ "<", "arch", "ascii", "asciiz", "brr", "byte", "db", "dd", "dl", "dw",
   │ "endasm", "fill", "fillbyte", "filldword", "filllong", "fillword",
-  │ "identifier", "incbin", "include", "incsrc", "macro", "math", "mnemonic",
-  │ "org", "pad", "padbyte", "paddword", "padlong", "padword", "pullpc",
-  │ "pushpc", "sampletable", "startpos", "word"
+  │ "identifier", "if", "incbin", "include", "incsrc", "macro", "math",
+  │ "mnemonic", "org", "pad", "padbyte", "paddword", "padlong", "padword",
+  │ "pullpc", "pushpc", "sampletable", "startpos", "word"
    ╭─[tests/errors/parser-missing-token.spcasmtest:1:1]
  1 │ org 0
  2 │ label:

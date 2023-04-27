@@ -203,6 +203,7 @@ Directive: Directive = {
 	FillAlignDirective,
 	FillAmountDirective,
 	PadDirective,
+	Conditional,
 	<value_directive:FillOrPadValueDirective> <fill_value:AssemblyTimeValue> => Directive {
 		value: DirectiveValue::SetDirectiveParameters ({
 			let mut parameters = HashMap::with_capacity(2);
@@ -303,6 +304,33 @@ PadDirective: Directive = <directive:"pad"> <address:AssemblyTimeValue> => Direc
 
 OffsetSpecifier: (AssemblyTimeValue, SourceSpan) = <offset_keyword:"offset"> <offset:AssemblyTimeValue> =>
 	(offset, offset_keyword.into());
+
+Conditional: Directive = {
+	<start:"if"> <condition:AssemblyTimeValue> "\n" <true_block:Program> <false_block:ElseBlock?> <end:"endif"> => Directive {
+		value: DirectiveValue::Conditional {
+			condition,
+			true_block,
+			false_block: false_block.unwrap_or_default(),
+		},
+		span: source_range(start.into(), end.into()),
+		expected_value: None,
+	},
+};
+
+ElseBlock: Vec<ProgramElement> = {
+	"else" <Program>,
+	<start:"elseif"> <condition:AssemblyTimeValue> <nl:"\n"> <true_block:Program> <false_block:ElseBlock> => {
+		vec![ProgramElement::Directive(Directive {
+			value: DirectiveValue::Conditional {
+				condition,
+				true_block,
+				false_block,
+			},
+			span: source_range(start.into(), nl.into()),
+			expected_value: None,
+		})]
+	},
+};
 
 UserDefinedMacro: Directive = <start:"macro"> <name:"identifier"> <arguments:UserDefinedMacroArguments?> "\n" <body:Program> <end:"endmacro"> => Directive {
 	value: DirectiveValue::UserDefinedMacro {
@@ -591,6 +619,10 @@ extern {
 		"paddword" => Token::Directive(DirectiveSymbol::PadDWord, <SourceSpan>),
 		"macro" => Token::Directive(DirectiveSymbol::Macro, <SourceSpan>),
 		"endmacro" => Token::Directive(DirectiveSymbol::EndMacro, <SourceSpan>),
+		"if" => Token::Directive(DirectiveSymbol::If, <SourceSpan>),
+		"elseif" => Token::Directive(DirectiveSymbol::ElseIf, <SourceSpan>),
+		"else" => Token::Directive(DirectiveSymbol::Else, <SourceSpan>),
+		"endif" => Token::Directive(DirectiveSymbol::EndIf, <SourceSpan>),
 		"math" => Token::Directive(DirectiveSymbol::Math, <SourceSpan>),
 		"number" => Token::Number(<i64>, <String>, <SourceSpan>),
 		"string" => Token::String(<Vec<u8>>, <SourceSpan>),

@@ -4,6 +4,7 @@ use std::sync::Arc;
 
 use miette::SourceSpan;
 
+use crate::change::Change;
 use crate::cli::Frontend;
 use crate::sema::instruction::MemoryAddress;
 use crate::sema::reference::Reference;
@@ -31,19 +32,19 @@ impl LabeledMemoryValue {
 	/// Returns whether the resolution attempt changed anything.
 	#[inline]
 	#[must_use]
-	pub fn try_resolve(
+	pub(crate) fn try_resolve(
 		&mut self,
 		own_memory_address: MemoryAddress,
 		src: &Arc<AssemblyCode>,
 		frontend: &dyn Frontend,
-	) -> bool {
+	) -> Change {
 		if let MemoryValue::Resolved(_) = self.value {
-			false
+			Change::Unmodified
 		} else {
 			// FIXME: I can't figure out how to do this without copying first.
 			let value_copy = self.value.clone();
 			self.value = value_copy.try_resolve(own_memory_address, self.instruction_location, src, frontend);
-			true
+			Change::Modified
 		}
 	}
 

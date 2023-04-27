@@ -173,6 +173,10 @@ pub enum DirectiveSymbol {
 	Arch,
 	Macro,
 	EndMacro,
+	If,
+	Else,
+	ElseIf,
+	EndIf,
 	Math,
 	Fill,
 	FillByte,
@@ -206,6 +210,10 @@ impl Display for DirectiveSymbol {
 			Self::Arch => "arch",
 			Self::Macro => "macro",
 			Self::EndMacro => "endmacro",
+			Self::If => "if",
+			Self::Else => "else",
+			Self::ElseIf => "elseif",
+			Self::EndIf => "endif",
 			Self::Math => "math",
 			Self::Fill => "fill",
 			Self::FillByte => "fillbyte",
@@ -276,6 +284,15 @@ pub enum DirectiveValue {
 		/// The value to fill with, populated from a global directive parameter.
 		value:     Option<SizedAssemblyTimeValue>,
 	},
+	/// if
+	Conditional {
+		/// The condition that decides which of the two blocks is assembled.
+		condition:   AssemblyTimeValue,
+		/// The block that is assembled if the condition is truthy.
+		true_block:  Vec<ProgramElement>,
+		/// The block that is assembled if the condition is falsy.
+		false_block: Vec<ProgramElement>,
+	},
 }
 
 impl DirectiveValue {
@@ -307,6 +324,18 @@ impl DirectiveValue {
 				.value_using_resolver(&|_| None)
 				.unwrap_or_else(|| (Self::large_assembled_size).try_into().unwrap())
 				as usize,
+			Self::Conditional { condition, true_block, false_block } =>
+				if condition.is_truthy() {
+					true_block.iter().map(ProgramElement::assembled_size).sum()
+				} else if condition.is_falsy() {
+					false_block.iter().map(ProgramElement::assembled_size).sum()
+				} else {
+					true_block
+						.iter()
+						.map(ProgramElement::assembled_size)
+						.sum::<usize>()
+						.max(false_block.iter().map(ProgramElement::assembled_size).sum())
+				},
 			// Use a large assembled size as a signal that we don't know at this point. This will force any later
 			// reference out of the direct page, which will always yield correct behavior.
 			Self::Include { .. } | Self::Brr { .. } | Self::SampleTable { .. } | Self::Fill { .. } =>
@@ -328,6 +357,7 @@ impl DirectiveValue {
 			Self::Table { .. }
 			| Self::String { .. }
 			| Self::Brr { .. }
+			| Self::Conditional { .. }
 			| Self::Fill { .. }
 			| Self::SampleTable { .. }
 			| Self::Include { .. } => false,
@@ -342,12 +372,18 @@ impl ReferenceResolvable for DirectiveValue {
 		source_code: &Arc<AssemblyCode>,
 	) -> Result<(), Box<AssemblyError>> {
 		match self {
-			Self::Table { values, .. } => {
-				for value in values {
-					value.value.replace_macro_parent(replacement_parent.clone(), source_code)?;
-				}
-				Ok(())
-			},
+			Self::Table { values, .. } =>
+				try {
+					for value in values {
+						value.value.replace_macro_parent(replacement_parent.clone(), source_code)?;
+					}
+				},
+			Self::Conditional { true_block, false_block, .. } =>
+				try {
+					for element in true_block.iter_mut().chain(false_block.iter_mut()) {
+						element.replace_macro_parent(replacement_parent.clone(), source_code)?;
+					}
+				},
 			Self::String { .. }
 			| Self::Include { .. }
 			| Self::End
@@ -383,6 +419,10 @@ impl ReferenceResolvable for DirectiveValue {
 				for value in values {
 					value.value.resolve_relative_labels(direction, relative_labels);
 				},
+			Self::Conditional { true_block, false_block, .. } =>
+				for element in true_block.iter_mut().chain(false_block.iter_mut()) {
+					element.resolve_relative_labels(direction, relative_labels);
+				},
 			Self::Fill { parameter, value, .. } => {
 				parameter.resolve_relative_labels(direction, relative_labels);
 				if let Some(value) = value.as_mut() {
@@ -409,6 +449,10 @@ impl ReferenceResolvable for DirectiveValue {
 			Self::Table { values, .. } =>
 				for value in values {
 					value.value.resolve_pseudo_labels(global_labels);
+				},
+			Self::Conditional { true_block, false_block, .. } =>
+				for element in true_block.iter_mut().chain(false_block.iter_mut()) {
+					element.resolve_pseudo_labels(global_labels);
 				},
 			Self::Fill { parameter, value, .. } => {
 				parameter.resolve_pseudo_labels(global_labels);
@@ -443,6 +487,19 @@ impl ReferenceResolvable for DirectiveValue {
 						value.value.set_current_label(current_label, source_code)?;
 					}
 				},
+			Self::Conditional { true_block, false_block, .. } =>
+				try {
+					for element in true_block.iter_mut().chain(false_block.iter_mut()) {
+						element.set_current_label(current_label, source_code)?;
+					}
+				},
+			Self::Fill { parameter, value, .. } =>
+				try {
+					parameter.set_current_label(current_label, source_code)?;
+					if let Some(value) = value.as_mut() {
+						value.set_current_label(current_label, source_code)?;
+					}
+				},
 			Self::AssignReference { reference, value } => {
 				reference.set_current_label(current_label, source_code)?;
 				value.set_current_label(current_label, source_code)
@@ -453,7 +510,6 @@ impl ReferenceResolvable for DirectiveValue {
 			| Self::Brr { .. }
 			| Self::String { .. }
 			| Self::SetDirectiveParameters { .. }
-			| Self::Fill { .. }
 			| Self::Placeholder
 			| Self::End
 			| Self::PushSection

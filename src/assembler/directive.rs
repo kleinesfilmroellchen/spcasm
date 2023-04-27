@@ -26,44 +26,53 @@ impl AssembledData {
 	pub fn assemble_directive(
 		&mut self,
 		directive: &mut Directive,
-		current_labels: &[Reference],
+		current_labels: &mut Vec<Reference>,
 	) -> Result<(), Box<AssemblyError>> {
 		match directive.value {
-			DirectiveValue::Table { ref values } => {
-				let mut is_first = true;
-				for value in values {
-					self.append_sized_unresolved(
-						value.clone(),
-						if is_first { current_labels } else { Self::DEFAULT_VEC },
-						directive.span,
-					)?;
-					is_first = false;
-				}
-			},
-			DirectiveValue::Brr { ref file, range, auto_trim, .. } =>
-				self.assemble_brr(directive, file, range, auto_trim, current_labels)?,
-			DirectiveValue::String { ref text, has_null_terminator } => {
-				self.append_bytes(text.clone(), current_labels, directive.span)?;
-				if has_null_terminator {
-					self.append(0, if text.is_empty() { current_labels } else { Self::DEFAULT_VEC }, directive.span)?;
-				}
-			},
-			DirectiveValue::AssignReference { ref mut reference, ref value } => match reference {
-				Reference::Label(ref mut global) => {
-					global.write().location = Some(value.clone().try_resolve());
-				},
-				Reference::MacroArgument { ref span, .. }
-				| Reference::MacroGlobal { ref span, .. }
-				| Reference::UnresolvedLocalLabel { ref span, .. }
-				| Reference::Relative { ref span, .. } =>
-					return Err(AssemblyError::AssigningToReference {
-						kind:     reference.clone().into(),
-						name:     reference.to_string().into(),
-						src:      self.source_code.clone(),
-						location: *span,
+			DirectiveValue::Table { ref values } =>
+				try {
+					let mut is_first = true;
+					for value in values {
+						self.append_sized_unresolved(
+							value.clone(),
+							if is_first { current_labels } else { Self::DEFAULT_VEC },
+							directive.span,
+						)?;
+						is_first = false;
 					}
-					.into()),
-			},
+				},
+			DirectiveValue::Brr { ref file, range, auto_trim, .. } =>
+				self.assemble_brr(directive, file, range, auto_trim, current_labels),
+			DirectiveValue::String { ref text, has_null_terminator } =>
+				try {
+					self.append_bytes(text.clone(), current_labels, directive.span)?;
+					if has_null_terminator {
+						self.append(
+							0,
+							if text.is_empty() { current_labels } else { Self::DEFAULT_VEC },
+							directive.span,
+						)?;
+					}
+				},
+			DirectiveValue::AssignReference { ref mut reference, ref value } =>
+				try {
+					match reference {
+						Reference::Label(ref mut global) => {
+							global.write().location = Some(value.clone().try_resolve());
+						},
+						Reference::MacroArgument { ref span, .. }
+						| Reference::MacroGlobal { ref span, .. }
+						| Reference::UnresolvedLocalLabel { ref span, .. }
+						| Reference::Relative { ref span, .. } =>
+							return Err(AssemblyError::AssigningToReference {
+								kind:     reference.clone().into(),
+								name:     reference.to_string().into(),
+								src:      self.source_code.clone(),
+								location: *span,
+							}
+							.into()),
+					}
+				},
 			DirectiveValue::Include { ref file, range } => {
 				let binary_file = resolve_file(&self.source_code, file);
 				let mut binary_data = std::fs::read(binary_file).map_err(|os_error| AssemblyError::FileNotFound {
@@ -74,11 +83,12 @@ impl AssembledData {
 				})?;
 
 				binary_data = self.slice_data_if_necessary(file, directive.span, binary_data, range)?;
-				self.append_bytes(binary_data, current_labels, directive.span)?;
+				self.append_bytes(binary_data, current_labels, directive.span)
 			},
-			DirectiveValue::End => {
-				self.should_stop = true;
-			},
+			DirectiveValue::End =>
+				try {
+					self.should_stop = true;
+				},
 			DirectiveValue::SampleTable { auto_align } => {
 				let current_address = self.segments.current_location().map_err(|_| AssemblyError::MissingSegment {
 					location: directive.span,
@@ -99,25 +109,25 @@ impl AssembledData {
 					}
 					.into());
 				}
-				self.assemble_sample_table(current_labels, directive.span)?;
+				self.assemble_sample_table(current_labels, directive.span)
 			},
 			DirectiveValue::Fill { ref operation, ref parameter, ref value } => {
 				let current_address = self.segments.current_location().map_err(|_| AssemblyError::MissingSegment {
 					location: directive.span,
 					src:      self.source_code.clone(),
 				})?;
-				self.assemble_fill(
-					operation,
-					parameter,
-					value.clone(),
-					current_address,
-					current_labels,
-					directive.span,
-				)?;
+				self.assemble_fill(operation, parameter, value.clone(), current_address, current_labels, directive.span)
 			},
-			_ => {},
+			DirectiveValue::Conditional { ref mut condition, ref mut true_block, ref mut false_block } => {
+				let condition = condition.try_value(directive.span, self.source_code.clone())?;
+				if condition == 0 {
+					self.assemble_all_from_list(false_block)
+				} else {
+					self.assemble_all_from_list(true_block)
+				}
+			},
+			_ => Ok(()),
 		}
-		Ok(())
 	}
 
 	pub(super) fn assemble_brr(

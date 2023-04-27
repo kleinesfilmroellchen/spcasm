@@ -133,6 +133,24 @@ impl AssemblyTimeValue {
 		}
 	}
 
+	/// Returns true if this assembly time value is definitely known to be truthy. If this assembly time value is either known to be falsy, or its value is unknown, the function returns false.
+	#[must_use]
+	pub fn is_truthy(&self) -> bool {
+		match self.clone().try_resolve() {
+			Self::Literal(value) => value != 0,
+			_ => false,
+		}
+	}
+
+	/// Returns true if this assembly time value is definitely known to be falsy. If this assembly time value is either known to be truthy, or its value is unknown, the function returns false.
+	#[must_use]
+	pub fn is_falsy(&self) -> bool {
+		match self.clone().try_resolve() {
+			Self::Literal(value) => value == 0,
+			_ => false,
+		}
+	}
+
 	/// Resolve this value while using a provided resolver function to obtain preliminary values for unresolved
 	/// references. If the resolver function can't do that, then we cannot determine a value either.
 	pub fn value_using_resolver(

@@ -120,6 +120,13 @@ byte %101000
 
 Math expression syntax is similar to C-like programming languages. Note that as opposed to Asar, **spcasm does not have a legacy priority mode. The `math pri` directive is detected and causes an error**. All spcasm expressions follow mathematical order of operations and all operations except for exponentiation are left-associative. The following list of available operations is sorted by priority, with the least strongly binding operation first.
 
+- conditional operations, which return 1 for true and 0 for false:
+  - `==` Numeric equality
+  - `!=` Numeric inequality
+  - `>=` Numerically greater or equals
+  - `<=` Numerically less or equals
+  - `>` Numerically greater
+  - `<` Numerically less
 - `|` Logical bitwise or
 - `&` Logical bitwise and
 - `^` Logical bitwise exclusive or
@@ -149,6 +156,11 @@ $0F | $f0       ; FF
 ~%10110010      ; 4D
 $9f ^ $78 ^ $9F ; 78
 6 ** 3          ; D8
+5 == 4          ; 00 (false)
+5 != 4          ; 01 (true)
+8 == 4+4        ; 01
+7 < 10          ; 01
+6 >= 19 * 2     ; 00
 ```
 
 Note that using parentheses might in some instances confuse spcasm over whether you are trying to use an indirect addressing mode with an instruction, or whether you are trying to create a math expression. To force anything into indirect addressing, use square brackets `[]` instead of round parentheses. To force anything into a math expression, use round parentheses and a prefixed `+` unary operation that is a no-op and mainly exists for exactly this purpose.
@@ -227,6 +239,42 @@ loop_cycles = $32 >> 7
 These labels always have to be global; local labels are specifically intended for code labeling and jump targets.
 
 When assigning references in this way, take care to not create a cyclic dependency. Such dependencies will be caught by spcasm in form of an unresolved reference error after the reference resolution limit was reached.
+
+### Pseudo references
+
+It is also possible to reference local references of any level with what spcasm calls "pseudo references". With pseudo references, you can refer to child references of other references by simply concatenating the reference names with underscores, like so:
+
+```asm
+
+start:
+  ...
+
+  .jumptable:
+  ..mode_1: db 10
+  ..mode_2: db 20
+
+; Can't refer to the jump table entries with normal references after this!
+other_subroutine:
+  jmp (start_jumptable+X)
+  ; Or even deeper nesting:
+  jmp start_jumptable_mode_2
+```
+
+Note that pseudo references are a brittle Asar compatibility feature and their use is discouraged. spcasm will **always** first resolve references normally. This means that if a global reference has the same name as a local reference when referred to by a pseudo label name, the global reference will always be used instead, and spcasm will not inform you of this fact.
+
+```asm
+
+some_global:
+  .function:
+
+some_global_function:
+  ...
+
+other_function:
+  ; Resolves to "some_global_function" instead of the local ".function" under "some_global"!
+  jmp some_global_function
+
+```
 
 ### Asar defines
 

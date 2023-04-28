@@ -227,3 +227,26 @@ some_label:
 While macros might call other macros, there must not be any infinite recursion and spcasm has a configurable limit for this.
 
 Within a macro, you can use the label \@ as a unique global label which will not collide with any other global label anywhere else, not even in another call of the same macro. This allows you to create a unique global label scope for each macro call and use local labels with the same name within it.
+
+## Conditional compilation
+
+Conditional compilation allows spcasm to decide at compile time which code to assemble into the output or not depending on user-defined conditions. The simplest form of this is the `if` construct, which behaves like you expect from other programming languages:
+
+```asm
+
+mode = 3 ; or 4, 5, 6, ...
+
+if mode == 4
+  jmp mode_4_handler
+elseif mode == 5
+  jmp mode_5_handler
+else
+  jmp other_modes_handler
+endif
+```
+
+The value in the same line as the `if` specifies the condition that decides which branch is taken. spcasm has no special boolean type. As is common in programming languages, any non-zero value is considered true, and zero itself is considered false.
+
+After an `if` there must be an `endif` or `else`. As you can see in the example, `elseif` can be chained arbitrarily.
+
+Note that depending on where you use conditional compilation, spcasm might have different requirements for when the condition's value needs to be known. In basically all cases, the condition needs to be resolved before assembly starts.

@@ -17,3 +17,13 @@ elseif 2 == 3
 else
 	nop ;= 00
 endif
+
+; macro repeat(n)
+; 	if <n> >= 1
+; 		%repeat(<n> - 1)
+; 		mov a, <n>
+; 	else
+; 	endif
+; endmacro
+
+; %repeat(7)

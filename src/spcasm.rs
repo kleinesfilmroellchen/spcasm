@@ -6,7 +6,9 @@ use std::io::Write;
 #[allow(unused)]
 use smartstring::alias::String;
 
-use crate::{cli, dump_ast, dump_reference_tree, elf, run_assembler, AssemblyCode, AssemblyError};
+use crate::{
+	cli, dump_ast, dump_reference_tree, elf, run_assembler, run_assembler_into_segments, AssemblyCode, AssemblyError,
+};
 
 pub fn main() -> miette::Result<()> {
 	use clap::Parser;
@@ -69,7 +71,9 @@ pub fn main() -> miette::Result<()> {
 				))
 			};
 			match args.output_format {
-				cli::OutputFormat::Elf => elf::write_to_elf(&mut outfile, &assembled).unwrap(),
+				// TODO: Don't do double work assembling here.
+				cli::OutputFormat::Elf =>
+					elf::write_to_elf(&mut outfile, run_assembler_into_segments(&code, options).unwrap().1).unwrap(),
 				cli::OutputFormat::Plain => outfile.write_all(&assembled).unwrap(),
 				cli::OutputFormat::HexDump =>
 					outfile.write_fmt(format_args!("{}", crate::pretty_hex(&assembled, None))).unwrap(),

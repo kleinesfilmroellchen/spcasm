@@ -169,7 +169,7 @@ pub fn lex(source_code: Arc<AssemblyCode>, options: &dyn Frontend) -> Result<Vec
 				if end - start > 1 {
 					tokens.push(Token::RelativeLabelMinus(NonZeroU64::new((end-start).try_into().unwrap()).unwrap(), (start, end-start).into()));
 				} else {
-					tokens.push(parse_single_char_tokens(chr, index.into()));
+					tokens.push(parse_single_char_tokens(chr, start.into()));
 				}
 			},
 			'#' | ',' | '+' | '^' | '|' | '~' | '&' | '*' | '(' | ')' | '[' | ']' | ':' | '.' | '/' | '!' | '=' | '<' | '>' => {

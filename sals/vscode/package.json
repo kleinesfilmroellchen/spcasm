@@ -66,6 +66,9 @@
           ],
           "operator": [
             "keyword.operator.spc700"
+          ],
+          "reference": [
+            "variable.other.label.spc700"
           ]
         }
       }

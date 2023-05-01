@@ -232,7 +232,7 @@ spcasm::directive::invalid_range
    ╭─[tests/errors/parser-invalid-range.spcasmtest:1:1]
  1 │ org 0
  2 │ incbin "../binary.bin":4-2
-   ·                       ─┬─
+   ·                       ─┬
    ·                        ╰── In this range
    ╰────
   help: Switch the range limits around: `2-4`.

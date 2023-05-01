@@ -10,7 +10,7 @@ use tower_lsp::lsp_types::SemanticTokenType;
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct SpcasmTokenType(SemanticTokenType);
 
-pub const SEMANTIC_TOKEN_TYPES: [SpcasmTokenType; 10] = [
+pub const SEMANTIC_TOKEN_TYPES: [SpcasmTokenType; 11] = [
 	SpcasmTokenType(SemanticTokenType::NUMBER),
 	SpcasmTokenType(SemanticTokenType::PARAMETER),
 	SpcasmTokenType(SemanticTokenType::VARIABLE),
@@ -21,6 +21,7 @@ pub const SEMANTIC_TOKEN_TYPES: [SpcasmTokenType; 10] = [
 	SpcasmTokenType(SemanticTokenType::COMMENT),
 	SpcasmTokenType(SemanticTokenType::STRING),
 	SpcasmTokenType(SemanticTokenType::new("punctuation")),
+	SpcasmTokenType(SemanticTokenType::new("reference")),
 ];
 
 impl From<&Token> for SpcasmTokenType {
@@ -28,11 +29,11 @@ impl From<&Token> for SpcasmTokenType {
 	fn from(token: &Token) -> Self {
 		match token {
 			Token::Mnemonic(_, _) => SemanticTokenType::FUNCTION,
-			Token::Identifier(_, _) => SemanticTokenType::FUNCTION,
+			Token::Identifier(_, _) => SemanticTokenType::new("reference"),
 			Token::SpecialIdentifier(_, _) => SemanticTokenType::PARAMETER,
 			Token::Register(_, _) => SemanticTokenType::KEYWORD,
 			Token::PlusRegister(_, _) => SemanticTokenType::KEYWORD,
-			Token::Directive(_, _) => SemanticTokenType::FUNCTION,
+			Token::Directive(_, _) => SemanticTokenType::MACRO,
 			Token::Number(_, _, _) => SemanticTokenType::NUMBER,
 			Token::String(_, _) => SemanticTokenType::STRING,
 			Token::Hash(_) => SemanticTokenType::OPERATOR,

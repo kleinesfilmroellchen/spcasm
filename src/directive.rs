@@ -581,7 +581,7 @@ impl ReferenceResolvable for DirectiveValue {
 					}
 				},
 			Self::AssignReference { reference, value } => {
-				reference.set_current_label(current_label, source_code)?;
+				reference.set_current_label_with_kind(current_label, sema::LabelUsageKind::AsDefinition, source_code)?;
 				value.set_current_label(current_label, source_code)
 			},
 			Self::UserDefinedMacro { .. }

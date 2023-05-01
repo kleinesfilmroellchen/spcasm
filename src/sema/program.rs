@@ -137,7 +137,8 @@ impl ReferenceResolvable for ProgramElement {
 		source_code: &Arc<AssemblyCode>,
 	) -> Result<(), Box<AssemblyError>> {
 		match self {
-			Self::Label(label) => label.set_current_label(current_label, source_code),
+			Self::Label(label) =>
+				label.set_current_label_with_kind(current_label, super::LabelUsageKind::AsDefinition, source_code),
 			Self::Directive(directive) => directive.set_current_label(current_label, source_code),
 			Self::Instruction(instruction) => instruction.set_current_label(current_label, source_code),
 			Self::IncludeSource { .. } => Ok(()),

@@ -11,7 +11,7 @@ use parking_lot::RwLock;
 use smartstring::alias::String;
 
 use super::instruction::MemoryAddress;
-use super::AssemblyTimeValue;
+use super::{AssemblyTimeValue, LabelUsageKind};
 use crate::error::AssemblyError;
 use crate::AssemblyCode;
 
@@ -110,6 +110,31 @@ impl Reference {
 			Self::Label(global) => global.read().location.clone(),
 			Self::MacroArgument { value, .. } | Self::Relative { value, .. } => value.clone().map(|boxed| *boxed),
 			Self::MacroGlobal { .. } | Self::UnresolvedLocalLabel { .. } => None,
+		}
+	}
+
+	pub fn set_current_label_with_kind(
+		&mut self,
+		current_label: &Option<Arc<RwLock<Label>>>,
+		kind: LabelUsageKind,
+		source_code: &Arc<AssemblyCode>,
+	) -> Result<(), Box<AssemblyError>> {
+		match self {
+			Self::UnresolvedLocalLabel { name, nesting_level, span, value } =>
+				try {
+					*self = Self::Label(create_local_at_this_position(
+						name.clone(),
+						*nesting_level,
+						*span,
+						value.clone(),
+						kind,
+						current_label.clone(),
+						source_code,
+					)?)
+				},
+			Self::MacroArgument { value: Some(value), .. } | Self::Relative { value: Some(value), .. } =>
+				value.set_current_label(current_label, source_code),
+			Self::Label(_) | Self::MacroGlobal { .. } | Self::MacroArgument { .. } | Self::Relative { .. } => Ok(()),
 		}
 	}
 }
@@ -241,22 +266,9 @@ impl ReferenceResolvable for Reference {
 		current_label: &Option<Arc<RwLock<Label>>>,
 		source_code: &Arc<AssemblyCode>,
 	) -> Result<(), Box<AssemblyError>> {
-		match self {
-			Self::UnresolvedLocalLabel { name, nesting_level, span, value } =>
-				try {
-					*self = Self::Label(create_local_at_this_position(
-						name.clone(),
-						*nesting_level,
-						*span,
-						value.clone(),
-						current_label.clone(),
-						source_code,
-					)?)
-				},
-			Self::MacroArgument { value: Some(value), .. } | Self::Relative { value: Some(value), .. } =>
-				value.set_current_label(current_label, source_code),
-			Self::Label(_) | Self::MacroGlobal { .. } | Self::MacroArgument { .. } | Self::Relative { .. } => Ok(()),
-		}
+		// Any callers that are aware of us being a definition will not call the trait function, but the with_kind
+		// function directly.
+		self.set_current_label_with_kind(current_label, LabelUsageKind::AsAddress, source_code)
 	}
 }
 
@@ -640,6 +652,7 @@ pub fn create_local_at_this_position(
 	local_nesting_level: NonZeroUsize,
 	local_location: SourceSpan,
 	local_value: Option<Box<AssemblyTimeValue>>,
+	creation_kind: LabelUsageKind,
 	current_label: Option<Arc<RwLock<Label>>>,
 	source_code: &Arc<AssemblyCode>,
 ) -> Result<Arc<RwLock<Label>>, Box<AssemblyError>> {
@@ -676,10 +689,16 @@ pub fn create_local_at_this_position(
 		let local_label = mutable_parent
 			.children
 			.entry(local_name.clone())
-			.or_insert_with(|| Label::new_with_definition(local_name, local_location))
+			.or_insert_with(|| match creation_kind {
+				LabelUsageKind::AsDefinition => Label::new_with_definition(local_name, local_location),
+				LabelUsageKind::AsAddress => Label::new_with_use(local_name, local_location),
+			})
 			.clone();
 		let mut mutable_label = local_label.write();
 		mutable_label.parent = Arc::downgrade(&parent_label);
+		if creation_kind == LabelUsageKind::AsAddress {
+			mutable_label.usage_spans.push(local_location);
+		}
 		mutable_label.location = mutable_label.location.clone().or_else(|| local_value.map(|v| *v));
 		drop(mutable_label);
 		Ok(local_label)

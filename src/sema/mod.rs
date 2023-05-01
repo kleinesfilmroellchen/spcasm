@@ -218,12 +218,46 @@ impl AssemblyFile {
 	pub fn token_at(&self, offset: usize) -> Option<Token> {
 		self.tokens.iter().find_map(|token| {
 			let span = token.source_span();
-			if span.offset() <= offset && span.offset() + span.len() > offset {
+			if Self::source_span_contains(span, offset) {
 				Some(token.clone())
 			} else {
 				None
 			}
 		})
+	}
+
+	fn source_span_contains(this: SourceSpan, offset: usize) -> bool {
+		this.offset() <= offset && this.offset() + this.len() > offset
+	}
+
+	/// Returns the reference defined at the specified offset, if there is one.
+	#[must_use]
+	pub fn reference_at(&self, offset: usize) -> Option<Reference> {
+		Self::reference_at_offset_in(self.parent.upgrade()?.try_read()?.globals.values(), offset)
+	}
+
+	/// Returns the reference defined at the specified offset, searching in the given iterator.
+	#[must_use]
+	fn reference_at_offset_in<'a>(
+		references: impl Iterator<Item = &'a Arc<RwLock<Label>>>,
+		offset: usize,
+	) -> Option<Reference> {
+		for reference in references {
+			if let Some(reading_reference) = reference.try_read() {
+				if reading_reference
+					.definition_span
+					.is_some_and(|definition| Self::source_span_contains(definition, offset))
+					|| reading_reference.usage_spans.iter().any(|usage| Self::source_span_contains(*usage, offset))
+				{
+					return Some(Reference::Label(reference.clone()));
+				}
+				if let Some(child_reference) = Self::reference_at_offset_in(reading_reference.children.values(), offset)
+				{
+					return Some(child_reference);
+				}
+			}
+		}
+		None
 	}
 
 	/// Returns the definitions of the given identifier string, if it is defined as a symbol anywhere.

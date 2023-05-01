@@ -46,6 +46,7 @@ pub enum Reference {
 		nesting_level: NonZeroUsize,
 		/// The location of definition of this label.
 		span:          SourceSpan,
+		/// The final value of the label, if it has already been assigned one.
 		value:         Option<Box<AssemblyTimeValue>>,
 	},
 	/// A relative label, declared with '+' or '-'.
@@ -54,6 +55,7 @@ pub enum Reference {
 		direction: RelativeReferenceDirection,
 		/// The id of this label, meaning how many '-' or '+' were used.
 		id:        NonZeroU64,
+		/// The final value of the label, if it has already been assigned one.
 		value:     Option<Box<AssemblyTimeValue>>,
 		/// The location of definition of this label.
 		span:      SourceSpan,
@@ -72,10 +74,16 @@ pub enum Reference {
 	},
 	/// A global label placeholder that will become a unique global label for each use of the containing macro.
 	/// This can be used to create a global label for a macro and use local labels within it safely.
-	MacroGlobal { span: SourceSpan },
+	MacroGlobal {
+		/// Source code location of the reference.
+		span: SourceSpan,
+	},
 }
 
 impl Reference {
+	/// Returns the source span where this reference is defined. In some instances, this will return a usage span of a
+	/// reference that wasn't actually defined.
+	#[must_use]
 	pub fn source_span(&self) -> SourceSpan {
 		match self {
 			Self::Label(global) => global.read().source_span(),
@@ -86,6 +94,9 @@ impl Reference {
 		}
 	}
 
+	/// Returns the user-specified name of the reference.
+	#[allow(clippy::missing_panics_doc)]
+	#[must_use]
 	pub fn name(&self) -> String {
 		match self {
 			Self::Label(label) => label.read_recursive().name.clone(),
@@ -96,6 +107,7 @@ impl Reference {
 		}
 	}
 
+	/// Sets the value of the reference.
 	pub fn set_location(&mut self, location: AssemblyTimeValue) {
 		match self {
 			Self::Label(global) => global.write().location = Some(location),
@@ -105,6 +117,8 @@ impl Reference {
 		}
 	}
 
+	/// Returns the value of the reference.
+	#[must_use]
 	pub fn location(&self) -> Option<AssemblyTimeValue> {
 		match self {
 			Self::Label(global) => global.read().location.clone(),
@@ -113,6 +127,11 @@ impl Reference {
 		}
 	}
 
+	/// Sets the current label at the position that this reference is used, and additionally specifies how the label is
+	/// used here: as an address/value or as the definition itself?
+	///
+	/// # Errors
+	/// If there is no global label, but we try to create a local label, a "missing global label" error is returned.
 	pub fn set_current_label_with_kind(
 		&mut self,
 		current_label: &Option<Arc<RwLock<Label>>>,

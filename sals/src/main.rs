@@ -7,11 +7,13 @@ use std::path::Path;
 use std::sync::Arc;
 
 use interface::*;
+use miette::SourceSpan;
 use parking_lot::{Mutex, RwLock};
 use semantic_token::*;
 use serde_json::Value;
 use spcasm::cli::Frontend;
 use spcasm::parser::Token;
+use spcasm::sema::AssemblyFile;
 use spcasm::{AssemblyCode, AssemblyError, Environment};
 use tower_lsp::jsonrpc::Result;
 use tower_lsp::lsp_types::notification::Notification;
@@ -139,7 +141,7 @@ impl LanguageServer for Backend {
 				)),
 				definition_provider: Some(OneOf::Left(true)),
 				references_provider: Some(OneOf::Left(true)),
-				rename_provider: None,
+
 				..ServerCapabilities::default()
 			},
 		})
@@ -157,7 +159,6 @@ impl LanguageServer for Backend {
 	}
 
 	async fn did_open(&self, params: DidOpenTextDocumentParams) {
-		self.client.log_message(MessageType::INFO, format!("file {} opened!", params.text_document.uri)).await;
 		self.on_change(TextDocumentItem {
 			uri:     params.text_document.uri,
 			text:    params.text_document.text,
@@ -195,23 +196,13 @@ impl LanguageServer for Backend {
 	}
 
 	async fn goto_definition(&self, params: GotoDefinitionParams) -> Result<Option<GotoDefinitionResponse>> {
-		let uri = &params.text_document_position_params.text_document.uri.to_file_path().map_err(|_| {
-			tower_lsp::jsonrpc::Error {
-				code:    tower_lsp::jsonrpc::ErrorCode::InvalidParams,
-				data:    None,
-				message: format!("invalid document URI {}", params.text_document_position_params.text_document.uri),
-			}
-		})?;
+		let file = self.file_for_uri(&params.text_document_position_params.text_document.uri)?;
 		let definition = async {
-			let file = self.environment.read().files.get::<Path>(uri)?.clone();
 			let source_code = file.read().source_code.text.clone();
 
 			let offset = lsp_position_to_source_offset(params.text_document_position_params.position, &source_code);
 
 			// Use reference itself if it can be found.
-			self.client
-				.log_message(MessageType::INFO, &format!("{:#?}", file.read().parent.upgrade().unwrap().read().globals))
-				.await;
 			let spans = if let Some(reference) = file.read().reference_at(offset) {
 				vec![reference.source_span()]
 			} else {
@@ -248,19 +239,52 @@ impl LanguageServer for Backend {
 	}
 
 	async fn references(&self, params: ReferenceParams) -> Result<Option<Vec<Location>>> {
-		log::info!("references {:?}!", params);
-		Ok(None)
+		use spcasm::sema::Reference;
+
+		let file = self.file_for_uri(&params.text_document_position.text_document.uri)?;
+		let offset =
+			lsp_position_to_source_offset(params.text_document_position.position, &file.read().source_code.text);
+		let readable_file = file.read();
+
+		readable_file.reference_at(offset).map_or(Ok(None), |reference| {
+			let spans: Box<dyn Iterator<Item = SourceSpan>> = match reference {
+				Reference::Label(label) => Box::new(
+					label
+						.read()
+						.usage_spans
+						.clone()
+						.into_iter()
+						.chain(label.read_recursive().definition_span.into_iter()),
+				),
+				Reference::MacroArgument { span, .. }
+				| Reference::MacroGlobal { span, .. }
+				| Reference::Relative { span, .. }
+				| Reference::UnresolvedLocalLabel { span, .. } => Box::new(std::iter::once(span)),
+			};
+
+			// TODO: Cross-file locations aren't handled properly.
+			Ok(Some(
+				spans
+					.filter_map(|span| {
+						Some(Location::new(
+							params.text_document_position.text_document.uri.clone(),
+							Range::new(
+								source_offset_to_lsp_position(span.offset(), &readable_file.source_code.text)?,
+								source_offset_to_lsp_position(
+									span.offset() + span.len(),
+									&readable_file.source_code.text,
+								)?,
+							),
+						))
+					})
+					.collect(),
+			))
+		})
 	}
 
 	async fn semantic_tokens_full(&self, params: SemanticTokensParams) -> Result<Option<SemanticTokensResult>> {
-		self.client.log_message(MessageType::LOG, format!("semantic tokens full {params:?}!")).await;
-		let uri = &params.text_document.uri.to_file_path().map_err(|_| tower_lsp::jsonrpc::Error {
-			code:    tower_lsp::jsonrpc::ErrorCode::InvalidParams,
-			data:    None,
-			message: format!("invalid document URI {}", params.text_document.uri),
-		})?;
+		let file = self.file_for_uri(&params.text_document.uri)?;
 		let semantic_tokens = || -> Option<Vec<SemanticToken>> {
-			let file = self.environment.read().files.get::<Path>(uri).cloned()?;
 			let text = file.read().source_code.text.clone();
 			// Necessary for semantic token location delta computation.
 			let mut last_token_line = 0;
@@ -365,7 +389,6 @@ struct TextDocumentItem {
 impl Backend {
 	async fn on_change(&self, TextDocumentItem { uri, text, version }: TextDocumentItem) {
 		if let Ok(path) = &uri.to_file_path() {
-			self.client.log_message(MessageType::LOG, format!("document path: {path:?}")).await;
 			// Clear frontend diagnostics.
 			self.frontend.clear_diagnostics();
 			let source_code = Arc::new(AssemblyCode::new_from_path(&text, path));
@@ -401,6 +424,19 @@ impl Backend {
 		} else {
 			self.client.log_message(MessageType::ERROR, format!("invalid document URI: {uri}")).await;
 		}
+	}
+
+	fn file_for_uri(&self, uri: &Url) -> Result<Arc<RwLock<AssemblyFile>>> {
+		let path = &uri.to_file_path().map_err(|_| tower_lsp::jsonrpc::Error {
+			code:    tower_lsp::jsonrpc::ErrorCode::InvalidParams,
+			data:    None,
+			message: format!("invalid document URI {}", uri),
+		})?;
+		self.environment.read().files.get::<Path>(path).cloned().ok_or_else(|| tower_lsp::jsonrpc::Error {
+			code:    tower_lsp::jsonrpc::ErrorCode::InvalidParams,
+			data:    None,
+			message: format!("no parsed document found for {}", uri),
+		})
 	}
 }
 

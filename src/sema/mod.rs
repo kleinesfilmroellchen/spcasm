@@ -13,6 +13,7 @@ pub use addressing_mode::{AddressingMode, AddressingModeCategory};
 pub use environment::Environment;
 pub use file::AssemblyFile;
 pub use program::ProgramElement;
+pub use reference::Reference;
 pub use register::Register;
 pub use value::AssemblyTimeValue;
 

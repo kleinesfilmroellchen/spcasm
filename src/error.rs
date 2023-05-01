@@ -778,6 +778,13 @@ pub enum AssemblyError {
 		#[source_code]
 		src:                  Arc<AssemblyCode>,
 	},
+
+	#[error(transparent)]
+	#[diagnostic(code(spcasm::io_error), severity(Error))]
+	OtherIoError {
+		#[from]
+		inner: Arc<std::io::Error>,
+	},
 }
 
 impl AssemblyError {
@@ -827,6 +834,12 @@ impl AssemblyError {
 impl From<Box<Self>> for AssemblyError {
 	fn from(boxed: Box<Self>) -> Self {
 		*boxed
+	}
+}
+
+impl From<std::io::Error> for AssemblyError {
+	fn from(value: std::io::Error) -> Self {
+		Self::OtherIoError { inner: Arc::new(value) }
 	}
 }
 

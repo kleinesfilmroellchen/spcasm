@@ -13,11 +13,23 @@ use smartstring::alias::String;
 
 use crate::Segments;
 
+/// Save all the metadata since object is too dumb to do this itself.
+struct SegmentMetadata {
+	name:            std::string::String,
+	// The following values are set later, once the data has been constructed into immutable memory.
+	name_id:         Cell<Option<StringId>>,
+	section_index:   Cell<Option<SectionIndex>>,
+	elf_file_offset: Cell<Option<u64>>,
+	data:            Vec<u8>,
+	start_address:   u64,
+}
+
 /// Writes assembled data to an ELF file, separating it by segments.
 ///
 /// # Errors
 /// I/O errors.
-pub fn write_to_elf(output_stream: &mut impl Write, data: Segments<u8>) -> Result<(), Box<dyn std::error::Error>> {
+#[allow(clippy::missing_panics_doc, clippy::cast_sign_loss, clippy::cast_possible_truncation, clippy::cast_lossless)]
+pub fn write_to_elf(output_stream: &mut impl Write, data: Segments<u8>) -> Result<(), std::io::Error> {
 	// FIXME: This appears to be a bug with object; it can't write past a Vec's capacity though it has a mutable
 	// reference and can totally do it. Therefore, preallocate a gigantic buffer, which is inefficient but works.
 	let mut buffer = Vec::with_capacity(65536);
@@ -38,32 +50,19 @@ pub fn write_to_elf(output_stream: &mut impl Write, data: Segments<u8>) -> Resul
 	// 	- shstrtab section (section header string table)
 	// - Section headers (yes, weird position, but I don't want to mess with something that readelf accepts)
 
-	/// Save all the metadata since object is too dumb to do this itself.
-	struct SegmentMetadata {
-		/// FOR SOME REASON object keeps a pointer to this.
-		/// Therefore it needs to be pinned.
-		name:            std::string::String,
-		// The following values are set later, once the data has been constructed into immutable memory.
-		name_id:         Cell<Option<StringId>>,
-		section_index:   Cell<Option<SectionIndex>>,
-		elf_file_offset: Cell<Option<u64>>,
-		data:            Vec<u8>,
-		start_address:   u64,
-	}
-
 	// TODO: Check if Pin is necessary here.
 	let mut segments: Vec<Pin<Box<SegmentMetadata>>> = Vec::new();
 
 	// Step 1: Create metadata.
 	// Since segments is a BTreeMap, it will always be sorted by address, simplifying later write steps.
-	for (segment_start, segment_contents) in &data.segments {
+	for (segment_start, segment_contents) in data.segments {
 		let metadata = Box::pin(SegmentMetadata {
 			name:            format!(".text_{:04X}", segment_start),
 			name_id:         Cell::new(None),
 			section_index:   Cell::new(None),
 			elf_file_offset: Cell::new(None),
-			data:            segment_contents.clone(),
-			start_address:   *segment_start as u64,
+			data:            segment_contents,
+			start_address:   segment_start as u64,
 		});
 		segments.push(metadata);
 	}
@@ -100,7 +99,8 @@ pub fn write_to_elf(output_stream: &mut impl Write, data: Segments<u8>) -> Resul
 		// Doesn't really matter for the ROM, but in practice this is the reset address.
 		e_entry:     0xFFC0,
 		e_flags:     0,
-	})?;
+	})
+	.map_err(|_| std::io::Error::from(std::io::ErrorKind::Other))?;
 
 	// Step 5: Write program headers.
 	elf.write_align_program_headers();

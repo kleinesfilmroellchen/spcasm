@@ -73,10 +73,12 @@ pub fn main() -> miette::Result<()> {
 			match args.output_format {
 				// TODO: Don't do double work assembling here.
 				cli::OutputFormat::Elf =>
-					elf::write_to_elf(&mut outfile, run_assembler_into_segments(&code, options).unwrap().1).unwrap(),
-				cli::OutputFormat::Plain => outfile.write_all(&assembled).unwrap(),
-				cli::OutputFormat::HexDump =>
-					outfile.write_fmt(format_args!("{}", crate::pretty_hex(&assembled, None))).unwrap(),
+					elf::write_to_elf(&mut outfile, run_assembler_into_segments(&code, options).unwrap().1)
+						.map_err(AssemblyError::from)?,
+				cli::OutputFormat::Plain => outfile.write_all(&assembled).map_err(AssemblyError::from)?,
+				cli::OutputFormat::HexDump => outfile
+					.write_fmt(format_args!("{}", crate::pretty_hex(&assembled, None)))
+					.map_err(AssemblyError::from)?,
 			};
 		}
 		Ok(())

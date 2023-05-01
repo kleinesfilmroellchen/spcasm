@@ -13,8 +13,8 @@ use smartstring::alias::String;
 
 use crate::directive::DirectiveSymbol;
 use crate::error::{ReferenceType, TokenOrString};
-use crate::sema::instruction::Mnemonic;
 use crate::parser::Token;
+use crate::sema::instruction::Mnemonic;
 use crate::AssemblyCode;
 
 /// This is a default-like trait whose values are wholly ignored. It's just necessary for a discriminator-related hack:

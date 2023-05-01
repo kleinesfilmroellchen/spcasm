@@ -68,9 +68,75 @@ Options:
 
 ```
 
-spcasm will read the assembly file INPUT and assemble it into a contiguous binary. This binary represents the SPC700's memory space.
+- auto-gen TOC;
+  {:toc}
 
-The output file is optional; omit it in order to dry-run the assembler and check that the assembly code does indeed compile. Use `-` to output to stdout, this is especially useful in combination with a hexdump.
+## Files, input and output format
+
+spcasm reads the assembly file `INPUT` as its primary input. This file must be UTF-8 coded and can have either Windows (CRLF) or Unix (LF) newlines. Currently, standard input (`-`) cannot be used as an input file.
+
+For other file operations, such as including source code, binary files, or BRR data, it does not matter whether you specify an absolute or relative path to the input file. All relative paths are relative to the file where that path is used, and all absolute paths are absolute. It is recommended to not use absolute paths since they are not compatible between different machines even with the same operating system.
+
+spcasm will assemble the input file it into an image of the SPC700's memory space. The terminology "ROM" is often used for such an image, both within spcasm and elsewhere, but do note that since the SPC700 has no user-controlled ROM but only RAM, all memory is initially loaded and always modifiable at runtime.
+
+The output file is optional; omit it in order to dry-run the assembler and check that the assembly code does indeed compile. Use `-` to output to standard output (the console), this is especially useful in combination with a `hex-dump`.
+
+The output format determines what kind of output spcasm produces. Note that during a dry run, the output conversion is not performed and any associated errors will not be produced. spcasm currently supports these output formats:
+
+- `hex-dump`: Produce a hex dump of the contiguous ROM; a feature primarily intended for debugging purposes and the web interface. In hex dump output, all segments are combined together with zero padding bytes and printed in a human-readable fashion similar to the output of many hex dump or hex editor programs. spcasm produces 16 columns and as many rows as needed, with each byte printed as a two-digit hex number. Note that there are no row or column headers, and no ASCII sidebar. If you want these traditional hex editor features, use the `plain` output format and inspect the resulting binary with a proper, separate hex editor program such as `xxd`. (In fact, since spcasm can output plain data to standard output, you can pipe spcasm's output directly into a command-line tool like `xxd`.)
+- `plain`: Produce the contiguous ROM in raw binary form, which is effectively equivalent to a ROM image. All segments are combined together with zero padding bytes, and any offset into the file corresponds exactly to a memory address. This output format is the default of Asar and other assemblers, and it is most convenient for further processing the image with other tools.
+- `elf`: Produce an ELF image. This uses ELF in a similar manner to how embedded system ELF images are usually produced:
+  - The ELF format is ELF32, little endian, ABI is "embedded" (0xFF), ELF type "executable", machine "Sony DSP Processor" (63). Entry point is always 0xFFC0, the reset address.
+  - Each segment is assembled into a separate ELF section and corresponding program segment. The names of these might change, so do not rely on them, but the program segment type will always be `LOAD` and the section type `PROGBITS`.
+  - All sections have the `ALLOC` flag. spcasm may intelligently mark some sections as read-execute only or read-write only, depending on the contents, but if that is not possible, the segment will just be read-write-execute.
+  - All section physical and virtual addresses correspond to the actual SPC700 addresses.
+
+As an example, here's what `readelf -a` says about the `tests/opcodes.s` file assembled into an ELF:
+
+```notrycmd
+ELF Header:
+  Magic:   7f 45 4c 46 01 01 01 ff 00 00 00 00 00 00 00 00
+  Class:                             ELF32
+  Data:                              2's complement, little endian
+  Version:                           1 (current)
+  OS/ABI:                            <unknown: ff>
+  ABI Version:                       0
+  Type:                              EXEC (Executable file)
+  Machine:                           Sony DSP processor
+  Version:                           0x1
+  Entry point address:               0xffc0
+  Start of program headers:          52 (bytes into file)
+  Start of section headers:          620 (bytes into file)
+  Flags:                             0x0
+  Size of this header:               52 (bytes)
+  Size of program headers:           32 (bytes)
+  Number of program headers:         1
+  Size of section headers:           40 (bytes)
+  Number of section headers:         3
+  Section header string table index: 2
+
+Section Headers:
+  [Nr] Name              Type            Addr     Off    Size   ES Flg Lk Inf Al
+  [ 0]                   NULL            00000000 000000 000000 00      0   0  0
+  [ 1] .text_0000        PROGBITS        00000000 000054 000202 00 WAX  0   0  1
+  [ 2] .shstrtab         STRTAB          00000000 000256 000016 00      0   0  1
+Key to Flags:
+  W (write), A (alloc), X (execute), M (merge), S (strings), I (info),
+  L (link order), O (extra OS processing required), G (group), T (TLS),
+  C (compressed), x (unknown), o (OS specific), E (exclude),
+  p (processor specific)
+
+Program Headers:
+  Type           Offset   VirtAddr   PhysAddr   FileSiz MemSiz  Flg Align
+  LOAD           0x000054 0x00000000 0x00000000 0x00202 0x00202     0x1
+
+ Section to Segment mapping:
+  Segment Sections...
+   00     .text_0000
+
+```
+
+## Errors and diagnostic terminology
 
 If an error occurs during any step of the assembly process, spcasm will provide you with a nice error of what went wrong and possibly how to solve it:
 

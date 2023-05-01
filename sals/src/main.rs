@@ -206,28 +206,35 @@ impl LanguageServer for Backend {
 			let file = self.environment.read().files.get::<Path>(uri)?.clone();
 			let source_code = file.read().source_code.text.clone();
 
-			let text = file
-				.read()
-				.token_at(lsp_position_to_source_offset(params.text_document_position_params.position, &source_code))
-				.and_then(|token| match token {
+			let offset = lsp_position_to_source_offset(params.text_document_position_params.position, &source_code);
+
+			// Use reference itself if it can be found.
+			self.client
+				.log_message(MessageType::INFO, &format!("{:#?}", file.read().parent.upgrade().unwrap().read().globals))
+				.await;
+			let spans = if let Some(reference) = file.read().reference_at(offset) {
+				vec![reference.source_span()]
+			} else {
+				// Fall back to token-based search otherwise.
+
+				let text = file.read().token_at(offset).and_then(|token| match token {
 					Token::Identifier(text, _) => Some(text),
 					_ => None,
 				})?;
 
-			let spans = file
-				.read()
-				.get_definition_spans_of(&text)
-				.into_iter()
-				.filter_map(|span| {
-					Some(Location::new(
-						params.text_document_position_params.text_document.uri.clone(),
-						Range::new(
-							source_offset_to_lsp_position(span.offset(), &source_code)?,
-							source_offset_to_lsp_position(span.offset() + span.len(), &source_code)?,
-						),
-					))
-				})
-				.collect::<Vec<_>>();
+				file.read().get_definition_spans_of(&text)
+			}
+			.into_iter()
+			.filter_map(|span| {
+				Some(Location::new(
+					params.text_document_position_params.text_document.uri.clone(),
+					Range::new(
+						source_offset_to_lsp_position(span.offset(), &source_code)?,
+						source_offset_to_lsp_position(span.offset() + span.len(), &source_code)?,
+					),
+				))
+			})
+			.collect::<Vec<_>>();
 
 			self.client.log_message(MessageType::INFO, &format!("{spans:?}")).await;
 			match spans.len() {

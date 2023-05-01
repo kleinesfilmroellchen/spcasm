@@ -147,7 +147,7 @@ pub fn run_assembler_into_symbolic_segments(
 ) -> Result<(Arc<RwLock<Environment>>, Segments<ProgramElement>), Box<AssemblyError>> {
 	let env = crate::Environment::new();
 	env.write().set_error_options(options.clone());
-	let tokens = crate::parser::lexer::lex(source_code.clone(), &*options)?;
+	let tokens = crate::parser::lex(source_code.clone(), &*options)?;
 	let program = crate::Environment::parse(&env, tokens, source_code)?;
 	let segmented_program = program.write().split_into_segments()?;
 	Ok((env, segmented_program))

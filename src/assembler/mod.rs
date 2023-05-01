@@ -11,15 +11,15 @@ use smartstring::alias::String;
 use crate::change::Change;
 use crate::cli::{default_backend_options, Frontend};
 use crate::error::AssemblyError;
-use crate::sema::instruction::{AddressingMode, Instruction, MemoryAddress, Opcode};
+use crate::sema::instruction::{Instruction, MemoryAddress, Opcode};
 use crate::sema::reference::{Reference, Resolvable};
 use crate::sema::value::{BinaryOperator, Size, SizedAssemblyTimeValue};
-use crate::sema::{AssemblyTimeValue, ProgramElement, Register};
+use crate::sema::{AssemblyTimeValue, ProgramElement, Register, AddressingMode};
 use crate::{pretty_hex, AssemblyCode, Segments};
 
 mod directive;
-pub mod memory;
-pub mod sample_table;
+mod memory;
+pub(crate) mod sample_table;
 mod table;
 
 pub use table::assembly_table;
@@ -62,17 +62,17 @@ macro_rules! assemble_element {
 	($data:ident, $program_element:ident, $current_labels:ident) => {{
 		let result: Result<(), Box<AssemblyError>> = try {
 			match $program_element {
-				$crate::sema::program::ProgramElement::Label(label) => {
+				$crate::sema::ProgramElement::Label(label) => {
 					$current_labels.push(label.clone());
 					continue;
 				},
-				$crate::sema::program::ProgramElement::Instruction(instruction) =>
+				$crate::sema::ProgramElement::Instruction(instruction) =>
 					$data.assemble_instruction(instruction, &$current_labels)?,
-				$crate::sema::program::ProgramElement::Directive(directive) =>
+				$crate::sema::ProgramElement::Directive(directive) =>
 					$data.assemble_directive(directive, &mut $current_labels)?,
-				$crate::sema::program::ProgramElement::IncludeSource { .. } =>
+				$crate::sema::ProgramElement::IncludeSource { .. } =>
 					unreachable!("there should not be any remaining unincluded source code at assembly time"),
-				$crate::sema::program::ProgramElement::UserDefinedMacroCall { .. } =>
+				$crate::sema::ProgramElement::UserDefinedMacroCall { .. } =>
 					unreachable!("there should not be unexpanded user macros at assembly time"),
 			}
 		};

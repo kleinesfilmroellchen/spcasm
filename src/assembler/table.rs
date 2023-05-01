@@ -10,8 +10,8 @@ use miette::SourceSpan;
 use smartstring::alias::String;
 
 use super::AssembledData;
-use crate::sema::instruction::{AddressingModeCategory, Mnemonic};
-use crate::sema::AssemblyTimeValue;
+use crate::sema::instruction::Mnemonic;
+use crate::sema::{AddressingModeCategory, AssemblyTimeValue};
 use crate::AssemblyError;
 
 /// An action of what to do additionally with the segment. This function handles two operands, such as addresses.

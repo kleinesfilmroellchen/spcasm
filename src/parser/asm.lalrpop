@@ -9,26 +9,26 @@ use smartstring::alias::String;
 
 use std::collections::HashMap;
 use std::num::{NonZeroU64, NonZeroUsize};
-use std::sync::{Weak, Arc};
+use std::sync::{Arc, Weak};
 
 use crate::sema::{
-	instruction::{Instruction, Mnemonic, AddressingMode, Opcode, MemoryAddress},
-	Environment,
+	AddressingMode,
 	AssemblyTimeValue,
-	value::{UnaryOperator, BinaryOperator, Size, SizedAssemblyTimeValue},
+	Environment,
+	instruction::{Instruction, Mnemonic, Opcode, MemoryAddress},
 	LabelUsageKind, 
-	Register,
+	ProgramElement,
 	reference::{Reference, MacroParent, RelativeReferenceDirection},
-	program::ProgramElement,
+	Register,
+	value::{UnaryOperator, BinaryOperator, Size, SizedAssemblyTimeValue},
 };
 use crate::parser::{
-	Token,
-	source_range,
-	try_make_direct_page_addressing_mode,
 	apply_brr_options,
-	apply_sample_table_options
+	apply_sample_table_options,
+	source_range,
+	Token,
+	try_make_direct_page_addressing_mode,
 };
-
 use crate::directive::{DirectiveSymbol, Directive, DirectiveValue, DirectiveParameter, FillOperation};
 use crate::error::AssemblyError;
 use crate::AssemblyCode;

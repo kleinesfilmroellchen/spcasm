@@ -1,8 +1,8 @@
 //! Parser infrastructure & communication with LALRPOP.
 
 pub(crate) mod lalrpop_adaptor;
-pub mod lexer;
-pub mod token;
+mod lexer;
+mod token;
 use std::sync::Arc;
 
 pub use lexer::*;

@@ -9,9 +9,9 @@ use smartstring::alias::String;
 
 use super::instruction::Instruction;
 use super::reference::{MacroParent, Reference, ReferenceResolvable};
-use super::{AssemblyTimeValue, Directive};
+use super::AssemblyTimeValue;
 use crate::parser::source_range;
-use crate::{span_to_string, AssemblyCode, AssemblyError};
+use crate::{span_to_string, AssemblyCode, AssemblyError, Directive};
 
 /// A program element of an assembled program. A list of program elements makes an assembled program itself.
 #[derive(Clone, Debug)]

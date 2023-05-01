@@ -13,7 +13,7 @@ use crate::cli::Frontend;
 use crate::directive::DirectiveSymbol;
 use crate::error::AssemblyError;
 use crate::sema::instruction::{MemoryAddress, Mnemonic};
-use crate::sema::register::Register;
+use crate::sema::Register;
 use crate::AssemblyCode;
 
 macro_rules! start_of_identifier {

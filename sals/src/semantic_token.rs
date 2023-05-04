@@ -64,6 +64,10 @@ impl From<&Token> for SpcasmTokenType {
 			Token::Equals(_) => SemanticTokenType::OPERATOR,
 			Token::Newline(_) => SemanticTokenType::COMMENT,
 			Token::TestComment(_, _) => SemanticTokenType::COMMENT,
+			Token::OpenAngleBracketEquals(_) => SemanticTokenType::OPERATOR,
+			Token::CloseAngleBracketEquals(_) => SemanticTokenType::OPERATOR,
+			Token::ExclamationEquals(_) => SemanticTokenType::OPERATOR,
+			Token::DoubleEquals(_) => SemanticTokenType::OPERATOR,
 		}
 		.into()
 	}

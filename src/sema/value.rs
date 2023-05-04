@@ -270,6 +270,7 @@ impl<T> From<(Self, T)> for AssemblyTimeValue {
 // should be closure in upperhex formatter but borrow checker says no, again, no passing references to other closures
 fn write_correctly(prefix: &str, f: &mut Formatter<'_>, address: &AssemblyTimeValue) -> Result<(), Error> {
 	f.write_str(prefix)?;
+	f.write_char(' ')?;
 	fmt::UpperHex::fmt(address, f)
 }
 
@@ -277,8 +278,9 @@ impl UpperHex for AssemblyTimeValue {
 	fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), Error> {
 		let write_binary = |op, f: &mut Formatter, lhs: &Self, rhs: &Self| {
 			write_correctly("(", f, lhs)?;
+			f.write_char(' ')?;
 			write_correctly(op, f, rhs)?;
-			f.write_char(')')
+			f.write_str(" )")
 		};
 
 		match self {
@@ -320,6 +322,17 @@ pub enum Size {
 	DWord = 4,
 }
 
+impl Display for Size {
+	fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+		f.pad(match self {
+			Self::Byte => "byte",
+			Self::Word => "word",
+			Self::Long => "long",
+			Self::DWord => "doubleword",
+		})
+	}
+}
+
 /// An assembly-time value that also carries a size.
 /// The size determines what truncation happens before the value is written out.
 #[derive(Clone, Debug, PartialEq)]
@@ -329,6 +342,12 @@ pub struct SizedAssemblyTimeValue {
 	pub value: AssemblyTimeValue,
 	/// The size of the value in memory.
 	pub size:  Size,
+}
+
+impl Display for SizedAssemblyTimeValue {
+	fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+		 f.pad(&format!("{:04X} ({})", self.value, self.size))
+	}
 }
 
 impl Default for SizedAssemblyTimeValue {

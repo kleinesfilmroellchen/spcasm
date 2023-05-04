@@ -160,10 +160,10 @@ impl std::fmt::Display for ProgramElement {
 			Self::IncludeSource { file, span } => write!(f, "{} include \"{}\"", span_to_string(*span), file),
 			Self::UserDefinedMacroCall { macro_name, arguments, span } => write!(
 				f,
-				"{} [macro call] %{} ({}\n)",
+				"{} [macro call] %{} ( {} )",
 				span_to_string(*span),
 				macro_name,
-				arguments.iter().map(AssemblyTimeValue::to_string).intersperse(",\n\t".into()).collect::<String>(),
+				arguments.iter().map(AssemblyTimeValue::to_string).intersperse(", ".into()).collect::<String>(),
 			),
 		}
 	}

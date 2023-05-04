@@ -149,7 +149,7 @@ impl Environment {
 		let mut file = rc_file.write();
 		file.resolve_source_includes()?;
 
-		file.expand_user_macros()?;
+		file.compiletime_compute()?;
 		file.fill_in_reference_links()?;
 		file.coerce_to_direct_page_addressing();
 		drop(file);
@@ -700,11 +700,12 @@ impl AssemblyFile {
 		Ok(())
 	}
 
-	/// Expands calls to user-defined macros.
+	/// Expands all compile-time constructs that can be expanded right now.
 	///
 	/// # Errors
-	/// Any errors relating to macro calls and macro definitions.
-	pub(super) fn expand_user_macros(&mut self) -> Result<Change, Box<AssemblyError>> {
+	/// Any errors relating to macro calls and macro definitions, as well as other compile-time constructs.
+	#[allow(clippy::too_many_lines)]
+	pub(super) fn compiletime_compute(&mut self) -> Result<Change, Box<AssemblyError>> {
 		let maximum_macro_expansion_depth = self
 			.parent
 			.upgrade()
@@ -727,89 +728,112 @@ impl AssemblyFile {
 			.collect::<HashMap<_, _>>();
 
 		let mut index = 0;
-		// A stack of end indices where code inserted by macros ends. Specifically, the indices point at the first
-		// program element after the macro. This is used to keep track of recursion depth.
-		let mut macro_end_stack = Vec::new();
+		// A stack of end indices where code inserted by compile time constructs ends. Specifically, the indices point
+		// at the first program element after the construct. This is used to keep track of recursion depth.
+		let mut comptime_call_stack = Vec::new();
 
 		while index < self.content.len() {
 			let element = &mut self.content[index];
 
-			if let ProgramElement::UserDefinedMacroCall { macro_name, arguments: actual_arguments, span, .. } = element
-			{
-				if macro_end_stack.len() > maximum_macro_expansion_depth {
-					return Err(AssemblyError::RecursiveMacroUse {
-						depth:    maximum_macro_expansion_depth,
-						name:     macro_name.clone(),
-						location: *span,
-						src:      self.source_code.clone(),
-					}
-					.into());
-				}
+			// Handles common code insertion logic
+			macro_rules! insert_code_here {
+				($body:expr) => {
+					let body = $body;
 
-				let called_macro = user_macros.get(macro_name);
-				if let Some((definition_span, DirectiveValue::UserDefinedMacro { arguments, body, .. })) = called_macro
-				{
-					let arguments = arguments.read();
-					let formal_arguments = match &(arguments).parameters {
-						MacroParameters::Formal(formal_arguments) => formal_arguments,
-						MacroParameters::Actual(_) => unreachable!(),
-					};
-					if formal_arguments.len() != actual_arguments.len() {
-						return Err(AssemblyError::IncorrectNumberOfMacroArguments {
-							name:            macro_name.clone(),
-							expected_number: formal_arguments.len(),
-							actual_number:   actual_arguments.len(),
-							location:        *span,
-							definition:      *definition_span,
-							src:             self.source_code.clone(),
-						}
-						.into());
-					}
-					let actual_argument_parent = MacroParent::new_actual(
-						formal_arguments
-							.iter()
-							.zip(actual_arguments.iter())
-							.map(|((formal_argument, _), actual_argument)| {
-								(formal_argument.clone(), actual_argument.clone())
-							})
-							.collect(),
-						// We use a unique reference name just to make sure that we don't combine different
-						// references accidentally. This is not a synthetic label!
-						Label::new_with_definition(
-							format!("{}_global_label_{}", macro_name, index).into(),
-							*definition_span,
-						),
-					);
-					// FIXME: Doesn't handle macro-internal references correctly; also no support for the \@ special
-					// label.
-					let mut inserted_body = body.clone();
-					for macro_element in &mut inserted_body {
-						macro_element.replace_macro_parent(actual_argument_parent.clone(), &self.source_code)?;
-					}
-
-					let body_length = inserted_body.len();
-					self.content.splice(index ..= index, inserted_body);
+					let body_length = body.len();
+					self.content.splice(index ..= index, body);
 
 					// Shift all later end indices backwards to account for the inserted instructions.
-					macro_end_stack = macro_end_stack
+					comptime_call_stack = comptime_call_stack
 						.into_iter()
 						.map(|end_index| if end_index >= index { end_index + body_length } else { end_index })
 						.collect();
-					macro_end_stack.push(index + body_length);
+					comptime_call_stack.push(index + body_length);
 					continue;
-				}
-				return Err(AssemblyError::UndefinedUserMacro {
-					name:             macro_name.clone(),
-					available_macros: user_macros.keys().map(String::clone).collect(),
-					location:         *span,
-					src:              self.source_code.clone(),
-				}
-				.into());
+				};
+			}
+
+			match element {
+				ProgramElement::UserDefinedMacroCall { macro_name, arguments: actual_arguments, span, .. } => {
+					if comptime_call_stack.len() > maximum_macro_expansion_depth {
+						return Err(AssemblyError::RecursiveMacroUse {
+							depth:    maximum_macro_expansion_depth,
+							name:     macro_name.clone(),
+							location: *span,
+							src:      self.source_code.clone(),
+						}
+						.into());
+					}
+
+					let called_macro = user_macros.get(macro_name);
+					if let Some((definition_span, DirectiveValue::UserDefinedMacro { arguments, body, .. })) =
+						called_macro
+					{
+						let arguments = arguments.read();
+						let formal_arguments = match &(arguments).parameters {
+							MacroParameters::Formal(formal_arguments) => formal_arguments,
+							MacroParameters::Actual(_) => unreachable!(),
+						};
+						if formal_arguments.len() != actual_arguments.len() {
+							return Err(AssemblyError::IncorrectNumberOfMacroArguments {
+								name:            macro_name.clone(),
+								expected_number: formal_arguments.len(),
+								actual_number:   actual_arguments.len(),
+								location:        *span,
+								definition:      *definition_span,
+								src:             self.source_code.clone(),
+							}
+							.into());
+						}
+						let actual_argument_parent = MacroParent::new_actual(
+							formal_arguments
+								.iter()
+								.zip(actual_arguments.iter())
+								.map(|((formal_argument, _), actual_argument)| {
+									(formal_argument.clone(), actual_argument.clone())
+								})
+								.collect(),
+							// We use a unique reference name just to make sure that we don't combine different
+							// references accidentally. This is not a synthetic label!
+							Label::new_with_definition(
+								format!("{}_global_label_{}", macro_name, index).into(),
+								*definition_span,
+							),
+						);
+						// FIXME: Doesn't handle macro-internal references correctly; also no support for the \@ special
+						// label.
+						let mut body = body.clone();
+						for macro_element in &mut body {
+							macro_element.replace_macro_parent(actual_argument_parent.clone(), &self.source_code)?;
+						}
+						insert_code_here!(body);
+					}
+					return Err(AssemblyError::UndefinedUserMacro {
+						name:             macro_name.clone(),
+						available_macros: user_macros.keys().map(String::clone).collect(),
+						location:         *span,
+						src:              self.source_code.clone(),
+					}
+					.into());
+				},
+				ProgramElement::Directive(Directive {
+					value: DirectiveValue::Conditional { condition, true_block, false_block },
+					..
+				}) => {
+					println!("{:#?}, {:#?}", true_block, false_block);
+					if condition.is_truthy() {
+						insert_code_here!(true_block.clone());
+					} else if condition.is_falsy() {
+						insert_code_here!(false_block.clone());
+						// Do not error out in the else case; resolving at assembly time is also fine.
+					}
+				},
+				_ => (),
 			}
 			index += 1;
 			// Using drain_filter is the easiest way of filtering elements from a vector. We need to consume the
 			// returned iterator fully or else not all filtering will happen.
-			let _: usize = macro_end_stack.drain_filter(|end_index| *end_index < index).count();
+			let _: usize = comptime_call_stack.drain_filter(|end_index| *end_index < index).count();
 		}
 
 		Ok(Change::Unmodified)

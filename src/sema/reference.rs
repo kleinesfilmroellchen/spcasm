@@ -542,6 +542,12 @@ impl MacroParent {
 	}
 }
 
+impl Display for MacroParent {
+	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+		self.parameters.fmt(f)
+	}
+}
+
 /// The kinds of parameters that a macro parent can have.
 #[derive(Debug, Clone)]
 pub enum MacroParameters {
@@ -574,6 +580,20 @@ impl MacroParameters {
 			Self::Formal(..) => None,
 			Self::Actual(list) => list.get(name).cloned(),
 		}
+	}
+}
+
+impl Display for MacroParameters {
+	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+		f.pad(&match self {
+			Self::Formal(formal) =>
+				formal.iter().map(|(parameter, _)| parameter).intersperse(&", ".to_owned().into()).collect::<String>(),
+			Self::Actual(actual) => actual
+				.iter()
+				.map(|(parameter, value)| format!("{parameter} = {value:04X}"))
+				.intersperse(", ".into())
+				.collect::<String>(),
+		})
 	}
 }
 

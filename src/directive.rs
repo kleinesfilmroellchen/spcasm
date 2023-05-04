@@ -146,7 +146,7 @@ impl ReferenceResolvable for Directive {
 
 impl std::fmt::Display for Directive {
 	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-		write!(f, "{} {:?} {}", span_to_string(self.span), self.value, byte_vec_to_string(&self.expected_value),)
+		write!(f, "{} {} {}", span_to_string(self.span), self.value, byte_vec_to_string(&self.expected_value),)
 	}
 }
 
@@ -365,6 +365,86 @@ impl DirectiveValue {
 	}
 }
 
+impl Display for DirectiveValue {
+	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+		f.pad(&match self {
+			Self::Placeholder => "[placeholder]".to_owned(),
+			Self::Org(value) => format!("org {:04X}", value),
+			Self::Table { values } => format!(
+				"table {}",
+				values.iter().map(ToString::to_string).intersperse(", ".to_string()).collect::<String>()
+			),
+			Self::Brr { file, range, auto_trim, directory } => format!(
+				"brr \"{}\" {}{}{}",
+				file,
+				range.map(span_to_string).unwrap_or_default(),
+				if *auto_trim { " autotrim" } else { " no autotrim" },
+				if *directory { " directory" } else { " nodirectory" }
+			),
+			Self::SampleTable { auto_align } =>
+				format!("sampletable{}", if *auto_align { " autoalign" } else { " no autoalign" }),
+			Self::String { text, has_null_terminator } => format!(
+				"ascii \"{:?}{}\"",
+				text.iter().map(|byte| *byte as char).collect::<String>(),
+				if *has_null_terminator { "\\0" } else { "" }
+			),
+			Self::AssignReference { reference, value } => format!("[reference] {} = {:04X}", reference, value),
+			Self::Include { file, range } =>
+				format!("include \"{}\"{}", file, range.map(span_to_string).unwrap_or_default()),
+			Self::End => "endasm".to_string(),
+			Self::PushSection => "push".to_string(),
+			Self::PopSection => "pop".to_string(),
+			Self::UserDefinedMacro { name, arguments, body } => format!(
+				"macro {} ({})\n    {}",
+				name,
+				arguments.read().to_string(),
+				body.iter()
+					.map(ProgramElement::to_string)
+					.intersperse("\n".into())
+					.collect::<String>()
+					.replace('\n', "\n    ")
+			),
+			Self::SetDirectiveParameters(parameters) => format!(
+				"set parameters: {}",
+				parameters
+					.iter()
+					.map(|(parameter, value)| format!("{parameter} = {value}"))
+					.intersperse(", ".into())
+					.collect::<String>()
+			),
+			Self::Fill { operation, parameter, value } => format!(
+				"fill {} {} {}",
+				match operation {
+					FillOperation::Amount => "amount".to_owned(),
+					FillOperation::ToAddress => "to address".to_owned(),
+					FillOperation::ToAlignment { offset } => format!(
+						"to alignment{}",
+						offset.as_ref().map(|offset| format!(" (offset {:04X})", offset)).unwrap_or_default()
+					),
+				},
+				parameter,
+				value.as_ref().map_or_else(|| "[fill value unknown]".to_owned(), SizedAssemblyTimeValue::to_string)
+			),
+			Self::Conditional { condition, true_block, false_block } => format!(
+				"if {:04X}\n{}\nelse\n{}",
+				condition,
+				true_block
+					.iter()
+					.map(ProgramElement::to_string)
+					.intersperse("\n".into())
+					.collect::<String>()
+					.replace('\n', "\n    "),
+				false_block
+					.iter()
+					.map(ProgramElement::to_string)
+					.intersperse("\n".into())
+					.collect::<String>()
+					.replace('\n', "\n    "),
+			),
+		})
+	}
+}
+
 impl ReferenceResolvable for DirectiveValue {
 	fn replace_macro_parent(
 		&mut self,
@@ -534,6 +614,17 @@ pub enum DirectiveParameter {
 impl Hash for DirectiveParameter {
 	fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
 		state.write_u8(self.to_u8().expect("unreachable"));
+	}
+}
+
+impl Display for DirectiveParameter {
+	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+		f.pad(match self {
+			Self::FillValue => "fillvalue",
+			Self::PadValue => "padvalue",
+			Self::FillSize => "fillsize",
+			Self::PadSize => "padsize",
+		})
 	}
 }
 

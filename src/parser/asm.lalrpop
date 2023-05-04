@@ -133,8 +133,7 @@ Directive: Directive = {
 				directive: DirectiveSymbol::Org,
 				src: source_code.clone(),
 				location: directive,
-				// TODO: reintroduce when numbers have source locations
-				// argument_location: address.source_span(),
+				argument_location: address.source_span(),
 			},
 		})?),
 		span: directive,
@@ -207,9 +206,9 @@ Directive: Directive = {
 	<value_directive:FillOrPadValueDirective> <fill_value:AssemblyTimeValue> => Directive {
 		value: DirectiveValue::SetDirectiveParameters ({
 			let mut parameters = HashMap::with_capacity(2);
-			let (value_parameter, size_parameter, size, _) = value_directive;
+			let (value_parameter, size_parameter, size, span) = value_directive;
 			parameters.insert(value_parameter, fill_value);
-			parameters.insert(size_parameter, AssemblyTimeValue::Literal(size as MemoryAddress));
+			parameters.insert(size_parameter, AssemblyTimeValue::Literal(size as MemoryAddress, span));
 			parameters
 		}),
 		span: value_directive.3,
@@ -427,43 +426,45 @@ LabelingPlus: (NonZeroU64, SourceSpan) = {
 };
 
 Reference = { ReferenceBase, GlobalReferenceAsAddress };
-ReferenceAsDefinition = { ReferenceBase, GlobalReferenceAsDefinition };
+ReferenceAsDefinition = { ReferenceBase => <>.0, GlobalReferenceAsDefinition };
 
-ReferenceBase: Reference = {
-	<dots:"."+> <identifier:"identifier"> => Reference::UnresolvedLocalLabel {
+ReferenceBase: (Reference, SourceSpan) = {
+	<dots:"."+> <identifier:"identifier"> => (Reference::UnresolvedLocalLabel {
 		name: identifier.0.clone(),
 		nesting_level: NonZeroUsize::try_from(dots.len()).unwrap(),
 		span: source_range(dots[0].into(), identifier.1.into()),
 		value: None,
-	},
-	<dots:"."+> <identifier:"number"> => Reference::UnresolvedLocalLabel {
+	}, source_range(dots[0].into(), identifier.1.into())),
+	<dots:"."+> <identifier:"number"> => (Reference::UnresolvedLocalLabel {
 		name: identifier.1.clone(),
 		nesting_level: NonZeroUsize::try_from(dots.len()).unwrap(),
 		span: source_range(dots[0].into(), identifier.2.into()),
 		value: None,
-	},
-	<start:"<"> <identifier:"identifier"> <end:">"> => Reference::MacroArgument {
+	}, source_range(dots[0].into(), identifier.2.into())),
+	<start:"<"> <identifier:"identifier"> <end:">"> => (Reference::MacroArgument {
 		name: identifier.0,
 		span: source_range(start.into(), end.into()),
 		macro_parent: MacroParent::new_formal(None, identifier.1),
 		value: None,
-	},
-	<pluses:"+++"> => Reference::Relative {
+	}, source_range(start.into(), end.into())),
+	<pluses:"+++"> => (Reference::Relative {
 		direction: RelativeReferenceDirection::Forward,
 		id: pluses.0,
 		value: None,
 		span: pluses.1,
-	},
-	<minuses:"---"> => Reference::Relative {
+	}, pluses.1),
+	<minuses:"---"> => (Reference::Relative {
 		direction: RelativeReferenceDirection::Backward,
 		id: minuses.0,
 		value: None,
 		span: minuses.1,
-	},
+	}, minuses.1),
 };
 
-GlobalReferenceAsAddress: Reference = <identifier:"identifier"> =>?
-	Ok(Reference::Label(environment.write().get_global_label(&identifier.0, identifier.1, LabelUsageKind::AsAddress, source_code)?));
+GlobalReferenceAsAddress: (Reference, SourceSpan) = <identifier:"identifier"> =>? Ok((
+	Reference::Label(environment.write().get_global_label(&identifier.0, identifier.1, LabelUsageKind::AsAddress, source_code)?),
+	identifier.1,
+));
 
 GlobalReferenceAsDefinition: Reference = <identifier:"identifier"> =>?
 	Ok(Reference::Label(environment.write().get_global_label(&identifier.0, identifier.1, LabelUsageKind::AsDefinition, source_code)?));
@@ -478,62 +479,70 @@ LabelAssignment: Directive = <mut reference:ReferenceAsDefinition> <eq:"="> <val
 };
 
 AssemblyTimeValue: AssemblyTimeValue = {
-	<lhs:AssemblyTimeValue> "==" <rhs:Or> => AssemblyTimeValue::BinaryOperation(Box::new(lhs), Box::new(rhs), BinaryOperator::Equals),
-	<lhs:AssemblyTimeValue> "!=" <rhs:Or> => AssemblyTimeValue::BinaryOperation(Box::new(lhs), Box::new(rhs), BinaryOperator::NotEquals),
-	<lhs:AssemblyTimeValue> "<=" <rhs:Or> => AssemblyTimeValue::BinaryOperation(Box::new(lhs), Box::new(rhs), BinaryOperator::LessEquals),
-	<lhs:AssemblyTimeValue> ">=" <rhs:Or> => AssemblyTimeValue::BinaryOperation(Box::new(lhs), Box::new(rhs), BinaryOperator::GreaterEquals),
-	<lhs:AssemblyTimeValue> ">" <rhs:Or> => AssemblyTimeValue::BinaryOperation(Box::new(lhs), Box::new(rhs), BinaryOperator::Greater),
-	<lhs:AssemblyTimeValue> "<" <rhs:Or> => AssemblyTimeValue::BinaryOperation(Box::new(lhs), Box::new(rhs), BinaryOperator::Less),
+	<lhs:AssemblyTimeValue> "==" <rhs:Or> => AssemblyTimeValue::BinaryOperation { lhs: Box::new(lhs.clone()), rhs: Box::new(rhs.clone()), operator: BinaryOperator::Equals, span: source_range(lhs.source_span().into(), rhs.source_span().into())},
+	<lhs:AssemblyTimeValue> "!=" <rhs:Or> => AssemblyTimeValue::BinaryOperation { lhs: Box::new(lhs.clone()), rhs: Box::new(rhs.clone()), operator: BinaryOperator::NotEquals, span: source_range(lhs.source_span().into(), rhs.source_span().into())},
+	<lhs:AssemblyTimeValue> "<=" <rhs:Or> => AssemblyTimeValue::BinaryOperation { lhs: Box::new(lhs.clone()), rhs: Box::new(rhs.clone()), operator: BinaryOperator::LessEquals, span: source_range(lhs.source_span().into(), rhs.source_span().into())},
+	<lhs:AssemblyTimeValue> ">=" <rhs:Or> => AssemblyTimeValue::BinaryOperation { lhs: Box::new(lhs.clone()), rhs: Box::new(rhs.clone()), operator: BinaryOperator::GreaterEquals, span: source_range(lhs.source_span().into(), rhs.source_span().into())},
+	<lhs:AssemblyTimeValue> ">" <rhs:Or> => AssemblyTimeValue::BinaryOperation { lhs: Box::new(lhs.clone()), rhs: Box::new(rhs.clone()), operator: BinaryOperator::Greater, span: source_range(lhs.source_span().into(), rhs.source_span().into())},
+	<lhs:AssemblyTimeValue> "<" <rhs:Or> => AssemblyTimeValue::BinaryOperation { lhs: Box::new(lhs.clone()), rhs: Box::new(rhs.clone()), operator: BinaryOperator::Less, span: source_range(lhs.source_span().into(), rhs.source_span().into())},
 	Or,
 };
 
 Or: AssemblyTimeValue = {
-	<lhs:Or> "|" <rhs:And> => AssemblyTimeValue::BinaryOperation(Box::new(lhs), Box::new(rhs), BinaryOperator::Or),
+	<lhs:Or> "|" <rhs:And> => AssemblyTimeValue::BinaryOperation { lhs: Box::new(lhs.clone()), rhs: Box::new(rhs.clone()), operator: BinaryOperator::Or, span: source_range(lhs.source_span().into(), rhs.source_span().into())},
 	And,
 };
 
 And: AssemblyTimeValue = {
-	<lhs:And> "&" <rhs:Xor> => AssemblyTimeValue::BinaryOperation(Box::new(lhs), Box::new(rhs), BinaryOperator::And),
+	<lhs:And> "&" <rhs:Xor> => AssemblyTimeValue::BinaryOperation { lhs: Box::new(lhs.clone()), rhs: Box::new(rhs.clone()), operator: BinaryOperator::And, span: source_range(lhs.source_span().into(), rhs.source_span().into())},
 	Xor,
 };
 
 Xor: AssemblyTimeValue = {
-	<lhs:Xor> "^" <rhs:Shift> => AssemblyTimeValue::BinaryOperation(Box::new(lhs), Box::new(rhs), BinaryOperator::Xor),
+	<lhs:Xor> "^" <rhs:Shift> => AssemblyTimeValue::BinaryOperation { lhs: Box::new(lhs.clone()), rhs: Box::new(rhs.clone()), operator: BinaryOperator::Xor, span: source_range(lhs.source_span().into(), rhs.source_span().into())},
 	Shift,
 };
 
 Shift: AssemblyTimeValue = {
-	<lhs:Shift> ">>" <rhs:Arithmetic> => AssemblyTimeValue::BinaryOperation(Box::new(lhs), Box::new(rhs), BinaryOperator::RightShift),
-	<lhs:Shift> "<<" <rhs:Arithmetic> => AssemblyTimeValue::BinaryOperation(Box::new(lhs), Box::new(rhs), BinaryOperator::LeftShift),
+	<lhs:Shift> ">>" <rhs:Arithmetic> => AssemblyTimeValue::BinaryOperation { lhs: Box::new(lhs.clone()), rhs: Box::new(rhs.clone()), operator: BinaryOperator::RightShift, span: source_range(lhs.source_span().into(), rhs.source_span().into())},
+	<lhs:Shift> "<<" <rhs:Arithmetic> => AssemblyTimeValue::BinaryOperation { lhs: Box::new(lhs.clone()), rhs: Box::new(rhs.clone()), operator: BinaryOperator::LeftShift, span: source_range(lhs.source_span().into(), rhs.source_span().into())},
 	Arithmetic,
 };
 
 Arithmetic: AssemblyTimeValue = {
-	<lhs:Arithmetic> "+" <rhs:Factor> => AssemblyTimeValue::BinaryOperation(Box::new(lhs), Box::new(rhs), BinaryOperator::Add),
-	<lhs:Arithmetic> "-" <rhs:Factor> => AssemblyTimeValue::BinaryOperation(Box::new(lhs), Box::new(rhs), BinaryOperator::Subtract),
+	<lhs:Arithmetic> "+" <rhs:Factor> => AssemblyTimeValue::BinaryOperation { lhs: Box::new(lhs.clone()), rhs: Box::new(rhs.clone()), operator: BinaryOperator::Add, span: source_range(lhs.source_span().into(), rhs.source_span().into())},
+	<lhs:Arithmetic> "-" <rhs:Factor> => AssemblyTimeValue::BinaryOperation { lhs: Box::new(lhs.clone()), rhs: Box::new(rhs.clone()), operator: BinaryOperator::Subtract, span: source_range(lhs.source_span().into(), rhs.source_span().into())},
 	Factor,
 };
 
 Factor: AssemblyTimeValue = {
-	<lhs:Factor> "*" <rhs:Exponential> => AssemblyTimeValue::BinaryOperation(Box::new(lhs), Box::new(rhs), BinaryOperator::Multiply),
-	<lhs:Factor> "/" <rhs:Exponential> => AssemblyTimeValue::BinaryOperation(Box::new(lhs), Box::new(rhs), BinaryOperator::Divide),
-	<lhs:Factor> "%" <rhs:Exponential> => AssemblyTimeValue::BinaryOperation(Box::new(lhs), Box::new(rhs), BinaryOperator::Modulus),
+	<lhs:Factor> "*" <rhs:Exponential> => AssemblyTimeValue::BinaryOperation { lhs: Box::new(lhs.clone()), rhs: Box::new(rhs.clone()), operator: BinaryOperator::Multiply, span: source_range(lhs.source_span().into(), rhs.source_span().into())},
+	<lhs:Factor> "/" <rhs:Exponential> => AssemblyTimeValue::BinaryOperation { lhs: Box::new(lhs.clone()), rhs: Box::new(rhs.clone()), operator: BinaryOperator::Divide, span: source_range(lhs.source_span().into(), rhs.source_span().into())},
+	<lhs:Factor> "%" <rhs:Exponential> => AssemblyTimeValue::BinaryOperation { lhs: Box::new(lhs.clone()), rhs: Box::new(rhs.clone()), operator: BinaryOperator::Modulus, span: source_range(lhs.source_span().into(), rhs.source_span().into())},
 	Exponential,
 };
 
 /// Note that the sub-expressions are the other way around, as exponentials have right-to-left operator precedence!
 Exponential: AssemblyTimeValue = {
-	<lhs:Term> "**" <rhs:Exponential> => AssemblyTimeValue::BinaryOperation(Box::new(lhs), Box::new(rhs), BinaryOperator::Exponentiation),
+	<lhs:Term> "**" <rhs:Exponential> => AssemblyTimeValue::BinaryOperation { lhs: Box::new(lhs.clone()), rhs: Box::new(rhs.clone()), operator: BinaryOperator::Exponentiation, span: source_range(lhs.source_span().into(), rhs.source_span().into())},
 	Term,
 }
 
 Term: AssemblyTimeValue = {
-	"number" => AssemblyTimeValue::Literal(<>.0),
+	"number" => AssemblyTimeValue::Literal(<>.0, <>.2),
 	"+" <Term>,
-	"-" <Term> => AssemblyTimeValue::UnaryOperation(Box::new(<>), UnaryOperator::Negate),
-	"~" <Term> => AssemblyTimeValue::UnaryOperation(Box::new(<>), UnaryOperator::Not),
+	<op:"-"> <inner_value: Term> => AssemblyTimeValue::UnaryOperation {
+		inner_value: Box::new(inner_value.clone()),
+		operator: UnaryOperator::Negate,
+		span: source_range(op.into(), inner_value.source_span().into())
+	},
+	<op:"~"> <inner_value: Term> => AssemblyTimeValue::UnaryOperation {
+		inner_value: Box::new(inner_value.clone()),
+		operator: UnaryOperator::Not,
+		span: source_range(op.into(), inner_value.source_span().into())
+	},
 	"(" <AssemblyTimeValue> ")",
-	Reference => AssemblyTimeValue::Reference(<>),
+	Reference => AssemblyTimeValue::Reference(<>.0.clone(), <>.1),
 };
 
 AddressingMode: AddressingMode = {

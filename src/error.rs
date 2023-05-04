@@ -495,9 +495,8 @@ pub enum AssemblyError {
 		src:       Arc<AssemblyCode>,
 		#[label("This directive")]
 		location:  SourceSpan,
-		// TODO: reintroduce when numbers have source locations
-		// #[label("This directive argument")]
-		// argument_location: SourceSpan,
+		#[label("This directive argument")]
+		argument_location: SourceSpan,
 	},
 
 	#[error("There is no global label defined before the local label '{local_label}'")]

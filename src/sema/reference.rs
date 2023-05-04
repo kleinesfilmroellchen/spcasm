@@ -352,7 +352,7 @@ impl Resolvable for Reference {
 		match self {
 			Self::Label(label) => label.write().resolve_to(location, usage_span, source_code),
 			Self::MacroArgument { value, .. } | Self::Relative { value, .. } => {
-				*value = Some(Box::new(AssemblyTimeValue::Literal(location)));
+				*value = Some(Box::new(AssemblyTimeValue::Literal(location, usage_span)));
 				Ok(())
 			},
 			Self::MacroGlobal { .. } | Self::UnresolvedLocalLabel { .. } =>
@@ -527,10 +527,10 @@ impl Resolvable for Label {
 	fn resolve_to(
 		&mut self,
 		location: MemoryAddress,
-		_usage_span: SourceSpan,
+		usage_span: SourceSpan,
 		_source_code: Arc<AssemblyCode>,
 	) -> Result<(), Box<AssemblyError>> {
-		self.location = Some(AssemblyTimeValue::Literal(location));
+		self.location = Some(AssemblyTimeValue::Literal(location, usage_span));
 		Ok(())
 	}
 }

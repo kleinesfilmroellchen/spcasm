@@ -24,8 +24,8 @@ spcasm::relative_offset_too_large
  204 │    bmi reltarget+10 ;= 30 F8
  205 │    bpl reltarget+12 ;= 10 F8
  206 │    cbne $2B,$2C  ;= 2E 2B B7
-     ·    ────────────┬────────────
-     ·                ╰── Difference of -329 to current address
+     ·             ─┬─
+     ·              ╰── Difference of -329 to current address
  207 │    cbne $2D+X,$2E;= DE 2D B6
  208 │    dbnz $2F,$30  ;= 6E 2F B5
  209 │    dbnz Y,$31    ;= FE B4
@@ -44,7 +44,7 @@ spcasm::relative_offset_too_large
  205 │    bpl reltarget+12 ;= 10 F8
  206 │    cbne $2B,$2C  ;= 2E 2B B7
  207 │    cbne $2D+X,$2E;= DE 2D B6
-     ·    ────────────┬────────────
+     ·               ─┬─
      ·                ╰── Difference of -330 to current address
  208 │    dbnz $2F,$30  ;= 6E 2F B5
  209 │    dbnz Y,$31    ;= FE B4
@@ -64,8 +64,8 @@ spcasm::relative_offset_too_large
  206 │    cbne $2B,$2C  ;= 2E 2B B7
  207 │    cbne $2D+X,$2E;= DE 2D B6
  208 │    dbnz $2F,$30  ;= 6E 2F B5
-     ·    ────────────┬────────────
-     ·                ╰── Difference of -331 to current address
+     ·             ─┬─
+     ·              ╰── Difference of -331 to current address
  209 │    dbnz Y,$31    ;= FE B4
  210 │    jmp $2122     ;= 5F 22 21
  211 │    jmp ($2324+X)     ;= 1F 24 23
@@ -84,8 +84,8 @@ spcasm::relative_offset_too_large
  207 │    cbne $2D+X,$2E;= DE 2D B6
  208 │    dbnz $2F,$30  ;= 6E 2F B5
  209 │    dbnz Y,$31    ;= FE B4
-     ·    ───────────┬──────────
-     ·               ╰── Difference of -332 to current address
+     ·           ─┬─
+     ·            ╰── Difference of -332 to current address
  210 │    jmp $2122     ;= 5F 22 21
  211 │    jmp ($2324+X)     ;= 1F 24 23
  212 │ 
@@ -104,8 +104,8 @@ spcasm::relative_offset_too_large
  224 │    bne global_selftarget ;= D0 FE
  225 │ 
  226 │    bbs data.0,$F9 ;= 03 13 64
-     ·    ─────────────┬────────────
-     ·                 ╰── Difference of -156 to current address
+     ·               ─┬─
+     ·                ╰── Difference of -156 to current address
  227 │    bbs $30.1,$F9 ;= 23 30 61
  228 │    bbs $30.2,$F9 ;= 43 30 5E
  229 │    bbs $30.3,$F9 ;= 63 30 5B
@@ -124,8 +124,8 @@ spcasm::relative_offset_too_large
  225 │ 
  226 │    bbs data.0,$F9 ;= 03 13 64
  227 │    bbs $30.1,$F9 ;= 23 30 61
-     ·    ────────────┬────────────
-     ·                ╰── Difference of -159 to current address
+     ·              ─┬─
+     ·               ╰── Difference of -159 to current address
  228 │    bbs $30.2,$F9 ;= 43 30 5E
  229 │    bbs $30.3,$F9 ;= 63 30 5B
  230 │    bbs $30.4,$F9 ;= 83 30 58
@@ -144,8 +144,8 @@ spcasm::relative_offset_too_large
  226 │    bbs data.0,$F9 ;= 03 13 64
  227 │    bbs $30.1,$F9 ;= 23 30 61
  228 │    bbs $30.2,$F9 ;= 43 30 5E
-     ·    ────────────┬────────────
-     ·                ╰── Difference of -162 to current address
+     ·              ─┬─
+     ·               ╰── Difference of -162 to current address
  229 │    bbs $30.3,$F9 ;= 63 30 5B
  230 │    bbs $30.4,$F9 ;= 83 30 58
  231 │    bbs $30.5,$F9 ;= A3 30 55
@@ -164,8 +164,8 @@ spcasm::relative_offset_too_large
  227 │    bbs $30.1,$F9 ;= 23 30 61
  228 │    bbs $30.2,$F9 ;= 43 30 5E
  229 │    bbs $30.3,$F9 ;= 63 30 5B
-     ·    ────────────┬────────────
-     ·                ╰── Difference of -165 to current address
+     ·              ─┬─
+     ·               ╰── Difference of -165 to current address
  230 │    bbs $30.4,$F9 ;= 83 30 58
  231 │    bbs $30.5,$F9 ;= A3 30 55
  232 │    bbs $30.6,$F9 ;= C3 30 52
@@ -184,8 +184,8 @@ spcasm::relative_offset_too_large
  228 │    bbs $30.2,$F9 ;= 43 30 5E
  229 │    bbs $30.3,$F9 ;= 63 30 5B
  230 │    bbs $30.4,$F9 ;= 83 30 58
-     ·    ────────────┬────────────
-     ·                ╰── Difference of -168 to current address
+     ·              ─┬─
+     ·               ╰── Difference of -168 to current address
  231 │    bbs $30.5,$F9 ;= A3 30 55
  232 │    bbs $30.6,$F9 ;= C3 30 52
  233 │    bbs $30.7,$F9 ;= E3 30 4F
@@ -204,8 +204,8 @@ spcasm::relative_offset_too_large
  229 │    bbs $30.3,$F9 ;= 63 30 5B
  230 │    bbs $30.4,$F9 ;= 83 30 58
  231 │    bbs $30.5,$F9 ;= A3 30 55
-     ·    ────────────┬────────────
-     ·                ╰── Difference of -171 to current address
+     ·              ─┬─
+     ·               ╰── Difference of -171 to current address
  232 │    bbs $30.6,$F9 ;= C3 30 52
  233 │    bbs $30.7,$F9 ;= E3 30 4F
  234 │    bbc start.0,$05 ;= 13 00 58
@@ -224,8 +224,8 @@ spcasm::relative_offset_too_large
  230 │    bbs $30.4,$F9 ;= 83 30 58
  231 │    bbs $30.5,$F9 ;= A3 30 55
  232 │    bbs $30.6,$F9 ;= C3 30 52
-     ·    ────────────┬────────────
-     ·                ╰── Difference of -174 to current address
+     ·              ─┬─
+     ·               ╰── Difference of -174 to current address
  233 │    bbs $30.7,$F9 ;= E3 30 4F
  234 │    bbc start.0,$05 ;= 13 00 58
  235 │    bbc $31.1,$05 ;= 33 31 55
@@ -244,8 +244,8 @@ spcasm::relative_offset_too_large
  231 │    bbs $30.5,$F9 ;= A3 30 55
  232 │    bbs $30.6,$F9 ;= C3 30 52
  233 │    bbs $30.7,$F9 ;= E3 30 4F
-     ·    ────────────┬────────────
-     ·                ╰── Difference of -177 to current address
+     ·              ─┬─
+     ·               ╰── Difference of -177 to current address
  234 │    bbc start.0,$05 ;= 13 00 58
  235 │    bbc $31.1,$05 ;= 33 31 55
  236 │    bbc $31.2,$05 ;= 53 31 52
@@ -264,7 +264,7 @@ spcasm::relative_offset_too_large
  232 │    bbs $30.6,$F9 ;= C3 30 52
  233 │    bbs $30.7,$F9 ;= E3 30 4F
  234 │    bbc start.0,$05 ;= 13 00 58
-     ·    ─────────────┬─────────────
+     ·                ─┬─
      ·                 ╰── Difference of -424 to current address
  235 │    bbc $31.1,$05 ;= 33 31 55
  236 │    bbc $31.2,$05 ;= 53 31 52
@@ -284,8 +284,8 @@ spcasm::relative_offset_too_large
  233 │    bbs $30.7,$F9 ;= E3 30 4F
  234 │    bbc start.0,$05 ;= 13 00 58
  235 │    bbc $31.1,$05 ;= 33 31 55
-     ·    ────────────┬────────────
-     ·                ╰── Difference of -427 to current address
+     ·              ─┬─
+     ·               ╰── Difference of -427 to current address
  236 │    bbc $31.2,$05 ;= 53 31 52
  237 │    bbc $31.3,$05 ;= 73 31 4F
  238 │    bbc $31.4,$05 ;= 93 31 4C
@@ -304,8 +304,8 @@ spcasm::relative_offset_too_large
  234 │    bbc start.0,$05 ;= 13 00 58
  235 │    bbc $31.1,$05 ;= 33 31 55
  236 │    bbc $31.2,$05 ;= 53 31 52
-     ·    ────────────┬────────────
-     ·                ╰── Difference of -430 to current address
+     ·              ─┬─
+     ·               ╰── Difference of -430 to current address
  237 │    bbc $31.3,$05 ;= 73 31 4F
  238 │    bbc $31.4,$05 ;= 93 31 4C
  239 │    bbc $31.5,$05 ;= B3 31 49
@@ -324,8 +324,8 @@ spcasm::relative_offset_too_large
  235 │    bbc $31.1,$05 ;= 33 31 55
  236 │    bbc $31.2,$05 ;= 53 31 52
  237 │    bbc $31.3,$05 ;= 73 31 4F
-     ·    ────────────┬────────────
-     ·                ╰── Difference of -433 to current address
+     ·              ─┬─
+     ·               ╰── Difference of -433 to current address
  238 │    bbc $31.4,$05 ;= 93 31 4C
  239 │    bbc $31.5,$05 ;= B3 31 49
  240 │    bbc $31.6,$05 ;= D3 31 46
@@ -344,8 +344,8 @@ spcasm::relative_offset_too_large
  236 │    bbc $31.2,$05 ;= 53 31 52
  237 │    bbc $31.3,$05 ;= 73 31 4F
  238 │    bbc $31.4,$05 ;= 93 31 4C
-     ·    ────────────┬────────────
-     ·                ╰── Difference of -436 to current address
+     ·              ─┬─
+     ·               ╰── Difference of -436 to current address
  239 │    bbc $31.5,$05 ;= B3 31 49
  240 │    bbc $31.6,$05 ;= D3 31 46
  241 │    bbc $31.7,$05 ;= F3 31 43
@@ -364,8 +364,8 @@ spcasm::relative_offset_too_large
  237 │    bbc $31.3,$05 ;= 73 31 4F
  238 │    bbc $31.4,$05 ;= 93 31 4C
  239 │    bbc $31.5,$05 ;= B3 31 49
-     ·    ────────────┬────────────
-     ·                ╰── Difference of -439 to current address
+     ·              ─┬─
+     ·               ╰── Difference of -439 to current address
  240 │    bbc $31.6,$05 ;= D3 31 46
  241 │    bbc $31.7,$05 ;= F3 31 43
  242 │ 
@@ -384,8 +384,8 @@ spcasm::relative_offset_too_large
  238 │    bbc $31.4,$05 ;= 93 31 4C
  239 │    bbc $31.5,$05 ;= B3 31 49
  240 │    bbc $31.6,$05 ;= D3 31 46
-     ·    ────────────┬────────────
-     ·                ╰── Difference of -442 to current address
+     ·              ─┬─
+     ·               ╰── Difference of -442 to current address
  241 │    bbc $31.7,$05 ;= F3 31 43
  242 │ 
  243 │    call $5060 ;= 3F 60 50
@@ -404,8 +404,8 @@ spcasm::relative_offset_too_large
  239 │    bbc $31.5,$05 ;= B3 31 49
  240 │    bbc $31.6,$05 ;= D3 31 46
  241 │    bbc $31.7,$05 ;= F3 31 43
-     ·    ────────────┬────────────
-     ·                ╰── Difference of -445 to current address
+     ·              ─┬─
+     ·               ╰── Difference of -445 to current address
  242 │ 
  243 │    call $5060 ;= 3F 60 50
  244 │    pcall $02  ;= 4F 02
@@ -450,8 +450,8 @@ spcasm::relative_offset_too_large
  204 │    bmi reltarget+10 ;= 30 F8
  205 │    bpl reltarget+12 ;= 10 F8
  206 │    cbne $2B,$2C  ;= 2E 2B B7
-     ·    ────────────┬────────────
-     ·                ╰── Difference of -329 to current address
+     ·             ─┬─
+     ·              ╰── Difference of -329 to current address
  207 │    cbne $2D+X,$2E;= DE 2D B6
  208 │    dbnz $2F,$30  ;= 6E 2F B5
  209 │    dbnz Y,$31    ;= FE B4
@@ -470,7 +470,7 @@ spcasm::relative_offset_too_large
  205 │    bpl reltarget+12 ;= 10 F8
  206 │    cbne $2B,$2C  ;= 2E 2B B7
  207 │    cbne $2D+X,$2E;= DE 2D B6
-     ·    ────────────┬────────────
+     ·               ─┬─
      ·                ╰── Difference of -330 to current address
  208 │    dbnz $2F,$30  ;= 6E 2F B5
  209 │    dbnz Y,$31    ;= FE B4
@@ -490,8 +490,8 @@ spcasm::relative_offset_too_large
  206 │    cbne $2B,$2C  ;= 2E 2B B7
  207 │    cbne $2D+X,$2E;= DE 2D B6
  208 │    dbnz $2F,$30  ;= 6E 2F B5
-     ·    ────────────┬────────────
-     ·                ╰── Difference of -331 to current address
+     ·             ─┬─
+     ·              ╰── Difference of -331 to current address
  209 │    dbnz Y,$31    ;= FE B4
  210 │    jmp $2122     ;= 5F 22 21
  211 │    jmp ($2324+X)     ;= 1F 24 23
@@ -510,8 +510,8 @@ spcasm::relative_offset_too_large
  207 │    cbne $2D+X,$2E;= DE 2D B6
  208 │    dbnz $2F,$30  ;= 6E 2F B5
  209 │    dbnz Y,$31    ;= FE B4
-     ·    ───────────┬──────────
-     ·               ╰── Difference of -332 to current address
+     ·           ─┬─
+     ·            ╰── Difference of -332 to current address
  210 │    jmp $2122     ;= 5F 22 21
  211 │    jmp ($2324+X)     ;= 1F 24 23
  212 │ 
@@ -530,8 +530,8 @@ spcasm::relative_offset_too_large
  224 │    bne global_selftarget ;= D0 FE
  225 │ 
  226 │    bbs data.0,$F9 ;= 03 13 64
-     ·    ─────────────┬────────────
-     ·                 ╰── Difference of -156 to current address
+     ·               ─┬─
+     ·                ╰── Difference of -156 to current address
  227 │    bbs $30.1,$F9 ;= 23 30 61
  228 │    bbs $30.2,$F9 ;= 43 30 5E
  229 │    bbs $30.3,$F9 ;= 63 30 5B
@@ -550,8 +550,8 @@ spcasm::relative_offset_too_large
  225 │ 
  226 │    bbs data.0,$F9 ;= 03 13 64
  227 │    bbs $30.1,$F9 ;= 23 30 61
-     ·    ────────────┬────────────
-     ·                ╰── Difference of -159 to current address
+     ·              ─┬─
+     ·               ╰── Difference of -159 to current address
  228 │    bbs $30.2,$F9 ;= 43 30 5E
  229 │    bbs $30.3,$F9 ;= 63 30 5B
  230 │    bbs $30.4,$F9 ;= 83 30 58
@@ -570,8 +570,8 @@ spcasm::relative_offset_too_large
  226 │    bbs data.0,$F9 ;= 03 13 64
  227 │    bbs $30.1,$F9 ;= 23 30 61
  228 │    bbs $30.2,$F9 ;= 43 30 5E
-     ·    ────────────┬────────────
-     ·                ╰── Difference of -162 to current address
+     ·              ─┬─
+     ·               ╰── Difference of -162 to current address
  229 │    bbs $30.3,$F9 ;= 63 30 5B
  230 │    bbs $30.4,$F9 ;= 83 30 58
  231 │    bbs $30.5,$F9 ;= A3 30 55
@@ -590,8 +590,8 @@ spcasm::relative_offset_too_large
  227 │    bbs $30.1,$F9 ;= 23 30 61
  228 │    bbs $30.2,$F9 ;= 43 30 5E
  229 │    bbs $30.3,$F9 ;= 63 30 5B
-     ·    ────────────┬────────────
-     ·                ╰── Difference of -165 to current address
+     ·              ─┬─
+     ·               ╰── Difference of -165 to current address
  230 │    bbs $30.4,$F9 ;= 83 30 58
  231 │    bbs $30.5,$F9 ;= A3 30 55
  232 │    bbs $30.6,$F9 ;= C3 30 52
@@ -610,8 +610,8 @@ spcasm::relative_offset_too_large
  228 │    bbs $30.2,$F9 ;= 43 30 5E
  229 │    bbs $30.3,$F9 ;= 63 30 5B
  230 │    bbs $30.4,$F9 ;= 83 30 58
-     ·    ────────────┬────────────
-     ·                ╰── Difference of -168 to current address
+     ·              ─┬─
+     ·               ╰── Difference of -168 to current address
  231 │    bbs $30.5,$F9 ;= A3 30 55
  232 │    bbs $30.6,$F9 ;= C3 30 52
  233 │    bbs $30.7,$F9 ;= E3 30 4F
@@ -630,8 +630,8 @@ spcasm::relative_offset_too_large
  229 │    bbs $30.3,$F9 ;= 63 30 5B
  230 │    bbs $30.4,$F9 ;= 83 30 58
  231 │    bbs $30.5,$F9 ;= A3 30 55
-     ·    ────────────┬────────────
-     ·                ╰── Difference of -171 to current address
+     ·              ─┬─
+     ·               ╰── Difference of -171 to current address
  232 │    bbs $30.6,$F9 ;= C3 30 52
  233 │    bbs $30.7,$F9 ;= E3 30 4F
  234 │    bbc start.0,$05 ;= 13 00 58
@@ -650,8 +650,8 @@ spcasm::relative_offset_too_large
  230 │    bbs $30.4,$F9 ;= 83 30 58
  231 │    bbs $30.5,$F9 ;= A3 30 55
  232 │    bbs $30.6,$F9 ;= C3 30 52
-     ·    ────────────┬────────────
-     ·                ╰── Difference of -174 to current address
+     ·              ─┬─
+     ·               ╰── Difference of -174 to current address
  233 │    bbs $30.7,$F9 ;= E3 30 4F
  234 │    bbc start.0,$05 ;= 13 00 58
  235 │    bbc $31.1,$05 ;= 33 31 55
@@ -670,8 +670,8 @@ spcasm::relative_offset_too_large
  231 │    bbs $30.5,$F9 ;= A3 30 55
  232 │    bbs $30.6,$F9 ;= C3 30 52
  233 │    bbs $30.7,$F9 ;= E3 30 4F
-     ·    ────────────┬────────────
-     ·                ╰── Difference of -177 to current address
+     ·              ─┬─
+     ·               ╰── Difference of -177 to current address
  234 │    bbc start.0,$05 ;= 13 00 58
  235 │    bbc $31.1,$05 ;= 33 31 55
  236 │    bbc $31.2,$05 ;= 53 31 52
@@ -690,7 +690,7 @@ spcasm::relative_offset_too_large
  232 │    bbs $30.6,$F9 ;= C3 30 52
  233 │    bbs $30.7,$F9 ;= E3 30 4F
  234 │    bbc start.0,$05 ;= 13 00 58
-     ·    ─────────────┬─────────────
+     ·                ─┬─
      ·                 ╰── Difference of -424 to current address
  235 │    bbc $31.1,$05 ;= 33 31 55
  236 │    bbc $31.2,$05 ;= 53 31 52
@@ -710,8 +710,8 @@ spcasm::relative_offset_too_large
  233 │    bbs $30.7,$F9 ;= E3 30 4F
  234 │    bbc start.0,$05 ;= 13 00 58
  235 │    bbc $31.1,$05 ;= 33 31 55
-     ·    ────────────┬────────────
-     ·                ╰── Difference of -427 to current address
+     ·              ─┬─
+     ·               ╰── Difference of -427 to current address
  236 │    bbc $31.2,$05 ;= 53 31 52
  237 │    bbc $31.3,$05 ;= 73 31 4F
  238 │    bbc $31.4,$05 ;= 93 31 4C
@@ -730,8 +730,8 @@ spcasm::relative_offset_too_large
  234 │    bbc start.0,$05 ;= 13 00 58
  235 │    bbc $31.1,$05 ;= 33 31 55
  236 │    bbc $31.2,$05 ;= 53 31 52
-     ·    ────────────┬────────────
-     ·                ╰── Difference of -430 to current address
+     ·              ─┬─
+     ·               ╰── Difference of -430 to current address
  237 │    bbc $31.3,$05 ;= 73 31 4F
  238 │    bbc $31.4,$05 ;= 93 31 4C
  239 │    bbc $31.5,$05 ;= B3 31 49
@@ -750,8 +750,8 @@ spcasm::relative_offset_too_large
  235 │    bbc $31.1,$05 ;= 33 31 55
  236 │    bbc $31.2,$05 ;= 53 31 52
  237 │    bbc $31.3,$05 ;= 73 31 4F
-     ·    ────────────┬────────────
-     ·                ╰── Difference of -433 to current address
+     ·              ─┬─
+     ·               ╰── Difference of -433 to current address
  238 │    bbc $31.4,$05 ;= 93 31 4C
  239 │    bbc $31.5,$05 ;= B3 31 49
  240 │    bbc $31.6,$05 ;= D3 31 46
@@ -770,8 +770,8 @@ spcasm::relative_offset_too_large
  236 │    bbc $31.2,$05 ;= 53 31 52
  237 │    bbc $31.3,$05 ;= 73 31 4F
  238 │    bbc $31.4,$05 ;= 93 31 4C
-     ·    ────────────┬────────────
-     ·                ╰── Difference of -436 to current address
+     ·              ─┬─
+     ·               ╰── Difference of -436 to current address
  239 │    bbc $31.5,$05 ;= B3 31 49
  240 │    bbc $31.6,$05 ;= D3 31 46
  241 │    bbc $31.7,$05 ;= F3 31 43
@@ -790,8 +790,8 @@ spcasm::relative_offset_too_large
  237 │    bbc $31.3,$05 ;= 73 31 4F
  238 │    bbc $31.4,$05 ;= 93 31 4C
  239 │    bbc $31.5,$05 ;= B3 31 49
-     ·    ────────────┬────────────
-     ·                ╰── Difference of -439 to current address
+     ·              ─┬─
+     ·               ╰── Difference of -439 to current address
  240 │    bbc $31.6,$05 ;= D3 31 46
  241 │    bbc $31.7,$05 ;= F3 31 43
  242 │ 
@@ -810,8 +810,8 @@ spcasm::relative_offset_too_large
  238 │    bbc $31.4,$05 ;= 93 31 4C
  239 │    bbc $31.5,$05 ;= B3 31 49
  240 │    bbc $31.6,$05 ;= D3 31 46
-     ·    ────────────┬────────────
-     ·                ╰── Difference of -442 to current address
+     ·              ─┬─
+     ·               ╰── Difference of -442 to current address
  241 │    bbc $31.7,$05 ;= F3 31 43
  242 │ 
  243 │    call $5060 ;= 3F 60 50
@@ -830,8 +830,8 @@ spcasm::relative_offset_too_large
  239 │    bbc $31.5,$05 ;= B3 31 49
  240 │    bbc $31.6,$05 ;= D3 31 46
  241 │    bbc $31.7,$05 ;= F3 31 43
-     ·    ────────────┬────────────
-     ·                ╰── Difference of -445 to current address
+     ·              ─┬─
+     ·               ╰── Difference of -445 to current address
  242 │ 
  243 │    call $5060 ;= 3F 60 50
  244 │    pcall $02  ;= 4F 02
@@ -870,8 +870,8 @@ spcasm::relative_offset_too_large
  204 │    bmi reltarget+10 ;= 30 F8
  205 │    bpl reltarget+12 ;= 10 F8
  206 │    cbne $2B,$2C  ;= 2E 2B B7
-     ·    ────────────┬────────────
-     ·                ╰── Difference of -329 to current address
+     ·             ─┬─
+     ·              ╰── Difference of -329 to current address
  207 │    cbne $2D+X,$2E;= DE 2D B6
  208 │    dbnz $2F,$30  ;= 6E 2F B5
  209 │    dbnz Y,$31    ;= FE B4
@@ -890,7 +890,7 @@ spcasm::relative_offset_too_large
  205 │    bpl reltarget+12 ;= 10 F8
  206 │    cbne $2B,$2C  ;= 2E 2B B7
  207 │    cbne $2D+X,$2E;= DE 2D B6
-     ·    ────────────┬────────────
+     ·               ─┬─
      ·                ╰── Difference of -330 to current address
  208 │    dbnz $2F,$30  ;= 6E 2F B5
  209 │    dbnz Y,$31    ;= FE B4
@@ -910,8 +910,8 @@ spcasm::relative_offset_too_large
  206 │    cbne $2B,$2C  ;= 2E 2B B7
  207 │    cbne $2D+X,$2E;= DE 2D B6
  208 │    dbnz $2F,$30  ;= 6E 2F B5
-     ·    ────────────┬────────────
-     ·                ╰── Difference of -331 to current address
+     ·             ─┬─
+     ·              ╰── Difference of -331 to current address
  209 │    dbnz Y,$31    ;= FE B4
  210 │    jmp $2122     ;= 5F 22 21
  211 │    jmp ($2324+X)     ;= 1F 24 23
@@ -930,8 +930,8 @@ spcasm::relative_offset_too_large
  207 │    cbne $2D+X,$2E;= DE 2D B6
  208 │    dbnz $2F,$30  ;= 6E 2F B5
  209 │    dbnz Y,$31    ;= FE B4
-     ·    ───────────┬──────────
-     ·               ╰── Difference of -332 to current address
+     ·           ─┬─
+     ·            ╰── Difference of -332 to current address
  210 │    jmp $2122     ;= 5F 22 21
  211 │    jmp ($2324+X)     ;= 1F 24 23
  212 │ 
@@ -950,8 +950,8 @@ spcasm::relative_offset_too_large
  224 │    bne global_selftarget ;= D0 FE
  225 │ 
  226 │    bbs data.0,$F9 ;= 03 13 64
-     ·    ─────────────┬────────────
-     ·                 ╰── Difference of -156 to current address
+     ·               ─┬─
+     ·                ╰── Difference of -156 to current address
  227 │    bbs $30.1,$F9 ;= 23 30 61
  228 │    bbs $30.2,$F9 ;= 43 30 5E
  229 │    bbs $30.3,$F9 ;= 63 30 5B
@@ -970,8 +970,8 @@ spcasm::relative_offset_too_large
  225 │ 
  226 │    bbs data.0,$F9 ;= 03 13 64
  227 │    bbs $30.1,$F9 ;= 23 30 61
-     ·    ────────────┬────────────
-     ·                ╰── Difference of -159 to current address
+     ·              ─┬─
+     ·               ╰── Difference of -159 to current address
  228 │    bbs $30.2,$F9 ;= 43 30 5E
  229 │    bbs $30.3,$F9 ;= 63 30 5B
  230 │    bbs $30.4,$F9 ;= 83 30 58
@@ -990,8 +990,8 @@ spcasm::relative_offset_too_large
  226 │    bbs data.0,$F9 ;= 03 13 64
  227 │    bbs $30.1,$F9 ;= 23 30 61
  228 │    bbs $30.2,$F9 ;= 43 30 5E
-     ·    ────────────┬────────────
-     ·                ╰── Difference of -162 to current address
+     ·              ─┬─
+     ·               ╰── Difference of -162 to current address
  229 │    bbs $30.3,$F9 ;= 63 30 5B
  230 │    bbs $30.4,$F9 ;= 83 30 58
  231 │    bbs $30.5,$F9 ;= A3 30 55
@@ -1010,8 +1010,8 @@ spcasm::relative_offset_too_large
  227 │    bbs $30.1,$F9 ;= 23 30 61
  228 │    bbs $30.2,$F9 ;= 43 30 5E
  229 │    bbs $30.3,$F9 ;= 63 30 5B
-     ·    ────────────┬────────────
-     ·                ╰── Difference of -165 to current address
+     ·              ─┬─
+     ·               ╰── Difference of -165 to current address
  230 │    bbs $30.4,$F9 ;= 83 30 58
  231 │    bbs $30.5,$F9 ;= A3 30 55
  232 │    bbs $30.6,$F9 ;= C3 30 52
@@ -1030,8 +1030,8 @@ spcasm::relative_offset_too_large
  228 │    bbs $30.2,$F9 ;= 43 30 5E
  229 │    bbs $30.3,$F9 ;= 63 30 5B
  230 │    bbs $30.4,$F9 ;= 83 30 58
-     ·    ────────────┬────────────
-     ·                ╰── Difference of -168 to current address
+     ·              ─┬─
+     ·               ╰── Difference of -168 to current address
  231 │    bbs $30.5,$F9 ;= A3 30 55
  232 │    bbs $30.6,$F9 ;= C3 30 52
  233 │    bbs $30.7,$F9 ;= E3 30 4F
@@ -1050,8 +1050,8 @@ spcasm::relative_offset_too_large
  229 │    bbs $30.3,$F9 ;= 63 30 5B
  230 │    bbs $30.4,$F9 ;= 83 30 58
  231 │    bbs $30.5,$F9 ;= A3 30 55
-     ·    ────────────┬────────────
-     ·                ╰── Difference of -171 to current address
+     ·              ─┬─
+     ·               ╰── Difference of -171 to current address
  232 │    bbs $30.6,$F9 ;= C3 30 52
  233 │    bbs $30.7,$F9 ;= E3 30 4F
  234 │    bbc start.0,$05 ;= 13 00 58
@@ -1070,8 +1070,8 @@ spcasm::relative_offset_too_large
  230 │    bbs $30.4,$F9 ;= 83 30 58
  231 │    bbs $30.5,$F9 ;= A3 30 55
  232 │    bbs $30.6,$F9 ;= C3 30 52
-     ·    ────────────┬────────────
-     ·                ╰── Difference of -174 to current address
+     ·              ─┬─
+     ·               ╰── Difference of -174 to current address
  233 │    bbs $30.7,$F9 ;= E3 30 4F
  234 │    bbc start.0,$05 ;= 13 00 58
  235 │    bbc $31.1,$05 ;= 33 31 55
@@ -1090,8 +1090,8 @@ spcasm::relative_offset_too_large
  231 │    bbs $30.5,$F9 ;= A3 30 55
  232 │    bbs $30.6,$F9 ;= C3 30 52
  233 │    bbs $30.7,$F9 ;= E3 30 4F
-     ·    ────────────┬────────────
-     ·                ╰── Difference of -177 to current address
+     ·              ─┬─
+     ·               ╰── Difference of -177 to current address
  234 │    bbc start.0,$05 ;= 13 00 58
  235 │    bbc $31.1,$05 ;= 33 31 55
  236 │    bbc $31.2,$05 ;= 53 31 52
@@ -1110,7 +1110,7 @@ spcasm::relative_offset_too_large
  232 │    bbs $30.6,$F9 ;= C3 30 52
  233 │    bbs $30.7,$F9 ;= E3 30 4F
  234 │    bbc start.0,$05 ;= 13 00 58
-     ·    ─────────────┬─────────────
+     ·                ─┬─
      ·                 ╰── Difference of -424 to current address
  235 │    bbc $31.1,$05 ;= 33 31 55
  236 │    bbc $31.2,$05 ;= 53 31 52
@@ -1130,8 +1130,8 @@ spcasm::relative_offset_too_large
  233 │    bbs $30.7,$F9 ;= E3 30 4F
  234 │    bbc start.0,$05 ;= 13 00 58
  235 │    bbc $31.1,$05 ;= 33 31 55
-     ·    ────────────┬────────────
-     ·                ╰── Difference of -427 to current address
+     ·              ─┬─
+     ·               ╰── Difference of -427 to current address
  236 │    bbc $31.2,$05 ;= 53 31 52
  237 │    bbc $31.3,$05 ;= 73 31 4F
  238 │    bbc $31.4,$05 ;= 93 31 4C
@@ -1150,8 +1150,8 @@ spcasm::relative_offset_too_large
  234 │    bbc start.0,$05 ;= 13 00 58
  235 │    bbc $31.1,$05 ;= 33 31 55
  236 │    bbc $31.2,$05 ;= 53 31 52
-     ·    ────────────┬────────────
-     ·                ╰── Difference of -430 to current address
+     ·              ─┬─
+     ·               ╰── Difference of -430 to current address
  237 │    bbc $31.3,$05 ;= 73 31 4F
  238 │    bbc $31.4,$05 ;= 93 31 4C
  239 │    bbc $31.5,$05 ;= B3 31 49
@@ -1170,8 +1170,8 @@ spcasm::relative_offset_too_large
  235 │    bbc $31.1,$05 ;= 33 31 55
  236 │    bbc $31.2,$05 ;= 53 31 52
  237 │    bbc $31.3,$05 ;= 73 31 4F
-     ·    ────────────┬────────────
-     ·                ╰── Difference of -433 to current address
+     ·              ─┬─
+     ·               ╰── Difference of -433 to current address
  238 │    bbc $31.4,$05 ;= 93 31 4C
  239 │    bbc $31.5,$05 ;= B3 31 49
  240 │    bbc $31.6,$05 ;= D3 31 46
@@ -1190,8 +1190,8 @@ spcasm::relative_offset_too_large
  236 │    bbc $31.2,$05 ;= 53 31 52
  237 │    bbc $31.3,$05 ;= 73 31 4F
  238 │    bbc $31.4,$05 ;= 93 31 4C
-     ·    ────────────┬────────────
-     ·                ╰── Difference of -436 to current address
+     ·              ─┬─
+     ·               ╰── Difference of -436 to current address
  239 │    bbc $31.5,$05 ;= B3 31 49
  240 │    bbc $31.6,$05 ;= D3 31 46
  241 │    bbc $31.7,$05 ;= F3 31 43
@@ -1210,8 +1210,8 @@ spcasm::relative_offset_too_large
  237 │    bbc $31.3,$05 ;= 73 31 4F
  238 │    bbc $31.4,$05 ;= 93 31 4C
  239 │    bbc $31.5,$05 ;= B3 31 49
-     ·    ────────────┬────────────
-     ·                ╰── Difference of -439 to current address
+     ·              ─┬─
+     ·               ╰── Difference of -439 to current address
  240 │    bbc $31.6,$05 ;= D3 31 46
  241 │    bbc $31.7,$05 ;= F3 31 43
  242 │ 
@@ -1230,8 +1230,8 @@ spcasm::relative_offset_too_large
  238 │    bbc $31.4,$05 ;= 93 31 4C
  239 │    bbc $31.5,$05 ;= B3 31 49
  240 │    bbc $31.6,$05 ;= D3 31 46
-     ·    ────────────┬────────────
-     ·                ╰── Difference of -442 to current address
+     ·              ─┬─
+     ·               ╰── Difference of -442 to current address
  241 │    bbc $31.7,$05 ;= F3 31 43
  242 │ 
  243 │    call $5060 ;= 3F 60 50
@@ -1250,8 +1250,8 @@ spcasm::relative_offset_too_large
  239 │    bbc $31.5,$05 ;= B3 31 49
  240 │    bbc $31.6,$05 ;= D3 31 46
  241 │    bbc $31.7,$05 ;= F3 31 43
-     ·    ────────────┬────────────
-     ·                ╰── Difference of -445 to current address
+     ·              ─┬─
+     ·               ╰── Difference of -445 to current address
  242 │ 
  243 │    call $5060 ;= 3F 60 50
  244 │    pcall $02  ;= 4F 02
@@ -1290,8 +1290,8 @@ spcasm::relative_offset_too_large
  204 │    bmi reltarget+10 ;= 30 F8
  205 │    bpl reltarget+12 ;= 10 F8
  206 │    cbne $2B,$2C  ;= 2E 2B B7
-     ·    ────────────┬────────────
-     ·                ╰── Difference of -329 to current address
+     ·             ─┬─
+     ·              ╰── Difference of -329 to current address
  207 │    cbne $2D+X,$2E;= DE 2D B6
  208 │    dbnz $2F,$30  ;= 6E 2F B5
  209 │    dbnz Y,$31    ;= FE B4
@@ -1310,7 +1310,7 @@ spcasm::relative_offset_too_large
  205 │    bpl reltarget+12 ;= 10 F8
  206 │    cbne $2B,$2C  ;= 2E 2B B7
  207 │    cbne $2D+X,$2E;= DE 2D B6
-     ·    ────────────┬────────────
+     ·               ─┬─
      ·                ╰── Difference of -330 to current address
  208 │    dbnz $2F,$30  ;= 6E 2F B5
  209 │    dbnz Y,$31    ;= FE B4
@@ -1330,8 +1330,8 @@ spcasm::relative_offset_too_large
  206 │    cbne $2B,$2C  ;= 2E 2B B7
  207 │    cbne $2D+X,$2E;= DE 2D B6
  208 │    dbnz $2F,$30  ;= 6E 2F B5
-     ·    ────────────┬────────────
-     ·                ╰── Difference of -331 to current address
+     ·             ─┬─
+     ·              ╰── Difference of -331 to current address
  209 │    dbnz Y,$31    ;= FE B4
  210 │    jmp $2122     ;= 5F 22 21
  211 │    jmp ($2324+X)     ;= 1F 24 23
@@ -1350,8 +1350,8 @@ spcasm::relative_offset_too_large
  207 │    cbne $2D+X,$2E;= DE 2D B6
  208 │    dbnz $2F,$30  ;= 6E 2F B5
  209 │    dbnz Y,$31    ;= FE B4
-     ·    ───────────┬──────────
-     ·               ╰── Difference of -332 to current address
+     ·           ─┬─
+     ·            ╰── Difference of -332 to current address
  210 │    jmp $2122     ;= 5F 22 21
  211 │    jmp ($2324+X)     ;= 1F 24 23
  212 │ 
@@ -1370,8 +1370,8 @@ spcasm::relative_offset_too_large
  224 │    bne global_selftarget ;= D0 FE
  225 │ 
  226 │    bbs data.0,$F9 ;= 03 13 64
-     ·    ─────────────┬────────────
-     ·                 ╰── Difference of -156 to current address
+     ·               ─┬─
+     ·                ╰── Difference of -156 to current address
  227 │    bbs $30.1,$F9 ;= 23 30 61
  228 │    bbs $30.2,$F9 ;= 43 30 5E
  229 │    bbs $30.3,$F9 ;= 63 30 5B
@@ -1390,8 +1390,8 @@ spcasm::relative_offset_too_large
  225 │ 
  226 │    bbs data.0,$F9 ;= 03 13 64
  227 │    bbs $30.1,$F9 ;= 23 30 61
-     ·    ────────────┬────────────
-     ·                ╰── Difference of -159 to current address
+     ·              ─┬─
+     ·               ╰── Difference of -159 to current address
  228 │    bbs $30.2,$F9 ;= 43 30 5E
  229 │    bbs $30.3,$F9 ;= 63 30 5B
  230 │    bbs $30.4,$F9 ;= 83 30 58
@@ -1410,8 +1410,8 @@ spcasm::relative_offset_too_large
  226 │    bbs data.0,$F9 ;= 03 13 64
  227 │    bbs $30.1,$F9 ;= 23 30 61
  228 │    bbs $30.2,$F9 ;= 43 30 5E
-     ·    ────────────┬────────────
-     ·                ╰── Difference of -162 to current address
+     ·              ─┬─
+     ·               ╰── Difference of -162 to current address
  229 │    bbs $30.3,$F9 ;= 63 30 5B
  230 │    bbs $30.4,$F9 ;= 83 30 58
  231 │    bbs $30.5,$F9 ;= A3 30 55
@@ -1430,8 +1430,8 @@ spcasm::relative_offset_too_large
  227 │    bbs $30.1,$F9 ;= 23 30 61
  228 │    bbs $30.2,$F9 ;= 43 30 5E
  229 │    bbs $30.3,$F9 ;= 63 30 5B
-     ·    ────────────┬────────────
-     ·                ╰── Difference of -165 to current address
+     ·              ─┬─
+     ·               ╰── Difference of -165 to current address
  230 │    bbs $30.4,$F9 ;= 83 30 58
  231 │    bbs $30.5,$F9 ;= A3 30 55
  232 │    bbs $30.6,$F9 ;= C3 30 52
@@ -1450,8 +1450,8 @@ spcasm::relative_offset_too_large
  228 │    bbs $30.2,$F9 ;= 43 30 5E
  229 │    bbs $30.3,$F9 ;= 63 30 5B
  230 │    bbs $30.4,$F9 ;= 83 30 58
-     ·    ────────────┬────────────
-     ·                ╰── Difference of -168 to current address
+     ·              ─┬─
+     ·               ╰── Difference of -168 to current address
  231 │    bbs $30.5,$F9 ;= A3 30 55
  232 │    bbs $30.6,$F9 ;= C3 30 52
  233 │    bbs $30.7,$F9 ;= E3 30 4F
@@ -1470,8 +1470,8 @@ spcasm::relative_offset_too_large
  229 │    bbs $30.3,$F9 ;= 63 30 5B
  230 │    bbs $30.4,$F9 ;= 83 30 58
  231 │    bbs $30.5,$F9 ;= A3 30 55
-     ·    ────────────┬────────────
-     ·                ╰── Difference of -171 to current address
+     ·              ─┬─
+     ·               ╰── Difference of -171 to current address
  232 │    bbs $30.6,$F9 ;= C3 30 52
  233 │    bbs $30.7,$F9 ;= E3 30 4F
  234 │    bbc start.0,$05 ;= 13 00 58
@@ -1490,8 +1490,8 @@ spcasm::relative_offset_too_large
  230 │    bbs $30.4,$F9 ;= 83 30 58
  231 │    bbs $30.5,$F9 ;= A3 30 55
  232 │    bbs $30.6,$F9 ;= C3 30 52
-     ·    ────────────┬────────────
-     ·                ╰── Difference of -174 to current address
+     ·              ─┬─
+     ·               ╰── Difference of -174 to current address
  233 │    bbs $30.7,$F9 ;= E3 30 4F
  234 │    bbc start.0,$05 ;= 13 00 58
  235 │    bbc $31.1,$05 ;= 33 31 55
@@ -1510,8 +1510,8 @@ spcasm::relative_offset_too_large
  231 │    bbs $30.5,$F9 ;= A3 30 55
  232 │    bbs $30.6,$F9 ;= C3 30 52
  233 │    bbs $30.7,$F9 ;= E3 30 4F
-     ·    ────────────┬────────────
-     ·                ╰── Difference of -177 to current address
+     ·              ─┬─
+     ·               ╰── Difference of -177 to current address
  234 │    bbc start.0,$05 ;= 13 00 58
  235 │    bbc $31.1,$05 ;= 33 31 55
  236 │    bbc $31.2,$05 ;= 53 31 52
@@ -1530,7 +1530,7 @@ spcasm::relative_offset_too_large
  232 │    bbs $30.6,$F9 ;= C3 30 52
  233 │    bbs $30.7,$F9 ;= E3 30 4F
  234 │    bbc start.0,$05 ;= 13 00 58
-     ·    ─────────────┬─────────────
+     ·                ─┬─
      ·                 ╰── Difference of -424 to current address
  235 │    bbc $31.1,$05 ;= 33 31 55
  236 │    bbc $31.2,$05 ;= 53 31 52
@@ -1550,8 +1550,8 @@ spcasm::relative_offset_too_large
  233 │    bbs $30.7,$F9 ;= E3 30 4F
  234 │    bbc start.0,$05 ;= 13 00 58
  235 │    bbc $31.1,$05 ;= 33 31 55
-     ·    ────────────┬────────────
-     ·                ╰── Difference of -427 to current address
+     ·              ─┬─
+     ·               ╰── Difference of -427 to current address
  236 │    bbc $31.2,$05 ;= 53 31 52
  237 │    bbc $31.3,$05 ;= 73 31 4F
  238 │    bbc $31.4,$05 ;= 93 31 4C
@@ -1570,8 +1570,8 @@ spcasm::relative_offset_too_large
  234 │    bbc start.0,$05 ;= 13 00 58
  235 │    bbc $31.1,$05 ;= 33 31 55
  236 │    bbc $31.2,$05 ;= 53 31 52
-     ·    ────────────┬────────────
-     ·                ╰── Difference of -430 to current address
+     ·              ─┬─
+     ·               ╰── Difference of -430 to current address
  237 │    bbc $31.3,$05 ;= 73 31 4F
  238 │    bbc $31.4,$05 ;= 93 31 4C
  239 │    bbc $31.5,$05 ;= B3 31 49
@@ -1590,8 +1590,8 @@ spcasm::relative_offset_too_large
  235 │    bbc $31.1,$05 ;= 33 31 55
  236 │    bbc $31.2,$05 ;= 53 31 52
  237 │    bbc $31.3,$05 ;= 73 31 4F
-     ·    ────────────┬────────────
-     ·                ╰── Difference of -433 to current address
+     ·              ─┬─
+     ·               ╰── Difference of -433 to current address
  238 │    bbc $31.4,$05 ;= 93 31 4C
  239 │    bbc $31.5,$05 ;= B3 31 49
  240 │    bbc $31.6,$05 ;= D3 31 46
@@ -1610,8 +1610,8 @@ spcasm::relative_offset_too_large
  236 │    bbc $31.2,$05 ;= 53 31 52
  237 │    bbc $31.3,$05 ;= 73 31 4F
  238 │    bbc $31.4,$05 ;= 93 31 4C
-     ·    ────────────┬────────────
-     ·                ╰── Difference of -436 to current address
+     ·              ─┬─
+     ·               ╰── Difference of -436 to current address
  239 │    bbc $31.5,$05 ;= B3 31 49
  240 │    bbc $31.6,$05 ;= D3 31 46
  241 │    bbc $31.7,$05 ;= F3 31 43
@@ -1630,8 +1630,8 @@ spcasm::relative_offset_too_large
  237 │    bbc $31.3,$05 ;= 73 31 4F
  238 │    bbc $31.4,$05 ;= 93 31 4C
  239 │    bbc $31.5,$05 ;= B3 31 49
-     ·    ────────────┬────────────
-     ·                ╰── Difference of -439 to current address
+     ·              ─┬─
+     ·               ╰── Difference of -439 to current address
  240 │    bbc $31.6,$05 ;= D3 31 46
  241 │    bbc $31.7,$05 ;= F3 31 43
  242 │ 
@@ -1650,8 +1650,8 @@ spcasm::relative_offset_too_large
  238 │    bbc $31.4,$05 ;= 93 31 4C
  239 │    bbc $31.5,$05 ;= B3 31 49
  240 │    bbc $31.6,$05 ;= D3 31 46
-     ·    ────────────┬────────────
-     ·                ╰── Difference of -442 to current address
+     ·              ─┬─
+     ·               ╰── Difference of -442 to current address
  241 │    bbc $31.7,$05 ;= F3 31 43
  242 │ 
  243 │    call $5060 ;= 3F 60 50
@@ -1670,8 +1670,8 @@ spcasm::relative_offset_too_large
  239 │    bbc $31.5,$05 ;= B3 31 49
  240 │    bbc $31.6,$05 ;= D3 31 46
  241 │    bbc $31.7,$05 ;= F3 31 43
-     ·    ────────────┬────────────
-     ·                ╰── Difference of -445 to current address
+     ·              ─┬─
+     ·               ╰── Difference of -445 to current address
  242 │ 
  243 │    call $5060 ;= 3F 60 50
  244 │    pcall $02  ;= 4F 02

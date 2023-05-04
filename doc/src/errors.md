@@ -74,7 +74,7 @@ spcasm::value_too_large
  28 │ mov a , #$ff &%11 ;= E8 03
  29 │  mov a,# $0F |$f0 ;= E8 FF
  30 │ mov a ,#~%10110010 ;= E8 4D
-    · ─────────────┬─────────────
+    ·          ────┬────
     ·              ╰── 8-bit operand
  31 │ mov a, #$9f ^ $78 ^$9F ;= E8 78
  32 │ mov a,#6**3 ;= E8 D8
@@ -91,8 +91,8 @@ spcasm::value_too_large
  43 │ 
  44 │ + mov a,$abcd    ;= E5 CD AB
  45 │ mov.b a,$abcd  ;= E4 CD
-    · ───────────┬───────────
-    ·            ╰── 8-bit operand
+    ·         ──┬──
+    ·           ╰── 8-bit operand
  46 │ 
  47 │ db 'x', '/x67', '//', '/"', '/''
  48 │ 
@@ -125,8 +125,8 @@ spcasm::relative_offset_too_large
  7 │ fill $100
  8 │ 
  9 │     bra start
-   ·     ────┬───
-   ·         ╰── Difference of -259 to current address
+   ·         ──┬──
+   ·           ╰── Difference of -259 to current address
    ╰────
   help: The current address is `0302` and therefore the difference is -259.
         This difference exceeds the range [-128, 127] and will wrap around,
@@ -327,7 +327,8 @@ spcasm::directive::references_as_argument
  4 │    nop       ; dummy
  5 │ 
  6 │ org dp_label
-   · ─┬─
+   · ─┬─ ────┬───
+   ·  │      ╰── This directive argument
    ·  ╰── This directive
    ╰────
   help: Because the directive argument can determine a reference's position,

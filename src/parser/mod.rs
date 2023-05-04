@@ -110,7 +110,7 @@ where
 {
 	let number: AssemblyTimeValue = value.clone().into().try_resolve();
 	match number {
-		AssemblyTimeValue::Literal(literal) if literal <= 0xFF => dp_mode(value),
+		AssemblyTimeValue::Literal(literal, ..) if literal <= 0xFF => dp_mode(value),
 		_ => non_dp_mode(value),
 	}
 }

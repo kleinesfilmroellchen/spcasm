@@ -23,24 +23,52 @@ use crate::AssemblyCode;
 #[allow(clippy::module_name_repetitions)]
 pub enum AssemblyTimeValue {
 	/// A literal.
-	Literal(MemoryAddress),
+	Literal(MemoryAddress, SourceSpan),
 	/// A reference that will resolve later.
-	Reference(Reference),
+	Reference(Reference, SourceSpan),
 	/// A unary math operation.
-	UnaryOperation(Box<AssemblyTimeValue>, UnaryOperator),
+	UnaryOperation {
+		/// The inner value of the expression.
+		inner_value: Box<AssemblyTimeValue>,
+		/// The operator applied to the inner value.
+		operator: UnaryOperator,
+		/// The source code location of the operation.
+		span: SourceSpan,
+	},
 	/// A binary math operation.
-	BinaryOperation(Box<AssemblyTimeValue>, Box<AssemblyTimeValue>, BinaryOperator),
+	BinaryOperation {
+		/// The left-hand side of the operation.
+		lhs: Box<AssemblyTimeValue>,
+		/// The right-hand side of the operation.
+		rhs: Box<AssemblyTimeValue>,
+		/// The operation applied to the two operands.
+		operator: BinaryOperator,
+		/// The source code location of the operation.
+		span: SourceSpan
+	},
 }
 
 impl AssemblyTimeValue {
+
+	/// Returns the source code location of this value.
+	#[must_use]
+	pub const fn source_span(&self) -> SourceSpan {
+		match self {
+			Self::Literal(_, span) |
+			Self::Reference(_, span) |
+			Self::UnaryOperation { span, .. } |
+			Self::BinaryOperation { span, .. } => *span,
+		}
+	}
+
 	/// Return the first reference that can be found in this expression.
 	#[must_use]
 	pub fn first_reference(&self) -> Option<Reference> {
 		match self {
 			Self::Literal(..) => None,
-			Self::Reference(reference) => Some(reference.clone()),
-			Self::UnaryOperation(number, _) => number.first_reference(),
-			Self::BinaryOperation(lhs, rhs, _) => lhs.first_reference().or_else(|| rhs.first_reference()),
+			Self::Reference(reference, ..) => Some(reference.clone()),
+			Self::UnaryOperation{inner_value, ..} => inner_value.first_reference(),
+			Self::BinaryOperation{lhs, rhs, ..} => lhs.first_reference().or_else(|| rhs.first_reference()),
 		}
 	}
 
@@ -49,9 +77,9 @@ impl AssemblyTimeValue {
 	pub fn references(&self) -> Vec<&Reference> {
 		match self {
 			Self::Literal(..) => Vec::default(),
-			Self::Reference(reference) => vec![reference],
-			Self::UnaryOperation(value, _) => value.references(),
-			Self::BinaryOperation(lhs, rhs, _) => {
+			Self::Reference(reference, ..) => vec![reference],
+			Self::UnaryOperation{inner_value, ..}  => inner_value.references(),
+			Self::BinaryOperation{lhs, rhs, ..} => {
 				let mut references = lhs.references();
 				let mut more_references = rhs.references();
 				references.append(&mut more_references);
@@ -69,7 +97,7 @@ impl AssemblyTimeValue {
 		source_code: Arc<AssemblyCode>,
 	) -> Result<MemoryAddress, Box<AssemblyError>> {
 		let possibly_resolved = self.clone().try_resolve();
-		if let Self::Literal(value) = possibly_resolved {
+		if let Self::Literal(value, ..) = possibly_resolved {
 			Ok(value)
 		} else {
 			let first_reference = self.first_reference().expect("unresolved value without a reference");
@@ -95,7 +123,7 @@ impl AssemblyTimeValue {
 	#[must_use]
 	pub fn try_resolve_impl(self, resolution_attempts: Vec<&Reference>) -> Self {
 		match self {
-			Self::Reference(ref reference @ Reference::Label(ref global)) if let Some(memory_location) = global.clone().read().location.clone() => {
+			Self::Reference(ref reference @ Reference::Label(ref global), ..) if let Some(memory_location) = global.clone().read().location.clone() => {
 				// Recursive reference definition, we need to abort.
 				if resolution_attempts.contains(&reference) {
 					self
@@ -105,7 +133,10 @@ impl AssemblyTimeValue {
 					memory_location.try_resolve_impl(attempts_with_this)
 				}
 			},
-			Self::Reference(ref reference @ (Reference::MacroArgument { value: Some(ref memory_location) , .. } | Reference::Relative { value: Some(ref memory_location) , .. })) => {
+			Self::Reference(ref reference @ 
+					(Reference::MacroArgument { value: Some(ref memory_location) , .. }
+					| Reference::Relative { value: Some(ref memory_location) , .. }),
+				..) => {
 				if resolution_attempts.contains(&reference) {
 					self
 				} else {
@@ -114,13 +145,13 @@ impl AssemblyTimeValue {
 					memory_location.clone().try_resolve_impl(attempts_with_this)
 				}
 			},
-			Self::UnaryOperation(number, operator) => match number.try_resolve_impl(resolution_attempts) {
-				Self::Literal(value) => Self::Literal(operator.execute(value)),
-				resolved => Self::UnaryOperation(Box::new(resolved), operator),
+			Self::UnaryOperation{inner_value, operator, span} => match inner_value.try_resolve_impl(resolution_attempts) {
+				Self::Literal(value, span) => Self::Literal(operator.execute(value), span),
+				resolved => Self::UnaryOperation{inner_value:Box::new(resolved), operator, span},
 			},
-			Self::BinaryOperation(lhs, rhs, operator) => match (lhs.try_resolve(), rhs.try_resolve()) {
-				(Self::Literal(lhs_value), Self::Literal(rhs_value)) => Self::Literal(operator.execute(lhs_value, rhs_value)),
-				(lhs, rhs) => Self::BinaryOperation(Box::new(lhs), Box::new(rhs), operator),
+			Self::BinaryOperation{lhs, rhs, operator, span} => match (lhs.try_resolve(), rhs.try_resolve()) {
+				(Self::Literal(lhs_value, ..), Self::Literal(rhs_value, ..)) => Self::Literal(operator.execute(lhs_value, rhs_value), span),
+				(lhs, rhs) => Self::BinaryOperation {lhs: Box::new(lhs), rhs: Box::new(rhs), operator, span},
 			},
 			Self::Literal(..) 
 			| Self::Reference(
@@ -128,7 +159,8 @@ impl AssemblyTimeValue {
 				| Reference::MacroArgument { value: None, .. } 
 				| Reference::Relative { value: None, .. } 
 				| Reference::MacroGlobal { .. }
-				| Reference::UnresolvedLocalLabel { .. }
+				| Reference::UnresolvedLocalLabel { .. },
+				..
 			) => self,
 		}
 	}
@@ -137,7 +169,7 @@ impl AssemblyTimeValue {
 	#[must_use]
 	pub fn is_truthy(&self) -> bool {
 		match self.clone().try_resolve() {
-			Self::Literal(value) => value != 0,
+			Self::Literal(value, ..) => value != 0,
 			_ => false,
 		}
 	}
@@ -146,7 +178,7 @@ impl AssemblyTimeValue {
 	#[must_use]
 	pub fn is_falsy(&self) -> bool {
 		match self.clone().try_resolve() {
-			Self::Literal(value) => value == 0,
+			Self::Literal(value, ..) => value == 0,
 			_ => false,
 		}
 	}
@@ -160,8 +192,8 @@ impl AssemblyTimeValue {
 		// TODO: figure out how to share this code with try_value (function APIs and assumptions are currently
 		// fundamentally incompatible)
 		match self {
-			Self::Literal(value) => Some(*value),
-			Self::Reference(ref reference) => match reference {
+			Self::Literal(value, ..) => Some(*value),
+			Self::Reference(ref reference, ..) => match reference {
 				Reference::Label(label) if let Some(ref value) = label.read().location => value.value_using_resolver(resolver),
 				Reference::MacroArgument { value: Some(value), .. }
 				| Reference::Relative { value: Some(value), .. } => value.value_using_resolver(resolver),
@@ -171,15 +203,15 @@ impl AssemblyTimeValue {
 				| Reference::UnresolvedLocalLabel { .. }
 				| Reference::MacroArgument { value: None, .. } => resolver(reference.clone()),
 			},
-			Self::UnaryOperation(number, operator) => number.value_using_resolver(resolver).map(|value| operator.execute(value)),
-			Self::BinaryOperation(lhs, rhs, operator) => lhs.value_using_resolver(resolver).and_then(|lhs|rhs.value_using_resolver(resolver).map(|rhs| operator.execute(lhs, rhs))),
+			Self::UnaryOperation{inner_value:number, operator, ..} => number.value_using_resolver(resolver).map(|value| operator.execute(value)),
+			Self::BinaryOperation{lhs, rhs, operator, ..} => lhs.value_using_resolver(resolver).and_then(|lhs|rhs.value_using_resolver(resolver).map(|rhs| operator.execute(lhs, rhs))),
 		}
 	}
 
 	/// Returns whether this value is resolved.
 	#[must_use]
 	pub fn is_resolved(&self) -> bool {
-		matches!(self.clone().try_resolve(), Self::Literal(_))
+		matches!(self.clone().try_resolve(), Self::Literal(..))
 	}
 }
 
@@ -190,15 +222,15 @@ impl ReferenceResolvable for AssemblyTimeValue {
 		source_code: &Arc<AssemblyCode>,
 	) -> Result<(), Box<AssemblyError>> {
 		match self {
-			Self::Literal(_) => Ok(()),
-			Self::Reference(reference @ Reference::MacroGlobal { .. }) => {
+			Self::Literal(..) => Ok(()),
+			Self::Reference(reference @ Reference::MacroGlobal { .. }, ..) => {
 				let new_global = replacement_parent.read().global_label();
 				*reference = Reference::Label(new_global);
 				Ok(())
 			},
-			Self::Reference(reference) => reference.replace_macro_parent(replacement_parent, source_code),
-			Self::UnaryOperation(number, _) => number.replace_macro_parent(replacement_parent, source_code),
-			Self::BinaryOperation(lhs, rhs, _) => {
+			Self::Reference(reference, ..) => reference.replace_macro_parent(replacement_parent, source_code),
+			Self::UnaryOperation { inner_value: number, .. } => number.replace_macro_parent(replacement_parent, source_code),
+			Self::BinaryOperation { lhs, rhs, .. } => {
 				lhs.replace_macro_parent(replacement_parent.clone(), source_code)?;
 				rhs.replace_macro_parent(replacement_parent, source_code)
 			},
@@ -208,7 +240,7 @@ impl ReferenceResolvable for AssemblyTimeValue {
 	fn resolve_relative_labels(&mut self, direction: RelativeReferenceDirection, relative_labels: &HashMap<NonZeroU64, Arc<RwLock<Label>>>) {
 		match self {
 			// Awkward match since the borrow checker is not smart enough for this.
-			Self::Reference(reference @ Reference::Relative { .. }) => {
+			Self::Reference(reference @ Reference::Relative { .. }, ..) => {
 				let (id, own_direction) = match reference {
 					Reference::Relative { id, direction,.. } => (*id, *direction),
 					_ => unreachable!(),
@@ -217,10 +249,10 @@ impl ReferenceResolvable for AssemblyTimeValue {
 					*reference = Reference::Label(new_reference);
 				}
 			},
-			Self::Literal(_) => (),
-			Self::Reference(reference) => reference.resolve_relative_labels(direction, relative_labels),
-			Self::UnaryOperation(number, _) => number.resolve_relative_labels(direction, relative_labels),
-			Self::BinaryOperation(lhs, rhs, _) => {
+			Self::Literal(..) => (),
+			Self::Reference(reference, ..) => reference.resolve_relative_labels(direction, relative_labels),
+			Self::UnaryOperation{inner_value:number, ..} => number.resolve_relative_labels(direction, relative_labels),
+			Self::BinaryOperation{lhs, rhs, ..} => {
 				lhs.resolve_relative_labels(direction, relative_labels);
 				rhs.resolve_relative_labels(direction, relative_labels);
 			},
@@ -229,10 +261,10 @@ impl ReferenceResolvable for AssemblyTimeValue {
 
 	fn resolve_pseudo_labels(&mut self, global_labels: &[Arc<RwLock<Label>>]) {
 		match self {
-			Self::Literal(_) => (),
-			Self::Reference(reference) => reference.resolve_pseudo_labels(global_labels),
-			Self::UnaryOperation(number, _) => number.resolve_pseudo_labels(global_labels),
-			Self::BinaryOperation(lhs, rhs, _) => {
+			Self::Literal(..) => (),
+			Self::Reference(reference, ..) => reference.resolve_pseudo_labels(global_labels),
+			Self::UnaryOperation{inner_value:number,..} => number.resolve_pseudo_labels(global_labels),
+			Self::BinaryOperation{lhs, rhs,..} => {
 				lhs.resolve_pseudo_labels(global_labels);
 				rhs.resolve_pseudo_labels(global_labels);
 			},
@@ -244,9 +276,9 @@ impl ReferenceResolvable for AssemblyTimeValue {
 	/// All panics are programming errors.
 	fn set_current_label(&mut self, label: &Option<Arc<RwLock<Label>>>, source_code: &Arc<AssemblyCode>) -> Result<(), Box<AssemblyError>> {
 		match self {
-			Self::Reference(reference) => reference.set_current_label(label, source_code),
-			Self::UnaryOperation(val, _) => val.set_current_label(label, source_code),
-			Self::BinaryOperation(lhs, rhs, _) => {
+			Self::Reference(reference, ..) => reference.set_current_label(label, source_code),
+			Self::UnaryOperation{inner_value:val,..} => val.set_current_label(label, source_code),
+			Self::BinaryOperation{lhs, rhs,..} => {
 				lhs.set_current_label(label, source_code).and_then(|_|
 				rhs.set_current_label(label, source_code))
 			},
@@ -257,7 +289,7 @@ impl ReferenceResolvable for AssemblyTimeValue {
 
 impl From<MemoryAddress> for AssemblyTimeValue {
 	fn from(address: MemoryAddress) -> Self {
-		Self::Literal(address)
+		Self::Literal(address, (0, 0).into())
 	}
 }
 
@@ -284,16 +316,16 @@ impl UpperHex for AssemblyTimeValue {
 		};
 
 		match self {
-			Self::Reference(reference) => match reference.location() {
+			Self::Reference(reference, ..) => match reference.location() {
 				Some(ref numeric_address) => fmt::UpperHex::fmt(numeric_address, f),
 				None => write!(f, "{}", reference),
 			},
-			Self::Literal(numeric_address) => {
+			Self::Literal(numeric_address, ..) => {
 				f.write_char('$')?;
 				fmt::UpperHex::fmt(numeric_address, f)
 			},
-			Self::UnaryOperation(number, operator) => write_correctly(&operator.to_string(), f, number.as_ref()),
-			Self::BinaryOperation(lhs, rhs, operator) => write_binary(&operator.to_string(), f, lhs, rhs),
+			Self::UnaryOperation{inner_value:number, operator, ..} => write_correctly(&operator.to_string(), f, number.as_ref()),
+			Self::BinaryOperation{lhs, rhs, operator, ..} => write_binary(&operator.to_string(), f, lhs, rhs),
 		}
 	}
 }
@@ -352,7 +384,7 @@ impl Display for SizedAssemblyTimeValue {
 
 impl Default for SizedAssemblyTimeValue {
 	fn default() -> Self {
-		Self { value: AssemblyTimeValue::Literal(0), size: Size::Byte }
+		Self { value: AssemblyTimeValue::Literal(0, (0,0).into()), size: Size::Byte }
 	}
 }
 

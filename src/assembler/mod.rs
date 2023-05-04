@@ -14,7 +14,7 @@ use crate::error::AssemblyError;
 use crate::sema::instruction::{Instruction, MemoryAddress, Opcode};
 use crate::sema::reference::{Reference, Resolvable};
 use crate::sema::value::{BinaryOperator, Size, SizedAssemblyTimeValue};
-use crate::sema::{AssemblyTimeValue, ProgramElement, Register, AddressingMode};
+use crate::sema::{AddressingMode, AssemblyTimeValue, ProgramElement, Register};
 use crate::{pretty_hex, AssemblyCode, Segments};
 
 mod directive;
@@ -223,7 +223,8 @@ impl AssembledData {
 		// Because the actions always expect to get a value, we need a fallback dummy value if there is none in the
 		// addressing mode. This is fine, since we control the codegen table and we can make sure that we never use a
 		// value where there is none in the operand.
-		const dummy_value: AssemblyTimeValue = AssemblyTimeValue::Literal(0);
+		// FIXME: Make this const once https://github.com/zkat/miette/issues/261 is resolved.
+		let dummy_value: AssemblyTimeValue = AssemblyTimeValue::Literal(0, (0, 0).into());
 
 		let Instruction { opcode: Opcode { first_operand, mnemonic, second_operand, .. }, span, .. } = instruction;
 
@@ -302,7 +303,7 @@ impl AssembledData {
 					},
 					EntryOrSecondOperandTable::BitEntry(opcode, action) => {
 						self.append_unresolved_opcode_with_bit_index(
-							AssemblyTimeValue::Literal(MemoryAddress::from(*opcode)),
+							AssemblyTimeValue::Literal(MemoryAddress::from(*opcode), *span),
 							first_operand.bit_index().or_else(|| mnemonic.bit_index()).unwrap_or(1),
 							current_labels,
 							*span,
@@ -317,21 +318,24 @@ impl AssembledData {
 					EntryOrSecondOperandTable::TcallEntry(opcode) => self.append_8_bits_unresolved(
 						// Synthesize the operation `opcode | ((operand & 0x0F) << 4)` which is exactly how TCALL
 						// works.
-						AssemblyTimeValue::BinaryOperation(
-							AssemblyTimeValue::Literal(MemoryAddress::from(*opcode)).into(),
-							AssemblyTimeValue::BinaryOperation(
-								AssemblyTimeValue::BinaryOperation(
-									first_operand.number().unwrap_or_else(|| dummy_value.clone()).into(),
-									AssemblyTimeValue::Literal(0x0F).into(),
-									BinaryOperator::And,
-								)
+						AssemblyTimeValue::BinaryOperation {
+							lhs:      AssemblyTimeValue::Literal(MemoryAddress::from(*opcode), *span).into(),
+							rhs:      AssemblyTimeValue::BinaryOperation {
+								lhs:      AssemblyTimeValue::BinaryOperation {
+									lhs:      first_operand.number().unwrap_or_else(|| dummy_value.clone()).into(),
+									rhs:      AssemblyTimeValue::Literal(0x0F, *span).into(),
+									operator: BinaryOperator::And,
+									span:     *span,
+								}
 								.into(),
-								AssemblyTimeValue::Literal(4).into(),
-								BinaryOperator::LeftShift,
-							)
+								rhs:      AssemblyTimeValue::Literal(4, *span).into(),
+								operator: BinaryOperator::LeftShift,
+								span:     *span,
+							}
 							.into(),
-							BinaryOperator::Or,
-						),
+							operator: BinaryOperator::Or,
+							span:     *span,
+						},
 						0,
 						true,
 						current_labels,
@@ -380,7 +384,7 @@ impl AssembledData {
 							},
 							TwoOperandEntry::BitEntry(opcode, action) => {
 								self.append_unresolved_opcode_with_bit_index(
-									AssemblyTimeValue::Literal(MemoryAddress::from(*opcode)),
+									AssemblyTimeValue::Literal(MemoryAddress::from(*opcode), *span),
 									bit_index,
 									current_labels,
 									*span,
@@ -577,11 +581,12 @@ impl AssembledData {
 			LabeledMemoryValue {
 				// Synthesize the (bit_index << 5) | value which is needed for bit indices in opcodes.
 				value:                MemoryValue::Number {
-					value:           AssemblyTimeValue::BinaryOperation(
-						value.into(),
-						AssemblyTimeValue::Literal(MemoryAddress::from(bit_index) << 5).into(),
-						BinaryOperator::Or,
-					),
+					value:           AssemblyTimeValue::BinaryOperation {
+						lhs: value.into(),
+						rhs: AssemblyTimeValue::Literal(MemoryAddress::from(bit_index) << 5, span).into(),
+						operator: BinaryOperator::Or,
+						span,
+					},
 					byte_index:      0,
 					is_highest_byte: true,
 				},

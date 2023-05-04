@@ -223,7 +223,12 @@ fn coverage() {
 	let _ = format!(
 		"{:X}, {:X}, {1:?}",
 		crate::sema::AssemblyTimeValue::from(34),
-		crate::sema::AssemblyTimeValue::BinaryOperation(Box::new(32.into()), Box::new(7.into()), BinaryOperator::And,),
+		crate::sema::AssemblyTimeValue::BinaryOperation {
+			lhs:      Box::new(32.into()),
+			rhs:      Box::new(7.into()),
+			operator: BinaryOperator::And,
+			span:     (0, 0).into(),
+		},
 	);
 
 	let label = crate::sema::reference::Reference::Label(std::sync::Arc::new(
@@ -267,14 +272,12 @@ fn coverage() {
 		BinaryOperator::Subtract,
 		BinaryOperator::Xor,
 	] {
-		let _ = format!(
-			"{:X}",
-			crate::sema::AssemblyTimeValue::BinaryOperation(
-				Box::new(crate::sema::AssemblyTimeValue::Reference(label.clone())),
-				Box::new(crate::sema::AssemblyTimeValue::Reference(label.clone())),
-				operator,
-			),
-		);
+		let _ = format!("{:X}", crate::sema::AssemblyTimeValue::BinaryOperation {
+			lhs: Box::new(crate::sema::AssemblyTimeValue::Reference(label.clone(), (0, 0).into())),
+			rhs: Box::new(crate::sema::AssemblyTimeValue::Reference(label.clone(), (0, 0).into())),
+			operator,
+			span: (0, 0).into(),
+		},);
 	}
 
 	assert_eq!(crate::sema::AssemblyTimeValue::from(34), crate::sema::AssemblyTimeValue::from(34));

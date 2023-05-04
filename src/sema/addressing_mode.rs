@@ -142,8 +142,8 @@ impl AddressingMode {
 	/// Try to coerce this addressing mode to direct page addressing if the internal number allows it.
 	#[must_use]
 	pub fn coerce_to_direct_page_addressing(self) -> Self {
-		if let Some(AssemblyTimeValue::Literal(resolved_address)) = self.number().map(AssemblyTimeValue::try_resolve) && resolved_address <= 0xFF {
-			let number = AssemblyTimeValue::Literal(resolved_address);
+		if let Some(AssemblyTimeValue::Literal(resolved_address, span)) = self.number().map(AssemblyTimeValue::try_resolve) && resolved_address <= 0xFF {
+			let number = AssemblyTimeValue::Literal(resolved_address, span);
 			match self {
 				Self::Address(..) => Self::DirectPage(number),
 				Self::XIndexed(..) => Self::DirectPageXIndexed(number),

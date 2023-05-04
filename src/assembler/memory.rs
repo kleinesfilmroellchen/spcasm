@@ -43,7 +43,7 @@ impl LabeledMemoryValue {
 		} else {
 			// FIXME: I can't figure out how to do this without copying first.
 			let value_copy = self.value.clone();
-			self.value = value_copy.try_resolve(own_memory_address, self.instruction_location, src, frontend);
+			self.value = value_copy.try_resolve(own_memory_address, src, frontend);
 			Change::Modified
 		}
 	}
@@ -58,7 +58,7 @@ impl LabeledMemoryValue {
 		src: &Arc<AssemblyCode>,
 		frontend: &dyn Frontend,
 	) -> Result<u8, Box<AssemblyError>> {
-		self.value.try_resolved(own_memory_address, self.instruction_location, src, frontend).map_err(|number| {
+		self.value.try_resolved(own_memory_address, src, frontend).map_err(|number| {
 			{
 				let first_reference = number
 					.first_reference()
@@ -106,14 +106,13 @@ impl MemoryValue {
 	fn try_resolve(
 		self,
 		own_memory_address: MemoryAddress,
-		source_span: SourceSpan,
 		source_code: &Arc<AssemblyCode>,
 		frontend: &dyn Frontend,
 	) -> Self {
 		match self {
 			Self::Resolved(_) => self,
 			Self::Number { value, byte_index, is_highest_byte } => match value.try_resolve() {
-				AssemblyTimeValue::Literal(value) => {
+				AssemblyTimeValue::Literal(value, value_span) => {
 					let unmasked_value = value >> (byte_index * 8);
 					unmasked_value.try_into().map_or_else(
 						|_| {
@@ -121,7 +120,7 @@ impl MemoryValue {
 								frontend.report_diagnostic(AssemblyError::ValueTooLarge {
 									value,
 									size: (byte_index + 1) * 8,
-									location: source_span,
+									location: value_span,
 									src: source_code.clone(),
 								});
 							}
@@ -133,12 +132,12 @@ impl MemoryValue {
 				resolved => Self::Number { value: resolved, byte_index, is_highest_byte },
 			},
 			Self::NumberRelative(number) => match number.clone().try_resolve() {
-				AssemblyTimeValue::Literal(reference_memory_address) => {
+				AssemblyTimeValue::Literal(reference_memory_address, ..) => {
 					let relative_offset = reference_memory_address - (own_memory_address + 1);
 					<MemoryAddress as TryInto<i8>>::try_into(relative_offset).map_or_else(
 						|_| {
 							frontend.report_diagnostic(AssemblyError::RelativeOffsetTooLarge {
-								location:        source_span,
+								location:        number.source_span(),
 								src:             source_code.clone(),
 								target:          reference_memory_address,
 								address:         own_memory_address,
@@ -152,7 +151,7 @@ impl MemoryValue {
 				resolved => Self::NumberRelative(resolved),
 			},
 			Self::NumberHighByteWithContainedBitIndex(number, bit_index) => match number.try_resolve() {
-				AssemblyTimeValue::Literal(reference_memory_address) => {
+				AssemblyTimeValue::Literal(reference_memory_address, ..) => {
 					// TODO: perform byte size check
 					let resolved_data = ((reference_memory_address & 0x1F00) >> 8) as u8 | (bit_index << 5);
 					Self::Resolved(resolved_data)
@@ -166,11 +165,10 @@ impl MemoryValue {
 	fn try_resolved(
 		&self,
 		own_memory_address: MemoryAddress,
-		source_span: SourceSpan,
 		source_code: &Arc<AssemblyCode>,
 		frontend: &dyn Frontend,
 	) -> Result<u8, AssemblyTimeValue> {
-		match self.clone().try_resolve(own_memory_address, source_span, source_code, frontend) {
+		match self.clone().try_resolve(own_memory_address, source_code, frontend) {
 			Self::Resolved(value) => Ok(value),
 			Self::Number { value: number, .. }
 			| Self::NumberHighByteWithContainedBitIndex(number, ..)

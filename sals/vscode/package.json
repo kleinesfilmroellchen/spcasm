@@ -1,6 +1,7 @@
 {
   "name": "sals-vscode",
   "description": "VSCode extension for sals, the SPC700 language server",
+  "license": "BSD-2-Clause",
   "version": "0.0.1",
   "repository": {
     "url": "https://github.com/kleinesfilmroellchen/spcasm"
@@ -21,11 +22,11 @@
   },
   "main": "./dist/extension.js",
   "scripts": {
-    "vscode:prepublish": "yarn run esbuild-base -- --minify",
+    "vscode:prepublish": "yarn run esbuild-base --minify",
     "server-compile": "cargo install --locked --force --no-track --bin sals --profile=spcasm-release --root dist --path ..",
     "esbuild-base": "esbuild ./src/extension.ts --bundle --outfile=./dist/extension.js --external:vscode --format=cjs --platform=node",
-    "esbuild": "yarn run esbuild-base -- --sourcemap && cargo -C .. build",
-    "esbuild-watch": "yarn run esbuild-base -- --sourcemap --watch"
+    "esbuild": "yarn run esbuild-base --sourcemap && cargo -Z unstable-options -C .. build",
+    "esbuild-watch": "yarn run esbuild-base --sourcemap --watch"
   },
   "activationEvents": [
     "onLanguage:spc700"

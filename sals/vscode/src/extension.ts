@@ -34,16 +34,11 @@ import {
 
 let client: LanguageClient;
 let context: ExtensionContext;
-let traceOutputChannel: OutputChannel;
 let clientOutputChannel: OutputChannel;
 
 export async function activate(providedContext: ExtensionContext) {
   commands.registerCommand("sals.restart", restartServer);
   context = providedContext;
-  traceOutputChannel = window.createOutputChannel(
-    "sals Language Server trace",
-    "spc700"
-  );
   clientOutputChannel = window.createOutputChannel(
     "sals Language Client",
     "spc700"
@@ -75,7 +70,6 @@ async function startServer() {
   // Options to control the language client.
   const clientOptions: LanguageClientOptions = {
     documentSelector: [{ scheme: "file", language: "spc700" }],
-    traceOutputChannel,
     outputChannel: clientOutputChannel,
   };
 

@@ -48,10 +48,10 @@ export async function activate(providedContext: ExtensionContext) {
     "sals Language Client",
     "spc700"
   );
-  startServer();
+  return startServer();
 }
 
-function startServer() {
+async function startServer() {
   const settings = workspace.getConfiguration("sals");
   const packagedSalsPath = (settings.get("executable.override") as boolean)
     ? (settings.get("executable.path") as string)
@@ -86,7 +86,7 @@ function startServer() {
     serverOptions,
     clientOptions
   );
-  client.start();
+  return client.start();
 }
 
 export function deactivate(): Thenable<void> | undefined {
@@ -98,10 +98,7 @@ export function deactivate(): Thenable<void> | undefined {
 export async function restartServer(
   _arguments: any[]
 ): Promise<Thenable<void> | undefined> {
-  if (!client) {
-    startServer();
-  } else {
-    await client.stop();
-    startServer();
-  }
+  if (client) await client.stop();
+
+  await startServer();
 }

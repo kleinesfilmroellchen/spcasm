@@ -110,6 +110,10 @@
       {
         "command": "sals.restart",
         "title": "sals: Restart language server"
+      },
+      {
+        "command": "sals.stop",
+        "title": "sals: Stop language server"
       }
     ]
   },

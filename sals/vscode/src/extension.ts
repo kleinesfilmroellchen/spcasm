@@ -38,6 +38,7 @@ let clientOutputChannel: OutputChannel;
 
 export async function activate(providedContext: ExtensionContext) {
   commands.registerCommand("sals.restart", restartServer);
+  commands.registerCommand("sals.stop", stopServer);
   context = providedContext;
   clientOutputChannel = window.createOutputChannel(
     "sals Language Client",
@@ -87,6 +88,10 @@ export function deactivate(): Thenable<void> | undefined {
   if (!client) return undefined;
 
   return client.stop();
+}
+
+export async function stopServer(_arguments: any[]) {
+  if (client) await client.stop();
 }
 
 export async function restartServer(

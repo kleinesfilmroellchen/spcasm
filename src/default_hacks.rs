@@ -9,7 +9,7 @@ use std::num::ParseIntError;
 use std::sync::Arc;
 
 #[allow(unused)]
-use smartstring::alias::String;
+use flexstr::{SharedStr, shared_str, IntoSharedStr, ToSharedStr};
 
 use crate::directive::DirectiveSymbol;
 use crate::error::{ReferenceType, TokenOrString};
@@ -36,7 +36,7 @@ where
 }
 
 impl InheritFromDefault for ReferenceType {}
-impl InheritFromDefault for String {}
+impl InheritFromDefault for SharedStr {}
 impl InheritFromDefault for AssemblyCode {}
 impl InheritFromDefault for bool {}
 impl InheritFromDefault for u8 {}
@@ -90,6 +90,6 @@ impl FakeDefaultForIgnoredValues for Mnemonic {
 
 impl FakeDefaultForIgnoredValues for TokenOrString {
 	fn default() -> Self {
-		Self::String(String::new())
+		Self::String(SharedStr::EMPTY)
 	}
 }

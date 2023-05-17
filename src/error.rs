@@ -4,10 +4,10 @@ use std::mem::Discriminant;
 use std::num::ParseIntError;
 use std::sync::Arc;
 
+#[allow(unused)]
+use flexstr::{shared_str, IntoSharedStr, SharedStr, ToSharedStr};
 use lalrpop_util::ParseError;
 use miette::{Diagnostic, SourceSpan};
-#[allow(unused)]
-use smartstring::alias::String;
 use spcasm_derive::ErrorCodes;
 use thiserror::Error;
 
@@ -19,7 +19,7 @@ use crate::AssemblyCode;
 
 #[allow(clippy::module_name_repetitions)]
 pub trait ErrorCodes {
-	fn all_codes() -> HashMap<Discriminant<AssemblyError>, String>;
+	fn all_codes() -> HashMap<Discriminant<AssemblyError>, SharedStr>;
 }
 
 /// All types of errors that the assembler can report to the user.
@@ -75,7 +75,7 @@ pub enum AssemblyError {
 		)
 	)]
 	InvalidArchitectureDirective {
-		arch:     String,
+		arch:     SharedStr,
 		#[source_code]
 		src:      Arc<AssemblyCode>,
 		#[label("`arch` directive")]
@@ -118,7 +118,7 @@ pub enum AssemblyError {
 		)
 	)]
 	AssigningToReference {
-		name:     String,
+		name:     SharedStr,
 		kind:     ReferenceType,
 		#[source_code]
 		src:      Arc<AssemblyCode>,
@@ -129,7 +129,7 @@ pub enum AssemblyError {
 	#[error("Using the user defined macro argument '<{name}>' outside a macro is not possible")]
 	#[diagnostic(code(spcasm::user_macro::argument_outside_macro), severity(Error))]
 	UsingMacroArgumentOutsideMacro {
-		name:     String,
+		name:     SharedStr,
 		#[source_code]
 		src:      Arc<AssemblyCode>,
 		#[label("Used here")]
@@ -146,7 +146,7 @@ pub enum AssemblyError {
 		)
 	)]
 	RecursiveMacroDefinition {
-		name:     String,
+		name:     SharedStr,
 		#[source_code]
 		src:      Arc<AssemblyCode>,
 		#[label("Inner macro defined here")]
@@ -165,7 +165,7 @@ pub enum AssemblyError {
 		)
 	)]
 	RecursiveMacroUse {
-		name:     String,
+		name:     SharedStr,
 		depth:    usize,
 		#[source_code]
 		src:      Arc<AssemblyCode>,
@@ -181,8 +181,8 @@ pub enum AssemblyError {
 			available_names.iter().map(|name| format!("'{}'", name)).collect::<Vec<_>>().join(", "))
 	)]
 	UnknownMacroArgument {
-		name:            String,
-		available_names: Vec<String>,
+		name:            SharedStr,
+		available_names: Vec<SharedStr>,
 		#[source_code]
 		src:             Arc<AssemblyCode>,
 		#[label("Macro argument used here")]
@@ -197,8 +197,8 @@ pub enum AssemblyError {
 			available_macros.iter().map(|name| format!("'{}'", name)).collect::<Vec<_>>().join(", "))
 	)]
 	UndefinedUserMacro {
-		name:             String,
-		available_macros: Vec<String>,
+		name:             SharedStr,
+		available_macros: Vec<SharedStr>,
 		#[source_code]
 		src:              Arc<AssemblyCode>,
 		#[label("Macro used here")]
@@ -212,7 +212,7 @@ pub enum AssemblyError {
 		help("{} arguments", if expected_number > actual_number { "Add" } else { "Remove" })
 	)]
 	IncorrectNumberOfMacroArguments {
-		name:            String,
+		name:            SharedStr,
 		expected_number: usize,
 		actual_number:   usize,
 		#[source_code]
@@ -229,7 +229,7 @@ pub enum AssemblyError {
 		/// https://github.com/rust-lang/rust/issues/24135 - std::io::Error is not clonable for performance and implementation detail reasons.
 		#[source]
 		os_error:  Arc<std::io::Error>,
-		file_name: String,
+		file_name: SharedStr,
 		#[source_code]
 		src:       Arc<AssemblyCode>,
 		#[label("File was requested here")]
@@ -245,7 +245,7 @@ pub enum AssemblyError {
 		)
 	)]
 	IncludeCycle {
-		cycle_trigger_file: String,
+		cycle_trigger_file: SharedStr,
 		#[source_code]
 		src:                Arc<AssemblyCode>,
 		#[label("This file's inclusion causes an include cycle")]
@@ -262,8 +262,8 @@ pub enum AssemblyError {
 		)
 	)]
 	AudioProcessingError {
-		error_text: String,
-		file_name:  String,
+		error_text: SharedStr,
+		file_name:  SharedStr,
 		#[source_code]
 		src:        Arc<AssemblyCode>,
 		#[label("While processing audio here")]
@@ -301,7 +301,7 @@ pub enum AssemblyError {
 		help("If you want this reference to have a value, start a segment before it with `org <memory address>`.")
 	)]
 	ReferenceOutsideSegment {
-		reference: String,
+		reference: SharedStr,
 		#[label("Reference defined here, outside segments")]
 		location:  SourceSpan,
 		#[source_code]
@@ -332,7 +332,7 @@ pub enum AssemblyError {
 		)
 	)]
 	UnresolvedReference {
-		reference:          String,
+		reference:          SharedStr,
 		#[label("'{reference}' defined here")]
 		reference_location: Option<SourceSpan>,
 		#[label("Used here")]
@@ -348,7 +348,7 @@ pub enum AssemblyError {
 		help("Local references are a convenient way to safely reuse common names like '.loop' or '.end'.")
 	)]
 	RedefinedReference {
-		reference:          String,
+		reference:          SharedStr,
 		#[label("'{reference}' first defined here…")]
 		reference_location: SourceSpan,
 		#[label("… and later redefined here")]
@@ -378,9 +378,9 @@ pub enum AssemblyError {
 			.legal_modes.iter().map(|mode| format!("{}, ", mode)).collect::<String>().strip_suffix(", ").unwrap_or_default()),
 	)]
 	InvalidFirstAddressingMode {
-		mode:        String,
+		mode:        SharedStr,
 		mnemonic:    Mnemonic,
-		legal_modes: Vec<String>,
+		legal_modes: Vec<SharedStr>,
 		#[source_code]
 		src:         Arc<AssemblyCode>,
 		#[label("For this instruction")]
@@ -395,10 +395,10 @@ pub enum AssemblyError {
 			.legal_modes.iter().map(|mode| format!("{}, ", mode)).collect::<String>().strip_suffix(", ").unwrap_or_default()),
 	)]
 	InvalidSecondAddressingMode {
-		mode:        String,
+		mode:        SharedStr,
 		mnemonic:    Mnemonic,
-		first_mode:  String,
-		legal_modes: Vec<String>,
+		first_mode:  SharedStr,
+		legal_modes: Vec<SharedStr>,
 		#[source_code]
 		src:         Arc<AssemblyCode>,
 		#[label("For this instruction")]
@@ -442,7 +442,7 @@ pub enum AssemblyError {
 	)]
 	MissingOperand {
 		mnemonic:    Mnemonic,
-		legal_modes: Vec<String>,
+		legal_modes: Vec<SharedStr>,
 		#[label("Takes at least one operand")]
 		location:    SourceSpan,
 		#[source_code]
@@ -458,7 +458,7 @@ pub enum AssemblyError {
 	)]
 	MissingSecondOperand {
 		mnemonic:    Mnemonic,
-		legal_modes: Vec<String>,
+		legal_modes: Vec<SharedStr>,
 		#[label("Takes two operands")]
 		location:    SourceSpan,
 		#[source_code]
@@ -472,8 +472,8 @@ pub enum AssemblyError {
 		severity(Error)
 	)]
 	InvalidConstant {
-		constant: String,
-		typename: String,
+		constant: SharedStr,
+		typename: SharedStr,
 		#[source_code]
 		src:      Arc<AssemblyCode>,
 		#[label("Takes 0 operands")]
@@ -490,11 +490,11 @@ pub enum AssemblyError {
 		severity(Error)
 	)]
 	ReferencesInDirectiveArgument {
-		directive: DirectiveSymbol,
+		directive:         DirectiveSymbol,
 		#[source_code]
-		src:       Arc<AssemblyCode>,
+		src:               Arc<AssemblyCode>,
 		#[label("This directive")]
-		location:  SourceSpan,
+		location:          SourceSpan,
 		#[label("This directive argument")]
 		argument_location: SourceSpan,
 	},
@@ -506,7 +506,7 @@ pub enum AssemblyError {
 		severity(Error)
 	)]
 	MissingGlobalLabel {
-		local_label: String,
+		local_label: SharedStr,
 		#[source_code]
 		src:         Arc<AssemblyCode>,
 		#[label("Local label defined here")]
@@ -537,7 +537,7 @@ pub enum AssemblyError {
 	RangeOutOfBounds {
 		start:    usize,
 		end:      usize,
-		file:     String,
+		file:     SharedStr,
 		file_len: usize,
 		#[source_code]
 		src:      Arc<AssemblyCode>,
@@ -553,9 +553,9 @@ pub enum AssemblyError {
 		severity(Error)
 	)]
 	InvalidDirectiveOption {
-		option:             String,
-		directive:          String,
-		valid_options:      Vec<String>,
+		option:             SharedStr,
+		directive:          SharedStr,
+		valid_options:      Vec<SharedStr>,
 		#[source_code]
 		src:                Arc<AssemblyCode>,
 		#[label("`{directive}` directive defined here")]
@@ -572,7 +572,7 @@ pub enum AssemblyError {
 		severity(Error)
 	)]
 	MissingFillParameter {
-		operation: String,
+		operation: SharedStr,
 		is_fill:   bool,
 		#[label("`{operation}` defined here")]
 		location:  SourceSpan,
@@ -653,7 +653,7 @@ pub enum AssemblyError {
 		)
 	)]
 	NumberIdentifier {
-		text:     String,
+		text:     SharedStr,
 		error:    ParseIntError,
 		#[label("Parse error: {error}")]
 		location: SourceSpan,
@@ -768,7 +768,7 @@ pub enum AssemblyError {
 		severity(Advice)
 	)]
 	NonDirectPageReference {
-		name:                 String,
+		name:                 SharedStr,
 		address:              MemoryAddress,
 		#[label("Might point at a direct page address")]
 		reference_definition: SourceSpan,
@@ -845,14 +845,14 @@ impl From<std::io::Error> for AssemblyError {
 #[derive(Clone, Debug)]
 pub enum TokenOrString {
 	Token(Token),
-	String(String),
+	String(SharedStr),
 }
 
 impl Display for TokenOrString {
 	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> Result<(), std::fmt::Error> {
 		write!(f, "{}", match self {
 			Self::Token(token) => format!("{}", token),
-			Self::String(string) => string.clone().into(),
+			Self::String(string) => string.to_string(),
 		})
 	}
 }
@@ -863,8 +863,8 @@ impl From<std::string::String> for TokenOrString {
 	}
 }
 
-impl From<String> for TokenOrString {
-	fn from(string: String) -> Self {
+impl From<SharedStr> for TokenOrString {
+	fn from(string: SharedStr) -> Self {
 		Self::String(string)
 	}
 }

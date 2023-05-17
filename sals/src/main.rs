@@ -6,6 +6,7 @@
 use std::path::Path;
 use std::sync::Arc;
 
+use flexstr::SharedStr;
 use interface::*;
 use miette::SourceSpan;
 use parking_lot::{Mutex, RwLock};
@@ -161,7 +162,7 @@ impl LanguageServer for Backend {
 	async fn did_open(&self, params: DidOpenTextDocumentParams) {
 		self.on_change(TextDocumentItem {
 			uri:     params.text_document.uri,
-			text:    params.text_document.text,
+			text:    params.text_document.text.into(),
 			version: params.text_document.version,
 		})
 		.await;
@@ -171,7 +172,7 @@ impl LanguageServer for Backend {
 		if params.content_changes.len() == 1 {
 			self.on_change(TextDocumentItem {
 				uri:     params.text_document.uri,
-				text:    params.content_changes[0].text.clone(),
+				text:    (&params.content_changes[0].text).into(),
 				version: params.text_document.version,
 			})
 			.await;
@@ -382,7 +383,7 @@ impl Notification for CustomNotification {
 
 struct TextDocumentItem {
 	uri:     Url,
-	text:    String,
+	text:    SharedStr,
 	version: i32,
 }
 

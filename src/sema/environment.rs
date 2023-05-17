@@ -8,7 +8,7 @@ use std::sync::Arc;
 use miette::SourceSpan;
 use parking_lot::RwLock;
 #[allow(unused)]
-use smartstring::alias::String;
+use flexstr::{SharedStr, shared_str, IntoSharedStr, ToSharedStr};
 
 use super::reference::Label;
 use super::{AssemblyFile, LabelUsageKind};
@@ -21,7 +21,7 @@ use crate::AssemblyCode;
 #[derive(Debug)]
 pub struct Environment {
 	/// The list of global labels.
-	pub globals: HashMap<String, Arc<RwLock<Label>>>,
+	pub globals: HashMap<SharedStr, Arc<RwLock<Label>>>,
 	/// The files included in this "tree" created by include statements.
 	pub files:   HashMap<PathBuf, Arc<RwLock<AssemblyFile>>>,
 	/// Error and warning options passed on the command line.

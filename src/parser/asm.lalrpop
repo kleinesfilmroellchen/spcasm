@@ -5,7 +5,7 @@ use miette::{SourceOffset, SourceSpan};
 use lalrpop_util::ParseError;
 use parking_lot::RwLock;
 
-use smartstring::alias::String;
+use flexstr::{SharedStr, shared_str, IntoSharedStr, ToSharedStr};
 
 use std::collections::HashMap;
 use std::num::{NonZeroU64, NonZeroUsize};
@@ -46,7 +46,7 @@ InstructionOrDirective: ProgramElement = {
 	InstructionWithTestComment => ProgramElement::Instruction(<>),
 	DirectiveWithTestComment => ProgramElement::Directive(<>),
 	<directive:IncludeDirective> <file:"string"> => ProgramElement::IncludeSource {
-		file: std::string::String::from_utf8_lossy(&file.0).into(),
+		file: std::string::String::from_utf8_lossy(&file.0).as_ref().into(),
 		span: source_range(directive.into(), file.1.into()),
 	},
 	MacroCall => <>,
@@ -142,7 +142,7 @@ Directive: Directive = {
 	<directive:"brr"> <filename:"string"> <range:InclusionRange?> <options:IdentifierOptions> =>? Ok(Directive {
 		value: apply_brr_options(source_range(directive.into(), filename.1.into()), source_code,
 			DirectiveValue::Brr {
-				file: std::string::String::from_utf8_lossy(&filename.0).into(),
+				file: std::string::String::from_utf8_lossy(&filename.0).as_ref().into(),
 				range,
 				auto_trim: false,
 				directory: true,
@@ -170,7 +170,7 @@ Directive: Directive = {
 	},
 	<directive:"incbin"> <text:"string"> <range:InclusionRange?> => Directive {
 		value: DirectiveValue::Include {
-			file: std::string::String::from_utf8_lossy(&text.0).into(),
+			file: std::string::String::from_utf8_lossy(&text.0).as_ref().into(),
 			range,
 		},
 		span: source_range(directive.into(), text.1.into()),
@@ -341,7 +341,7 @@ UserDefinedMacro: Directive = <start:"macro"> <name:"identifier"> <arguments:Use
 	expected_value: None,
 };
 
-UserDefinedMacroArguments: Vec<(String, SourceSpan)> = {
+UserDefinedMacroArguments: Vec<(SharedStr, SourceSpan)> = {
 	"(" <Comma<"identifier">> ")" => <>,
 	"," <Comma<"identifier">> => <>,
 };
@@ -584,7 +584,7 @@ extern {
 	type Error = AssemblyError;
 
 	enum Token {
-		"identifier" => Token::Identifier(<String>, <SourceSpan>),
+		"identifier" => Token::Identifier(<SharedStr>, <SourceSpan>),
 		"mnemonic" => Token::Mnemonic(<Mnemonic>, <SourceSpan>),
 		"A" => Token::Register(Register::A, <SourceSpan>),
 		"X" => Token::Register(Register::X, <SourceSpan>),
@@ -633,7 +633,7 @@ extern {
 		"else" => Token::Directive(DirectiveSymbol::Else, <SourceSpan>),
 		"endif" => Token::Directive(DirectiveSymbol::EndIf, <SourceSpan>),
 		"math" => Token::Directive(DirectiveSymbol::Math, <SourceSpan>),
-		"number" => Token::Number(<i64>, <String>, <SourceSpan>),
+		"number" => Token::Number(<i64>, <SharedStr>, <SourceSpan>),
 		"string" => Token::String(<Vec<u8>>, <SourceSpan>),
 		"#" => Token::Hash(<SourceOffset>),
 		"," => Token::Comma(<SourceOffset>),

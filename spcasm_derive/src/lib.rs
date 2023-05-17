@@ -2,7 +2,7 @@
 #![allow(missing_docs, clippy::missing_panics_doc)]
 
 #[allow(unused)]
-use smartstring::alias::String;
+use flexstr::{shared_str, FlexStr, IntoSharedStr, ToSharedStr};
 
 extern crate proc_macro;
 
@@ -90,7 +90,7 @@ pub fn error_codes_derive(input: TokenStream) -> TokenStream {
 				#[automatically_derived]
 				#[allow(missing_docs)]
 				impl crate::error::ErrorCodes for #name {
-					fn all_codes() -> std::collections::HashMap<std::mem::Discriminant<crate::error::AssemblyError>, smartstring::alias::String> {
+					fn all_codes() -> std::collections::HashMap<std::mem::Discriminant<crate::error::AssemblyError>, flexstr::SharedStr> {
 						let mut map = std::collections::HashMap::new();
 						#( let error_instance = &Self::#variant_identifiers {
 								#variant_fields

@@ -21,6 +21,7 @@ web-sys = { version = "0.3.60", features = [
 	"console",
 ] }
 
+flexstr = { version = "0.9.2" }
 serde = { version = "1", features = ["derive"] }
 serde-wasm-bindgen = "0.5"
 

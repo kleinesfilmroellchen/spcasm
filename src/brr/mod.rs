@@ -12,7 +12,7 @@ use std::convert::TryInto;
 use num_derive::FromPrimitive;
 use num_traits::FromPrimitive;
 #[allow(unused)]
-use smartstring::alias::String;
+use flexstr::{SharedStr, shared_str, IntoSharedStr, ToSharedStr};
 
 #[cfg(test)] mod test;
 
@@ -152,7 +152,7 @@ pub fn encode_to_brr(
 /// All possible header bytes are valid on some level, so no errors are thrown because of this. If the encoded data does
 /// not line up with a BRR block however, an error is returned.
 #[allow(clippy::module_name_repetitions)]
-pub fn decode_from_brr(encoded: &[u8]) -> Result<Vec<DecodedSample>, String> {
+pub fn decode_from_brr(encoded: &[u8]) -> Result<Vec<DecodedSample>,SharedStr> {
 	let (blocks, remainder) = encoded.as_chunks();
 	if !remainder.is_empty() {
 		return Err(format!("Cut off BRR block (size {}) at the end of the stream", remainder.len()).into());

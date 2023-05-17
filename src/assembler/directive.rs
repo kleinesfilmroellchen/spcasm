@@ -6,7 +6,7 @@ use std::sync::Arc;
 use miette::SourceSpan;
 use num_traits::{FromPrimitive, ToPrimitive};
 #[allow(unused)]
-use smartstring::alias::String;
+use flexstr::{SharedStr, shared_str, IntoSharedStr, ToSharedStr};
 
 use super::{resolve_file, AssembledData};
 use crate::brr::wav;

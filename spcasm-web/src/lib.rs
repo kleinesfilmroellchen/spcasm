@@ -4,6 +4,7 @@
 
 use std::sync::Arc;
 
+use flexstr::SharedStr;
 use html_escape::{decode_html_entities, encode_safe};
 use miette::{GraphicalReportHandler, GraphicalTheme};
 use once_cell::sync::Lazy;
@@ -39,11 +40,11 @@ static REPORT_HANDLER: Lazy<GraphicalReportHandler> = Lazy::new(|| {
 		.with_links(false)
 });
 
-fn htmlify(text: &str) -> String {
-	ansi_to_html(&encode_safe(text).replace(' ', "&nbsp;")).replace('\n', "<br/>")
+fn htmlify(text: &str) -> SharedStr {
+	ansi_to_html(&encode_safe(text).replace(' ', "&nbsp;")).replace('\n', "<br/>").into()
 }
 
-fn ansi_to_html(text: &str) -> String {
+fn ansi_to_html(text: &str) -> SharedStr {
 	// FIXME: This is a crude converter that only handles the escapes the renderer actually uses.
 	let text = text.replace("[2m", "<span class=\"ansi-faint\">").replace("[0m", "</span>");
 
@@ -87,7 +88,8 @@ fn ansi_to_html(text: &str) -> String {
 
 			replacement_text
 		})
-		.to_string()
+		.as_ref()
+		.into()
 }
 
 #[wasm_bindgen(module = "/www/lib.js")]

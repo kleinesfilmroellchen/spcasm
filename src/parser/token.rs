@@ -3,9 +3,9 @@
 use std::fmt::Display;
 use std::num::NonZeroU64;
 
-use miette::{SourceOffset, SourceSpan};
 #[allow(unused)]
-use smartstring::alias::String;
+use flexstr::{shared_str, IntoSharedStr, SharedStr, ToSharedStr};
+use miette::{SourceOffset, SourceSpan};
 
 use crate::directive::DirectiveSymbol;
 use crate::sema::instruction::Mnemonic;
@@ -18,7 +18,7 @@ pub enum Token {
 	/// Mnemonic, the start of an instruction.
 	Mnemonic(Mnemonic, SourceSpan),
 	/// Identifier, i.e. a reference.
-	Identifier(String, SourceSpan),
+	Identifier(SharedStr, SourceSpan),
 	/// A "special" identifier used in some directives as a keyword.
 	SpecialIdentifier(&'static str, SourceSpan),
 	/// Register name (this can never be used as an identifier).
@@ -28,7 +28,7 @@ pub enum Token {
 	/// Start of a directive.
 	Directive(DirectiveSymbol, SourceSpan),
 	/// Literal number which was already parsed.
-	Number(i64, String, SourceSpan),
+	Number(i64, SharedStr, SourceSpan),
 	/// Text string delimited by "".
 	String(Vec<u8>, SourceSpan),
 	/// '#'
@@ -215,7 +215,7 @@ impl Token {
 			"align" => Ok("align"),
 			"startpos" => Ok("startpos"),
 			_ => Err(AssemblyError::ExpectedToken {
-				expected: String::from("identifier").into(),
+				expected: shared_str!("identifier").into(),
 				actual: Self::Identifier(identifier.into(), span),
 				location: span,
 				src,

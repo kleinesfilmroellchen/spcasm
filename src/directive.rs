@@ -7,12 +7,12 @@ use std::hash::Hash;
 use std::num::NonZeroU64;
 use std::sync::Arc;
 
+#[allow(unused)]
+use flexstr::{SharedStr, shared_str, FlexStr, IntoSharedStr, ToSharedStr};
 use miette::SourceSpan;
 use num_derive::ToPrimitive;
 use num_traits::{FromPrimitive, ToPrimitive};
 use parking_lot::RwLock;
-#[allow(unused)]
-use smartstring::alias::String;
 use spcasm_derive::Parse;
 
 use crate::parser::source_range;
@@ -246,7 +246,7 @@ pub enum DirectiveValue {
 	/// brr <file name>
 	Brr {
 		/// Path to the WAV source file.
-		file:      String,
+		file:      SharedStr,
 		/// The range of samples to include.
 		range:     Option<SourceSpan>,
 		/// Whether to automatically trim silence at the beginning and end of the sample (after cutting the range)
@@ -264,7 +264,7 @@ pub enum DirectiveValue {
 	/// <reference> = <value>
 	AssignReference { reference: Reference, value: AssemblyTimeValue },
 	/// incbin <file name>
-	Include { file: String, range: Option<SourceSpan> },
+	Include { file: SharedStr, range: Option<SourceSpan> },
 	/// endasm
 	End,
 	/// pushpc
@@ -272,7 +272,7 @@ pub enum DirectiveValue {
 	/// pullpc
 	PopSection,
 	/// macro
-	UserDefinedMacro { name: String, arguments: Arc<RwLock<MacroParent>>, body: Vec<ProgramElement> },
+	UserDefinedMacro { name: SharedStr, arguments: Arc<RwLock<MacroParent>>, body: Vec<ProgramElement> },
 	/// A variety of global parameters are changed with this directive.
 	SetDirectiveParameters(HashMap<DirectiveParameter, AssemblyTimeValue>),
 	/// fill, pad

@@ -3,9 +3,9 @@
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
-use miette::{MietteError, MietteSpanContents, SourceCode, SourceSpan, SpanContents};
 #[allow(unused)]
-use smartstring::alias::String;
+use flexstr::{shared_str, IntoSharedStr, SharedStr, ToSharedStr};
+use miette::{MietteError, MietteSpanContents, SourceCode, SourceSpan, SpanContents};
 
 use crate::AssemblyError;
 
@@ -13,7 +13,7 @@ use crate::AssemblyError;
 #[derive(Debug, Clone, Default, Eq, PartialEq)]
 pub struct AssemblyCode {
 	/// The text content of the assembly code.
-	pub text:         String,
+	pub text:         SharedStr,
 	/// The source code location must be canonicalized!
 	pub name:         PathBuf,
 	/// The include path of the file.
@@ -32,14 +32,14 @@ impl AssemblyCode {
 		}
 		path = uniform_canonicalize(&path)?;
 
-		// Optimization: Pre-allocate the String with the known size of the source code.
+		// Optimization: Pre-allocate theSharedStr with the known size of the source code.
 		let text = std::fs::read_to_string(&path)?;
 		let text_size = text.len();
 		let mut contents = String::new();
 		<String as Extend<char>>::extend_reserve(&mut contents, text_size);
 		contents.extend(text.chars().filter(|c| c != &'\r'));
 
-		Ok(Arc::new(Self { name: path, text: contents, include_path: Vec::new() }))
+		Ok(Arc::new(Self { name: path, text: contents.into(), include_path: Vec::new() }))
 	}
 
 	/// Create a new source code struct by loading a file's contents, and immediately create an assembler error if that
@@ -95,7 +95,7 @@ impl AssemblyCode {
 	/// # Panics
 	/// Programming bugs.
 	#[must_use]
-	pub fn file_name(&self) -> String {
+	pub fn file_name(&self) -> SharedStr {
 		Self::file_name_for(&self.name)
 	}
 
@@ -109,7 +109,7 @@ impl AssemblyCode {
 	/// # Panics
 	/// Programming bugs.
 	#[must_use]
-	pub fn file_name_for(path: &Path) -> String {
+	pub fn file_name_for(path: &Path) -> SharedStr {
 		let cwd = uniform_canonicalize(&PathBuf::from(".")).unwrap();
 		if path.starts_with(&cwd) {
 			path.strip_prefix(cwd).unwrap().to_string_lossy().to_string().into()
@@ -153,7 +153,7 @@ impl SourceCode for AssemblyCode {
 	) -> Result<Box<dyn SpanContents<'a> + 'a>, MietteError> {
 		let result = self.text.read_span(span, context_lines_before, context_lines_after)?;
 		let retval = Box::new(MietteSpanContents::new_named(
-			self.file_name().into(),
+			self.file_name().as_str().to_owned(),
 			result.data(),
 			*result.span(),
 			result.line(),

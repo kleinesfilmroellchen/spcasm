@@ -5,7 +5,7 @@
 use std::fmt::Display;
 
 #[allow(unused)]
-use smartstring::alias::String;
+use flexstr::{SharedStr, shared_str, IntoSharedStr, ToSharedStr};
 use spcasm_derive::{Parse, VariantName};
 
 use crate::VariantName;

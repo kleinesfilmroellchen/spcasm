@@ -6,7 +6,7 @@ use std::sync::Arc;
 
 use miette::{Result, SourceSpan};
 #[allow(unused)]
-use smartstring::alias::String;
+use flexstr::{SharedStr, shared_str, IntoSharedStr, ToSharedStr};
 
 use crate::change::Change;
 use crate::cli::{default_backend_options, Frontend};

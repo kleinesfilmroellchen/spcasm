@@ -6,12 +6,11 @@ use std::sync::Arc;
 
 #[cfg(feature = "binaries")]
 use clap::Args;
-use miette::Diagnostic;
-use miette::Severity;
+#[allow(unused)]
+use flexstr::{shared_str, IntoSharedStr, SharedStr, ToSharedStr};
+use miette::{Diagnostic, Severity};
 #[allow(unused)]
 use parking_lot::RwLock;
-#[allow(unused)]
-use smartstring::alias::String;
 
 use crate::error::{AssemblyError, ErrorCodes};
 
@@ -42,7 +41,10 @@ pub trait Frontend: std::fmt::Debug + Send + Sync {
 	/// ``report_diagnostic_impl``.
 	fn report_diagnostic(&self, diagnostic: AssemblyError) {
 		// Pass on anything that is either an error or not ignored.
-		if diagnostic.severity().is_some_and(|severity| severity == Severity::Error) || self.is_error(&diagnostic) || !self.is_ignored(&diagnostic) {
+		if diagnostic.severity().is_some_and(|severity| severity == Severity::Error)
+			|| self.is_error(&diagnostic)
+			|| !self.is_ignored(&diagnostic)
+		{
 			self.report_diagnostic_impl(diagnostic);
 		}
 	}

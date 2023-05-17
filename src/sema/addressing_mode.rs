@@ -7,7 +7,7 @@ use std::sync::Arc;
 use miette::SourceSpan;
 use parking_lot::RwLock;
 #[allow(unused)]
-use smartstring::alias::String;
+use flexstr::{SharedStr, shared_str, IntoSharedStr, ToSharedStr};
 
 use super::reference::{self, Label, Reference, ReferenceResolvable};
 use super::register::Register;

@@ -4,9 +4,9 @@ use std::iter::Peekable;
 use std::num::NonZeroU64;
 use std::sync::Arc;
 
-use miette::SourceOffset;
 #[allow(unused)]
-use smartstring::alias::String;
+use flexstr::{shared_str, IntoSharedStr, SharedStr, ToSharedStr};
+use miette::SourceOffset;
 
 use super::{Parse, Token};
 use crate::cli::Frontend;
@@ -197,9 +197,11 @@ pub fn lex(source_code: Arc<AssemblyCode>, options: &dyn Frontend) -> Result<Vec
 					#[allow(unused)]
 					let start_index = index;
 					index += 2;
+					#[cfg(test)]
 					let mut comment_contents = String::new();
 					// Either stop at a newline or another regular comment.
 					while let Some(chr) = chars.peek() && chr != &'\n' && chr != &';' {
+						#[cfg(test)]
 						comment_contents.push(chars.next().unwrap());
 						index += 1;
 					}
@@ -233,13 +235,13 @@ pub fn lex(source_code: Arc<AssemblyCode>, options: &dyn Frontend) -> Result<Vec
 	Ok(tokens)
 }
 
-fn next_identifier(chars: &mut Peekable<std::str::Chars>, start: char) -> String {
-	let mut identifier = String::default();
+fn next_identifier(chars: &mut Peekable<std::str::Chars>, start: char) -> SharedStr {
+	let mut identifier = String::new();
 	identifier.push(start);
 	while let Some(chr) = chars.peek() && (chr.is_alphanumeric() || chr.is_ascii_digit() || ['_', '-', '@' ].contains(chr)) {
 		identifier.push(chars.next().unwrap());
 	}
-	identifier
+	identifier.into()
 }
 
 /// Parse the next number from the character stream `chars`. Since the first character may have already been extracted
@@ -259,11 +261,11 @@ fn next_number(
 	source_code: &Arc<AssemblyCode>,
 	options: &dyn Frontend,
 ) -> Result<(Token, usize), Box<AssemblyError>> {
-	let mut number_chars: String =
-		first_char.map_or_else(std::string::String::default, std::string::String::from).into();
+	let mut number_chars: String = first_char.map_or_else(std::string::String::default, std::string::String::from);
 	while let Some(chr) = chars.peek() && chr.is_alphanumeric() {
 		number_chars.push(chars.next().unwrap());
 	}
+	let number_chars = number_chars.into_shared_str();
 	let location = (start_index, number_chars.len() + usize::from(radix != 10)).into();
 	i64::from_str_radix(&number_chars, radix.into())
 		.map_or_else(

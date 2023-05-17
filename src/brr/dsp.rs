@@ -1,7 +1,7 @@
 //! Signal Processing Utilities for BRR.
 
 #[allow(unused)]
-use smartstring::alias::String;
+use flexstr::{SharedStr, shared_str, IntoSharedStr, ToSharedStr};
 
 use super::DecodedSample;
 

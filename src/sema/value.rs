@@ -11,7 +11,7 @@ use std::sync::Arc;
 use miette::SourceSpan;
 use num_derive::{FromPrimitive, ToPrimitive};
 #[allow(unused)]
-use smartstring::alias::String;
+use flexstr::{SharedStr, shared_str, IntoSharedStr, ToSharedStr};
 
 use super::instruction::MemoryAddress;
 use super::reference::{self, Label, ReferenceResolvable, Reference, RelativeReferenceDirection};

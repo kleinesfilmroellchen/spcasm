@@ -9,7 +9,7 @@ use object::elf::{ELFOSABI_STANDALONE, EM_PDSP, ET_EXEC, PT_LOAD, SHF_ALLOC, SHF
 use object::write::elf::{FileHeader, ProgramHeader, SectionHeader, SectionIndex};
 use object::write::StringId;
 #[allow(unused)]
-use smartstring::alias::String;
+use flexstr::{SharedStr, shared_str, IntoSharedStr, ToSharedStr};
 
 use crate::Segments;
 

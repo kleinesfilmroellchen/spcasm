@@ -518,6 +518,17 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0ce7134b9999ecaf8bcd65542e436736ef32ddca1b3e06094cb6ec5755203b80"
 
 [[package]]
+name = "flexstr"
+version = "0.9.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "4d50aef14619d336a54fca5a592d952eb39037b1a1e7e6afd9f91c892ac7ef65"
+dependencies = [
+ "itoa",
+ "serde",
+ "static_assertions",
+]
+
+[[package]]
 name = "fnv"
 version = "1.0.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1517,6 +1528,7 @@ version = "0.1.0"
 dependencies = [
  "dashmap",
  "env_logger",
+ "flexstr",
  "log",
  "miette",
  "parking_lot",
@@ -1708,16 +1720,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "smartstring"
-version = "1.0.1"
-source = "git+https://github.com/kleinesfilmroellchen/smartstring.git?branch=perf#28640e8ce3bdd6a9324c4d5503262377168f3dbc"
-dependencies = [
- "autocfg",
- "static_assertions",
- "version_check",
-]
-
-[[package]]
 name = "smawk"
 version = "0.3.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1765,6 +1767,7 @@ version = "0.2.0"
 dependencies = [
  "arrcat",
  "clap",
+ "flexstr",
  "human-panic",
  "lalrpop",
  "lalrpop-util",
@@ -1776,7 +1779,6 @@ dependencies = [
  "parking_lot",
  "reqwest",
  "shadow-rs",
- "smartstring 1.0.1 (git+https://github.com/kleinesfilmroellchen/smartstring.git?branch=perf)",
  "spcasm_derive",
  "thiserror",
  "trycmd",
@@ -1788,6 +1790,7 @@ name = "spcasm-web"
 version = "0.1.0"
 dependencies = [
  "console_error_panic_hook",
+ "flexstr",
  "html-escape",
  "js-sys",
  "miette",
@@ -1806,8 +1809,9 @@ dependencies = [
 name = "spcasm_derive"
 version = "0.1.0"
 dependencies = [
+ "flexstr",
  "quote",
- "smartstring 1.0.1 (registry+https://github.com/rust-lang/crates.io-index)",
+ "smartstring",
  "syn 2.0.12",
 ]
 

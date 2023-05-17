@@ -6,7 +6,7 @@
 
 extern crate test;
 #[allow(unused)]
-use smartstring::alias::String;
+use flexstr::{SharedStr, shared_str, IntoSharedStr, ToSharedStr};
 use test::Bencher;
 
 use super::wav::read_wav_for_brr;

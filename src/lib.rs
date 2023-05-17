@@ -23,7 +23,7 @@
 #![allow(non_upper_case_globals)]
 
 #[allow(unused)]
-use smartstring::alias::String;
+use flexstr::{shared_str, IntoSharedStr, SharedStr, ToSharedStr};
 
 #[macro_use] extern crate lalrpop_util;
 #[macro_use] extern crate lazy_static;

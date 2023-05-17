@@ -7,7 +7,7 @@ use std::sync::{Arc, Weak};
 use miette::SourceSpan;
 use parking_lot::RwLock;
 #[allow(unused)]
-use smartstring::alias::String;
+use flexstr::{SharedStr, shared_str, IntoSharedStr, ToSharedStr};
 
 use super::instruction::{Instruction, MemoryAddress, Opcode};
 use super::reference::{
@@ -140,7 +140,7 @@ impl AssemblyFile {
 					// To reference the relative label until codegen, create a new local label for it.
 					// This name is likely, but not guaranteed, to be unique! That's why we directly insert into
 					// the globals list.
-					let label_name: String =
+					let label_name:SharedStr =
 						format!("{}_{}", "-".repeat(usize::try_from(u64::from(id)).unwrap()), span.offset()).into();
 					let global_for_relative = Label::new_synthetic(label_name.clone(), *span);
 					self.parent
@@ -186,7 +186,7 @@ impl AssemblyFile {
 			{
 				let id = *id;
 				// To reference the relative label until codegen, create a new local label for it.
-				let label_name: String =
+				let label_name:SharedStr =
 					format!("{}_{}", "+".repeat(usize::try_from(u64::from(id)).unwrap()), span.offset()).into();
 				let global_for_relative = Label::new_synthetic(label_name.clone(), *span);
 				self.parent
@@ -296,7 +296,7 @@ impl AssemblyFile {
 					if matches!(&directive.value, DirectiveValue::Brr { directory: true, .. })
 						&& current_labels.is_empty()
 					{
-						let label_name: String = format!("brr_sample_{}", brr_label_number).into();
+						let label_name:SharedStr = format!("brr_sample_{}", brr_label_number).into();
 						let new_brr_label = Label::new_synthetic(label_name.clone(), directive.span);
 						brr_label_number += 1;
 
@@ -533,7 +533,7 @@ impl AssemblyFile {
 			let element = self.content[index].clone();
 			if let ProgramElement::IncludeSource { ref file, span } = element {
 				let environment = self.parent.upgrade().expect("parent deleted while we're still parsing");
-				let file: String = resolve_file(&self.source_code, file).to_string_lossy().into();
+				let file:SharedStr = resolve_file(&self.source_code, file).to_string_lossy().as_ref().into();
 				let mut included_code =
 					AssemblyCode::from_file(&file).map_err(|os_error| AssemblyError::FileNotFound {
 						os_error:  Arc::new(os_error),
@@ -656,7 +656,7 @@ impl AssemblyFile {
 				}
 				return Err(AssemblyError::UndefinedUserMacro {
 					name:             macro_name.clone(),
-					available_macros: user_macros.keys().map(String::clone).collect(),
+					available_macros: user_macros.keys().map(SharedStr::clone).collect(),
 					location:         *span,
 					src:              self.source_code.clone(),
 				}

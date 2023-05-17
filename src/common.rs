@@ -3,10 +3,10 @@
 use std::cmp::min;
 use std::sync::Arc;
 
+#[allow(unused)]
+use flexstr::{shared_str, IntoSharedStr, SharedStr, ToSharedStr};
 use miette::SourceSpan;
 use parking_lot::RwLock;
-#[allow(unused)]
-use smartstring::alias::String;
 
 pub use super::directive::Directive;
 pub use super::error::AssemblyError;
@@ -21,23 +21,23 @@ pub type AssemblyResult = miette::Result<(std::sync::Arc<RwLock<Environment>>, V
 
 /// Pretty-print byte data as hexadecimal, similar to hex editors.
 #[must_use]
-pub fn pretty_hex(bytes: &[u8], emphasis: Option<usize>) -> String {
+pub fn pretty_hex(bytes: &[u8], emphasis: Option<usize>) -> SharedStr {
 	let mut string = String::new();
 	// need approximately high nibble + low nibble + ' ' per byte
 	let mut index = 0;
 	while index * 16 < bytes.len() {
 		let section = &bytes[index * 16 .. min((index + 1) * 16, bytes.len())];
 		for (column, byte) in section.iter().enumerate() {
-			string = string + if let Some(emphasis) = emphasis && index * 16 + column == emphasis {
+			string.push_str(if let Some(emphasis) = emphasis && index * 16 + column == emphasis {
 				format!(" [{:02X}]", byte)
 			} else {
 				format!(" {:02X}", byte)
-			};
+			}.as_ref());
 		}
 		string.push('\n');
 		index += 1;
 	}
-	string
+	string.into()
 }
 
 /// Dumps the tree of references for debugging purposes
@@ -83,7 +83,7 @@ pub fn dump_ast(ast: &[ProgramElement]) {
 
 /// Pseudo-`Display` implementation for `SourceSpan`.
 #[must_use]
-pub fn span_to_string(span: SourceSpan) -> String {
+pub fn span_to_string(span: SourceSpan) -> SharedStr {
 	format!("({:<4}-{:<4})", span.offset(), span.offset() + span.len()).into()
 }
 

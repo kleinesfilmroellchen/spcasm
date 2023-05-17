@@ -7,7 +7,7 @@ use std::collections::HashMap;
 
 use miette::SourceSpan;
 #[allow(unused)]
-use smartstring::alias::String;
+use flexstr::{SharedStr, shared_str, IntoSharedStr, ToSharedStr};
 
 use super::AssembledData;
 use crate::sema::instruction::Mnemonic;

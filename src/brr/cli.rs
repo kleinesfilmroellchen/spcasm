@@ -8,9 +8,9 @@ use std::path::PathBuf;
 
 use ::wav::WAV_FORMAT_PCM;
 use clap::{Parser, Subcommand, ValueEnum};
-use num_traits::cast::FromPrimitive;
 #[allow(unused)]
-use smartstring::alias::String;
+use flexstr::{shared_str, IntoSharedStr, SharedStr, ToSharedStr};
+use num_traits::cast::FromPrimitive;
 #[allow(clippy::wildcard_imports)]
 use spcasm::brr::*;
 
@@ -228,7 +228,7 @@ fn main() {
 				block
 					.encoded_samples
 					.iter()
-					.map(|sample| String::from(std::string::String::from(
+					.map(|sample| SharedStr::from(std::string::String::from(
 						format!("{:01X}", sample).chars().last().unwrap()
 					)))
 					.collect::<Vec<_>>()

@@ -5,10 +5,10 @@ mod lexer;
 mod token;
 use std::sync::Arc;
 
+#[allow(unused)]
+use flexstr::{shared_str, IntoSharedStr, SharedStr, ToSharedStr};
 pub use lexer::*;
 use miette::{SourceOffset, SourceSpan};
-#[allow(unused)]
-use smartstring::alias::String;
 pub use token::Token;
 
 use crate::directive::DirectiveValue;
@@ -125,7 +125,7 @@ pub fn apply_brr_options(
 	directive_location: SourceSpan,
 	source_code: &Arc<AssemblyCode>,
 	mut value: DirectiveValue,
-	options: Vec<(String, SourceSpan)>,
+	options: Vec<(SharedStr, SourceSpan)>,
 ) -> Result<DirectiveValue, AssemblyError> {
 	match &mut value {
 		DirectiveValue::Brr { auto_trim, directory, .. } => {
@@ -139,7 +139,7 @@ pub fn apply_brr_options(
 							option_location,
 							option: option.clone(),
 							directive: "brr".into(),
-							valid_options: vec!["nodirectory".into(), "autotrim".into()],
+							valid_options: vec![shared_str!("nodirectory"), shared_str!("autotrim")],
 							src: source_code.clone(),
 						}),
 				}
@@ -160,7 +160,7 @@ pub fn apply_sample_table_options(
 	directive_location: SourceSpan,
 	source_code: &Arc<AssemblyCode>,
 	mut value: DirectiveValue,
-	options: Vec<(String, SourceSpan)>,
+	options: Vec<(SharedStr, SourceSpan)>,
 ) -> Result<DirectiveValue, AssemblyError> {
 	match &mut value {
 		DirectiveValue::SampleTable { auto_align } => {

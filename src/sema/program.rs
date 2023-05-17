@@ -5,7 +5,7 @@ use std::sync::Arc;
 use miette::SourceSpan;
 use parking_lot::RwLock;
 #[allow(unused)]
-use smartstring::alias::String;
+use flexstr::{SharedStr, shared_str, IntoSharedStr, ToSharedStr};
 
 use super::instruction::Instruction;
 use super::reference::{MacroParent, Reference, ReferenceResolvable};
@@ -26,14 +26,14 @@ pub enum ProgramElement {
 	/// Include directive that copy-pastes another file's assembly into this one.
 	IncludeSource {
 		/// The file that is included as source code.
-		file: String,
+		file:SharedStr,
 		/// Source code location of the include directive.
 		span: SourceSpan,
 	},
 	/// Calling a user-defined macro, e.g. `%my_macro(3, 4, 5)`
 	UserDefinedMacroCall {
 		/// Name of the macro that is being called.
-		macro_name: String,
+		macro_name:SharedStr,
 		/// The arguments to the macro; currently only numbers are supported.
 		arguments:  Vec<AssemblyTimeValue>,
 		/// Location in source code of the macro call.

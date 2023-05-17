@@ -5,10 +5,10 @@ use std::fmt::Display;
 use std::num::{NonZeroU64, NonZeroUsize};
 use std::sync::{Arc, Weak};
 
+#[allow(unused)]
+use flexstr::{shared_str, IntoSharedStr, SharedStr, ToSharedStr};
 use miette::SourceSpan;
 use parking_lot::RwLock;
-#[allow(unused)]
-use smartstring::alias::String;
 
 use super::instruction::MemoryAddress;
 use super::{AssemblyTimeValue, LabelUsageKind};
@@ -40,7 +40,7 @@ pub enum Reference {
 	/// environmental information when it was created.
 	UnresolvedLocalLabel {
 		/// Name of the label.
-		name:          String,
+		name:          SharedStr,
 		/// Nesting level of the label, indicated by the number of preceding dots.
 		/// This is important for figuring out which label is this label's parent.
 		nesting_level: NonZeroUsize,
@@ -63,7 +63,7 @@ pub enum Reference {
 	/// A macro argument that is resolved at a later point.
 	MacroArgument {
 		/// The name of the argument.
-		name:         String,
+		name:         SharedStr,
 		/// The resolved value of the argument. Note that this is always None for the macro definition.
 		value:        Option<Box<AssemblyTimeValue>>,
 		/// The location where this macro argument usage is defined. Note that because macro arguments are not coerced,
@@ -97,7 +97,7 @@ impl Reference {
 	/// Returns the user-specified name of the reference.
 	#[allow(clippy::missing_panics_doc)]
 	#[must_use]
-	pub fn name(&self) -> String {
+	pub fn name(&self) -> SharedStr {
 		match self {
 			Self::Label(label) => label.read_recursive().name.clone(),
 			Self::Relative { direction, id, .. } =>
@@ -390,7 +390,7 @@ impl Display for RelativeReferenceDirection {
 #[derive(Clone, Debug)]
 pub struct Label {
 	/// User-given reference name.
-	pub name:            String,
+	pub name:            SharedStr,
 	/// Resolved memory location of the reference, if any.
 	pub location:        Option<AssemblyTimeValue>,
 	/// Source code location where this reference is defined.
@@ -400,7 +400,7 @@ pub struct Label {
 	/// Whether this is a synthetic label. Synthetic labels are transparent to label hierarchy resolution.
 	pub synthetic:       bool,
 	/// Child labels belonging to this label.
-	pub children:        BTreeMap<String, Arc<RwLock<Label>>>,
+	pub children:        BTreeMap<SharedStr, Arc<RwLock<Label>>>,
 	/// Parent label of this label. If not set, this label is global.
 	pub parent:          Weak<RwLock<Label>>,
 }
@@ -434,7 +434,7 @@ impl Label {
 	}
 
 	/// Creates a new label with the given name and definition location.
-	pub fn new_with_definition(name: String, span: SourceSpan) -> Arc<RwLock<Self>> {
+	pub fn new_with_definition(name: SharedStr, span: SourceSpan) -> Arc<RwLock<Self>> {
 		Arc::new(RwLock::new(Self {
 			children: BTreeMap::default(),
 			location: None,
@@ -447,7 +447,7 @@ impl Label {
 	}
 
 	/// Creates a new synthetic label with the given name and definition location.
-	pub fn new_synthetic(name: String, span: SourceSpan) -> Arc<RwLock<Self>> {
+	pub fn new_synthetic(name: SharedStr, span: SourceSpan) -> Arc<RwLock<Self>> {
 		Arc::new(RwLock::new(Self {
 			children: BTreeMap::default(),
 			location: None,
@@ -460,7 +460,7 @@ impl Label {
 	}
 
 	/// Creates a new label with the given name and one usage location.
-	pub fn new_with_use(name: String, span: SourceSpan) -> Arc<RwLock<Self>> {
+	pub fn new_with_use(name: SharedStr, span: SourceSpan) -> Arc<RwLock<Self>> {
 		Arc::new(RwLock::new(Self {
 			children: BTreeMap::default(),
 			location: None,
@@ -549,11 +549,11 @@ pub struct MacroParent {
 }
 
 impl MacroParent {
-	pub fn new_actual(parameters: HashMap<String, AssemblyTimeValue>, label: Arc<RwLock<Label>>) -> Arc<RwLock<Self>> {
+	pub fn new_actual(parameters: HashMap<SharedStr, AssemblyTimeValue>, label: Arc<RwLock<Label>>) -> Arc<RwLock<Self>> {
 		Arc::new(RwLock::new(Self { label, parameters: MacroParameters::Actual(parameters) }))
 	}
 
-	pub fn new_formal(parameters: Option<Vec<(String, SourceSpan)>>, span: SourceSpan) -> Arc<RwLock<Self>> {
+	pub fn new_formal(parameters: Option<Vec<(SharedStr, SourceSpan)>>, span: SourceSpan) -> Arc<RwLock<Self>> {
 		Arc::new(RwLock::new(Self {
 			label:      Arc::new(RwLock::new(Label {
 				name:            "macro global placeholder".into(),
@@ -583,9 +583,9 @@ impl Display for MacroParent {
 #[derive(Debug, Clone)]
 pub enum MacroParameters {
 	/// Formal parameters, used in the macro's definition.
-	Formal(Vec<(String, SourceSpan)>),
+	Formal(Vec<(SharedStr, SourceSpan)>),
 	/// Actual parameters, used while a macro is being resolved.
-	Actual(HashMap<String, AssemblyTimeValue>),
+	Actual(HashMap<SharedStr, AssemblyTimeValue>),
 }
 
 impl MacroParameters {
@@ -599,10 +599,10 @@ impl MacroParameters {
 	}
 
 	/// Returns all argument names that this macro parent has.
-	pub fn argument_names(&self) -> Vec<String> {
+	pub fn argument_names(&self) -> Vec<SharedStr> {
 		match self {
 			Self::Formal(list) => list.clone().into_iter().map(|(name, _)| name).collect(),
-			Self::Actual(list) => list.keys().map(String::clone).collect(),
+			Self::Actual(list) => list.keys().map(SharedStr::clone).collect(),
 		}
 	}
 
@@ -618,7 +618,7 @@ impl Display for MacroParameters {
 	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
 		f.pad(&match self {
 			Self::Formal(formal) =>
-				formal.iter().map(|(parameter, _)| parameter).intersperse(&", ".to_owned().into()).collect::<String>(),
+				formal.iter().map(|(parameter, _)| parameter as &str).intersperse(", ").collect::<String>(),
 			Self::Actual(actual) => actual
 				.iter()
 				.map(|(parameter, value)| format!("{parameter} = {value:04X}"))
@@ -667,7 +667,7 @@ pub trait ReferenceResolvable {
 /// Note that the given current label may not end up being the label's parent, just one of its parents. This depends on
 /// the hierarchical position of this label, indicated by `nesting_level`
 pub fn create_local_at_this_position(
-	local_name: String,
+	local_name: SharedStr,
 	local_nesting_level: NonZeroUsize,
 	local_location: SourceSpan,
 	local_value: Option<Box<AssemblyTimeValue>>,

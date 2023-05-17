@@ -4,7 +4,7 @@ use std::fs::File;
 use std::io::Write;
 
 #[allow(unused)]
-use smartstring::alias::String;
+use flexstr::{SharedStr, shared_str, IntoSharedStr, ToSharedStr};
 
 use crate::{
 	cli, dump_ast, dump_reference_tree, elf, run_assembler, run_assembler_into_segments, AssemblyCode, AssemblyError,

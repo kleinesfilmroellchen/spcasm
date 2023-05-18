@@ -4,9 +4,9 @@
 use std::path::PathBuf;
 use std::sync::Arc;
 
-use miette::{Result, SourceSpan};
 #[allow(unused)]
-use flexstr::{SharedStr, shared_str, IntoSharedStr, ToSharedStr};
+use flexstr::{shared_str, IntoSharedStr, SharedStr, ToSharedStr};
+use miette::{Result, SourceSpan};
 
 use crate::change::Change;
 use crate::cli::{default_backend_options, Frontend};
@@ -246,11 +246,14 @@ impl AssembledData {
 					self.append_8_bits(MemoryAddress::from(*opcode), current_labels, *span)
 				},
 			EntryOrFirstOperandTable::Table(first_operand_table) => {
-				let mut legal_modes: Vec<_> = first_operand_table.keys().map(|f| f.to_string().into()).collect();
-				legal_modes.sort();
+				let get_legal_modes = || {
+					let mut legal_modes: Vec<_> = first_operand_table.keys().map(|f| f.to_string().into()).collect();
+					legal_modes.sort();
+					legal_modes
+				};
 				let first_operand = first_operand.as_ref().ok_or_else(|| AssemblyError::MissingOperand {
 					mnemonic:    *mnemonic,
-					legal_modes: legal_modes.clone(),
+					legal_modes: get_legal_modes(),
 					location:    *span,
 					src:         self.source_code.clone(),
 				})?;
@@ -258,11 +261,11 @@ impl AssembledData {
 				// Retrieve the table entry for the first operand.
 				let first_operand_entry = first_operand_table.get(&first_operand.into()).ok_or_else(|| {
 					AssemblyError::InvalidFirstAddressingMode {
-						mode: first_operand.to_string().into(),
-						mnemonic: *mnemonic,
-						legal_modes,
-						src: self.source_code.clone(),
-						location: *span,
+						mode:        first_operand.to_string().into(),
+						mnemonic:    *mnemonic,
+						legal_modes: get_legal_modes(),
+						src:         self.source_code.clone(),
+						location:    *span,
 					}
 				})?;
 				// At this point, we have fully checked the first operand's correctness and can assume that the table
@@ -342,26 +345,29 @@ impl AssembledData {
 						*span,
 					),
 					EntryOrSecondOperandTable::Table(second_operand_table) => {
-						let mut legal_modes: Vec<_> =
-							second_operand_table.keys().map(|f| f.to_string().into()).collect();
-						legal_modes.sort();
+						let get_legal_modes = || {
+							let mut legal_modes: Vec<_> =
+								second_operand_table.keys().map(|f| f.to_string().into()).collect();
+							legal_modes.sort();
+							legal_modes
+						};
 						let second_operand =
 							second_operand.as_ref().ok_or_else(|| AssemblyError::MissingSecondOperand {
 								mnemonic:    *mnemonic,
 								location:    *span,
-								legal_modes: legal_modes.clone(),
+								legal_modes: get_legal_modes(),
 								src:         self.source_code.clone(),
 							})?;
 
 						let second_operand_entry =
 							second_operand_table.get(&second_operand.into()).ok_or_else(|| {
 								AssemblyError::InvalidSecondAddressingMode {
-									mode: second_operand.to_string().into(),
-									mnemonic: *mnemonic,
-									first_mode: first_operand.to_string().into(),
-									legal_modes,
-									src: self.source_code.clone(),
-									location: *span,
+									mode:        second_operand.to_string().into(),
+									mnemonic:    *mnemonic,
+									first_mode:  first_operand.to_string().into(),
+									legal_modes: get_legal_modes(),
+									src:         self.source_code.clone(),
+									location:    *span,
 								}
 							})?;
 

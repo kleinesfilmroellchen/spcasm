@@ -12,6 +12,7 @@ export function outputWidth() {
   const metrics = context.measureText("M".repeat(repeat));
   // The calculation is off by almost 30%, I have no idea why but this seems to work.
   return (
-    document.querySelector("#output").clientWidth / (metrics.width / repeat) * 0.7
+    (document.querySelector("#output").clientWidth / (metrics.width / repeat)) *
+    0.7
   );
 }

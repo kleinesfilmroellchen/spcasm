@@ -92,7 +92,7 @@ fn ansi_to_html(text: &str) -> SharedStr {
 		.into()
 }
 
-#[wasm_bindgen(module = "/www/lib.js")]
+#[wasm_bindgen(module = "/lib.js")]
 extern "C" {
 	#[wasm_bindgen(js_name = "outputWidth")]
 	fn output_width() -> f64;

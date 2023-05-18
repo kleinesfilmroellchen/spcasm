@@ -29,27 +29,13 @@ jobs:
             target/
           key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}-${{ hashFiles('rust-version') }}-nodefault
 
-      - name: Install wasm-pack
+      - name: Install trunk
         uses: extractions/setup-crate@v1
         with:
-          owner: rustwasm
-          name: wasm-pack
-      - name: Compile wasm module
-        run: cd spcasm-web && wasm-pack --verbose build --verbose --features wee_alloc --no-default-features
-      - name: Install node
-        uses: actions/setup-node@v3
-        with:
-          node-version: "17.0"
-          cache: "npm"
-          cache-dependency-path: spcasm-web/www/package-lock.json
-      - name: Install NPM modules
-        run: cd spcasm-web/www && npm install --verbose
-      - name: Build frontend
-        run: cd spcasm-web/www && npm run build --verbose
-      - name: Make site directory
-        run: mkdir site
-      - name: Copy frontend
-        run: cp -rT spcasm-web/www/dist site
+          owner: thedodd
+          name: trunk
+      - name: Compile and package spcasm-web
+        run: cd spcasm-web && trunk build --dist ../site --release --features wee_alloc --no-default-features --public-url spcasm
 
       - name: Install mdbook
         uses: extractions/setup-crate@v1

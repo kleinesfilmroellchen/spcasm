@@ -55,11 +55,7 @@ There's further ways of fiddling with the build config:
 
 ### `spcasm-web`
 
-Working with the WebAssembly bindings and webpage requires a little more effort. You need to have `wasm-pack` and `npm`/node.js. In the `spcasm-web` directory:
-
-- Use `wasm-pack build --features wee_alloc,console_error_panic_hook --no-default-features` to generate the Wasm module and bindings. The two extra features are optional; `wee_alloc` reduces code size and `console_error_panic_hook` helps debugging by printing panics to the console.
-- In the `www` directory: Use `npm install` to deal with the necessary evil of several hundred JavaScript modules. (This unfortunately is the best way of making things "just work", plus you get a development server for free.)
-- Use `npm run start` for a development server, or `npm run build` to build files for a static web server into the `dist` directory.
+Working with the WebAssembly bindings and webpage is quite straightforward, but you need to have `trunk` installed (`cargo install trunk`). Then, run `trunk build` in the `spcasm-web` folder. For a development server with auto-reload, use `trunk serve`; a browser window will open automatically.
 
 ## Architectural Overview
 

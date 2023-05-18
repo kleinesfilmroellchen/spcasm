@@ -9,17 +9,25 @@
       name="description"
       content="In-browser interactive assembler for the SPC700 architecture."
     />
-    <link rel="stylesheet" href="normalize.css" />
-    <link rel="stylesheet" href="skeleton.css" />
-    <link rel="stylesheet" href="main.css" />
+
+    <!-- Trunk build setup -->
+    <link data-trunk rel="css" href="normalize.css" />
+    <link data-trunk rel="css" href="skeleton.css" />
+    <link data-trunk rel="css" href="main.css" />
+    <link data-trunk rel="copy-dir" href="fonts" />
+    <!-- https://github.com/thedodd/trunk/issues/3#issuecomment-698849526 -->
+    <!-- Even though plain scripts are documented to just work, that's not actually the case. -->
+    <link data-trunk rel="copy-file" href="./index.js" />
+    <base data-trunk-public-url />
   </head>
   <body>
+    <noscript
+      >This page does not work without JavaScript and WebAssembly, please enable
+      both in your browser.</noscript
+    >
+    <script src="index.js" defer></script>
+
     <div class="container">
-      <noscript
-        >This page does not work without JavaScript and WebAssembly, please
-        enable both in your browser.</noscript
-      >
-      <script src="./bootstrap.js"></script>
       <header aria-labelledby="title">
         <h1 id="title">spcasm</h1>
         <p>

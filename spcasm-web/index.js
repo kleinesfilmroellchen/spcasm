@@ -1,7 +1,5 @@
 "use strict";
 
-import * as spcasm from "spcasm-web";
-
 // Creates an options object from the UI input.
 function createOptions() {
   return {
@@ -25,9 +23,11 @@ const updatingObjects = [
 for (const object of updatingObjects) {
   object.addEventListener(
     "input",
-    () => spcasm.on_assembly_change(createOptions()),
+    () => window.spcasm.on_assembly_change(createOptions()),
     false
   );
 }
 
-spcasm.on_assembly_change(createOptions());
+window.onWasmLoad = function () {
+  window.spcasm.on_assembly_change(createOptions());
+};

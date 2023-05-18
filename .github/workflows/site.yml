@@ -16,6 +16,9 @@ jobs:
         uses: actions-rs/toolchain@v1
         with:
           toolchain: nightly
+          profile: minimal
+      - name: Install Wasm target
+        run: rustup target add wasm32-unknown-unknown
       - name: Output Rust version to file
         run: cargo --version > rust-version
       - name: Cargo cache

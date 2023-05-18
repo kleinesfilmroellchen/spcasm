@@ -4,7 +4,7 @@ use std::fs::File;
 use std::io::Write;
 
 #[allow(unused)]
-use flexstr::{SharedStr, shared_str, IntoSharedStr, ToSharedStr};
+use flexstr::{shared_str, IntoSharedStr, SharedStr, ToSharedStr};
 
 use crate::{
 	cli, dump_ast, dump_reference_tree, elf, run_assembler, run_assembler_into_segments, AssemblyCode, AssemblyError,
@@ -81,6 +81,7 @@ pub fn main() -> miette::Result<()> {
 					.map_err(AssemblyError::from)?,
 			};
 		}
+
 		Ok(())
 	} else {
 		std::process::exit(1);

@@ -155,6 +155,7 @@ impl PartialEq for Token {
 impl Token {
 	/// Returns the source span where this token is located in the file.
 	#[must_use]
+	#[inline]
 	pub fn source_span(&self) -> SourceSpan {
 		match self {
 			Self::Hash(location)

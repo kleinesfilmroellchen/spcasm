@@ -1,6 +1,6 @@
 # Error reference
 
-spcasm reports various kinds of errors, warnings and advice. Errors always abort the assembly process. Warnings inform you of things that might not have the behavior you want, and point out what the assembler actually did. Advice, often called "Infos" in IDEs, informs you of assembler behavior that you are probably expecing, but which is nice to know about anyways.
+spcasm reports various kinds of errors, warnings and advice. Errors always abort the assembly process. Warnings inform you of things that might not have the behavior you want, and point out what the assembler actually did. Advice, often called "Infos" in IDEs, informs you of assembler behavior that you are probably expecting, but which is nice to know about anyways.
 
 All of these three are often collectively called errors, as they can be turned into hard errors with the right settings (see [Usage](usage.md)). Each error can be uniquely identified by its error code, which starts with `spcasm::` by convention and follows a Rust namespace-like syntax. The various categories group errors related to common spcasm features. (There are no numeric error codes, not even behind the scenes; spcasm always exits with exit code 1 if an error occurs.)
 
@@ -291,7 +291,7 @@ spcasm::directive::missing_fill_pad_parameter
 
 ```
 
-The `fill`, `fill align`, and `pad` directives have the value to be used for filling specified in a separate directive. For `fill` and `fill align`, this is `fillbyte`, `fillword`, `filllong`, `filldword`, and for `pad` it's `padbyte`, `padword`, `padlong`, `paddword`. Note that segments have no effect on these directives, so you must precede the fill directive with the value specification directive in source code. (Yes, these directives have a weird design for Asar compatibility reasons.)
+The `fill`, `fill align`, and `pad` directives have the value to be used for filling specified in a separate directive. For `fill` and `fill align`, these are `fillbyte`, `fillword`, `filllong`, `filldword`, and for `pad` they are `padbyte`, `padword`, `padlong`, `paddword`. Note that segments have no effect on these directives, so you must precede the fill directive with the value specification directive in source code. (Yes, these directives have a weird design for Asar compatibility reasons.)
 
 #### spcasm::directive::range_out_of_bounds
 
@@ -621,7 +621,7 @@ $ spcasm -w all tests/errors/file-not-found.spcasmtest
 Error: spcasm::io::file_not_found
 
   × File "tests/errors/this_definitely_does_not_exist" was not found
-  ╰─▶ Das System kann die angegebene Datei nicht finden. (os error 2)
+  ╰─▶ File not found. (os error 2)
    ╭─[tests/errors/file-not-found.spcasmtest:1:1]
  1 │ org 0
  2 │ include "this_definitely_does_not_exist"

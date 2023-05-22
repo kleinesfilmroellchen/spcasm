@@ -11,7 +11,7 @@ use crate::error::AssemblyError;
 use crate::sema::reference::RelativeReferenceDirection;
 use crate::sema::Register;
 
-/// An API adaptor that allows us to pass the Vec<Token> we lexed into LALRPOP.
+/// An API adaptor that allows us to pass the [`Vec<Token>`] we lexed into LALRPOP.
 pub struct LalrpopAdaptor(IntoIter<Token>);
 
 impl From<Vec<Token>> for LalrpopAdaptor {

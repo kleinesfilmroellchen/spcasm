@@ -118,7 +118,7 @@ impl AssemblyTimeValue {
 		self.try_resolve_impl(Vec::new())
 	}
 
-	/// The implementation for ``try_resolve``. This function keeps track of which references have been tried to be
+	/// The implementation for [`Self::try_resolve`]. This function keeps track of which references have been tried to be
 	/// resolved already to prevent infinite recursion.
 	#[must_use]
 	pub fn try_resolve_impl(self, resolution_attempts: Vec<&Reference>) -> Self {

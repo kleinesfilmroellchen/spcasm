@@ -213,7 +213,7 @@ impl AssembledData {
 		Ok(())
 	}
 
-	/// Assemble a single instruction. This function uses the codegen table `table::assembly_table`.
+	/// Assemble a single instruction. This function uses the codegen table [`table::assembly_table`](`static@table::assembly_table`).
 	#[allow(clippy::unnecessary_wraps, clippy::too_many_lines)]
 	fn assemble_instruction(
 		&mut self,

@@ -9,10 +9,10 @@
 
 use std::convert::TryInto;
 
+#[allow(unused)]
+use flexstr::{shared_str, IntoSharedStr, SharedStr, ToSharedStr};
 use num_derive::FromPrimitive;
 use num_traits::FromPrimitive;
-#[allow(unused)]
-use flexstr::{SharedStr, shared_str, IntoSharedStr, ToSharedStr};
 
 #[cfg(test)] mod test;
 
@@ -30,7 +30,7 @@ pub type DecodedBlockSamples = [DecodedSample; 16];
 pub type EncodedBlockSamples = [EncodedSample; 16];
 
 /// In the DSP hardware, decimal multiplication is simulated with addition and shifting. We therefore use functions that
-/// provide the hardware calculation simulating the multiplication. See ``LPCFilter`` for the implementations of the
+/// provide the hardware calculation simulating the multiplication. See [`LPCFilter`] for the implementations of the
 /// various shift functions.
 type FilterCoefficients = [fn(i16) -> i16; 2];
 type WarmUpSamples = [DecodedSample; 2];
@@ -152,7 +152,7 @@ pub fn encode_to_brr(
 /// All possible header bytes are valid on some level, so no errors are thrown because of this. If the encoded data does
 /// not line up with a BRR block however, an error is returned.
 #[allow(clippy::module_name_repetitions)]
-pub fn decode_from_brr(encoded: &[u8]) -> Result<Vec<DecodedSample>,SharedStr> {
+pub fn decode_from_brr(encoded: &[u8]) -> Result<Vec<DecodedSample>, SharedStr> {
 	let (blocks, remainder) = encoded.as_chunks();
 	if !remainder.is_empty() {
 		return Err(format!("Cut off BRR block (size {}) at the end of the stream", remainder.len()).into());
@@ -568,8 +568,8 @@ pub enum LPCFilter {
 	Zero = 0,
 	/// Filter 1, differential coding.
 	One = 1,
-	/// Filter 2, something extremely close to polynomial order 2 predictive coding (which would be s[t] + 2* s[t-1] -
-	/// s[t-2]).
+	/// Filter 2, something extremely close to polynomial order 2 predictive coding (which would be `s[t] + 2* s[t-1] -
+	/// s[t-2])`.
 	Two = 2,
 	/// Filter 3, again very close to polynomial order 2 predictive coding but more off than filter 2. I can't make
 	/// sense of this one.
@@ -689,14 +689,14 @@ impl LoopEndFlags {
 	}
 
 	/// Returns whether these flags signal that after this block, playback should jump back to the loop point specified
-	/// in the sample table. Note that this raw loop flag only has effect if ``is_end`` is set.
+	/// in the sample table. Note that this raw loop flag only has effect if [`Self::is_end`] is set.
 	#[must_use]
 	pub const fn is_raw_loop(self) -> bool {
 		self as u8 & 0b10 > 0
 	}
 
 	/// Returns whether the playback will *actually* loop after this sample, i.e. jump to the loop point. This is
-	/// different from the raw loop flag (``Self::is_raw_loop``), which has no effect without the end flag.
+	/// different from the raw loop flag ([`Self::is_raw_loop`]), which has no effect without the end flag.
 	#[must_use]
 	pub const fn will_loop_afterwards(self) -> bool {
 		self.eq_(Self::Loop)

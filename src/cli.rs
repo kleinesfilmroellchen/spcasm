@@ -19,7 +19,7 @@ use crate::error::{AssemblyError, ErrorCodes};
 /// has different requirements for how the backend should react in various situations, especially error conditions. The
 /// backend passes a reference to the frontend around and calls into it during assembly.
 ///
-/// `Frontend` need to additionally implement Send and Sync (since it's used in multi-threaded contexts), and
+/// [`Frontend`] need to additionally implement Send and Sync (since it's used in multi-threaded contexts), and
 /// provide debug output.
 pub trait Frontend: std::fmt::Debug + Send + Sync {
 	/// Returns whether the given warning is ignored, i.e. the user must not be informed of it.
@@ -38,7 +38,7 @@ pub trait Frontend: std::fmt::Debug + Send + Sync {
 
 	/// Signals a diagnostic to the frontend. The frontend can decide whether it wants to output the diagnostic
 	/// directly, collect it internally, etc. This function will not pass ignored diagnostics on to
-	/// ``report_diagnostic_impl``.
+	/// [`report_diagnostic_impl`](`crate::cli::Frontend::report_diagnostic_impl`).
 	fn report_diagnostic(&self, diagnostic: AssemblyError) {
 		// Pass on anything that is either an error or not ignored.
 		if diagnostic.severity().is_some_and(|severity| severity == Severity::Error)
@@ -50,13 +50,13 @@ pub trait Frontend: std::fmt::Debug + Send + Sync {
 	}
 }
 
-/// Returns a `Frontend` implementation with default behavior.
+/// Returns a [`Frontend`] implementation with default behavior.
 #[must_use]
 pub fn default_backend_options() -> Arc<dyn Frontend> {
 	Arc::new(DummyOptions {})
 }
 
-/// Backend options created by clap in binary builds.
+/// [`Frontend`] options created by clap in binary builds.
 #[derive(Debug, Default, Args)]
 #[cfg(feature = "binaries")]
 #[allow(clippy::module_name_repetitions)]
@@ -228,7 +228,7 @@ mod clap_dependent {
 		pub dump_ast:        bool,
 	}
 
-	/// Format to output to; see `SpcasmCli`.
+	/// Format to output to; see [`SpcasmCli`].
 	#[derive(Clone, Copy, Debug, Eq, PartialEq, ValueEnum)]
 	#[repr(u8)]
 	pub enum OutputFormat {

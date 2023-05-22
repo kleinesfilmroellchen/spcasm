@@ -5,9 +5,9 @@
 
 use std::collections::HashMap;
 
-use miette::SourceSpan;
 #[allow(unused)]
-use flexstr::{SharedStr, shared_str, IntoSharedStr, ToSharedStr};
+use flexstr::{shared_str, IntoSharedStr, SharedStr, ToSharedStr};
+use miette::SourceSpan;
 
 use super::AssembledData;
 use crate::sema::instruction::Mnemonic;
@@ -98,8 +98,8 @@ pub enum TwoOperandEntry {
 type Table = HashMap<Mnemonic, EntryOrFirstOperandTable>;
 
 lazy_static! {
-	/// The `assembly_table` static data structure contains mappings from mnemonics and operands to the assembled data. This
-	/// data is given in the form of functions executed on a `Segments` instance.
+	/// The [`assembly_table`] static data structure contains mappings from mnemonics and operands to the assembled data. This
+	/// data is given in the form of functions executed on a [`crate::segments::Segments`] instance.
 	pub static ref assembly_table: Table = {
 		let mut table = HashMap::new();
 

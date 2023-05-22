@@ -17,7 +17,7 @@ pub use reference::Reference;
 pub use register::Register;
 pub use value::AssemblyTimeValue;
 
-/// How a looked-up reference is used. See ``Environment::get_global_label``.
+/// How a looked-up reference is used. See [`crate::Environment::get_global_label`].
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[repr(u8)]
 pub enum LabelUsageKind {

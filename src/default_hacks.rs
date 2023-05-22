@@ -9,7 +9,7 @@ use std::num::ParseIntError;
 use std::sync::Arc;
 
 #[allow(unused)]
-use flexstr::{SharedStr, shared_str, IntoSharedStr, ToSharedStr};
+use flexstr::{shared_str, IntoSharedStr, SharedStr, ToSharedStr};
 
 use crate::directive::DirectiveSymbol;
 use crate::error::{ReferenceType, TokenOrString};
@@ -17,11 +17,11 @@ use crate::parser::Token;
 use crate::sema::instruction::Mnemonic;
 use crate::AssemblyCode;
 
-/// This is a default-like trait whose values are wholly ignored. It's just necessary for a discriminator-related hack:
-/// ``std::mem::discriminator`` has to obtain an enum instance, because enum variants are not types. In order to
-/// instantiate all the variants of e.g. ``crate::error::AssemblyError``, we just have to provide values to their
-/// fields, it does not matter at all what those values are. If possible we're just gonna grab ``Default``'s data, but
-/// not all field types implement that.
+/// This is a default-like trait whose values are wholly ignored. It's just necessary for a discriminant-related hack:
+/// [`std::mem::discriminant`] has to obtain an enum instance, because enum variants are not types. In order to
+/// instantiate all the variants of e.g. [`crate::error::AssemblyError`], we just have to provide values to their
+/// fields, it does not matter at all what those values are. If possible we're just gonna grab
+/// [`std::default::Default`]'s data, but not all field types implement that.
 pub trait FakeDefaultForIgnoredValues {
 	fn default() -> Self;
 }

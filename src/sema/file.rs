@@ -258,7 +258,7 @@ impl AssemblyFile {
 		|_| AssemblyError::MissingSegment { location: *span, src: source_code.clone() }.into()
 	}
 
-	/// Splits the AST into segments which (still) contain ``ProgramElements``. This is an initial step in laying out
+	/// Splits the AST into segments which (still) contain [`ProgramElement`]s. This is an initial step in laying out
 	/// segments and their contents, and also helps to catch user segmenting errors early.
 	///
 	/// # Errors

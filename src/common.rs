@@ -81,13 +81,13 @@ pub fn dump_ast(ast: &[ProgramElement]) {
 	println!("AST:\n{}", ast.iter().map(ProgramElement::to_string).intersperse("\n".into()).collect::<String>());
 }
 
-/// Pseudo-`Display` implementation for `SourceSpan`.
+/// Pseudo-[`std::fmt::Display`] implementation for [`SourceSpan`](https://docs.rs/miette/latest/miette/struct.SourceSpan.html).
 #[must_use]
 pub fn span_to_string(span: SourceSpan) -> SharedStr {
 	format!("({:<4}-{:<4})", span.offset(), span.offset() + span.len()).into()
 }
 
-/// Pseudo-`Display` implementation for the expected output of a program element.
+/// Pseudo-[`std::fmt::Display`] implementation for the expected output of a program element.
 pub fn byte_vec_to_string(vec: &Option<Vec<u8>>) -> std::string::String {
 	vec.as_ref().map_or_else(std::string::String::new, |expected_value| {
 		format!(
@@ -111,6 +111,7 @@ pub fn run_assembler_with_default_options(file_name: &str) -> AssemblyResult {
 }
 
 /// Run the assembler on a single file.
+///
 /// # Errors
 /// Any assembler errors are propagated to the caller.
 pub fn run_assembler_on_file(file_name: &str, options: Arc<dyn Frontend>) -> AssemblyResult {

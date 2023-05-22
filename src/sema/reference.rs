@@ -590,7 +590,7 @@ pub enum MacroParameters {
 
 impl MacroParameters {
 	/// Returns whether the macro parent has any argument with this name. This function will usually be faster than
-	/// searching through the result of `argument_names`.
+	/// searching through the result of [`Self::argument_names`].
 	pub fn has_argument_named(&self, name: &str) -> bool {
 		match self {
 			Self::Formal(list) => list.iter().any(|(formal_name, _)| formal_name == name),

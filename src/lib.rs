@@ -38,7 +38,7 @@ pub use source::AssemblyCode;
 #[macro_export]
 macro_rules! w_error {
 	($vis:vis mod $modname:ident) => {
-		#[deny(missing_docs, unused, clippy::all, clippy::pedantic, clippy::nursery)]
+		#[deny(missing_docs, unused, clippy::all, clippy::pedantic, clippy::nursery, rustdoc::all)]
 		$vis mod $modname;
 	};
 }

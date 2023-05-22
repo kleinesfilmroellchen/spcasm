@@ -46,7 +46,7 @@ impl Environment {
 
 	/// Searches for an existing parsed file in this environment given that file's source code.
 	/// Note that the source code does not have to be the identical object in memory, it just has to compare equal.
-	/// See ``AssemblyCode::eq`` for the equality semantics of the source code objects.
+	/// See [`crate::AssemblyCode::eq`] for the equality semantics of the source code objects.
 	pub(crate) fn find_file_by_source(
 		&self,
 		source_code: &Arc<AssemblyCode>,

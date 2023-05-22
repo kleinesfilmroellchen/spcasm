@@ -25,7 +25,7 @@ lalrpop_mod!(
 pub use asm::ProgramParser;
 
 /// Anything that can be primitively parsed from a string into an enum variant.
-/// This trait is intended to be derived with the macro from ``spcasm_derive``.
+/// This trait is intended to be derived with the macro from [`spcasm_derive`].
 pub trait Parse
 where
 	Self: Sized,
@@ -98,7 +98,7 @@ pub fn source_range(start: SpanOrOffset, end: SpanOrOffset) -> SourceSpan {
 /// Creates the direct page addressing mode if the number is a legal direct page address.
 ///
 /// This function is both generic over the value being passed (it must be convertible into a number) and the return type
-/// of the handler functions. Typically, you want to use Result types with fallible handlers and the ``AddressingMode``
+/// of the handler functions. Typically, you want to use Result types with fallible handlers and the [`crate::sema::AddressingMode`]
 /// type with non-fallible handlers, but the function is agnostic to that.
 pub fn try_make_direct_page_addressing_mode<T, ReturnType>(
 	value: T,

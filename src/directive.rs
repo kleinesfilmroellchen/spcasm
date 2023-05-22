@@ -235,15 +235,14 @@ impl Display for DirectiveSymbol {
 pub enum DirectiveValue {
 	/// A placeholder value, this is mostly auto-generated.
 	Placeholder,
-	/// org <memory address>
+	/// `org <memory address>`
 	Org(MemoryAddress),
-	/// Various table directives, such as byte/db, word/dw, dl, dd, ascii(z), ...
-	/// dw <16-bit word>
+	/// Various table directives, such as byte/db, word/dw, dl, dd, ...
 	Table {
 		/// The entries of the table. For simple directives like "dw $0A", this only has one entry.
 		values: Vec<SizedAssemblyTimeValue>,
 	},
-	/// brr <file name>
+	/// `brr <file name>`
 	Brr {
 		/// Path to the WAV source file.
 		file:      SharedStr,
@@ -254,28 +253,28 @@ pub enum DirectiveValue {
 		/// Whether to add the sample to the sample directory (not currently implemented)
 		directory: bool,
 	},
-	/// sampletable
+	/// `sampletable`
 	SampleTable {
 		/// Whether to automatically align the sample table or throw an error.
 		auto_align: bool,
 	},
-	/// ascii(z) <string>
+	/// `ascii(z) <string>`
 	String { text: Vec<u8>, has_null_terminator: bool },
-	/// <reference> = <value>
+	/// `<reference> = <value>`
 	AssignReference { reference: Reference, value: AssemblyTimeValue },
-	/// incbin <file name>
+	/// `incbin <file name>`
 	Include { file: SharedStr, range: Option<SourceSpan> },
-	/// endasm
+	/// `endasm`
 	End,
-	/// pushpc
+	/// `pushpc`
 	PushSection,
-	/// pullpc
+	/// `pullpc`
 	PopSection,
-	/// macro
+	/// `macro`
 	UserDefinedMacro { name: SharedStr, arguments: Arc<RwLock<MacroParent>>, body: Vec<ProgramElement> },
 	/// A variety of global parameters are changed with this directive.
 	SetDirectiveParameters(HashMap<DirectiveParameter, AssemblyTimeValue>),
-	/// fill, pad
+	/// `fill`, `pad`
 	Fill {
 		/// The exact fill operation to be performed.
 		operation: FillOperation,
@@ -285,7 +284,7 @@ pub enum DirectiveValue {
 		/// The value to fill with, populated from a global directive parameter.
 		value:     Option<SizedAssemblyTimeValue>,
 	},
-	/// if
+	/// `if`
 	Conditional {
 		/// The condition that decides which of the two blocks is assembled.
 		condition:   AssemblyTimeValue,
@@ -657,12 +656,12 @@ impl FillOperation {
 
 	/// Returns the amount of bytes to fill, given the fill operation parameter and a current address from which to
 	/// start filling. The result depends on which fill operation is performed:
-	/// - `ToAddress` uses the parameter as the address to fill to. The amount to fill is the distance of that to the
+	/// - [`FillOperation::ToAddress`] uses the parameter as the address to fill to. The amount to fill is the distance of that to the
 	///   current address.
-	/// - `ToAlignment` uses the parameter as the alignment to achieve. The amount to fill is the difference between the
+	/// - [`FillOperation::ToAlignment`] uses the parameter as the alignment to achieve. The amount to fill is the difference between the
 	///   current memory address and the next correctly-aligned address. Also, the offset (if provided) is added to that
 	///   fill amount.
-	/// - `Amount` uses the parameter directly as the amount of bytes to fill.
+	/// - [`FillOperation::Amount`] uses the parameter directly as the amount of bytes to fill.
 	pub fn amount_to_fill(
 		&self,
 		parameter: MemoryAddress,

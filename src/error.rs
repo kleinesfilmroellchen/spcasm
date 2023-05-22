@@ -226,7 +226,9 @@ pub enum AssemblyError {
 	#[error("File \"{file_name}\" was not found")]
 	#[diagnostic(code(spcasm::io::file_not_found), severity(Error))]
 	FileNotFound {
-		/// https://github.com/rust-lang/rust/issues/24135 - std::io::Error is not clonable for performance and implementation detail reasons.
+		/// std::io::Error is not clonable for performance and implementation detail reasons[rustissue].
+		/// 
+		/// [rustissue]: <https://github.com/rust-lang/rust/issues/24135>
 		#[source]
 		os_error:  Arc<std::io::Error>,
 		file_name: SharedStr,

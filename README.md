@@ -17,7 +17,7 @@ brr "my-sample.wav"
 
 ## Installation
 
-This is a normal Rust project without special dependencies. Use `cargo` or [`just`](https://just.systems/) for building, running, testing etc.
+This is a normal Rust project without special dependencies. Use `cargo` or [`just`](https://just.systems/) for building, running, testing etc. The sub-projects of spcasm require extra dependencies and tools, for details see the [development documentation](https://kleinesfilmroellchen.github.io/spcasm/doc/dev/index.html).
 
 ## Usage
 
@@ -93,6 +93,8 @@ spcasm follows the mnemonic conventions from [this APU manual](https://web.archi
 
 For all further information read the above.
 
+[API documentation](https://kleinesfilmroellchen.github.io/spcasm/doc/api/spcasm/index.html) is also available online, in case you want to use spcasm as a library. Note that spcasm makes no stability guarantees in regards to its public APIs.
+
 ## Contributing
 
 See the documentation for developer information, including further information on how to build and configure spcasm.
@@ -101,7 +103,7 @@ You can contribute by:
 
 - implementing missing features from Asar or vasm
 - reporting and/or fixing bugs
-- writing documentation; the code itself is well-documented, but user documentation is lacking.
+- writing documentation
 
 ## Acknowledgements
 

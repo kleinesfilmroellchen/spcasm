@@ -18,6 +18,7 @@ jobs:
         uses: actions-rs/toolchain@v1
         with:
           toolchain: nightly
+          profile: minimal
       - name: Output Rust version to file
         run: cargo --version > rust-version
       - uses: actions/cache@v3
@@ -56,6 +57,7 @@ jobs:
         uses: actions-rs/toolchain@v1
         with:
           toolchain: nightly
+          profile: minimal
           components: clippy
       - name: Check style
         uses: actions-rs/clippy-check@v1.0.7
@@ -70,6 +72,7 @@ jobs:
         uses: actions-rs/toolchain@v1
         with:
           toolchain: nightly
+          profile: minimal
           components: rustfmt
       - name: Check code format
         run: cargo fmt --all --check --verbose

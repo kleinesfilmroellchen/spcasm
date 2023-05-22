@@ -17,7 +17,7 @@ brr "my-sample.wav"
 
 ## Installation
 
-This is a normal Rust project without special dependencies. Use `cargo` for building, running, testing etc.
+This is a normal Rust project without special dependencies. Use `cargo` or [`just`](https://just.systems/) for building, running, testing etc.
 
 ## Usage
 

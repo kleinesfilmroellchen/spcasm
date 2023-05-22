@@ -16,11 +16,15 @@ spcasm is structured into a few related components:
 
 ## Toolchain and workflow
 
+> `$ just spcasm`
+
 spcasm is written in Rust (2021 edition). Due to the use of many (really cool!) unstable features, it can only be compiled with a Rust nightly compiler. The minimum supported Rust version (MSRV) is nightly 1.68 on both Linux (gnu) and Windows (msvc).
 
 Because of `rust-toolchain.toml`, the nightly toolchain should automatically be selected if you run any Rustup-based command (like `cargo` or `rustc`).
 
 The standard binary is the assembler `spcasm` itself. There is an additional binary target `brr`, a BRR encoder and decoder with additional interactive functionality. Both require the `binaries` feature.
+
+> `$ just test`
 
 Tests work through the normal rustc test harness, so they can be run with `cargo test` and `cargo bench`.
 
@@ -54,6 +58,8 @@ There's further ways of fiddling with the build config:
 - Create a GitHub release and attach the two archives as well as all the four binaries individually
 
 ### `spcasm-web`
+
+> `$ just web`
 
 Working with the WebAssembly bindings and webpage is quite straightforward, but you need to have `trunk` installed (`cargo install trunk`). Then, run `trunk build` in the `spcasm-web` folder. For a development server with auto-reload, use `trunk serve`; a browser window will open automatically.
 

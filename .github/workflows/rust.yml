@@ -29,6 +29,12 @@ jobs:
             ~/.cargo/git/db/
             target/
           key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}-${{ hashFiles('rust-version') }}
+      - name: Install nextest
+        uses: extractions/setup-crate@v1
+        with:
+          owner: nextest-rs
+          name: nextest
+
         # The binary build adds > 40 dependencies, so we would like to avoid it, but some integration tests depend on it.
         # Therefore, we first run a faster build that will report almost all errors immediately and cancel the CI run.
       - name: Build
@@ -38,7 +44,7 @@ jobs:
         run: cargo build --verbose --no-default-features --features binaries
         # ... and run the tests.
       - name: Run tests
-        run: cargo test --verbose --no-default-features --features binaries
+        run: cargo nextest run --verbose --no-default-features --features binaries --no-fail-fast --failure-output immediate-final --success-output immediate-final
 
   clippy:
     runs-on: ubuntu-latest

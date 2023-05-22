@@ -45,6 +45,8 @@ jobs:
         # ... and run the tests.
       - name: Run tests
         run: cargo nextest run --verbose --no-default-features --features binaries --no-fail-fast --failure-output immediate-final --success-output immediate-final
+      - name: Build sals
+        run: cd sals && cargo build --verbose
 
   clippy:
     runs-on: ubuntu-latest

@@ -31,10 +31,7 @@ jobs:
             target/
           key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}-${{ hashFiles('rust-version') }}
       - name: Install nextest
-        uses: extractions/setup-crate@v1
-        with:
-          owner: nextest-rs
-          name: nextest
+        run: curl -LsSf https://get.nexte.st/latest/linux | tar zxf - -C ${CARGO_HOME:-~/.cargo}/bin
 
         # The binary build adds > 40 dependencies, so we would like to avoid it, but some integration tests depend on it.
         # Therefore, we first run a faster build that will report almost all errors immediately and cancel the CI run.

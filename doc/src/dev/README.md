@@ -30,7 +30,6 @@ Tests work through the normal rustc test harness, so they can be run with `cargo
 
 The crate has the following features:
 
-- `expensive_tests`: Enable long-running tests. This is enabled by default, but disabled on CI as it wastes time there.
 - `binaries`: Enable the two binaries `spcasm` and `brr` and their specific dependencies. If you want to run non-CLI tests or use spcasm as a library, this is not necessary, therefore although it is a default feature, it can be disabled.
 
 If you want to create a release build, please compile with the `spcasm-release` profile; the standard `release` profile needs to be reserved for `wasm-pack` as it is too inflexible at the moment.

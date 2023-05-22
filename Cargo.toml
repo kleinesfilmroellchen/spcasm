@@ -44,9 +44,8 @@ test = false
 bench = false
 
 [features]
-default = ["expensive_tests", "binaries"]
+default = ["binaries"]
 binaries = ["dep:clap", "dep:object", "dep:shadow-rs"]
-expensive_tests = []
 
 [dependencies]
 object = { version = "0.30", features = [

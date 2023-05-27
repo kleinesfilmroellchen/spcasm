@@ -143,7 +143,7 @@ dependencies = [
  "cfg-if 1.0.0",
  "libc",
  "miniz_oxide",
- "object",
+ "object 0.30.3",
  "rustc-demangle",
 ]
 
@@ -1144,6 +1144,15 @@ version = "0.30.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ea86265d3d3dcb6a27fc51bd29a4bf387fae9d2986b823079d4986af253eb439"
 dependencies = [
+ "memchr",
+]
+
+[[package]]
+name = "object"
+version = "0.31.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "8bda667d9f2b5051b8833f59f3bf748b28ef54f850f4fcb389a252aa383866d1"
+dependencies = [
  "crc32fast",
  "hashbrown 0.13.2",
  "indexmap",
@@ -1755,7 +1764,7 @@ dependencies = [
  "miette",
  "num-derive",
  "num-traits",
- "object",
+ "object 0.31.1",
  "parking_lot",
  "reqwest",
  "shadow-rs",

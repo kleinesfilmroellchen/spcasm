@@ -56,8 +56,6 @@ release version: release-build-common && (release-finalize-common version)
 release-build-common: test check
 	cargo build -q --profile=spcasm-release
 
-release-indirect version: (release-finalize-common version)
-
 release-finalize-common version:
 	mkdir 'spcasm-{{version}}'
 	cp target/spcasm-release/spcasm.exe 'spcasm-{{version}}'

@@ -44,21 +44,19 @@ There's further ways of fiddling with the build config:
 
 ### Creating a release
 
-###### This documentation is both for transparency purposes and also to make sure that releases consistently contain correct files.
+The release process requires `just` and a Windows machine, and it can take many minutes to run the multitude of compilations and checks.
 
-> `$ just release`
+```shell
+# Ensure up-to-date toolchains.
+$ rustup update && wsl rustup update
 
-- Make sure that the Rust compiler(s) are up-to-date and all (!) tests pass
-- Bump the spcasm version if that didn't happen before
-- Clean any existing files for the release build, if necessary: `cargo clean --profile=spcasm-release --all-features`
-- Run a build on spcasm-release on both Windows and Linux: `cargo build --profile=spcasm-release`
-- Make sure that the four (!) binaries have correct build times and version numbers
-- Copy the four binaries into a temporary release folder named `spcasm-<version>`
-- Make sure the documentation is up-to-date, especially check the usage output
-- Run `mdbook build` (make sure to have the PDF backend installed!) and copy the generated PDF as "spcasm-manual.pdf" into the release folder
-- Copy the `include` folder into the release folder
-- Create a .zip archive (Linux binaries removed) and a .tar.gz archive (Windows binaries removed), and name them the same as the folder
-- Create a GitHub release and attach the two archives as well as all the four binaries individually
+$ just clean
+$ just release $version
+```
+
+Towards the end, the process will run the released binaries to show their version information. Check that this version information is up-to-date, and if not, update the version information in the main Cargo.toml and run the release again.
+
+Finally, create a GitHub release and attach the two archives and four binaries from the `spcasm-$version` folder that was created. Make sure that the main branch from which the release build was run is up-to-date in the repository before releasing.
 
 ### `spcasm-web`
 

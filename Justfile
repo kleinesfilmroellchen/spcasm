@@ -21,6 +21,8 @@ build:
 # Build spcasm
 build-spcasm:
 	cargo build --bin spcasm
+fastrelease:
+	cargo build --profile=spcasm-fastrelease
 
 web:
 	cd spcasm-web && trunk serve --features wee_alloc,console_error_panic_hook
@@ -41,4 +43,39 @@ github-pages:
 	just doc
 	cp -rT doc/book/html site/doc
 	cp -rT target/doc site/doc/api
-	
+
+# Create a new spcasm release from a Windows machine
+[windows]
+release version: release-build-common && (release-finalize-common version)
+	wsl just release-build-common
+
+# Create a new spcasm release from a Unix machine
+[unix]
+release version: release-build-common && (release-finalize-common version)
+
+release-build-common: test check
+	cargo build -q --profile=spcasm-release
+
+release-indirect version: (release-finalize-common version)
+
+release-finalize-common version:
+	mkdir 'spcasm-{{version}}'
+	cp target/spcasm-release/spcasm.exe 'spcasm-{{version}}'
+	cp target/spcasm-release/spcasm 'spcasm-{{version}}'
+	cp target/spcasm-release/brr.exe 'spcasm-{{version}}'
+	cp target/spcasm-release/brr 'spcasm-{{version}}'
+	@echo '======================================================================='
+	@echo 'spcasm and brr version(s)'
+	wsl './spcasm-{{version}}/spcasm' --version
+	./spcasm-{{version}}/spcasm.exe --version
+	wsl './spcasm-{{version}}/brr' --version
+	./spcasm-{{version}}/brr.exe --version
+	cd doc && mdbook build
+	cp doc/book/pdf/output.pdf 'spcasm-{{version}}/spcasm-manual.pdf'
+	wsl -e cp -rT include 'spcasm-{{version}}/include'
+	cd spcasm-{{version}} && zip spcasm-{{version}}.zip '*' 'include/*' -x spcasm brr
+	wsl -e tar -caz --exclude '*.exe' --exclude '*.zip' -f spcasm-{{version}}.tar.xz -C spcasm-{{version}} .
+	mv spcasm-{{version}}.tar.xz spcasm-{{version}}
+
+clean:
+	cargo clean -r

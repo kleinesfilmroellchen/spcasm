@@ -110,12 +110,16 @@ debug-assertions = true
 incremental = true
 
 # This is the actual release profile; wasm-pack can't use custom profiles so we reserve "release" for it.
-[profile.spcasm-release]
+[profile.spcasm-fastrelease]
 inherits = "release"
-# If you need ~0.5MiB less binary size, change this to "fat" LTO.
 lto = "thin"
 opt-level = 3
 incremental = true
+
+[profile.spcasm-release]
+inherits = "spcasm-fastrelease"
+lto = "fat"
+incremental = false
 
 # Cross configuration
 [package.metadata.cross.target.x86_64-unknown-linux-gnu]

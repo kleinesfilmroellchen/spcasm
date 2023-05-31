@@ -24,11 +24,16 @@ fn boot_rom() {
 
 #[test]
 fn assembler() {
+	#[cfg(miri)]
+	const ignored_miri_tests: [&str; 1] = ["brr.spcasmtest"];
+	#[cfg(not(miri))]
+	const ignored_miri_tests: [&str; 0] = [];
+
 	let sources = std::fs::read_dir("tests").unwrap();
 	for source in sources {
 		let source = source.unwrap().path();
 		let source = &*source.to_string_lossy();
-		if source.ends_with(".spcasmtest") {
+		if source.ends_with(".spcasmtest") && !ignored_miri_tests.contains(&source) {
 			println!("assembling {} ...", source);
 			test_file(source);
 		} else {

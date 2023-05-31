@@ -1,0 +1,36 @@
+name: Check and test spcasm
+
+on:
+  schedule:
+    - cron: '0 0 * * 0' # every sunday at midnight
+
+env:
+  CARGO_TERM_COLOR: always
+  MIRIFLAGS: -Zmiri-disable-isolation -Zmiri-ignore-leaks # thread leaks happen in trycmd, nothing we can do
+
+jobs:
+  miri:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Get number of CPU cores
+        uses: SimenB/github-actions-cpu-cores@v1
+        id: cpu-cores
+      - name: Install latest nightly
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: nightly
+          profile: minimal
+          components: rust-src
+      - name: Install Miri
+        run: |
+          rustup toolchain install nightly --component miri
+          rustup override set nightly
+          cargo miri setup
+      - name: Install nextest
+        run: curl -LsSf https://get.nexte.st/latest/linux | tar zxf - -C ${CARGO_HOME:-~/.cargo}/bin
+      - name: Build Miri's binaries
+        # without arguments, spcasm exits right away with code 2
+        run: cargo miri run --profile spcasm-fastrelease || true
+      - name: Test with Miri
+        run: cargo miri nextest run -j ${{ steps.cpu-cores.outputs.count }} --cargo-profile spcasm-fastrelease --config-file .github/nextest-ci.toml

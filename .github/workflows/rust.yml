@@ -42,7 +42,7 @@ jobs:
         run: cargo build --verbose --no-default-features --features binaries
         # ... and run the tests.
       - name: Run tests
-        run: cargo nextest run --verbose --no-default-features --features binaries --no-fail-fast --failure-output immediate-final --success-output immediate-final
+        run: cargo nextest run --verbose --no-default-features --features binaries --config-file .github/nextest-ci.toml
       - name: Build sals
         run: cd sals && cargo build --verbose
 

@@ -157,6 +157,8 @@ fn microbench_decode_block_filter_3(bencher: &mut Bencher) {
 }
 
 #[bench]
+// This test takes many minutes to run under Miri without providing extra insight.
+#[cfg_attr(miri, ignore)]
 fn short_sample_encode(bencher: &mut Bencher) {
 	use ::wav::read as wav_read;
 
@@ -166,6 +168,7 @@ fn short_sample_encode(bencher: &mut Bencher) {
 }
 
 #[test]
+#[cfg_attr(miri, ignore)]
 fn different_compression_levels() {
 	use ::wav::read as wav_read;
 
@@ -192,6 +195,8 @@ fn wav_sample_formats() {
 }
 
 #[cfg(not(debug_assertions))]
+// Slow test that doesn't cover more than the BRR tests themselves.
+#[cfg_attr(miri, ignore)]
 #[bench]
 #[allow(clippy::cast_precision_loss)]
 fn extremely_long_encode(bencher: &mut Bencher) {
@@ -200,7 +205,7 @@ fn extremely_long_encode(bencher: &mut Bencher) {
 	let (_, data) = wav_read(&mut std::fs::File::open("tests/song.wav").unwrap()).unwrap();
 	let mut data = data.try_into_sixteen().expect("must be signed 16-bit WAV");
 	let now = std::time::Instant::now();
-	bencher.iter(|| encode_to_brr(&mut data, false, CompressionLevel::Max));
+	bencher.iter(|| encode_to_brr(&mut data, None, CompressionLevel::Max));
 	let diff = now.elapsed();
 	println!("took: {}ns ({} samples/s)", diff.as_nanos(), data.len() as f64 / diff.as_secs_f64());
 }

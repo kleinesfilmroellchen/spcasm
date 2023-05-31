@@ -59,27 +59,35 @@ fn errors() {
 }
 
 #[bench]
+// Slow test that doesn't cover more than the BRR tests themselves.
+#[cfg_attr(miri, ignore)]
 fn brr_integration(bencher: &mut Bencher) {
 	bencher.iter(|| test_file("tests/brr.spcasmtest"));
 }
 
 #[test]
+// Binaries run by trycmd are not run under miri, so testing them is pointless.
+#[cfg_attr(miri, ignore)]
 fn clis() {
 	trycmd::TestCases::new().case("tests/cli/*.trycmd");
 }
 
 #[test]
+#[cfg_attr(miri, ignore)]
 fn documented_cli() {
 	trycmd::TestCases::new().case("doc/src/usage.md");
 	trycmd::TestCases::new().case("README.md");
 }
 
 #[test]
+#[cfg_attr(miri, ignore)]
 fn documented_errors() {
 	trycmd::TestCases::new().case("doc/src/errors.md");
 }
 
 #[test]
+// Miri can't do networking.
+#[cfg_attr(miri, ignore)]
 fn asar_opcode_test() -> Result<(), Box<AssemblyError>> {
 	const test_file_url: &str = "https://raw.githubusercontent.com/RPGHacker/asar/master/tests/arch-spc700.asm";
 	const file_name: &str = "asar-arch-spc700.asm";

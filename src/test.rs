@@ -25,7 +25,7 @@ fn boot_rom() {
 #[test]
 fn assembler() {
 	#[cfg(miri)]
-	const ignored_miri_tests: [&str; 1] = ["brr.spcasmtest"];
+	const ignored_miri_tests: [&str; 1] = ["tests/brr.spcasmtest"];
 	#[cfg(not(miri))]
 	const ignored_miri_tests: [&str; 0] = [];
 

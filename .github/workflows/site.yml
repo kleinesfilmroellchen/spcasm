@@ -62,7 +62,7 @@ jobs:
         run: just github-pages
 
       - name: Upload page artifact
-        uses: actions/upload-pages-artifact@v1.0.8
+        uses: actions/upload-pages-artifact@v1.0.9
         with:
           path: site
 

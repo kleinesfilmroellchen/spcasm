@@ -665,7 +665,7 @@ impl AssemblyFile {
 			index += 1;
 			// Using drain_filter is the easiest way of filtering elements from a vector. We need to consume the
 			// returned iterator fully or else not all filtering will happen.
-			let _: usize = macro_end_stack.drain_filter(|end_index| *end_index < index).count();
+			let _: usize = macro_end_stack.extract_if(|end_index| *end_index < index).count();
 		}
 
 		Ok(Change::Unmodified)

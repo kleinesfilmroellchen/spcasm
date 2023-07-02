@@ -14,7 +14,7 @@
 	result_option_inspect,
 	maybe_uninit_uninit_array,
 	const_trait_impl,
-	drain_filter,
+	extract_if,
 	extend_one,
 	try_blocks,
 	option_get_or_insert_default,

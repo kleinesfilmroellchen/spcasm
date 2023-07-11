@@ -58,6 +58,12 @@ Towards the end, the process will run the released binaries to show their versio
 
 Finally, create a GitHub release and attach the two archives and four binaries from the `spcasm-$version` folder that was created. Make sure that the main branch from which the release build was run is up-to-date in the repository before releasing.
 
+### Experimental profile-guided optimization builds
+
+> `$ just pgo-release`
+
+For this to work, you need to have llvm-profdata from the llvm-tools-preview Rustup component on your PATH. Remember to delete the target/pgo folder after every run so that stale profiling data doesn't stick around. As with any high-optimization build, this one takes a while.
+
 ### `spcasm-web`
 
 > `$ just web`

@@ -28,7 +28,23 @@ build:
 build-spcasm:
 	cargo build --bin spcasm
 fastrelease:
-	cargo build --profile=spcasm-fastrelease
+	cargo build --workspace --profile=spcasm-fastrelease
+
+PGO_DIRECTORY := justfile_directory() / "target/pgo"
+PGO_DATA_DIRECTORY := PGO_DIRECTORY / "data"
+PGO_MERGED_PROFDATA := PGO_DIRECTORY / "merged.profdata"
+PGO_RUSTFLAGS := "-Cprofile-generate=" + PGO_DATA_DIRECTORY
+
+# Run profile-guided optimization on the release build. (Remember to delete the target/pgo directory!)
+pgo-release $RUSTFLAGS=PGO_RUSTFLAGS: (_pgo-release-build PGO_RUSTFLAGS) && _pgo-release-finalize
+	cargo test --profile=spcasm-fastrelease
+	llvm-profdata merge -o {{PGO_MERGED_PROFDATA}} {{PGO_DATA_DIRECTORY}}
+
+_pgo-release-build $RUSTFLAGS:
+	cargo build --workspace --profile=spcasm-release
+
+# Build the actual PGO binary.
+_pgo-release-finalize: (_pgo-release-build "-Cprofile-use=" + PGO_MERGED_PROFDATA)
 
 web:
 	cd spcasm-web && trunk serve --features wee_alloc,console_error_panic_hook

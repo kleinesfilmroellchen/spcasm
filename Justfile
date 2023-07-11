@@ -8,7 +8,7 @@ test: build
 
 coverage:
 	# The first two commands are expected to fail, since "run" is just a hack to get llvm-cov to compile the binaries.
-	-cargo llvm-cov --all-features --hide-instantiations --no-clean --bin=brr run -- x
+	-cargo llvm-cov --all-features --hide-instantiations --bin=brr run -- x
 	-cargo llvm-cov --all-features --hide-instantiations --no-clean run -- x
 	cargo llvm-cov --open --all-features --hide-instantiations --no-clean nextest
 

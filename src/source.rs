@@ -10,7 +10,7 @@ use miette::{MietteError, MietteSpanContents, SourceCode, SourceSpan, SpanConten
 use crate::AssemblyError;
 
 /// The source code for an assembly error.
-#[derive(Debug, Clone, Default, Eq, PartialEq)]
+#[derive(Debug, Clone, Default, Eq)]
 pub struct AssemblyCode {
 	/// The text content of the assembly code.
 	pub text:         SharedStr,
@@ -18,6 +18,12 @@ pub struct AssemblyCode {
 	pub name:         PathBuf,
 	/// The include path of the file.
 	pub include_path: Vec<PathBuf>,
+}
+
+impl PartialEq for AssemblyCode {
+	fn eq(&self, other: &Self) -> bool {
+		self.name == other.name
+	}
 }
 
 impl AssemblyCode {

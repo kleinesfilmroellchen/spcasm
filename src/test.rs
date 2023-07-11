@@ -2,15 +2,15 @@ extern crate test;
 use std::cmp::min;
 use std::sync::Arc;
 
-use reqwest;
 #[allow(unused)]
-use flexstr::{SharedStr, shared_str, IntoSharedStr, ToSharedStr};
+use flexstr::{shared_str, IntoSharedStr, SharedStr, ToSharedStr};
+use reqwest;
 use test::Bencher;
 
 use crate::cli::default_backend_options;
 use crate::sema::instruction::MemoryAddress;
 use crate::sema::ProgramElement;
-use crate::{dump_reference_tree, pretty_hex, AssemblyError, Segments};
+use crate::{dump_ast, dump_reference_tree, pretty_hex, AssemblyError, Segments};
 
 #[bench]
 fn all_opcodes(bencher: &mut Bencher) {
@@ -119,14 +119,12 @@ fn asar_opcode_test() -> Result<(), Box<AssemblyError>> {
 }
 
 fn test_file(file: &str) {
-	let (parsed, assembled) = super::run_assembler_into_segments(
-		&crate::AssemblyCode::from_file_or_assembly_error(file).unwrap(),
-		default_backend_options(),
-	)
-	.unwrap();
+	let code = crate::AssemblyCode::from_file_or_assembly_error(file).unwrap();
+	let (parsed, assembled) = super::run_assembler_into_segments(&code, default_backend_options()).unwrap();
 	let (environment, _) = super::run_assembler_with_default_options(file).unwrap();
 
 	dump_reference_tree(&environment.read_recursive().globals.values().cloned().collect::<Vec<_>>());
+	dump_ast(&environment.read_recursive().files.get(&code.name).unwrap().read_recursive().content);
 
 	let expected_binary = assemble_expected_binary(parsed);
 	for ((parsed_segment_start, expected_segment), (assembled_segment_start, assembled)) in
@@ -215,8 +213,10 @@ fn coverage() {
 	use std::sync::Weak;
 
 	use crate::default_hacks::FakeDefaultForIgnoredValues;
+	use crate::directive::DirectiveSymbol;
 	use crate::parser::Token;
 	use crate::sema::value::BinaryOperator;
+	use crate::Directive;
 
 	<i64 as FakeDefaultForIgnoredValues>::default();
 	miette::SourceSpan::default();
@@ -225,7 +225,7 @@ fn coverage() {
 	crate::parser::Token::default();
 	crate::directive::DirectiveSymbol::default();
 	crate::sema::instruction::Mnemonic::default();
-	crate::error::TokenOrString::default();
+	crate::parser::SpanOrOffset::default();
 
 	let code = crate::AssemblyCode::new("\r\n", &"hello".into()).clone();
 	println!("{:?}", code);
@@ -337,7 +337,7 @@ fn coverage() {
 
 	assert_eq!(crate::sema::LabelUsageKind::AsAddress, crate::sema::LabelUsageKind::AsAddress);
 	let _ = format!(
-		"{:?} {:?} {:?} {:?} {:?} {:?} {:?}",
+		"{:?} {:?} {:?} {:?} {:?} {:?} {:?} {:?} {:?} {:?} {:?} {:?}",
 		crate::Environment::new(),
 		crate::sema::LabelUsageKind::AsAddress.clone(),
 		crate::sema::AssemblyFile {
@@ -352,7 +352,53 @@ fn coverage() {
 		crate::assembler::sample_table::SampleEntry { start_address: 0.into() }.clone(),
 		crate::assembler::sample_table::SampleEntry { start_address: 0.into() }.clone()
 			== crate::assembler::sample_table::SampleEntry { start_address: 0.into() }.clone(),
+		Directive { ..Default::default() },
+		crate::parser::SpanOrOffset::Offset(0.into()).clone(),
+		crate::parser::SpanOrOffset::from(&miette::SourceSpan::default()).clone()
+			== crate::parser::SpanOrOffset::from(&miette::SourceSpan::default()).clone(),
+		crate::Change::default().clone(),
+		crate::Change::default().clone() == crate::Change::default(),
 	);
+
+	for directive_symbol in [
+		DirectiveSymbol::Org,
+		DirectiveSymbol::Db,
+		DirectiveSymbol::Byte,
+		DirectiveSymbol::Dw,
+		DirectiveSymbol::Word,
+		DirectiveSymbol::Dl,
+		DirectiveSymbol::Dd,
+		DirectiveSymbol::Ascii,
+		DirectiveSymbol::Asciiz,
+		DirectiveSymbol::Brr,
+		DirectiveSymbol::SampleTable,
+		DirectiveSymbol::Incbin,
+		DirectiveSymbol::Include,
+		DirectiveSymbol::Incsrc,
+		DirectiveSymbol::EndAsm,
+		DirectiveSymbol::Pushpc,
+		DirectiveSymbol::Pullpc,
+		DirectiveSymbol::Arch,
+		DirectiveSymbol::Macro,
+		DirectiveSymbol::EndMacro,
+		DirectiveSymbol::If,
+		DirectiveSymbol::Else,
+		DirectiveSymbol::ElseIf,
+		DirectiveSymbol::EndIf,
+		DirectiveSymbol::Math,
+		DirectiveSymbol::Fill,
+		DirectiveSymbol::FillByte,
+		DirectiveSymbol::FillWord,
+		DirectiveSymbol::FillLong,
+		DirectiveSymbol::FillDWord,
+		DirectiveSymbol::Pad,
+		DirectiveSymbol::PadByte,
+		DirectiveSymbol::PadWord,
+		DirectiveSymbol::PadLong,
+		DirectiveSymbol::PadDWord,
+	] {
+		let _ = format!("{0} {0:?}", directive_symbol);
+	}
 
 	assert_eq!(crate::sema::ProgramElement::Directive(crate::Directive::default()).span(), (0, 0).into());
 	let macro_call = crate::sema::ProgramElement::UserDefinedMacroCall {

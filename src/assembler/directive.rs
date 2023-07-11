@@ -3,14 +3,14 @@
 use std::fs::File;
 use std::sync::Arc;
 
+#[allow(unused)]
+use flexstr::{shared_str, IntoSharedStr, SharedStr, ToSharedStr};
 use miette::SourceSpan;
 use num_traits::{FromPrimitive, ToPrimitive};
-#[allow(unused)]
-use flexstr::{SharedStr, shared_str, IntoSharedStr, ToSharedStr};
 
 use super::{resolve_file, AssembledData};
 use crate::brr::wav;
-use crate::directive::{DirectiveValue, FillOperation};
+use crate::directive::{DirectiveValue, FillOperation, symbolic_directives};
 use crate::sema::instruction::MemoryAddress;
 use crate::sema::reference::Reference;
 use crate::sema::value::{Size, SizedAssemblyTimeValue};
@@ -29,6 +29,8 @@ impl AssembledData {
 		current_labels: &mut Vec<Reference>,
 	) -> Result<(), Box<AssemblyError>> {
 		match directive.value {
+			// Symbolic directives should not be around anymore.
+			symbolic_directives!() => unreachable!(),
 			DirectiveValue::Table { ref values } =>
 				try {
 					let mut is_first = true;
@@ -54,25 +56,6 @@ impl AssembledData {
 						)?;
 					}
 				},
-			DirectiveValue::AssignReference { ref mut reference, ref value } =>
-				try {
-					match reference {
-						Reference::Label(ref mut global) => {
-							global.write().location = Some(value.clone().try_resolve());
-						},
-						Reference::MacroArgument { ref span, .. }
-						| Reference::MacroGlobal { ref span, .. }
-						| Reference::UnresolvedLocalLabel { ref span, .. }
-						| Reference::Relative { ref span, .. } =>
-							return Err(AssemblyError::AssigningToReference {
-								kind:     reference.clone().into(),
-								name:     reference.to_string().into(),
-								src:      self.source_code.clone(),
-								location: *span,
-							}
-							.into()),
-					}
-				},
 			DirectiveValue::Include { ref file, range } => {
 				let binary_file = resolve_file(&self.source_code, file);
 				let mut binary_data = std::fs::read(binary_file).map_err(|os_error| AssemblyError::FileNotFound {
@@ -85,15 +68,8 @@ impl AssembledData {
 				binary_data = self.slice_data_if_necessary(file, directive.span, binary_data, range)?;
 				self.append_bytes(binary_data, current_labels, directive.span)
 			},
-			DirectiveValue::End =>
-				try {
-					self.should_stop = true;
-				},
 			DirectiveValue::SampleTable { auto_align } => {
-				let current_address = self.segments.current_location().map_err(|_| AssemblyError::MissingSegment {
-					location: directive.span,
-					src:      self.source_code.clone(),
-				})?;
+				let current_address = self.segments.current_location().unwrap();
 				if auto_align {
 					if current_address & 0xff != 0 {
 						let target_address = (current_address + 0x100) & !0xff;
@@ -112,10 +88,7 @@ impl AssembledData {
 				self.assemble_sample_table(current_labels, directive.span)
 			},
 			DirectiveValue::Fill { ref operation, ref parameter, ref value } => {
-				let current_address = self.segments.current_location().map_err(|_| AssemblyError::MissingSegment {
-					location: directive.span,
-					src:      self.source_code.clone(),
-				})?;
+				let current_address = self.segments.current_location().unwrap();
 				self.assemble_fill(operation, parameter, value.clone(), current_address, current_labels, directive.span)
 			},
 			DirectiveValue::Conditional { ref mut condition, ref mut true_block, ref mut false_block } => {
@@ -126,7 +99,6 @@ impl AssembledData {
 					self.assemble_all_from_list(true_block)
 				}
 			},
-			_ => Ok(()),
 		}
 	}
 
@@ -195,7 +167,7 @@ impl AssembledData {
 			data.get(range.offset() .. range.offset().saturating_add(range.len()).min(max_number_of_bytes))
 				.ok_or(AssemblyError::RangeOutOfBounds {
 					start:    range.offset(),
-					end:      range.offset() + range.len(),
+					end:      range.offset().saturating_add(range.len()),
 					file:     file.to_string().into(),
 					file_len: data.len(),
 					src:      self.source_code.clone(),

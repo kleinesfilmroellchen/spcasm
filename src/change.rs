@@ -1,8 +1,9 @@
 //! Enum specifying whether a change occurred or not.
 
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+#[derive(Clone, Copy, Debug, Eq, PartialEq, Default)]
 #[repr(u8)]
 pub enum Change {
+	#[default]
 	Unmodified,
 	Modified,
 }

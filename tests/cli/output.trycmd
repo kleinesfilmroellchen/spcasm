@@ -42,10 +42,24 @@ global_selftarget ____________________________________________________    0190
  B0 AA 90 90 CA A0 30 60 80 ED E0 20 40 A0 C0 00
  EF FF
 
+$ spcasm -w all -f hex-dump tests/opcodes.s /you/cant/write/here
+? 1
+Error: spcasm::io_error
+
+  × Das System kann den angegebenen Pfad nicht finden. (os error 3)
+
+
 ```
 
 ```trycmd
 $ spcasm -w all -f elf tests/opcodes.s tests/test-output
+
+$ spcasm -w all -f elf tests/opcodes.s /you/cant/write/here
+? 1
+Error: spcasm::io_error
+
+  × Das System kann den angegebenen Pfad nicht finden. (os error 3)
+
 
 ```
 
@@ -59,5 +73,12 @@ another_global _______________________________________________________    0189
  .subtarget __________________________________________________________    018A
  .selftarget _________________________________________________________    018E
 global_selftarget ____________________________________________________    0190
+
+$ spcasm -w all -f plain tests/opcodes.s /you/cant/write/here
+? 1
+Error: spcasm::io_error
+
+  × Das System kann den angegebenen Pfad nicht finden. (os error 3)
+
 
 ```

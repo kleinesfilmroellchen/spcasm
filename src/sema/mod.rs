@@ -7,6 +7,7 @@ pub mod instruction;
 mod program;
 pub(crate) mod reference;
 mod register;
+#[cfg(test)] mod test;
 pub mod value;
 
 pub use addressing_mode::{AddressingMode, AddressingModeCategory};

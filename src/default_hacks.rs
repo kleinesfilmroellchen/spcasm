@@ -12,7 +12,7 @@ use std::sync::Arc;
 use flexstr::{shared_str, IntoSharedStr, SharedStr, ToSharedStr};
 
 use crate::directive::DirectiveSymbol;
-use crate::error::{ReferenceType, TokenOrString};
+use crate::error::ReferenceType;
 use crate::parser::Token;
 use crate::sema::instruction::Mnemonic;
 use crate::AssemblyCode;
@@ -85,11 +85,5 @@ impl FakeDefaultForIgnoredValues for DirectiveSymbol {
 impl FakeDefaultForIgnoredValues for Mnemonic {
 	fn default() -> Self {
 		Self::Adc
-	}
-}
-
-impl FakeDefaultForIgnoredValues for TokenOrString {
-	fn default() -> Self {
-		Self::String(SharedStr::EMPTY)
 	}
 }

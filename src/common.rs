@@ -84,7 +84,7 @@ pub fn dump_ast(ast: &[ProgramElement]) {
 /// Pseudo-[`std::fmt::Display`] implementation for [`SourceSpan`](https://docs.rs/miette/latest/miette/struct.SourceSpan.html).
 #[must_use]
 pub fn span_to_string(span: SourceSpan) -> SharedStr {
-	format!("({:<4}-{:<4})", span.offset(), span.offset() + span.len()).into()
+	format!("({:<4}-{:<4})", span.offset(), span.offset().saturating_add(span.len())).into()
 }
 
 /// Pseudo-[`std::fmt::Display`] implementation for the expected output of a program element.

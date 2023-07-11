@@ -1,3 +1,5 @@
+outside_segment:
+
 org 0
 
 zero:
@@ -80,3 +82,12 @@ bra stuff_other_lol ;= 2F FC
 
 jmp zero_local_cool ;= 5F AA 00
 jmp later_on_nonassigned_local ;= 5F 0C 00
+
+value_of_local = stuff_thing
+value_of_value = value_of_local + 7
+
+dw value_of_local ;= 13 30
+dw value_of_value ;= 1A 30
+
+macro some_macro
+endmacro

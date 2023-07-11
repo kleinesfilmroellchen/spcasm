@@ -67,7 +67,7 @@ pub fn main() -> miette::Result<()> {
 						.truncate(true)
 						.write(true)
 						.open(outfile)
-						.expect("Couldn't open output file"),
+						.map_err(AssemblyError::from)?,
 				))
 			};
 			match args.output_format {

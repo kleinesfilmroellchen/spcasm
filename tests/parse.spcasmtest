@@ -59,6 +59,12 @@ MOV a,- (-((40)))
 
 asciiz "h\\af1234\n\t\r\" \""
 textlabel: ascii "\x08\xff\x1D'\'"
+empty_null_string: asciiz ""
+empty_string: ascii ""
+string_after_empty_string: asciiz "blah"
+
+db empty_null_string != empty_string ;= 01
+db empty_string == string_after_empty_string ;= 01
 
 incbin "binary.bin":2-3
 incbin "binary.bin":(2-1)-3

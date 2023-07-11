@@ -2,10 +2,10 @@
 #![allow(clippy::module_name_repetitions, clippy::large_enum_variant)]
 use std::sync::Arc;
 
+#[allow(unused)]
+use flexstr::{shared_str, IntoSharedStr, SharedStr, ToSharedStr};
 use miette::SourceSpan;
 use parking_lot::RwLock;
-#[allow(unused)]
-use flexstr::{SharedStr, shared_str, IntoSharedStr, ToSharedStr};
 
 use super::instruction::Instruction;
 use super::reference::{MacroParent, Reference, ReferenceResolvable};
@@ -26,14 +26,14 @@ pub enum ProgramElement {
 	/// Include directive that copy-pastes another file's assembly into this one.
 	IncludeSource {
 		/// The file that is included as source code.
-		file:SharedStr,
+		file: SharedStr,
 		/// Source code location of the include directive.
 		span: SourceSpan,
 	},
 	/// Calling a user-defined macro, e.g. `%my_macro(3, 4, 5)`
 	UserDefinedMacroCall {
 		/// Name of the macro that is being called.
-		macro_name:SharedStr,
+		macro_name: SharedStr,
 		/// The arguments to the macro; currently only numbers are supported.
 		arguments:  Vec<AssemblyTimeValue>,
 		/// Location in source code of the macro call.
@@ -155,7 +155,11 @@ impl ReferenceResolvable for ProgramElement {
 impl std::fmt::Display for ProgramElement {
 	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
 		match self {
-			Self::Label(label) => write!(f, "{} [label] {}", span_to_string(label.source_span()), label),
+			Self::Label(label) =>
+				write!(f, "{} [label] {}{}", span_to_string(label.source_span()), label, match label.location() {
+					Some(value) => format!(" = {}", value),
+					None => String::new(),
+				}),
 			Self::Directive(directive) => write!(f, "{}", directive),
 			Self::Instruction(instruction) => write!(f, "{}", instruction),
 			Self::IncludeSource { file, span } => write!(f, "{} include \"{}\"", span_to_string(*span), file),

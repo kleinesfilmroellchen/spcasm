@@ -354,21 +354,19 @@ AssemblyTimeValueWithHashPrefix = "#" <AssemblyTimeValue>;
 /// asar: `: start - end`
 InclusionRange: SourceSpan = {
 	<comma:","> <start:AssemblyTimeValue> <length:( "," <AssemblyTimeValue> )?> =>? {
-		let start = usize::try_from(start.try_value(comma.into(), source_code.clone()).map_err(AssemblyError::from)?)
-			.map_err(|_| AssemblyError::from_number_error(comma.into(), source_code.clone()))?;
+		// usize::MAX > i64::MAX only on wasm, so the "safe" defaults will most likely never be hit.
+		let start = usize::try_from(start.try_value(comma.into(), source_code.clone())
+				.map_err(AssemblyError::from)?).unwrap_or(usize::MIN);
 		let length = usize::try_from(length.map(|length| length.try_value(comma.into(), source_code.clone())).transpose()
-				.map_err(AssemblyError::from)?.unwrap_or(i64::MAX))
-			.map_err(|_| AssemblyError::from_number_error(comma.into(), source_code.clone()))?;
+				.map_err(AssemblyError::from)?.unwrap_or(usize::MAX as i64)).unwrap_or(usize::MAX);
 		Ok((start, length).into())
 	},
 	<colon:":"> <start:AssemblyTimeValue> <dash:"-range-"> <end:AssemblyTimeValue> =>? {
 		let colon_dash_range = source_range(colon.into(), dash.into());
 		let start = usize::try_from(start.try_value(colon_dash_range, source_code.clone())
-				.map_err(AssemblyError::from)?)
-			.map_err(|_| AssemblyError::from_number_error(colon.into(), source_code.clone()))?;
+				.map_err(AssemblyError::from)?).unwrap_or(usize::MIN);
 		let end = usize::try_from(end.try_value(colon_dash_range, source_code.clone())
-				.map_err(AssemblyError::from)?)
-			.map_err(|_| AssemblyError::from_number_error(colon.into(), source_code.clone()))?;
+				.map_err(AssemblyError::from)?).unwrap_or(usize::MAX);
 		if start > end {
 			Err(ParseError::User { error: AssemblyError::StartAboveEnd {
 				start,

@@ -213,7 +213,7 @@ pub fn lex(source_code: Arc<AssemblyCode>, options: &dyn Frontend) -> Result<Vec
 						.map(|byte_string| u8::from_str_radix(byte_string, 16))
 						.try_collect::<Vec<u8>>()
 						.map_err(|parse_error| AssemblyError::InvalidTestComment {
-							basis: Some(parse_error),
+							basis: parse_error,
 							src: source_code.clone(),
 							location: (start_index, comment_contents.len()).into()
 						})?, (start_index, comment_contents.len()).into()));

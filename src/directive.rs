@@ -8,7 +8,7 @@ use std::num::NonZeroU64;
 use std::sync::Arc;
 
 #[allow(unused)]
-use flexstr::{SharedStr, shared_str, FlexStr, IntoSharedStr, ToSharedStr};
+use flexstr::{shared_str, FlexStr, IntoSharedStr, SharedStr, ToSharedStr};
 use miette::SourceSpan;
 use num_derive::ToPrimitive;
 use num_traits::{FromPrimitive, ToPrimitive};
@@ -36,7 +36,7 @@ pub struct Directive {
 impl Directive {
 	/// Perform the segments operations of this directive, if this directive does any segment operations.
 	/// # Errors
-	/// If the segments are mishandles, for example an empty segment stack.
+	/// If the segments are mishandled, for example an empty segment stack.
 	#[allow(clippy::missing_panics_doc)]
 	pub fn perform_segment_operations_if_necessary<Contained>(
 		&mut self,
@@ -77,27 +77,27 @@ impl Directive {
 				}
 				Ok(())
 			},
-			DirectiveValue::Fill { value, operation, .. } => {
-				*value = if operation.is_fill() {
-					&segments.directive_parameters.fill_value
-				} else {
-					&segments.directive_parameters.pad_value
-				}
-				.clone();
-				Ok(())
-			},
-			DirectiveValue::AssignReference { reference: reference @ Reference::MacroArgument { .. }, .. } =>
+			DirectiveValue::Fill { value, operation, .. } =>
+				try {
+					*value = if operation.is_fill() {
+						&segments.directive_parameters.fill_value
+					} else {
+						&segments.directive_parameters.pad_value
+					}
+					.clone();
+				},
+			// For zero-sized strings, we would lose the preceding labels if we didn't remove the string here.
+			DirectiveValue::String { text, has_null_terminator: false } if text.len() == 0 =>
+				try {
+					self.value = DirectiveValue::Placeholder;
+				},
+			DirectiveValue::AssignReference {
+				reference: ref reference @ (Reference::MacroArgument { .. } | Reference::MacroGlobal { .. }),
+				..
+			} =>
 				return Err(AssemblyError::AssigningToReference {
-					kind:     crate::error::ReferenceType::MacroArgument,
+					kind:     reference.into(),
 					name:     reference.to_string().into(),
-					src:      source_code,
-					location: self.span,
-				}
-				.into()),
-			DirectiveValue::AssignReference { reference: reference @ Reference::MacroGlobal { .. }, .. } =>
-				return Err(AssemblyError::AssigningToReference {
-					name:     reference.to_string().into(),
-					kind:     crate::error::ReferenceType::MacroGlobal,
 					src:      source_code,
 					location: self.span,
 				}
@@ -295,6 +295,22 @@ pub enum DirectiveValue {
 	},
 }
 
+/// Expands to a pattern that matches all symbolic directives.
+macro_rules! symbolic_directives {
+	() => {
+		$crate::directive::DirectiveValue::Org(_)
+			| $crate::directive::DirectiveValue::Placeholder
+			| $crate::directive::DirectiveValue::PushSection
+			| $crate::directive::DirectiveValue::SetDirectiveParameters { .. }
+			| $crate::directive::DirectiveValue::PopSection
+			| $crate::directive::DirectiveValue::End
+			| $crate::directive::DirectiveValue::AssignReference { .. }
+			| $crate::directive::DirectiveValue::UserDefinedMacro { .. }
+	};
+}
+
+pub(crate) use symbolic_directives;
+
 impl DirectiveValue {
 	/// A large assembled size constant which effectively disables all optimizations.
 	const large_assembled_size: usize = u16::MAX as usize;
@@ -346,21 +362,8 @@ impl DirectiveValue {
 	/// Whether the directive needs to be in the segmented AST (false) or not (true).
 	pub const fn is_symbolic(&self) -> bool {
 		match self {
-			Self::Org(_)
-			| Self::Placeholder
-			| Self::PushSection
-			| Self::SetDirectiveParameters { .. }
-			| Self::PopSection
-			| Self::End
-			| Self::AssignReference { .. }
-			| Self::UserDefinedMacro { .. } => true,
-			Self::Table { .. }
-			| Self::String { .. }
-			| Self::Brr { .. }
-			| Self::Conditional { .. }
-			| Self::Fill { .. }
-			| Self::SampleTable { .. }
-			| Self::Include { .. } => false,
+			symbolic_directives!() => true,
+			_ => false,
 		}
 	}
 }
@@ -656,11 +659,11 @@ impl FillOperation {
 
 	/// Returns the amount of bytes to fill, given the fill operation parameter and a current address from which to
 	/// start filling. The result depends on which fill operation is performed:
-	/// - [`FillOperation::ToAddress`] uses the parameter as the address to fill to. The amount to fill is the distance of that to the
-	///   current address.
-	/// - [`FillOperation::ToAlignment`] uses the parameter as the alignment to achieve. The amount to fill is the difference between the
-	///   current memory address and the next correctly-aligned address. Also, the offset (if provided) is added to that
-	///   fill amount.
+	/// - [`FillOperation::ToAddress`] uses the parameter as the address to fill to. The amount to fill is the distance
+	///   of that to the current address.
+	/// - [`FillOperation::ToAlignment`] uses the parameter as the alignment to achieve. The amount to fill is the
+	///   difference between the current memory address and the next correctly-aligned address. Also, the offset (if
+	///   provided) is added to that fill amount.
 	/// - [`FillOperation::Amount`] uses the parameter directly as the amount of bytes to fill.
 	pub fn amount_to_fill(
 		&self,

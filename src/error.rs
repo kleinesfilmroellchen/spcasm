@@ -1,5 +1,5 @@
+use std::borrow::Borrow;
 use std::collections::HashMap;
-use std::fmt::Display;
 use std::mem::Discriminant;
 use std::num::ParseIntError;
 use std::sync::Arc;
@@ -227,7 +227,7 @@ pub enum AssemblyError {
 	#[diagnostic(code(spcasm::io::file_not_found), severity(Error))]
 	FileNotFound {
 		/// std::io::Error is not clonable for performance and implementation detail reasons[rustissue].
-		/// 
+		///
 		/// [rustissue]: <https://github.com/rust-lang/rust/issues/24135>
 		#[source]
 		os_error:  Arc<std::io::Error>,
@@ -616,7 +616,7 @@ pub enum AssemblyError {
 	#[error("Expected \"{expected}\"")]
 	#[diagnostic(code(spcasm::syntax::expected_token), severity(Error))]
 	ExpectedToken {
-		expected: TokenOrString,
+		expected: SharedStr,
 		actual:   Token,
 		#[label("This {actual} is invalid here")]
 		location: SourceSpan,
@@ -627,7 +627,7 @@ pub enum AssemblyError {
 	#[error("Expected any of {}", expected.iter().map(std::string::ToString::to_string).collect::<Vec<_>>().join(", "))]
 	#[diagnostic(code(spcasm::syntax::expected_token), severity(Error))]
 	ExpectedTokens {
-		expected: Vec<TokenOrString>,
+		expected: Vec<SharedStr>,
 		actual:   Token,
 		#[label("This {actual} is invalid here")]
 		location: SourceSpan,
@@ -666,7 +666,7 @@ pub enum AssemblyError {
 	#[error("Expected any of {}", expected.iter().map(std::string::ToString::to_string).collect::<Vec<_>>().join(", "))]
 	#[diagnostic(code(spcasm::syntax::missing_token), severity(Error))]
 	UnexpectedEndOfTokens {
-		expected: Vec<TokenOrString>,
+		expected: Vec<SharedStr>,
 		#[label("There should be a token here")]
 		location: SourceSpan,
 		#[source_code]
@@ -717,11 +717,11 @@ pub enum AssemblyError {
 		severity(Error)
 	)]
 	InvalidTestComment {
-		#[label("This ';=' comment is invalid: {}", basis.clone().or_else(|| "".parse::<u8>().err()).unwrap())]
+		#[label("This ';=' comment is invalid: {basis}")]
 		location: SourceSpan,
 		#[source_code]
 		src:      Arc<AssemblyCode>,
-		basis:    Option<ParseIntError>,
+		basis:    ParseIntError,
 	},
 
 	#[error(
@@ -797,13 +797,13 @@ impl AssemblyError {
 				src,
 			},
 			ParseError::UnrecognizedEOF { location, expected } => Self::UnexpectedEndOfTokens {
-				expected: expected.into_iter().map(TokenOrString::from).collect(),
+				expected: expected.into_iter().map(SharedStr::from).collect(),
 				location: (location, 1).into(),
 				src,
 			},
 			ParseError::UnrecognizedToken { token: (start, token, end), expected } if expected.len() > 1 =>
 				Self::ExpectedTokens {
-					expected: expected.into_iter().map(TokenOrString::from).collect(),
+					expected: expected.into_iter().map(SharedStr::from).collect(),
 					actual: token,
 					location: (start, end - start).into(),
 					src,
@@ -821,15 +821,6 @@ impl AssemblyError {
 			ParseError::User { error } => error,
 		}
 	}
-
-	pub(crate) fn from_number_error(location: SourceSpan, src: Arc<AssemblyCode>) -> Self {
-		// HACK: Create an integer parsing error that looks somewhat like the error which integer conversion would give.
-		Self::InvalidNumber {
-			error: format!("{}", usize::MAX as u128 + 1).parse::<usize>().unwrap_err(),
-			location,
-			src,
-		}
-	}
 }
 
 impl From<Box<Self>> for AssemblyError {
@@ -841,45 +832,6 @@ impl From<Box<Self>> for AssemblyError {
 impl From<std::io::Error> for AssemblyError {
 	fn from(value: std::io::Error) -> Self {
 		Self::OtherIoError { inner: Arc::new(value) }
-	}
-}
-
-#[derive(Clone, Debug)]
-pub enum TokenOrString {
-	Token(Token),
-	String(SharedStr),
-}
-
-impl Display for TokenOrString {
-	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> Result<(), std::fmt::Error> {
-		write!(f, "{}", match self {
-			Self::Token(token) => format!("{}", token),
-			Self::String(string) => string.to_string(),
-		})
-	}
-}
-
-impl From<std::string::String> for TokenOrString {
-	fn from(string: std::string::String) -> Self {
-		Self::String(string.into())
-	}
-}
-
-impl From<SharedStr> for TokenOrString {
-	fn from(string: SharedStr) -> Self {
-		Self::String(string)
-	}
-}
-
-impl From<&str> for TokenOrString {
-	fn from(string: &str) -> Self {
-		Self::String(string.into())
-	}
-}
-
-impl From<Token> for TokenOrString {
-	fn from(string: Token) -> Self {
-		Self::Token(string)
 	}
 }
 
@@ -908,9 +860,12 @@ impl ReferenceType {
 	}
 }
 
-impl From<Reference> for ReferenceType {
-	fn from(value: Reference) -> Self {
-		match value {
+impl<Ref: Borrow<Reference>> From<Ref> for ReferenceType
+where
+	Ref: Borrow<Reference>,
+{
+	fn from(value: Ref) -> Self {
+		match value.borrow() {
 			Reference::Label(_) => Self::Global,
 			Reference::Relative { .. } => Self::Relative,
 			Reference::UnresolvedLocalLabel { .. } => Self::Local,

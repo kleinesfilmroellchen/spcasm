@@ -155,11 +155,13 @@ impl ReferenceResolvable for ProgramElement {
 impl std::fmt::Display for ProgramElement {
 	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
 		match self {
-			Self::Label(label) =>
-				write!(f, "{} [label] {}{}", span_to_string(label.source_span()), label, match label.location() {
-					Some(value) => format!(" = {}", value),
-					None => String::new(),
-				}),
+			Self::Label(label) => write!(
+				f,
+				"{} [label] {}{}",
+				span_to_string(label.source_span()),
+				label,
+				label.location().map_or_else(String::new, |value| format!(" = {}", value),)
+			),
 			Self::Directive(directive) => write!(f, "{}", directive),
 			Self::Instruction(instruction) => write!(f, "{}", instruction),
 			Self::IncludeSource { file, span } => write!(f, "{} include \"{}\"", span_to_string(*span), file),

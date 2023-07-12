@@ -10,11 +10,13 @@ use std::sync::Arc;
 
 #[allow(unused)]
 use flexstr::{shared_str, IntoSharedStr, SharedStr, ToSharedStr};
+use miette::SourceSpan;
 
 use crate::directive::DirectiveSymbol;
 use crate::error::ReferenceType;
 use crate::parser::Token;
 use crate::sema::instruction::Mnemonic;
+use crate::sema::AssemblyTimeValue;
 use crate::AssemblyCode;
 
 /// This is a default-like trait whose values are wholly ignored. It's just necessary for a discriminant-related hack:
@@ -85,5 +87,11 @@ impl FakeDefaultForIgnoredValues for DirectiveSymbol {
 impl FakeDefaultForIgnoredValues for Mnemonic {
 	fn default() -> Self {
 		Self::Adc
+	}
+}
+
+impl FakeDefaultForIgnoredValues for AssemblyTimeValue {
+	fn default() -> Self {
+		Self::Literal(0, SourceSpan::default())
 	}
 }

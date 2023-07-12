@@ -139,13 +139,14 @@ impl AssembledData {
 	/// memory address 0 etc.
 	/// # Errors
 	/// If the segments contain overlapping data, errors are returned.
+	#[allow(clippy::cast_possible_wrap)]
 	pub fn combine_segments(&self) -> Result<Vec<u8>, Box<AssemblyError>> {
 		let mut all_data = Vec::new();
 		let segments = self.resolve_segments()?;
 
 		// The iteration is sorted
 		for (starting_address, segment_data) in segments.segments {
-			if starting_address < all_data.len() as i64 {
+			if starting_address < all_data.len() as MemoryAddress {
 				return Err(AssemblyError::SegmentMismatch {
 					src:           Arc::new(AssemblyCode {
 						text:         pretty_hex(&all_data, Some(starting_address as usize)),
@@ -614,13 +615,13 @@ impl AssembledData {
 	/// Whether any modifications were actually done during the resolution pass.
 	/// # Errors
 	/// Any warnings and warning-promoted errors from resolution are passed on.
-	#[allow(clippy::missing_panics_doc)]
+	#[allow(clippy::missing_panics_doc, clippy::cast_possible_wrap)]
 	fn execute_reference_resolution_pass(&mut self) -> Change {
 		let mut had_modifications = Change::Unmodified;
 		for (segment_start, segment_data) in &mut self.segments.segments {
 			let mut current_global_label = None;
 			for (offset, datum) in segment_data.iter_mut().enumerate() {
-				let memory_address = segment_start + offset as i64;
+				let memory_address = segment_start + offset as MemoryAddress;
 				current_global_label = datum
 					.labels
 					.last()

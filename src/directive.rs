@@ -69,10 +69,10 @@ impl Directive {
 							segments.directive_parameters.pad_value.get_or_insert_default().value = value.clone(),
 						DirectiveParameter::FillSize =>
 							segments.directive_parameters.fill_value.get_or_insert_default().size =
-								Size::from_i64(value.try_value(self.span, source_code.clone())?).unwrap(),
+								Size::from_i64(value.try_value(self.span, &source_code)?).unwrap(),
 						DirectiveParameter::PadSize =>
 							segments.directive_parameters.pad_value.get_or_insert_default().size =
-								Size::from_i64(value.try_value(self.span, source_code.clone())?).unwrap(),
+								Size::from_i64(value.try_value(self.span, &source_code)?).unwrap(),
 					}
 				}
 				Ok(())
@@ -87,7 +87,7 @@ impl Directive {
 					.clone();
 				},
 			// For zero-sized strings, we would lose the preceding labels if we didn't remove the string here.
-			DirectiveValue::String { text, has_null_terminator: false } if text.len() == 0 =>
+			DirectiveValue::String { text, has_null_terminator: false } if text.is_empty() =>
 				try {
 					self.value = DirectiveValue::Placeholder;
 				},
@@ -361,10 +361,7 @@ impl DirectiveValue {
 
 	/// Whether the directive needs to be in the segmented AST (false) or not (true).
 	pub const fn is_symbolic(&self) -> bool {
-		match self {
-			symbolic_directives!() => true,
-			_ => false,
-		}
+		matches!(self, symbolic_directives!())
 	}
 }
 
@@ -400,7 +397,7 @@ impl Display for DirectiveValue {
 			Self::UserDefinedMacro { name, arguments, body } => format!(
 				"macro {} ({})\n    {}",
 				name,
-				arguments.read().to_string(),
+				arguments.read(),
 				body.iter()
 					.map(ProgramElement::to_string)
 					.intersperse("\n".into())
@@ -566,7 +563,7 @@ impl ReferenceResolvable for DirectiveValue {
 		match self {
 			Self::Table { values, .. } =>
 				try {
-					for value in values.iter_mut() {
+					for value in &mut *values {
 						value.value.set_current_label(current_label, source_code)?;
 					}
 				},
@@ -683,7 +680,7 @@ impl FillOperation {
 					let offset_to_aligned_address =
 						if current_address % alignment == 0 { 0 } else { alignment - current_address % alignment };
 					offset_to_aligned_address
-						+ offset.clone().map_or(Ok(0), |offset| offset.try_value(location, source_code.clone()))?
+						+ offset.clone().map_or(Ok(0), |offset| offset.try_value(location, source_code))?
 				}
 			},
 			Self::ToAddress => parameter - current_address,

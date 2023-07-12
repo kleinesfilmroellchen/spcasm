@@ -261,6 +261,9 @@ impl Opcode {
 	}
 
 	/// Return all references that this opcode points to, and the corresponding assembly time calculations.
+	/// 
+	/// # Panics
+	/// All panics are programming bugs.
 	#[must_use]
 	pub fn references_and_calculations(&self) -> Vec<(&Reference, &AssemblyTimeValue)> {
 		let mut references = self

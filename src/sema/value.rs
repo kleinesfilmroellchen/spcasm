@@ -89,25 +89,32 @@ impl AssemblyTimeValue {
 	}
 
 	/// Extracts the concrete value, if possible.
+	/// 
 	/// # Errors
 	/// If the value cannot be resolved.
 	pub fn try_value(
 		&self,
 		location: SourceSpan,
-		source_code: Arc<AssemblyCode>,
+		source_code: &Arc<AssemblyCode>,
 	) -> Result<MemoryAddress, Box<AssemblyError>> {
 		let possibly_resolved = self.clone().try_resolve();
 		if let Self::Literal(value, ..) = possibly_resolved {
 			Ok(value)
 		} else {
-			let first_reference = self.first_reference().expect("unresolved value without a reference");
-			Err(AssemblyError::UnresolvedReference {
-				reference:          first_reference.to_string().into(),
-				reference_location: Some(first_reference.source_span()),
-				usage_location:     location,
-				src:                source_code,
-			}
-			.into())
+			Err(self.first_reference().map_or_else(|| {
+				AssemblyError::UnresolvableValue { 
+					value:          self.clone(),
+					value_location: location,
+					src:            source_code.clone(),
+				}
+			}, |first_reference| {
+				AssemblyError::UnresolvedReference {
+					reference:          first_reference.to_string().into(),
+					reference_location: Some(first_reference.source_span()),
+					usage_location:     location,
+					src:                source_code.clone(),
+				}
+			}).into())
 		}
 	}
 

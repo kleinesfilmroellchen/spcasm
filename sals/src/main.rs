@@ -249,14 +249,8 @@ impl LanguageServer for Backend {
 
 		readable_file.reference_at(offset).map_or(Ok(None), |reference| {
 			let spans: Box<dyn Iterator<Item = SourceSpan>> = match reference {
-				Reference::Label(label) => Box::new(
-					label
-						.read()
-						.usage_spans
-						.clone()
-						.into_iter()
-						.chain(label.read_recursive().definition_span.into_iter()),
-				),
+				Reference::Label(label) =>
+					Box::new(label.read().usage_spans.clone().into_iter().chain(label.read_recursive().definition_span)),
 				Reference::MacroArgument { span, .. }
 				| Reference::MacroGlobal { span, .. }
 				| Reference::Relative { span, .. }
@@ -285,7 +279,7 @@ impl LanguageServer for Backend {
 
 	async fn semantic_tokens_full(&self, params: SemanticTokensParams) -> Result<Option<SemanticTokensResult>> {
 		let file = self.file_for_uri(&params.text_document.uri)?;
-		let semantic_tokens = || -> Option<Vec<SemanticToken>> {
+		let semantic_tokens = {
 			let text = file.read().source_code.text.clone();
 			// Necessary for semantic token location delta computation.
 			let mut last_token_line = 0;
@@ -318,7 +312,7 @@ impl LanguageServer for Backend {
 				})
 				.collect::<Vec<_>>();
 			Some(tokens)
-		}();
+		};
 		if let Some(semantic_token) = semantic_tokens {
 			return Ok(Some(SemanticTokensResult::Tokens(SemanticTokens {
 				result_id: None,

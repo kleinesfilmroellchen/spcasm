@@ -128,7 +128,7 @@ Directive: Directive = {
 		}
 	},
 	<directive:"org"> <address:AssemblyTimeValue> =>? Ok(Directive {
-		value: DirectiveValue::Org(address.try_value(directive, source_code.clone()).map_err(|err| ParseError::User {
+		value: DirectiveValue::Org(address.try_value(directive, source_code).map_err(|err| ParseError::User {
 			error: AssemblyError::ReferencesInDirectiveArgument {
 				directive: DirectiveSymbol::Org,
 				src: source_code.clone(),
@@ -355,17 +355,17 @@ AssemblyTimeValueWithHashPrefix = "#" <AssemblyTimeValue>;
 InclusionRange: SourceSpan = {
 	<comma:","> <start:AssemblyTimeValue> <length:( "," <AssemblyTimeValue> )?> =>? {
 		// usize::MAX > i64::MAX only on wasm, so the "safe" defaults will most likely never be hit.
-		let start = usize::try_from(start.try_value(comma.into(), source_code.clone())
+		let start = usize::try_from(start.try_value(comma.into(), source_code)
 				.map_err(AssemblyError::from)?).unwrap_or(usize::MIN);
-		let length = usize::try_from(length.map(|length| length.try_value(comma.into(), source_code.clone())).transpose()
+		let length = usize::try_from(length.map(|length| length.try_value(comma.into(), source_code)).transpose()
 				.map_err(AssemblyError::from)?.unwrap_or(usize::MAX as i64)).unwrap_or(usize::MAX);
 		Ok((start, length).into())
 	},
 	<colon:":"> <start:AssemblyTimeValue> <dash:"-range-"> <end:AssemblyTimeValue> =>? {
 		let colon_dash_range = source_range(colon.into(), dash.into());
-		let start = usize::try_from(start.try_value(colon_dash_range, source_code.clone())
+		let start = usize::try_from(start.try_value(colon_dash_range, source_code)
 				.map_err(AssemblyError::from)?).unwrap_or(usize::MIN);
-		let end = usize::try_from(end.try_value(colon_dash_range, source_code.clone())
+		let end = usize::try_from(end.try_value(colon_dash_range, source_code)
 				.map_err(AssemblyError::from)?).unwrap_or(usize::MAX);
 		if start > end {
 			Err(ParseError::User { error: AssemblyError::StartAboveEnd {

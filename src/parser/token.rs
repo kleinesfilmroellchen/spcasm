@@ -216,7 +216,7 @@ impl Token {
 			"align" => Ok("align"),
 			"startpos" => Ok("startpos"),
 			_ => Err(AssemblyError::ExpectedToken {
-				expected: shared_str!("identifier").into(),
+				expected: shared_str!("identifier"),
 				actual: Self::Identifier(identifier.into(), span),
 				location: span,
 				src,

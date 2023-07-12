@@ -5,7 +5,7 @@
 use std::collections::BTreeMap;
 
 #[allow(unused)]
-use flexstr::{SharedStr, shared_str, IntoSharedStr, ToSharedStr};
+use flexstr::{shared_str, IntoSharedStr, SharedStr, ToSharedStr};
 
 use crate::assembler::sample_table::SampleTable;
 use crate::directive::DirectiveParameterTable;
@@ -64,11 +64,11 @@ impl<Contained> Segments<Contained> {
 
 	/// Returns the current memory location where data is written to.
 	/// # Errors
-	/// If this assembly data doesn't have a started segment yet.
+	/// If this assembly data doesn't have a started segment yet, or the start address overflowed (unlikely).
 	#[inline]
 	#[allow(clippy::missing_panics_doc)]
 	pub fn current_location(&self) -> Result<MemoryAddress, ()> {
-		Ok(self.segments[&self.current_segment_start.ok_or(())?].len() as MemoryAddress
+		Ok(MemoryAddress::try_from(self.segments[&self.current_segment_start.ok_or(())?].len()).map_err(|_| ())?
 			+ self.current_segment_start.unwrap())
 	}
 

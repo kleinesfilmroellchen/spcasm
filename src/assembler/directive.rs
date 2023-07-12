@@ -22,6 +22,9 @@ impl AssembledData {
 	///
 	/// # Errors
 	/// Any error caused by the directive assembly process is returned.
+	/// 
+	/// # Panics
+	/// All panics are programming bugs.
 	#[allow(clippy::unnecessary_wraps)]
 	pub fn assemble_directive(
 		&mut self,
@@ -92,7 +95,7 @@ impl AssembledData {
 				self.assemble_fill(operation, parameter, value.clone(), current_address, current_labels, directive.span)
 			},
 			DirectiveValue::Conditional { ref mut condition, ref mut true_block, ref mut false_block } => {
-				let condition = condition.try_value(directive.span, self.source_code.clone())?;
+				let condition = condition.try_value(directive.span, &self.source_code)?;
 				if condition == 0 {
 					self.assemble_all_from_list(false_block)
 				} else {
@@ -196,7 +199,7 @@ impl AssembledData {
 			src: self.source_code.clone(),
 		})?;
 		let amount_to_fill = operation.amount_to_fill(
-			parameter.try_value(location, self.source_code.clone())?,
+			parameter.try_value(location, &self.source_code)?,
 			current_address,
 			location,
 			&self.source_code,

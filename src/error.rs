@@ -15,6 +15,7 @@ use crate::directive::DirectiveSymbol;
 use crate::parser::Token;
 use crate::sema::instruction::{MemoryAddress, Mnemonic};
 use crate::sema::reference::Reference;
+use crate::sema::AssemblyTimeValue;
 use crate::AssemblyCode;
 
 #[allow(clippy::module_name_repetitions)]
@@ -724,6 +725,20 @@ pub enum AssemblyError {
 		basis:    ParseIntError,
 	},
 
+	#[error("`{value:04X}` cannot be resolved to a static value")]
+	#[diagnostic(
+		code(spcasm::unresolvable),
+		severity(Error),
+		help("This error is not caused by a reference, but no further information is available.")
+	)]
+	UnresolvableValue {
+		value:          AssemblyTimeValue,
+		#[label("`{value:04X}` used here")]
+		value_location: SourceSpan,
+		#[source_code]
+		src:            Arc<AssemblyCode>,
+	},
+
 	#[error(
 		"The value `{value:02X}` is being used as a {size}-bit operand here, but it is larger than this. The extra \
 		 upper bits are truncated."
@@ -860,7 +875,7 @@ impl ReferenceType {
 	}
 }
 
-impl<Ref: Borrow<Reference>> From<Ref> for ReferenceType
+impl<Ref> From<Ref> for ReferenceType
 where
 	Ref: Borrow<Reference>,
 {

@@ -347,7 +347,7 @@ impl AssemblyFile {
 	/// 4. Modify instructions accordingly
 	///
 	/// TODO: This function is very hot; >20% of runtime. Optimize the optimizer :^)
-	#[allow(clippy::too_many_lines)]
+	#[allow(clippy::too_many_lines, clippy::cast_possible_wrap)]
 	fn optimize_direct_page_labels(&self, segments: &mut Segments<ProgramElement>) {
 		/// Do the more complex direct page coercing with references. We only consider references in the direct page if
 		/// they are in the *zero page*. If that is a problem, forcing to direct page addressing is always possible.
@@ -527,6 +527,9 @@ impl AssemblyFile {
 	///
 	/// # Errors
 	/// All errors from other files are propagated, as well as include cycles.
+	/// 
+	/// # Panics
+	/// All panics are programming bugs.
 	pub fn resolve_source_includes(&mut self) -> Result<(), Box<AssemblyError>> {
 		let mut index = 0;
 		while index < self.content.len() {

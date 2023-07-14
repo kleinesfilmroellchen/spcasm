@@ -91,3 +91,12 @@ dw value_of_value ;= 1A 30
 
 macro some_macro
 endmacro
+
+; bra SomeNamespace_zero ;= 2F 00
+
+; namespace SomeNamespace
+
+; zero: bra zero ;= 2F FE
+; bra pseudo_tests ;= 2F F0
+
+; namespace off

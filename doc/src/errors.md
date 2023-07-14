@@ -903,8 +903,8 @@ spcasm::syntax::missing_token
   │ "<", "arch", "ascii", "asciiz", "brr", "byte", "db", "dd", "dl", "dw",
   │ "endasm", "fill", "fillbyte", "filldword", "filllong", "fillword",
   │ "identifier", "if", "incbin", "include", "incsrc", "macro", "math",
-  │ "mnemonic", "org", "pad", "padbyte", "paddword", "padlong", "padword",
-  │ "pullpc", "pushpc", "sampletable", "startpos", "word"
+  │ "mnemonic", "namespace", "org", "pad", "padbyte", "paddword", "padlong",
+  │ "padword", "pullpc", "pushpc", "sampletable", "startpos", "word"
    ╭─[tests/errors/parser-missing-token.spcasmtest:1:1]
  1 │ org 0
  2 │ label:

@@ -216,6 +216,18 @@ Directive: Directive = {
 	},
 	LabelAssignment,
 	UserDefinedMacro,
+	<directive:"namespace"> <namespace_name_or_end:"identifier"> => {
+		let span = source_range(directive.into(), namespace_name_or_end.1.into());
+		Directive {
+			value: if namespace_name_or_end.0 == "end" {
+					DirectiveValue::EndNamespace
+				} else {
+					DirectiveValue::StartNamespace { name: namespace_name_or_end.0, }
+				},
+			span,
+			expected_value: None,
+		}
+	},
 };
 
 TableDirective: (DirectiveSymbol, SourceSpan) = {
@@ -631,6 +643,7 @@ extern {
 		"else" => Token::Directive(DirectiveSymbol::Else, <SourceSpan>),
 		"endif" => Token::Directive(DirectiveSymbol::EndIf, <SourceSpan>),
 		"math" => Token::Directive(DirectiveSymbol::Math, <SourceSpan>),
+		"namespace" => Token::Directive(DirectiveSymbol::Namespace, <SourceSpan>),
 		"number" => Token::Number(<i64>, <SharedStr>, <SourceSpan>),
 		"string" => Token::String(<Vec<u8>>, <SourceSpan>),
 		"#" => Token::Hash(<SourceOffset>),

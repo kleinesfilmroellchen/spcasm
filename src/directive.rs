@@ -189,6 +189,7 @@ pub enum DirectiveSymbol {
 	PadWord,
 	PadLong,
 	PadDWord,
+	Namespace,
 }
 
 impl Display for DirectiveSymbol {
@@ -226,6 +227,7 @@ impl Display for DirectiveSymbol {
 			Self::PadWord => "padword",
 			Self::PadLong => "padlong",
 			Self::PadDWord => "paddword",
+			Self::Namespace => "namespace",
 		})
 	}
 }
@@ -293,6 +295,10 @@ pub enum DirectiveValue {
 		/// The block that is assembled if the condition is falsy.
 		false_block: Vec<ProgramElement>,
 	},
+	/// `namespace`
+	StartNamespace { name: SharedStr },
+	/// `namespace off`
+	EndNamespace,
 }
 
 /// Expands to a pattern that matches all symbolic directives.
@@ -304,6 +310,8 @@ macro_rules! symbolic_directives {
 			| $crate::directive::DirectiveValue::SetDirectiveParameters { .. }
 			| $crate::directive::DirectiveValue::PopSection
 			| $crate::directive::DirectiveValue::End
+			| $crate::directive::DirectiveValue::StartNamespace { .. }
+			| $crate::directive::DirectiveValue::EndNamespace
 			| $crate::directive::DirectiveValue::AssignReference { .. }
 			| $crate::directive::DirectiveValue::UserDefinedMacro { .. }
 	};
@@ -332,6 +340,8 @@ impl DirectiveValue {
 			| Self::AssignReference { .. }
 			| Self::Placeholder
 			| Self::SetDirectiveParameters { .. }
+			| Self::StartNamespace { .. }
+			| Self::EndNamespace
 			| Self::Org(..) => 0,
 			Self::Table { values } =>
 				values.len() * values.first().and_then(|value| value.size.to_u8()).unwrap_or(0) as usize,
@@ -394,6 +404,8 @@ impl Display for DirectiveValue {
 			Self::End => "endasm".to_string(),
 			Self::PushSection => "push".to_string(),
 			Self::PopSection => "pop".to_string(),
+			Self::EndNamespace => "namespace off".to_string(),
+			Self::StartNamespace { name } => format!("namespace {}", name),
 			Self::UserDefinedMacro { name, arguments, body } => format!(
 				"macro {} ({})\n    {}",
 				name,
@@ -474,6 +486,8 @@ impl ReferenceResolvable for DirectiveValue {
 			| Self::SetDirectiveParameters { .. }
 			| Self::Fill { .. }
 			| Self::PopSection
+			| Self::StartNamespace { .. }
+			| Self::EndNamespace
 			| Self::Org(_) => Ok(()),
 			Self::AssignReference { value, .. } => value.replace_macro_parent(replacement_parent, source_code),
 			Self::UserDefinedMacro { name, body, .. } => Err(AssemblyError::RecursiveMacroDefinition {
@@ -518,6 +532,8 @@ impl ReferenceResolvable for DirectiveValue {
 			| Self::SampleTable { .. }
 			| Self::SetDirectiveParameters { .. }
 			| Self::PopSection
+			| Self::StartNamespace { .. }
+			| Self::EndNamespace
 			| Self::Org(_)
 			| Self::UserDefinedMacro { .. } => (),
 			Self::AssignReference { value, .. } => value.resolve_relative_labels(direction, relative_labels),
@@ -549,6 +565,8 @@ impl ReferenceResolvable for DirectiveValue {
 			| Self::SampleTable { .. }
 			| Self::SetDirectiveParameters { .. }
 			| Self::PopSection
+			| Self::StartNamespace { .. }
+			| Self::EndNamespace
 			| Self::Org(_)
 			| Self::UserDefinedMacro { .. } => (),
 			Self::AssignReference { value, .. } => value.resolve_pseudo_labels(global_labels),
@@ -598,6 +616,8 @@ impl ReferenceResolvable for DirectiveValue {
 			| Self::End
 			| Self::PushSection
 			| Self::PopSection
+			| Self::StartNamespace { .. }
+			| Self::EndNamespace
 			| Self::Org(_) => Ok(()),
 		}
 	}

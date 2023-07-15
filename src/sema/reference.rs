@@ -295,8 +295,7 @@ impl Display for Reference {
 	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
 		f.pad(&match self {
 			Self::Label(label) => label.read().to_string(),
-			Self::UnresolvedLabel { name, nesting_level, .. } =>
-				format!("{}{}", ".".repeat((*nesting_level).into()), name),
+			Self::UnresolvedLabel { name, nesting_level, .. } => format!("{}{}", ".".repeat(*nesting_level), name),
 			Self::MacroArgument { name, .. } => format!("<{}>", name),
 			Self::MacroGlobal { .. } => "\\@".to_string(),
 			Self::Relative { direction, id, .. } => direction.string().repeat(usize::try_from(u64::from(*id)).unwrap()),
@@ -683,7 +682,7 @@ pub fn create_label_at_this_position(
 		// Nesting level of the current label we're considering.
 		let mut current_nesting_level = parent_label.read().nesting_count();
 		// Move up the parent chain while the "parent" is still on our level (or below us)
-		while current_nesting_level >= label_nesting_level.into() {
+		while current_nesting_level >= label_nesting_level {
 			let parent_borrow = parent_label.read();
 			if let Some(new_parent) = parent_borrow.parent.upgrade() {
 				let new_parent_clone = new_parent.clone();
@@ -698,7 +697,7 @@ pub fn create_label_at_this_position(
 		}
 		// We used "break" in the previous loop because the parent chain of the current label is broken.
 		// This should not happen (given `nesting_count()`), but it's a safe error to return.
-		if current_nesting_level >= label_nesting_level.into() {
+		if current_nesting_level >= label_nesting_level {
 			return Err(AssemblyError::MissingGlobalLabel {
 				local_label: label_name,
 				src:         source_code.clone(),

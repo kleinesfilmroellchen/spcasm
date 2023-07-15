@@ -5,7 +5,7 @@
 use std::fmt::Display;
 
 #[allow(unused)]
-use flexstr::{SharedStr, shared_str, IntoSharedStr, ToSharedStr};
+use flexstr::{shared_str, IntoSharedStr, SharedStr, ToSharedStr};
 use spcasm_derive::{Parse, VariantName};
 
 use crate::VariantName;

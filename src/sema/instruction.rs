@@ -4,10 +4,10 @@ use std::fmt::{Display, Formatter};
 use std::result::Result;
 use std::sync::Arc;
 
+#[allow(unused)]
+use flexstr::{shared_str, IntoSharedStr, SharedStr, ToSharedStr};
 use miette::SourceSpan;
 use parking_lot::RwLock;
-#[allow(unused)]
-use flexstr::{SharedStr, shared_str, IntoSharedStr, ToSharedStr};
 use spcasm_derive::{Parse, VariantName};
 
 use super::reference::{self, Label, Reference, ReferenceResolvable};
@@ -261,7 +261,7 @@ impl Opcode {
 	}
 
 	/// Return all references that this opcode points to, and the corresponding assembly time calculations.
-	/// 
+	///
 	/// # Panics
 	/// All panics are programming bugs.
 	#[must_use]

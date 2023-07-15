@@ -2,7 +2,7 @@ name: Check and test spcasm
 
 on:
   schedule:
-    - cron: '0 0 * * 0' # every sunday at midnight
+    - cron: "0 0 * * 0" # every sunday at midnight
 
 env:
   CARGO_TERM_COLOR: always

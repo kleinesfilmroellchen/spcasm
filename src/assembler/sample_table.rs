@@ -1,8 +1,8 @@
 //! BRR sample table infrastructure.
 
-use miette::SourceSpan;
 #[allow(unused)]
-use flexstr::{SharedStr, shared_str, IntoSharedStr, ToSharedStr};
+use flexstr::{shared_str, IntoSharedStr, SharedStr, ToSharedStr};
+use miette::SourceSpan;
 
 use super::AssembledData;
 use crate::sema::reference::Reference;

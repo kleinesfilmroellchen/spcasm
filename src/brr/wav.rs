@@ -4,7 +4,7 @@ use std::fs::File;
 use std::io::BufReader;
 
 #[allow(unused)]
-use flexstr::{SharedStr, shared_str, IntoSharedStr, ToSharedStr};
+use flexstr::{shared_str, IntoSharedStr, SharedStr, ToSharedStr};
 use wav::{read as wav_read, BitDepth};
 
 use super::DecodedSample;
@@ -16,13 +16,13 @@ const i24max: f64 = (0xff_ffff - 1) as f64;
 ///
 /// # Errors
 /// Any errors from the WAV support library are passed on, as well as some custom errors.
-pub fn read_wav_for_brr(file: File) -> Result<Vec<DecodedSample>,SharedStr> {
-	let (header, data) = wav_read(&mut BufReader::new(file)).map_err(|err|SharedStr::from(err.to_string()))?;
+pub fn read_wav_for_brr(file: File) -> Result<Vec<DecodedSample>, SharedStr> {
+	let (header, data) = wav_read(&mut BufReader::new(file)).map_err(|err| SharedStr::from(err.to_string()))?;
 	convert_sample_format(data, header.channel_count)
 }
 
 /// Convert the sample format to signed 16 bit mono.
-fn convert_sample_format(source_data: BitDepth, channels: u16) -> Result<Vec<DecodedSample>,SharedStr> {
+fn convert_sample_format(source_data: BitDepth, channels: u16) -> Result<Vec<DecodedSample>, SharedStr> {
 	let s16bit_data = convert_bit_depth_to_16_bits(source_data)?;
 	if channels > 1 {
 		average_channels(&s16bit_data, channels)
@@ -32,7 +32,7 @@ fn convert_sample_format(source_data: BitDepth, channels: u16) -> Result<Vec<Dec
 }
 
 /// Convert all samples to 16 bits.
-fn convert_bit_depth_to_16_bits(source_data: BitDepth) -> Result<Vec<i16>,SharedStr> {
+fn convert_bit_depth_to_16_bits(source_data: BitDepth) -> Result<Vec<i16>, SharedStr> {
 	match source_data {
 		BitDepth::Sixteen(data) => Ok(data),
 		BitDepth::Eight(u8bit) => Ok(u8bit
@@ -51,7 +51,7 @@ fn convert_bit_depth_to_16_bits(source_data: BitDepth) -> Result<Vec<i16>,Shared
 }
 
 /// Convert any number of channels to mono by averaging all channels together.
-fn average_channels(multichannel_data: &[i16], channels: u16) -> Result<Vec<DecodedSample>,SharedStr> {
+fn average_channels(multichannel_data: &[i16], channels: u16) -> Result<Vec<DecodedSample>, SharedStr> {
 	debug_assert!(channels > 1);
 	let mut result = Vec::with_capacity(multichannel_data.len() / channels as usize);
 	let mut multichannel_data_iterator = multichannel_data.iter();

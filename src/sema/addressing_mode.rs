@@ -4,10 +4,10 @@ use std::fmt::{Display, Formatter};
 use std::result::Result;
 use std::sync::Arc;
 
+#[allow(unused)]
+use flexstr::{shared_str, IntoSharedStr, SharedStr, ToSharedStr};
 use miette::SourceSpan;
 use parking_lot::RwLock;
-#[allow(unused)]
-use flexstr::{SharedStr, shared_str, IntoSharedStr, ToSharedStr};
 
 use super::reference::{self, Label, Reference, ReferenceResolvable};
 use super::register::Register;

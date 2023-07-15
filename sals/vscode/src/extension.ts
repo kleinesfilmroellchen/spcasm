@@ -42,7 +42,7 @@ export async function activate(providedContext: ExtensionContext) {
   context = providedContext;
   clientOutputChannel = window.createOutputChannel(
     "sals Language Client",
-    "spc700"
+    "spc700",
   );
   return startServer();
 }
@@ -79,7 +79,7 @@ async function startServer() {
     "sals",
     "sals Language Server",
     serverOptions,
-    clientOptions
+    clientOptions,
   );
   return client.start();
 }
@@ -95,7 +95,7 @@ export async function stopServer(_arguments: any[]) {
 }
 
 export async function restartServer(
-  _arguments: any[]
+  _arguments: any[],
 ): Promise<Thenable<void> | undefined> {
   if (client) await client.stop();
 

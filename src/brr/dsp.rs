@@ -1,7 +1,7 @@
 //! Signal Processing Utilities for BRR.
 
 #[allow(unused)]
-use flexstr::{SharedStr, shared_str, IntoSharedStr, ToSharedStr};
+use flexstr::{shared_str, IntoSharedStr, SharedStr, ToSharedStr};
 
 use super::DecodedSample;
 

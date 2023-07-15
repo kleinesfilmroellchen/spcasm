@@ -4,10 +4,10 @@ use std::collections::HashMap;
 use std::result::Result;
 use std::sync::{Arc, Weak};
 
+#[allow(unused)]
+use flexstr::{shared_str, IntoSharedStr, SharedStr, ToSharedStr};
 use miette::SourceSpan;
 use parking_lot::RwLock;
-#[allow(unused)]
-use flexstr::{SharedStr, shared_str, IntoSharedStr, ToSharedStr};
 
 use super::instruction::{Instruction, MemoryAddress, Opcode};
 use super::reference::{
@@ -140,7 +140,7 @@ impl AssemblyFile {
 					// To reference the relative label until codegen, create a new local label for it.
 					// This name is likely, but not guaranteed, to be unique! That's why we directly insert into
 					// the globals list.
-					let label_name:SharedStr =
+					let label_name: SharedStr =
 						format!("{}_{}", "-".repeat(usize::try_from(u64::from(id)).unwrap()), span.offset()).into();
 					let global_for_relative = Label::new_synthetic(label_name.clone(), *span);
 					self.parent
@@ -186,7 +186,7 @@ impl AssemblyFile {
 			{
 				let id = *id;
 				// To reference the relative label until codegen, create a new local label for it.
-				let label_name:SharedStr =
+				let label_name: SharedStr =
 					format!("{}_{}", "+".repeat(usize::try_from(u64::from(id)).unwrap()), span.offset()).into();
 				let global_for_relative = Label::new_synthetic(label_name.clone(), *span);
 				self.parent
@@ -296,7 +296,7 @@ impl AssemblyFile {
 					if matches!(&directive.value, DirectiveValue::Brr { directory: true, .. })
 						&& current_labels.is_empty()
 					{
-						let label_name:SharedStr = format!("brr_sample_{}", brr_label_number).into();
+						let label_name: SharedStr = format!("brr_sample_{}", brr_label_number).into();
 						let new_brr_label = Label::new_synthetic(label_name.clone(), directive.span);
 						brr_label_number += 1;
 
@@ -527,7 +527,7 @@ impl AssemblyFile {
 	///
 	/// # Errors
 	/// All errors from other files are propagated, as well as include cycles.
-	/// 
+	///
 	/// # Panics
 	/// All panics are programming bugs.
 	pub fn resolve_source_includes(&mut self) -> Result<(), Box<AssemblyError>> {
@@ -536,7 +536,7 @@ impl AssemblyFile {
 			let element = self.content[index].clone();
 			if let ProgramElement::IncludeSource { ref file, span } = element {
 				let environment = self.parent.upgrade().expect("parent deleted while we're still parsing");
-				let file:SharedStr = resolve_file(&self.source_code, file).to_string_lossy().as_ref().into();
+				let file: SharedStr = resolve_file(&self.source_code, file).to_string_lossy().as_ref().into();
 				let mut included_code =
 					AssemblyCode::from_file(&file).map_err(|os_error| AssemblyError::FileNotFound {
 						os_error:  Arc::new(os_error),

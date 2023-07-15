@@ -4,7 +4,7 @@ use std::num::NonZeroU64;
 use std::vec::IntoIter;
 
 #[allow(unused)]
-use flexstr::{SharedStr, shared_str, IntoSharedStr, ToSharedStr};
+use flexstr::{shared_str, IntoSharedStr, SharedStr, ToSharedStr};
 
 use super::{source_range, Token};
 use crate::error::AssemblyError;

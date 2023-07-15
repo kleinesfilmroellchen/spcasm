@@ -5,11 +5,11 @@ use std::cell::Cell;
 use std::io::Write;
 use std::pin::Pin;
 
+#[allow(unused)]
+use flexstr::{shared_str, IntoSharedStr, SharedStr, ToSharedStr};
 use object::elf::{ELFOSABI_STANDALONE, EM_PDSP, ET_EXEC, PT_LOAD, SHF_ALLOC, SHF_EXECINSTR, SHF_WRITE, SHT_PROGBITS};
 use object::write::elf::{FileHeader, ProgramHeader, SectionHeader, SectionIndex};
 use object::write::StringId;
-#[allow(unused)]
-use flexstr::{SharedStr, shared_str, IntoSharedStr, ToSharedStr};
 
 use crate::Segments;
 

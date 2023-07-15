@@ -1,67 +1,53 @@
 {
-	"version": "0.2.0",
-	"configurations": [
-		{
-			"type": "lldb",
-			"request": "launch",
-			"name": "Debug spcasm",
-			"cargo": {
-				"args": [
-					"build",
-					"--bin=spcasm",
-				],
-				"filter": {
-					"name": "spcasm",
-					"kind": "bin"
-				}
-			},
-			"args": [
-				"tests/opcodes.s",
-				"-f",
-				"hex-dump",
-				"-"
-			],
-			"cwd": "${workspaceFolder}"
-		},
-		{
-			"type": "lldb",
-			"request": "launch",
-			"name": "Debug spcasm tests",
-			"cargo": {
-				"args": [
-					"test",
-					"--no-run",
-					"--lib"
-				],
-				"filter": {
-					"name": "spcasm",
-					"kind": "lib"
-				}
-			},
-			"cwd": "${workspaceFolder}"
-		},
-		{
-			"name": "Test sals in extension host",
-			"type": "extensionHost",
-			"request": "launch",
-			"runtimeExecutable": "${execPath}",
-			"args": [
-				"--extensionDevelopmentPath=${workspaceRoot}/sals",
-				"${workspaceRoot}/tests/opcodes.s"
-			],
-			"outFiles": [
-				"${workspaceRoot}/sals/vscode/dist/**/*.js"
-			],
-			"env": {
-				"SERVER_PATH": "${workspaceRoot}/target/debug/sals"
-			}
-		},
-		{
-			"name": "Attach to sals server",
-			"request": "attach",
-			"type": "lldb",
-			"program": "${workspaceRoot}/target/debug/sals",
-			"pid": "${command:pickMyProcess}"
-		}
-	]
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "type": "lldb",
+      "request": "launch",
+      "name": "Debug spcasm",
+      "cargo": {
+        "args": ["build", "--bin=spcasm"],
+        "filter": {
+          "name": "spcasm",
+          "kind": "bin"
+        }
+      },
+      "args": ["tests/opcodes.s", "-f", "hex-dump", "-"],
+      "cwd": "${workspaceFolder}"
+    },
+    {
+      "type": "lldb",
+      "request": "launch",
+      "name": "Debug spcasm tests",
+      "cargo": {
+        "args": ["test", "--no-run", "--lib"],
+        "filter": {
+          "name": "spcasm",
+          "kind": "lib"
+        }
+      },
+      "cwd": "${workspaceFolder}"
+    },
+    {
+      "name": "Test sals in extension host",
+      "type": "extensionHost",
+      "request": "launch",
+      "runtimeExecutable": "${execPath}",
+      "args": [
+        "--extensionDevelopmentPath=${workspaceRoot}/sals",
+        "${workspaceRoot}/tests/opcodes.s"
+      ],
+      "outFiles": ["${workspaceRoot}/sals/vscode/dist/**/*.js"],
+      "env": {
+        "SERVER_PATH": "${workspaceRoot}/target/debug/sals"
+      }
+    },
+    {
+      "name": "Attach to sals server",
+      "request": "attach",
+      "type": "lldb",
+      "program": "${workspaceRoot}/target/debug/sals",
+      "pid": "${command:pickMyProcess}"
+    }
+  ]
 }

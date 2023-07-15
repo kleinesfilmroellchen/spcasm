@@ -6,10 +6,10 @@ function createOptions() {
     silence_all: false,
     silenced: [],
     max_reference_resolution_passes: Number(
-      document.querySelector("#max-reference-resolution-passes").value
+      document.querySelector("#max-reference-resolution-passes").value,
     ),
     max_macro_expansion_depth: Number(
-      document.querySelector("#max-macro-expansion-depth").value
+      document.querySelector("#max-macro-expansion-depth").value,
     ),
   };
 }
@@ -24,7 +24,7 @@ for (const object of updatingObjects) {
   object.addEventListener(
     "input",
     () => window.spcasm.on_assembly_change(createOptions()),
-    false
+    false,
   );
 }
 

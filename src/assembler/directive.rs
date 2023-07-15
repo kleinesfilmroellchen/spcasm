@@ -10,7 +10,7 @@ use num_traits::{FromPrimitive, ToPrimitive};
 
 use super::{resolve_file, AssembledData};
 use crate::brr::wav;
-use crate::directive::{DirectiveValue, FillOperation, symbolic_directives};
+use crate::directive::{symbolic_directives, DirectiveValue, FillOperation};
 use crate::sema::instruction::MemoryAddress;
 use crate::sema::reference::Reference;
 use crate::sema::value::{Size, SizedAssemblyTimeValue};
@@ -22,7 +22,7 @@ impl AssembledData {
 	///
 	/// # Errors
 	/// Any error caused by the directive assembly process is returned.
-	/// 
+	///
 	/// # Panics
 	/// All panics are programming bugs.
 	#[allow(clippy::unnecessary_wraps)]

@@ -304,8 +304,8 @@ spcasm::directive::range_out_of_bounds
    ╭─[tests/errors/range-out-of-bounds.spcasmtest:1:1]
  1 │ org 0
  2 │ incbin "../binary.bin":20000-50000
-   · ────────────────┬────────────────
-   ·                 ╰── Out of bounds range defined here
+   · ─────────────────┬────────────────
+   ·                  ╰── Out of bounds range defined here
    ╰────
   help: The input's length is 6.
 
@@ -475,7 +475,7 @@ spcasm::instruction::invalid_addressing_mode
  1 │ org 0
  2 │ 
  3 │ MOV PSW,Y
-   · ────┬───
+   · ────┬────
    ·     ╰── For this instruction
    ╰────
   help: The instruction `MOV` accepts the modes (X), (X)+, (direct_page)+Y,
@@ -506,7 +506,7 @@ spcasm::instruction::missing_operand
    ╭─[tests/errors/missing-operand.spcasmtest:1:1]
  1 │ org 0
  2 │ mov
-   · ─┬
+   · ─┬─
    ·  ╰── Takes at least one operand
    ╰────
   help: Add any of the operands (X), (X)+, (direct_page)+Y, (direct_page+X),
@@ -529,7 +529,7 @@ spcasm::instruction::missing_second_operand
    ╭─[tests/errors/missing-second-operand.spcasmtest:1:1]
  1 │ org 0
  2 │ mov a
-   · ──┬─
+   · ──┬──
    ·   ╰── Takes two operands
    ╰────
   help: Add any of the operands #immediate, (X), (X)+, (direct_page)+Y,
@@ -552,7 +552,7 @@ spcasm::instruction::operand_not_allowed
    ╭─[tests/errors/no-operand.spcasmtest:1:1]
  1 │ org 0
  2 │ nop a
-   · ──┬─
+   · ──┬──
    ·   ╰── Takes 0 operands
    ╰────
   help: Remove the operands of this instruction
@@ -573,7 +573,7 @@ spcasm::instruction::two_operands_not_allowed
    ╭─[tests/errors/two-operands.spcasmtest:1:1]
  1 │ org 0
  2 │ pop x,a
-   · ───┬──
+   · ───┬───
    ·    ╰── Only takes 1 operand
    ╰────
   help: Remove the second operand
@@ -599,7 +599,7 @@ spcasm::io::audio_processing_error
  1 │ org 0
  2 │ 
  3 │ brr "../binary.bin"
-   · ─────────┬────────
+   · ─────────┬─────────
    ·          ╰── While processing audio here
    ╰────
   help: This error is caused by the malformed input audio file "../
@@ -686,7 +686,7 @@ spcasm::reference::redefine
 
 ```
 
-Defining a reference with the same name more than once is ambiguous and not allowed. Some assemblers allow this and have different behavior for which reference they actually use when; spcasm would *in theory probably* always use the first definition in source code order. However, this is not considered a useful feature and therefore disallowed.
+Defining a reference with the same name more than once is ambiguous and not allowed. Some assemblers allow this and have different behavior for which reference they actually use when; spcasm would _in theory probably_ always use the first definition in source code order. However, this is not considered a useful feature and therefore disallowed.
 
 Some common names, such as `loop`, `end`, `return`, `continue`, `again`, `else`, ... should be usable more than once in the program without ambiguity. The [local label system](reference/README.md#labels-and-references) of spcasm and other assemblers allow you to use local labels (leading `.` before the label name) for these instead, so they only have to be unique within a global label.
 
@@ -701,9 +701,9 @@ spcasm::reference::unresolved
    ╭─[tests/errors/unresolved-label.spcasmtest:1:1]
  1 │ org 0
  2 │ mov a,no_exist
-   · ──────┬──────┬
-   ·       │      ╰── 'no_exist' defined here
-   ·       ╰── Used here
+   · ───────┬──────┬
+   ·        │      ╰── 'no_exist' defined here
+   ·        ╰── Used here
    ╰────
   help: Any symbolic reference must be defined somewhere. Did you misspell
         the reference's name?
@@ -739,8 +739,8 @@ spcasm::segment::empty_stack
  1 │ org 0
  2 │ 
  3 │ pullpc
-   · ──┬──
-   ·   ╰── Segment stack access here
+   · ───┬──
+   ·    ╰── Segment stack access here
    ╰────
   help: Directives like `pullpc` require that you push a segment to the
         stack beforehand with `pushpc`.
@@ -781,8 +781,8 @@ spcasm::segment::missing
  1 │ org 0
  2 │ pushpc
  3 │ db 0
-   · ─┬─
-   ·  ╰── This requires that there be a segment
+   · ──┬─
+   ·   ╰── This requires that there be a segment
    ╰────
   help: Start a new segment with `org <memory address>`
 
@@ -1079,8 +1079,8 @@ spcasm::user_macro::undefined
  4 │ endmacro
  5 │ 
  6 │ %does_not_exist()
-   · ───────┬───────
-   ·        ╰── Macro used here
+   · ────────┬────────
+   ·         ╰── Macro used here
    ╰────
   help: The available macros are: 'does_ot_exist'.
 

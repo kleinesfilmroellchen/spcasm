@@ -811,7 +811,7 @@ impl AssemblyError {
 				location: (location, 1).into(),
 				src,
 			},
-			ParseError::UnrecognizedEOF { location, expected } => Self::UnexpectedEndOfTokens {
+			ParseError::UnrecognizedEof { location, expected } => Self::UnexpectedEndOfTokens {
 				expected: expected.into_iter().map(SharedStr::from).collect(),
 				location: (location, 1).into(),
 				src,

@@ -1,5 +1,7 @@
 # spcasm
 
+![architecture](https://img.shields.io/badge/SPC700-arch?logo=sony&label=architecture&color=brown) [![pre-commit](https://img.shields.io/badge/pre--commit-enabled-brightgreen?logo=pre-commit&logoColor=white)](https://github.com/pre-commit/pre-commit) [![Tests](https://github.com/kleinesfilmroellchen/spcasm/actions/workflows/rust.yaml/badge.svg?branch=main)](https://github.com/kleinesfilmroellchen/spcasm/actions/workflows/rust.yaml) [![Site](https://github.com/kleinesfilmroellchen/spcasm/actions/workflows/site.yaml/badge.svg)](https://kleinesfilmroellchen.github.io/spcasm)
+
 spcasm is a modern assembler for the SPC700 processor architecture, famously used in the S-SMP as the sound co-processor of the SNES. spcasm is designed to be user-friendly, fast and feature-rich. Different from other assemblers for the SNES architecture family, spcasm is not intended for ROM hacking and patching in general, but regular from-scratch software development.
 
 [This project is just for fun](https://justforfunnoreally.dev/). Still, there's many reasons to use spcasm:

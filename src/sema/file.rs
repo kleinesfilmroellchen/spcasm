@@ -159,7 +159,7 @@ impl AssemblyFile {
 					Reference::Label(_)
 					| Reference::MacroGlobal { .. }
 					| Reference::Relative { .. }
-					| Reference::UnresolvedLocalLabel { .. },
+					| Reference::UnresolvedLabel { .. },
 				)
 				| ProgramElement::Directive(_)
 				| ProgramElement::Instruction(_) => (),

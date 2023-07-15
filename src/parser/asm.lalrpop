@@ -397,16 +397,16 @@ InclusionRange: SourceSpan = {
 MultipleLabelsForInstruction: Vec<Reference> = LabelForInstruction+;
 
 LabelForInstruction: Reference = {
-	<dots:"."+> <identifier:"identifier"> ":"? "\n"* => Reference::UnresolvedLocalLabel {
+	<dots:"."+> <identifier:"identifier"> ":"? "\n"* => Reference::UnresolvedLabel {
 		name: identifier.0.clone(),
-		nesting_level: NonZeroUsize::try_from(dots.len()).unwrap(),
+		nesting_level: dots.len(),
 		span: identifier.1,
 		value: None,
 	},
 	// Asar allows number-only identifiers, at least in local labels where ambiguity is not a problem.
-	<dots:"."+> <identifier:"number"> ":"? "\n"* => Reference::UnresolvedLocalLabel {
+	<dots:"."+> <identifier:"number"> ":"? "\n"* => Reference::UnresolvedLabel {
 		name: identifier.1.clone(),
-		nesting_level: NonZeroUsize::try_from(dots.len()).unwrap(),
+		nesting_level: dots.len(),
 		span: identifier.2,
 		value: None,
 	},
@@ -439,15 +439,15 @@ Reference = { ReferenceBase, GlobalReferenceAsAddress };
 ReferenceAsDefinition = { ReferenceBase => <>.0, GlobalReferenceAsDefinition };
 
 ReferenceBase: (Reference, SourceSpan) = {
-	<dots:"."+> <identifier:"identifier"> => (Reference::UnresolvedLocalLabel {
+	<dots:"."+> <identifier:"identifier"> => (Reference::UnresolvedLabel {
 		name: identifier.0.clone(),
-		nesting_level: NonZeroUsize::try_from(dots.len()).unwrap(),
+		nesting_level: dots.len(),
 		span: source_range(dots[0].into(), identifier.1.into()),
 		value: None,
 	}, source_range(dots[0].into(), identifier.1.into())),
-	<dots:"."+> <identifier:"number"> => (Reference::UnresolvedLocalLabel {
+	<dots:"."+> <identifier:"number"> => (Reference::UnresolvedLabel {
 		name: identifier.1.clone(),
-		nesting_level: NonZeroUsize::try_from(dots.len()).unwrap(),
+		nesting_level: dots.len(),
 		span: source_range(dots[0].into(), identifier.2.into()),
 		value: None,
 	}, source_range(dots[0].into(), identifier.2.into())),

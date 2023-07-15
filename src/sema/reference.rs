@@ -2,7 +2,7 @@
 
 use std::collections::{BTreeMap, HashMap};
 use std::fmt::Display;
-use std::num::{NonZeroU64, NonZeroUsize};
+use std::num::NonZeroU64;
 use std::sync::{Arc, Weak};
 
 #[allow(unused)]
@@ -36,14 +36,14 @@ pub enum Reference {
 	/// A reference that is most often used to label some place in memory.
 	/// Labels form a hierarchical structure among themselves.
 	Label(Arc<RwLock<Label>>),
-	/// A local label that knows its nesting count, but hasn't been converted to a real label yet due to lack of
-	/// environmental information when it was created.
-	UnresolvedLocalLabel {
+	/// A local or global label that knows its nesting count, but hasn't been converted to a real label yet due to lack
+	/// of environmental information (parent labels, namespaces) when it was created.
+	UnresolvedLabel {
 		/// Name of the label.
 		name:          SharedStr,
 		/// Nesting level of the label, indicated by the number of preceding dots.
 		/// This is important for figuring out which label is this label's parent.
-		nesting_level: NonZeroUsize,
+		nesting_level: usize,
 		/// The location of definition of this label.
 		span:          SourceSpan,
 		/// The final value of the label, if it has already been assigned one.
@@ -88,7 +88,7 @@ impl Reference {
 		match self {
 			Self::Label(global) => global.read().source_span(),
 			Self::MacroArgument { span, .. }
-			| Self::UnresolvedLocalLabel { span, .. }
+			| Self::UnresolvedLabel { span, .. }
 			| Self::Relative { span, .. }
 			| Self::MacroGlobal { span, .. } => *span,
 		}
@@ -102,7 +102,7 @@ impl Reference {
 			Self::Label(label) => label.read_recursive().name.clone(),
 			Self::Relative { direction, id, .. } =>
 				direction.string().repeat(usize::try_from(u64::from(*id)).unwrap()).into(),
-			Self::UnresolvedLocalLabel { name, .. } | Self::MacroArgument { name, .. } => name.clone(),
+			Self::UnresolvedLabel { name, .. } | Self::MacroArgument { name, .. } => name.clone(),
 			Self::MacroGlobal { .. } => "\\@".into(),
 		}
 	}
@@ -111,7 +111,7 @@ impl Reference {
 	pub fn set_location(&mut self, location: AssemblyTimeValue) {
 		match self {
 			Self::Label(global) => global.write().location = Some(location),
-			Self::UnresolvedLocalLabel { value, .. } | Self::Relative { value, .. } => *value = Some(location.into()),
+			Self::UnresolvedLabel { value, .. } | Self::Relative { value, .. } => *value = Some(location.into()),
 			// noop on macro arguments
 			Self::MacroArgument { .. } | Self::MacroGlobal { .. } => {},
 		}
@@ -123,7 +123,7 @@ impl Reference {
 		match self {
 			Self::Label(global) => global.read().location.clone(),
 			Self::MacroArgument { value, .. } | Self::Relative { value, .. } => value.clone().map(|boxed| *boxed),
-			Self::MacroGlobal { .. } | Self::UnresolvedLocalLabel { .. } => None,
+			Self::MacroGlobal { .. } | Self::UnresolvedLabel { .. } => None,
 		}
 	}
 
@@ -139,9 +139,9 @@ impl Reference {
 		source_code: &Arc<AssemblyCode>,
 	) -> Result<(), Box<AssemblyError>> {
 		match self {
-			Self::UnresolvedLocalLabel { name, nesting_level, span, value } =>
+			Self::UnresolvedLabel { name, nesting_level, span, value } =>
 				try {
-					*self = Self::Label(create_local_at_this_position(
+					*self = Self::Label(create_label_at_this_position(
 						name.clone(),
 						*nesting_level,
 						*span,
@@ -190,7 +190,7 @@ impl ReferenceResolvable for Reference {
 					},
 				)
 			},
-			Self::MacroGlobal { .. } | Self::Relative { .. } | Self::UnresolvedLocalLabel { .. } => Ok(()),
+			Self::MacroGlobal { .. } | Self::Relative { .. } | Self::UnresolvedLabel { .. } => Ok(()),
 		}
 	}
 
@@ -211,7 +211,7 @@ impl ReferenceResolvable for Reference {
 				if let Some(value) = value.as_mut() {
 					value.resolve_relative_labels(direction, relative_labels);
 				},
-			Self::MacroGlobal { .. } | Self::Relative { .. } | Self::UnresolvedLocalLabel { .. } => (),
+			Self::MacroGlobal { .. } | Self::Relative { .. } | Self::UnresolvedLabel { .. } => (),
 		}
 	}
 
@@ -276,7 +276,7 @@ impl ReferenceResolvable for Reference {
 				if let Some(value) = value.as_mut() {
 					value.resolve_pseudo_labels(global_labels);
 				},
-			Self::MacroGlobal { .. } | Self::Relative { .. } | Self::UnresolvedLocalLabel { .. } => (),
+			Self::MacroGlobal { .. } | Self::Relative { .. } | Self::UnresolvedLabel { .. } => (),
 		}
 	}
 
@@ -295,7 +295,7 @@ impl Display for Reference {
 	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
 		f.pad(&match self {
 			Self::Label(label) => label.read().to_string(),
-			Self::UnresolvedLocalLabel { name, nesting_level, .. } =>
+			Self::UnresolvedLabel { name, nesting_level, .. } =>
 				format!("{}{}", ".".repeat((*nesting_level).into()), name),
 			Self::MacroArgument { name, .. } => format!("<{}>", name),
 			Self::MacroGlobal { .. } => "\\@".to_string(),
@@ -313,7 +313,7 @@ impl PartialEq for Reference {
 				_ => false,
 			},
 			Self::Relative { .. } |
-			Self::UnresolvedLocalLabel { .. } |
+			Self::UnresolvedLabel { .. } |
 			// Equality doesn't really make sense for dynamic user macro globals.
 			Self::MacroGlobal { .. } => false,
 			Self::MacroArgument { name, .. } => match other {
@@ -339,7 +339,7 @@ impl Resolvable for Reference {
 			Self::MacroArgument { .. }
 			| Self::Relative { .. }
 			| Self::MacroGlobal { .. }
-			| Self::UnresolvedLocalLabel { .. } => false,
+			| Self::UnresolvedLabel { .. } => false,
 		}
 	}
 
@@ -355,7 +355,7 @@ impl Resolvable for Reference {
 				*value = Some(Box::new(AssemblyTimeValue::Literal(location, usage_span)));
 				Ok(())
 			},
-			Self::MacroGlobal { .. } | Self::UnresolvedLocalLabel { .. } =>
+			Self::MacroGlobal { .. } | Self::UnresolvedLabel { .. } =>
 				unimplemented!("{:?} leaked to reference resolution, this is a sema bug", self),
 		}
 	}
@@ -549,7 +549,10 @@ pub struct MacroParent {
 }
 
 impl MacroParent {
-	pub fn new_actual(parameters: HashMap<SharedStr, AssemblyTimeValue>, label: Arc<RwLock<Label>>) -> Arc<RwLock<Self>> {
+	pub fn new_actual(
+		parameters: HashMap<SharedStr, AssemblyTimeValue>,
+		label: Arc<RwLock<Label>>,
+	) -> Arc<RwLock<Self>> {
 		Arc::new(RwLock::new(Self { label, parameters: MacroParameters::Actual(parameters) }))
 	}
 
@@ -666,11 +669,11 @@ pub trait ReferenceResolvable {
 ///
 /// Note that the given current label may not end up being the label's parent, just one of its parents. This depends on
 /// the hierarchical position of this label, indicated by `nesting_level`
-pub fn create_local_at_this_position(
-	local_name: SharedStr,
-	local_nesting_level: NonZeroUsize,
-	local_location: SourceSpan,
-	local_value: Option<Box<AssemblyTimeValue>>,
+pub fn create_label_at_this_position(
+	label_name: SharedStr,
+	label_nesting_level: usize,
+	label_location: SourceSpan,
+	label_value: Option<Box<AssemblyTimeValue>>,
 	creation_kind: LabelUsageKind,
 	current_label: Option<Arc<RwLock<Label>>>,
 	source_code: &Arc<AssemblyCode>,
@@ -680,7 +683,7 @@ pub fn create_local_at_this_position(
 		// Nesting level of the current label we're considering.
 		let mut current_nesting_level = parent_label.read().nesting_count();
 		// Move up the parent chain while the "parent" is still on our level (or below us)
-		while current_nesting_level >= local_nesting_level.into() {
+		while current_nesting_level >= label_nesting_level.into() {
 			let parent_borrow = parent_label.read();
 			if let Some(new_parent) = parent_borrow.parent.upgrade() {
 				let new_parent_clone = new_parent.clone();
@@ -695,11 +698,11 @@ pub fn create_local_at_this_position(
 		}
 		// We used "break" in the previous loop because the parent chain of the current label is broken.
 		// This should not happen (given `nesting_count()`), but it's a safe error to return.
-		if current_nesting_level >= local_nesting_level.into() {
+		if current_nesting_level >= label_nesting_level.into() {
 			return Err(AssemblyError::MissingGlobalLabel {
-				local_label: local_name,
+				local_label: label_name,
 				src:         source_code.clone(),
-				location:    local_location,
+				location:    label_location,
 			}
 			.into());
 		}
@@ -707,25 +710,25 @@ pub fn create_local_at_this_position(
 		let mut mutable_parent = parent_label.write();
 		let local_label = mutable_parent
 			.children
-			.entry(local_name.clone())
+			.entry(label_name.clone())
 			.or_insert_with(|| match creation_kind {
-				LabelUsageKind::AsDefinition => Label::new_with_definition(local_name, local_location),
-				LabelUsageKind::AsAddress => Label::new_with_use(local_name, local_location),
+				LabelUsageKind::AsDefinition => Label::new_with_definition(label_name, label_location),
+				LabelUsageKind::AsAddress => Label::new_with_use(label_name, label_location),
 			})
 			.clone();
 		let mut mutable_label = local_label.write();
 		mutable_label.parent = Arc::downgrade(&parent_label);
 		if creation_kind == LabelUsageKind::AsAddress {
-			mutable_label.usage_spans.push(local_location);
+			mutable_label.usage_spans.push(label_location);
 		}
-		mutable_label.location = mutable_label.location.clone().or_else(|| local_value.map(|v| *v));
+		mutable_label.location = mutable_label.location.clone().or_else(|| label_value.map(|v| *v));
 		drop(mutable_label);
 		Ok(local_label)
 	} else {
 		Err(AssemblyError::MissingGlobalLabel {
-			local_label: local_name,
+			local_label: label_name,
 			src:         source_code.clone(),
-			location:    local_location,
+			location:    label_location,
 		}
 		.into())
 	}

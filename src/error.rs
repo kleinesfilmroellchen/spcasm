@@ -883,7 +883,7 @@ where
 		match value.borrow() {
 			Reference::Label(_) => Self::Global,
 			Reference::Relative { .. } => Self::Relative,
-			Reference::UnresolvedLocalLabel { .. } => Self::Local,
+			Reference::UnresolvedLabel { .. } => Self::Local,
 			Reference::MacroArgument { .. } => Self::MacroArgument,
 			Reference::MacroGlobal { .. } => Self::MacroGlobal,
 		}

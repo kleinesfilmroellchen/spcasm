@@ -644,7 +644,7 @@ impl AssembledData {
 							),
 							Reference::MacroArgument { value: Some(_), .. } => Ok(()),
 							Reference::MacroArgument { value: None, span, .. }
-							| Reference::UnresolvedLocalLabel { span, .. } => Err(AssemblyError::UnresolvedReference {
+							| Reference::UnresolvedLabel { span, .. } => Err(AssemblyError::UnresolvedReference {
 								reference:          resolved_reference.to_string().into(),
 								reference_location: None,
 								usage_location:     span,

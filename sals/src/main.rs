@@ -254,7 +254,7 @@ impl LanguageServer for Backend {
 				Reference::MacroArgument { span, .. }
 				| Reference::MacroGlobal { span, .. }
 				| Reference::Relative { span, .. }
-				| Reference::UnresolvedLocalLabel { span, .. } => Box::new(std::iter::once(span)),
+				| Reference::UnresolvedLabel { span, .. } => Box::new(std::iter::once(span)),
 			};
 
 			// TODO: Cross-file locations aren't handled properly.

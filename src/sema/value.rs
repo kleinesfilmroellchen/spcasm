@@ -166,7 +166,7 @@ impl AssemblyTimeValue {
 				| Reference::MacroArgument { value: None, .. } 
 				| Reference::Relative { value: None, .. } 
 				| Reference::MacroGlobal { .. }
-				| Reference::UnresolvedLocalLabel { .. },
+				| Reference::UnresolvedLabel { .. },
 				..
 			) => self,
 		}
@@ -207,7 +207,7 @@ impl AssemblyTimeValue {
 				| Reference::Label(_)
 				| Reference::MacroGlobal { .. }
 				| Reference::Relative { value: None, .. }
-				| Reference::UnresolvedLocalLabel { .. }
+				| Reference::UnresolvedLabel { .. }
 				| Reference::MacroArgument { value: None, .. } => resolver(reference.clone()),
 			},
 			Self::UnaryOperation{inner_value:number, operator, ..} => number.value_using_resolver(resolver).map(|value| operator.execute(value)),

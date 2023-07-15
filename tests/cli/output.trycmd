@@ -46,7 +46,7 @@ $ spcasm -w all -f hex-dump tests/opcodes.s /you/cant/write/here
 ? 1
 Error: spcasm::io_error
 
-  × Das System kann den angegebenen Pfad nicht finden. (os error 3)
+  × [..]
 
 
 ```
@@ -58,7 +58,7 @@ $ spcasm -w all -f elf tests/opcodes.s /you/cant/write/here
 ? 1
 Error: spcasm::io_error
 
-  × Das System kann den angegebenen Pfad nicht finden. (os error 3)
+  × [..]
 
 
 ```
@@ -78,7 +78,7 @@ $ spcasm -w all -f plain tests/opcodes.s /you/cant/write/here
 ? 1
 Error: spcasm::io_error
 
-  × Das System kann den angegebenen Pfad nicht finden. (os error 3)
+  × [..]
 
 
 ```

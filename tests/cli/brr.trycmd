@@ -522,11 +522,11 @@ For more information, try '--help'.
 $ brr encode tests/yoshi.wav /absolutely/nonexistent/file
 ? 1
 Encoded 1036 blocks (0: 1031, 1: 5, 2: 0, 3: 0)
-error opening output: Das System kann den angegebenen Pfad nicht finden. (os error 3)
+error opening output: [..]
 
 $ brr encode /absolutely/nonexistent/file
 ? 1
-error: Das System kann den angegebenen Pfad nicht finden. (os error 3)
+error: [..]
 
 ```
 
@@ -539,6 +539,6 @@ Decoded 1036 blocks (0: 1031, 1: 5, 2: 0, 3: 0)
 ```trycmd
 $ brr decode /absolutely/nonexistent/file
 ? 1
-error: Das System kann den angegebenen Pfad nicht finden. (os error 3)
+error: [..]
 
 ```

@@ -146,6 +146,7 @@ fn assert_segments_are_equal(
 		"Assembly and AST differ in segments; something has gone wrong!"
 	);
 	for (byte, (expected, actual)) in expected_segment.iter().zip(assembled.iter()).enumerate() {
+		#[allow(clippy::cast_possible_wrap)]
 		if let Some(expected) = expected {
 			assert_eq!(
 				expected,
@@ -207,7 +208,12 @@ fn extract_asar_expected_output(file: &str) -> Vec<u8> {
 }
 
 #[test]
-#[allow(clippy::redundant_clone, clippy::too_many_lines)]
+#[allow(
+	clippy::redundant_clone,
+	clippy::unnecessary_struct_initialization,
+	clippy::clone_on_copy,
+	clippy::too_many_lines
+)]
 fn coverage() {
 	use std::collections::BTreeMap;
 	use std::sync::Weak;

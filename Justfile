@@ -14,7 +14,7 @@ coverage:
 
 # Run checks and formatting
 check:
-	-cargo clippy --workspace
+	-cargo clippy --workspace --tests
 	-cargo fmt --all
 
 # Run spcasm

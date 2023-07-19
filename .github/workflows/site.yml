@@ -37,6 +37,8 @@ jobs:
         with:
           owner: thedodd
           name: trunk
+          # https://github.com/thedodd/trunk/issues/575
+          version: 0.16.0
       - name: Install mdbook
         uses: extractions/setup-crate@v1
         with:

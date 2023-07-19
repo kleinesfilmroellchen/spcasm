@@ -69,7 +69,7 @@ macro_rules! assemble_element {
 				$crate::sema::ProgramElement::Instruction(instruction) =>
 					$data.assemble_instruction(instruction, &$current_labels)?,
 				$crate::sema::ProgramElement::Directive(directive) =>
-					$data.assemble_directive(directive, &mut $current_labels)?,
+					$data.assemble_directive(directive, &$current_labels)?,
 				$crate::sema::ProgramElement::IncludeSource { .. } =>
 					unreachable!("there should not be any remaining unincluded source code at assembly time"),
 				$crate::sema::ProgramElement::UserDefinedMacroCall { .. } =>

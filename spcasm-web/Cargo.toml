@@ -29,7 +29,7 @@ regex = { version = "1.8.3", default-features = false, features = [
 	"unicode",
 	"std",
 ] }
-once_cell = { version = "1.17.0", default-features = false, features = [
+once_cell = { version = "1.18.0", default-features = false, features = [
 	"alloc",
 ] }
 parking_lot = "0.12"

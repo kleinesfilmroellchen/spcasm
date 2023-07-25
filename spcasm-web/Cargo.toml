@@ -2,10 +2,10 @@
 name = "spcasm-web"
 version = "0.1.0"
 edition = "2021"
+autobins = false
 
 [lib]
-crate-type = ["cdylib", "rlib"]
-path = "src/lib.rs"
+crate-type = ["bin"]
 
 [features]
 default = ["console_error_panic_hook"]

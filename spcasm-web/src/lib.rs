@@ -104,6 +104,10 @@ fn set_panic_hook() {
 	console_error_panic_hook::set_once();
 }
 
+/// For build system reasons, we're compiled as a binary crate, so we need an (unused) main function.
+#[allow(dead_code)]
+fn main() {}
+
 /// Callback for when the user changes assembly code.
 #[allow(clippy::cast_sign_loss, clippy::cast_possible_truncation)]
 #[wasm_bindgen]

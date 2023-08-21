@@ -439,7 +439,7 @@ impl AssembledData {
 	#[inline]
 	fn append(&mut self, value: u8, labels: &[Reference], span: SourceSpan) -> Result<(), Box<AssemblyError>> {
 		let src = self.source_code.clone();
-		self.segments.current_segment_mut().map_err(|_| AssemblyError::MissingSegment { location: span, src })?.push(
+		self.segments.current_segment_mut().map_err(|()| AssemblyError::MissingSegment { location: span, src })?.push(
 			LabeledMemoryValue {
 				value:                MemoryValue::Resolved(value),
 				labels:               labels.to_owned(),
@@ -477,7 +477,7 @@ impl AssembledData {
 		span: SourceSpan,
 	) -> Result<(), Box<AssemblyError>> {
 		let src = self.source_code.clone();
-		self.segments.current_segment_mut().map_err(|_| AssemblyError::MissingSegment { location: span, src })?.push(
+		self.segments.current_segment_mut().map_err(|()| AssemblyError::MissingSegment { location: span, src })?.push(
 			LabeledMemoryValue {
 				value:                MemoryValue::Number { value, byte_index: byte, is_highest_byte },
 				labels:               labels.to_owned(),
@@ -540,7 +540,7 @@ impl AssembledData {
 		span: SourceSpan,
 	) -> Result<(), Box<AssemblyError>> {
 		let src = self.source_code.clone();
-		self.segments.current_segment_mut().map_err(|_| AssemblyError::MissingSegment { location: span, src })?.push(
+		self.segments.current_segment_mut().map_err(|()| AssemblyError::MissingSegment { location: span, src })?.push(
 			LabeledMemoryValue {
 				labels:               Vec::default(),
 				value:                MemoryValue::NumberRelative(value),
@@ -563,7 +563,7 @@ impl AssembledData {
 		span: SourceSpan,
 	) -> Result<(), Box<AssemblyError>> {
 		let src = self.source_code.clone();
-		self.segments.current_segment_mut().map_err(|_| AssemblyError::MissingSegment { location: span, src })?.push(
+		self.segments.current_segment_mut().map_err(|()| AssemblyError::MissingSegment { location: span, src })?.push(
 			LabeledMemoryValue {
 				value:                MemoryValue::NumberHighByteWithContainedBitIndex(value, bit_index),
 				labels:               Vec::default(),
@@ -585,7 +585,7 @@ impl AssembledData {
 		span: SourceSpan,
 	) -> Result<(), Box<AssemblyError>> {
 		let src = self.source_code.clone();
-		self.segments.current_segment_mut().map_err(|_| AssemblyError::MissingSegment { location: span, src })?.push(
+		self.segments.current_segment_mut().map_err(|()| AssemblyError::MissingSegment { location: span, src })?.push(
 			LabeledMemoryValue {
 				// Synthesize the (bit_index << 5) | value which is needed for bit indices in opcodes.
 				value:                MemoryValue::Number {

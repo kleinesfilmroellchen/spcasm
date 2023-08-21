@@ -104,7 +104,7 @@ impl Directive {
 				.into()),
 			_ => Ok(()),
 		}
-		.map_err(|_| AssemblyError::NoSegmentOnStack { location: self.span, src: source_code }.into())
+		.map_err(|()| AssemblyError::NoSegmentOnStack { location: self.span, src: source_code }.into())
 	}
 }
 

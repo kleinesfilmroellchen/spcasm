@@ -299,7 +299,7 @@ impl ReferenceResolvable for AssemblyTimeValue {
 			Self::Reference(reference, ..) => reference.set_current_label(label, source_code),
 			Self::UnaryOperation { inner_value: val, .. } => val.set_current_label(label, source_code),
 			Self::BinaryOperation { lhs, rhs, .. } =>
-				lhs.set_current_label(label, source_code).and_then(|_| rhs.set_current_label(label, source_code)),
+				lhs.set_current_label(label, source_code).and_then(|()| rhs.set_current_label(label, source_code)),
 			Self::Literal(..) => Ok(()),
 		}
 	}

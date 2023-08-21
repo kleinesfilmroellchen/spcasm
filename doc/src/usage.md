@@ -286,11 +286,9 @@ Options:
           select a filter, 'treble' is used.
 
           Possible values:
-          - treble:
-            A precise treble filter that inverts the hardware Gaussian filter exactly
-          - brrtools:
-            BRRTools' treble filter, which is slightly imprecise, but provided for compatibility
-            purposes
+          - treble:   A precise treble filter that inverts the hardware Gaussian filter exactly
+          - brrtools: BRRTools' treble filter, which is slightly imprecise, but provided for
+            compatibility purposes
 
   -l, --loop-point <LOOP_POINT>
           Set the sample's loop point. The ending block has its flags set to signal a looping

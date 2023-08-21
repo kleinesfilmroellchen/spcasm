@@ -1,7 +1,7 @@
 #![doc = include_str!("../README.md")]
 #![feature(try_blocks)]
 #![deny(missing_docs, unused, clippy::all, clippy::pedantic, clippy::nursery)]
-#![allow(clippy::wildcard_imports)]
+#![allow(clippy::wildcard_imports, clippy::ignored_unit_patterns)]
 
 use std::path::Path;
 use std::sync::Arc;
@@ -422,7 +422,7 @@ impl Backend {
 	}
 
 	fn file_for_uri(&self, uri: &Url) -> Result<Arc<RwLock<AssemblyFile>>> {
-		let path = &uri.to_file_path().map_err(|_| tower_lsp::jsonrpc::Error {
+		let path = &uri.to_file_path().map_err(|()| tower_lsp::jsonrpc::Error {
 			code:    tower_lsp::jsonrpc::ErrorCode::InvalidParams,
 			data:    None,
 			message: format!("invalid document URI {}", uri),

@@ -255,7 +255,7 @@ impl AssemblyFile {
 		span: &'a SourceSpan,
 		source_code: &'a Arc<AssemblyCode>,
 	) -> impl Fn(()) -> Box<AssemblyError> + 'a {
-		|_| AssemblyError::MissingSegment { location: *span, src: source_code.clone() }.into()
+		|()| AssemblyError::MissingSegment { location: *span, src: source_code.clone() }.into()
 	}
 
 	/// Splits the AST into segments which (still) contain [`ProgramElement`]s. This is an initial step in laying out

@@ -1,5 +1,6 @@
 use std::borrow::Borrow;
 use std::collections::HashMap;
+use std::fmt::Write;
 use std::mem::Discriminant;
 use std::num::ParseIntError;
 use std::sync::Arc;
@@ -378,7 +379,7 @@ pub enum AssemblyError {
 		code(spcasm::instruction::invalid_addressing_mode),
 		severity(Error),
 		help("The instruction `{mnemonic}` accepts the modes {} as first operands", 
-			.legal_modes.iter().map(|mode| format!("{}, ", mode)).collect::<String>().strip_suffix(", ").unwrap_or_default()),
+			.legal_modes.iter().fold(String::new(), |mut output, mode| { let _ = write!(output, "{}, ", mode); output }).strip_suffix(", ").unwrap_or_default()),
 	)]
 	InvalidFirstAddressingMode {
 		mode:        SharedStr,
@@ -395,7 +396,7 @@ pub enum AssemblyError {
 		code(spcasm::instruction::invalid_addressing_mode),
 		severity(Error),
 		help("The instruction `{mnemonic}`, with the first operand `{first_mode}`, accepts the modes {} as second operands", 
-			.legal_modes.iter().map(|mode| format!("{}, ", mode)).collect::<String>().strip_suffix(", ").unwrap_or_default()),
+			.legal_modes.iter().fold(String::new(), |mut output, mode| { let _ = write!(output, "{}, ", mode); output }).strip_suffix(", ").unwrap_or_default()),
 	)]
 	InvalidSecondAddressingMode {
 		mode:        SharedStr,
@@ -440,7 +441,7 @@ pub enum AssemblyError {
 	#[diagnostic(
 		code(spcasm::instruction::missing_operand),
 		help("Add any of the operands {} to this instruction",
-			.legal_modes.iter().map(|mode| format!("{}, ", mode)).collect::<String>().strip_suffix(", ").unwrap_or_default()),
+			.legal_modes.iter().fold(String::new(), |mut output, mode| { let _ = write!(output, "{}, ", mode); output }).strip_suffix(", ").unwrap_or_default()),
 		severity(Error)
 	)]
 	MissingOperand {
@@ -456,7 +457,7 @@ pub enum AssemblyError {
 	#[diagnostic(
 		code(spcasm::instruction::missing_second_operand),
 		help("Add any of the operands {} to this instruction",
-			.legal_modes.iter().map(|mode| format!("{}, ", mode)).collect::<String>().strip_suffix(", ").unwrap_or_default()),
+			.legal_modes.iter().fold(String::new(), |mut output, mode| { let _ = write!(output, "{}, ", mode); output }).strip_suffix(", ").unwrap_or_default()),
 		severity(Error)
 	)]
 	MissingSecondOperand {
@@ -552,7 +553,7 @@ pub enum AssemblyError {
 	#[diagnostic(
 		code(spcasm::directive::invalid_directive_option),
 		help("The valid options are {}.",
-			.valid_options.iter().map(|option| format!("`{}`, ", option)).collect::<String>().strip_suffix(", ").unwrap_or_default()),
+			.valid_options.iter().fold(String::new(), |mut output, option| { let _ = write!(output, "`{}`, ", option); output }).strip_suffix(", ").unwrap_or_default()),
 		severity(Error)
 	)]
 	InvalidDirectiveOption {

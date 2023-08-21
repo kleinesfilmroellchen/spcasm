@@ -63,6 +63,11 @@ jobs:
       - name: Build and assemble site
         run: just github-pages
 
+      - name: Fix permissions
+        run: |
+          chmod -c -R +rX "_site/" | while read line; do
+            echo "::warning title=Invalid file permissions automatically fixed::$line"
+          done
       - name: Upload page artifact
         uses: actions/upload-pages-artifact@v2.0.0
         with:

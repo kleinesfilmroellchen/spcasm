@@ -103,7 +103,7 @@ pub fn lex(source_code: Arc<AssemblyCode>, options: &dyn Frontend) -> Result<Vec
 				tokens.push(number);
 				index += size;
 			},
-			'.' if let Some(letter_after_dot @ ('b' | 'w')) = chars.peek().cloned() => {
+			'.' if let Some(letter_after_dot @ ('b' | 'w')) = chars.peek().copied() => {
 				chars.next();
 				// This is a local label, not an addressing mode suffix!
 				if chars.peek().is_some_and(|chr| is_identifier!(chr)) {

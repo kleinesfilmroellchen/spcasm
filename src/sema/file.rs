@@ -9,7 +9,7 @@ use flexstr::{shared_str, IntoSharedStr, SharedStr, ToSharedStr};
 use miette::SourceSpan;
 use parking_lot::RwLock;
 
-use super::instruction::{Instruction, MemoryAddress, Opcode};
+use super::instruction::{AddressingModeOptimization, Instruction, MemoryAddress, Opcode};
 use super::reference::{
 	Label, MacroParameters, MacroParent, Reference, ReferenceResolvable, RelativeReferenceDirection,
 };
@@ -236,14 +236,14 @@ impl AssemblyFile {
 	pub fn coerce_to_direct_page_addressing(&mut self) {
 		for element in &mut self.content {
 			if let ProgramElement::Instruction(Instruction {
-				opcode: Opcode { first_operand, second_operand, force_direct_page, .. },
+				opcode: Opcode { first_operand, second_operand, addressing_mode_optimization, .. },
 				..
 			}) = element
 			{
-				let coercion_function = if *force_direct_page {
-					AddressingMode::force_to_direct_page_addressing
-				} else {
-					AddressingMode::coerce_to_direct_page_addressing
+				let coercion_function = match addressing_mode_optimization {
+					AddressingModeOptimization::ForceDirectPage => AddressingMode::force_to_direct_page_addressing,
+					AddressingModeOptimization::PreventDirectPage => AddressingMode::force_to_wide_addressing,
+					AddressingModeOptimization::Automatic => AddressingMode::coerce_to_direct_page_addressing,
 				};
 				*first_operand = first_operand.clone().map(AddressingMode::optimize_numbers).map(coercion_function);
 				*second_operand = second_operand.clone().map(AddressingMode::optimize_numbers).map(coercion_function);

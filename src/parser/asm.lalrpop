@@ -15,7 +15,7 @@ use crate::sema::{
 	AddressingMode,
 	AssemblyTimeValue,
 	Environment,
-	instruction::{Instruction, Mnemonic, Opcode, MemoryAddress},
+	instruction::{Instruction, Mnemonic, Opcode, MemoryAddress, AddressingModeOptimization},
 	LabelUsageKind, 
 	ProgramElement,
 	reference::{Reference, MacroParent, RelativeReferenceDirection},
@@ -87,7 +87,7 @@ Instruction: Instruction = {
 			mnemonic: mnemonic.0,
 			first_operand: Some(first_operand),
 			second_operand,
-			force_direct_page: mnemonic.1,
+			addressing_mode_optimization: mnemonic.1,
 		},
 		span: mnemonic.2,
 		..Instruction::default()
@@ -97,7 +97,7 @@ Instruction: Instruction = {
 			mnemonic: mnemonic.0,
 			first_operand: None,
 			second_operand: None, 
-			force_direct_page: mnemonic.1,
+			addressing_mode_optimization: mnemonic.1,
 		},
 		span: mnemonic.2,
 		..Instruction::default()
@@ -105,9 +105,10 @@ Instruction: Instruction = {
 };
 
 // The boolean specifies whether this instruction is forced to direct page addressing.
-Mnemonic: (Mnemonic, bool, SourceSpan) = {
-	<mnemonic:"mnemonic"> => (mnemonic.0, false, mnemonic.1),
-	<mnemonic:"mnemonic"> <b:".b"> => (mnemonic.0, true, source_range(mnemonic.1.into(), b.into())),
+Mnemonic: (Mnemonic, AddressingModeOptimization, SourceSpan) = {
+	<mnemonic:"mnemonic"> => (mnemonic.0, AddressingModeOptimization::Automatic, mnemonic.1),
+	<mnemonic:"mnemonic"> <b:".b"> => (mnemonic.0, AddressingModeOptimization::ForceDirectPage, source_range(mnemonic.1.into(), b.into())),
+	<mnemonic:"mnemonic"> <b:".w"> => (mnemonic.0, AddressingModeOptimization::PreventDirectPage, source_range(mnemonic.1.into(), b.into())),
 };
 
 Directive: Directive = {
@@ -672,6 +673,7 @@ extern {
 		":" => Token::Colon(<SourceOffset>),
 		"." => Token::Period(<SourceOffset>),
 		".b" => Token::ExplicitDirectPage(<SourceSpan>),
+		".w" => Token::ExplicitNoDirectPage(<SourceSpan>),
 		"=" => Token::Equals(<SourceOffset>),
 		"==" => Token::DoubleEquals(<SourceSpan>),
 		"<=" => Token::OpenAngleBracketEquals(<SourceSpan>),

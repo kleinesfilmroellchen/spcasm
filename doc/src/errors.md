@@ -6,6 +6,9 @@ All of these three are often collectively called errors, as they can be turned i
 
 In the following, each error is listed with an example and a detailed explanation of what the problem is and how to deal with it. Note that the exact reports in the examples are not always updated and might not reflect what spcasm currently reports, but the error code is usually stable.
 
+- auto-gen TOC;
+  {:toc}
+
 ## Advice
 
 ### spcasm::reference::non_direct_page
@@ -93,9 +96,9 @@ spcasm::value_too_large
  45 │ mov.b a,$abcd  ;= E4 CD
     ·         ──┬──
     ·           ╰── 8-bit operand
- 46 │ 
- 47 │ db 'x', '/x67', '//', '/"', '/''
- 48 │ 
+ 46 │ mov.w a,$00cd  ;= E5 CD 00
+ 47 │ 
+ 48 │ db 'x', '/x67', '//', '/"', '/''
     ╰────
   help: If this was intentional, explicitly truncate the value.
 

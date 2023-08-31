@@ -169,6 +169,20 @@ impl AddressingMode {
 		}
 	}
 
+	/// Force this addressing mode into wide addressing (out of direct page addressing) regardless of the internal
+	/// number.
+	#[must_use]
+	#[allow(clippy::missing_const_for_fn)] // false positive
+	pub fn force_to_wide_addressing(self) -> Self {
+		match self {
+			Self::DirectPage(number) => Self::Address(number),
+			Self::DirectPageXIndexed(number) => Self::XIndexed(number),
+			Self::DirectPageYIndexed(number) => Self::YIndexed(number),
+			Self::DirectPageBit(number, bit) => Self::AddressBit(number, bit),
+			_ => self,
+		}
+	}
+
 	/// Optimize any numbers in this addressing mode as far as possible, including the removal of references. This
 	/// simplifies and improves later optimization steps.
 	#[must_use]

@@ -83,6 +83,8 @@ pub enum Token {
 	Percent(SourceOffset),
 	/// '.b'
 	ExplicitDirectPage(SourceSpan),
+	/// '.w'
+	ExplicitNoDirectPage(SourceSpan),
 	/// '='
 	Equals(SourceOffset),
 	/// '>='
@@ -142,6 +144,7 @@ impl PartialEq for Token {
 			| (Self::Star(..), Self::Star(..))
 			| (Self::Newline(..), Self::Newline(..))
 			| (Self::ExplicitDirectPage(..), Self::ExplicitDirectPage(..))
+			| (Self::ExplicitNoDirectPage(..), Self::ExplicitNoDirectPage(..))
 			| (Self::Comma(..), Self::Comma(..))
 			| (Self::Period(..), Self::Period(..)) => true,
 			#[cfg(test)]
@@ -182,6 +185,7 @@ impl Token {
 			| Self::Plus(location) => (*location, SourceOffset::from(1)).into(),
 			Self::Identifier(_, location)
 			| Self::ExplicitDirectPage(location)
+			| Self::ExplicitNoDirectPage(location)
 			| Self::Number(_, _, location)
 			| Self::Register(_, location)
 			| Self::String(_, location)
@@ -243,6 +247,7 @@ impl Display for Token {
 			Self::Comma(..) => "comma".to_string(),
 			Self::Period(..) => "'.'".to_string(),
 			Self::ExplicitDirectPage(..) => "'.b'".to_string(),
+			Self::ExplicitNoDirectPage(..) => "'.w'".to_string(),
 			Self::Plus(..) => "'+'".to_string(),
 			Self::RelativeLabelPlus(count, _) =>
 				format!("'{}'", "+".repeat(usize::try_from(u64::from(*count)).unwrap_or(usize::MAX))),

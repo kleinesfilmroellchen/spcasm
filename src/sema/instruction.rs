@@ -38,10 +38,10 @@ impl Default for Instruction {
 	fn default() -> Self {
 		Self {
 			opcode:                      Opcode {
-				mnemonic:          Mnemonic::Nop,
-				first_operand:     None,
-				second_operand:    None,
-				force_direct_page: false,
+				mnemonic:                     Mnemonic::Nop,
+				first_operand:                None,
+				second_operand:               None,
+				addressing_mode_optimization: AddressingModeOptimization::default(),
 			},
 			span:                        (0, 0).into(),
 			#[cfg(test)]
@@ -98,17 +98,34 @@ impl std::fmt::Display for Instruction {
 	}
 }
 
+/// How to optimize the addressing mode
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+#[repr(u8)]
+pub enum AddressingModeOptimization {
+	/// Force using direct page addressing.
+	ForceDirectPage,
+	/// Force using full addressing.
+	PreventDirectPage,
+	/// Let the optimizer decide.
+	Automatic,
+}
+impl Default for AddressingModeOptimization {
+	fn default() -> Self {
+		Self::Automatic
+	}
+}
+
 /// An instruction's core data that's used to generate machine code.
 #[derive(Clone, Debug, PartialEq)]
 pub struct Opcode {
 	/// Instruction mnemonic.
-	pub mnemonic:          Mnemonic,
+	pub mnemonic:                     Mnemonic,
 	/// First operand, usually instruction target.
-	pub first_operand:     Option<AddressingMode>,
+	pub first_operand:                Option<AddressingMode>,
 	/// Second operand, usually instruction source. This is unused on many instructions.
-	pub second_operand:    Option<AddressingMode>,
+	pub second_operand:               Option<AddressingMode>,
 	/// Whether this opcode is forced to use direct page addressing.
-	pub force_direct_page: bool,
+	pub addressing_mode_optimization: AddressingModeOptimization,
 }
 
 impl Opcode {
@@ -236,8 +253,10 @@ impl Opcode {
 	/// at all. These will fail the compiler later on, so the correctness is not important.
 	#[must_use]
 	pub fn can_use_direct_page_addressing(&self) -> bool {
+		// An instruction may be forced to use no direct page addressing.
+		self.addressing_mode_optimization != AddressingModeOptimization::PreventDirectPage
 		// Some instructions plain-out never accept direct page addressing.
-		!([
+			&& (!([
 			Mnemonic::Jmp,
 			Mnemonic::Call,
 			Mnemonic::Tset1,
@@ -257,7 +276,7 @@ impl Opcode {
 				(Some(AddressingMode::Register(Register::A)), Some(AddressingMode::YIndexed(..))) |
 				(Some(AddressingMode::YIndexed(..)), Some(AddressingMode::Register(Register::A)))
 			)
-		))
+		)))
 	}
 
 	/// Return all references that this opcode points to, and the corresponding assembly time calculations.

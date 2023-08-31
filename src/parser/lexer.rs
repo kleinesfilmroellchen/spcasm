@@ -20,6 +20,12 @@ macro_rules! start_of_identifier {
 	() => { 'A' ..= 'Z' | 'a' ..= 'z' | '_' | '@' };
 }
 
+macro_rules! is_identifier {
+	($chr:expr) => {
+		($chr.is_alphanumeric() || $chr.is_ascii_digit() || ['_', '-', '@'].contains($chr))
+	};
+}
+
 /// Lex the given assembly into a list of tokens.
 /// # Errors
 /// Errors are returned for any syntactical error at the token level, e.g. invalid number literals.
@@ -90,29 +96,25 @@ pub fn lex(source_code: Arc<AssemblyCode>, options: &dyn Frontend) -> Result<Vec
 				tokens.push(Token::Number(chr as MemoryAddress, source_code.text[start_index..=end_index].into(), (start_index, end_index - start_index).into()));
 			},
 			start_of_identifier!() => {
-				let start_index = index;
-				let identifier = next_identifier(&mut chars, chr);
-				index += identifier.len();
-				let identifier_span =  (start_index, identifier.len()).into();
-				tokens.push(Token::parse_special_identifier(&identifier.to_lowercase(), identifier_span, source_code.clone())
-									.map(|value| Token::SpecialIdentifier(value, identifier_span))
-								.or_else(|_| Register::parse(&identifier.to_lowercase(), identifier_span, source_code.clone())
-									.map(|value| Token::Register(value, identifier_span)))
-								.or_else(|_| DirectiveSymbol::parse(&identifier.to_lowercase(), identifier_span, source_code.clone())
-									.map(|value| Token::Directive(value, identifier_span)))
-								.or_else(|_| Mnemonic::parse(&identifier.to_lowercase(), identifier_span, source_code.clone())
-									.map(|mnemonic| Token::Mnemonic(mnemonic, identifier_span)))
-								.or_else::<AssemblyError, _>(|_| Ok(Token::Identifier(identifier, identifier_span)))?);
+				tokens.push(parse_identifier_like(&mut chars, chr, &mut index, &source_code)?);
 			},
 			'0'..='9' => {
 				let (number, size) = next_number(&mut chars, Some(chr), false, 10, index, &source_code, options)?;
 				tokens.push(number);
 				index += size;
 			},
-			'.' if chars.peek().is_some_and(|chr| chr == &'b') =>  {
+			'.' if let Some(letter_after_dot @ ('b' | 'w')) = chars.peek().cloned() => {
 				chars.next();
-				index += 2;
-				tokens.push(Token::ExplicitDirectPage((index - 2, 2).into()));
+				// This is a local label, not an addressing mode suffix!
+				if chars.peek().is_some_and(|chr| is_identifier!(chr)) {
+					tokens.push(parse_single_char_tokens('.', index.into()));
+					index += 1;
+					tokens.push(parse_identifier_like(&mut chars, chr, &mut index, &source_code)?);
+				} else {
+					index += 2;
+					tokens.push((if letter_after_dot == 'b' {Token::ExplicitDirectPage} else {Token::ExplicitNoDirectPage})
+						((index - 2, 2).into()));
+				}
 			},
 			'*' if chars.peek().is_some_and(|chr| chr == &'*') => {
 				chars.next();
@@ -242,6 +244,34 @@ fn next_identifier(chars: &mut Peekable<std::str::Chars>, start: char) -> Shared
 		identifier.push(chars.next().unwrap());
 	}
 	identifier.into()
+}
+
+fn parse_identifier_like(
+	chars: &mut Peekable<std::str::Chars>,
+	start: char,
+	index: &mut usize,
+	source_code: &Arc<AssemblyCode>,
+) -> Result<Token, AssemblyError> {
+	let start_index = *index;
+	let identifier = next_identifier(chars, start);
+	*index += identifier.len();
+	let identifier_span = (start_index, identifier.len()).into();
+
+	Token::parse_special_identifier(&identifier.to_lowercase(), identifier_span, source_code.clone())
+		.map(|value| Token::SpecialIdentifier(value, identifier_span))
+		.or_else(|_| {
+			Register::parse(&identifier.to_lowercase(), identifier_span, source_code.clone())
+				.map(|value| Token::Register(value, identifier_span))
+		})
+		.or_else(|_| {
+			DirectiveSymbol::parse(&identifier.to_lowercase(), identifier_span, source_code.clone())
+				.map(|value| Token::Directive(value, identifier_span))
+		})
+		.or_else(|_| {
+			Mnemonic::parse(&identifier.to_lowercase(), identifier_span, source_code.clone())
+				.map(|mnemonic| Token::Mnemonic(mnemonic, identifier_span))
+		})
+		.or_else::<AssemblyError, _>(|_| Ok(Token::Identifier(identifier, identifier_span)))
 }
 
 /// Parse the next number from the character stream `chars`. Since the first character may have already been extracted

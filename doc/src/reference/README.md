@@ -72,6 +72,10 @@ The SPC700 supports various addressing modes, though not all addressing modes ar
 
 Apart from the addressable memory constraints outlined above, some instructions operate on memory locations which have some of their memory address fixed by hardware. This is documented with these specific instructions.
 
+### Addressing mode suffixes
+
+Several instructions can operate both on the direct page only as well as most of the address space. spcasm includes a direct page optimizer which automatically uses the direct page version of the instruction wherever possible. If this doesn't work, you can use the `.b` suffix on all applicable instructions to force the direct page version of the instruction. If, however, the larger version of the instruction is desired instead, you can use the `.w` suffix instead.
+
 ## Instruction encoding details
 
 To program the SPC700, understanding what an addressing mode does and where it can be used is enough. This section will explain the surprising intricacies and complexities of encoding SPC700 instructions. This is the explanation I would have liked to have when I started creating spcasm, I hope it is helpful to anyone hand-verifying assembly, testing assemblers or disassembling SPC700 code.

@@ -62,6 +62,7 @@ impl From<&Token> for SpcasmTokenType {
 			Token::DoubleCloseAngleBracket(_) => SemanticTokenType::OPERATOR,
 			Token::Percent(_) => SemanticTokenType::new("punctuation"),
 			Token::ExplicitDirectPage(_) => SemanticTokenType::OPERATOR,
+			Token::ExplicitNoDirectPage(_) => SemanticTokenType::OPERATOR,
 			Token::Equals(_) => SemanticTokenType::OPERATOR,
 			Token::Newline(_) => SemanticTokenType::COMMENT,
 			Token::TestComment(_, _) => SemanticTokenType::COMMENT,

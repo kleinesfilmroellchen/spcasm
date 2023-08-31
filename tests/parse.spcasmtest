@@ -43,6 +43,7 @@ mov a,#(7 <=12) ;= E8 01
 
 + mov a,$abcd    ;= E5 CD AB
 mov.b a,$abcd  ;= E4 CD
+mov.w a,$00cd  ;= E5 CD 00
 
 db 'x', '\x67', '\\', '\"', '\''
 

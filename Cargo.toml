@@ -18,7 +18,7 @@ version = "1.0.0"
 license-file = "LICENSE"
 
 edition = "2021"
-rust-version = "1.56"
+rust-version = "1.70"
 build = "build.rs"
 
 default-run = "spcasm"
@@ -61,9 +61,21 @@ num-traits = "0.2"
 num-derive = "0.3"
 arrcat = "0.1"
 proc-macro2 = "^1.0.60"
-lazy_static = { version = "1.4.0", features = ["spin_no_std"] }
 human-panic = { version = "1.1.4", optional = true }
 flexstr = { version = "0.9.2", features = ["int_convert", "serde"] }
+
+[dependencies.miette]
+features = ["fancy-no-backtrace"]
+version = "5"
+
+# Only compile clap for the CLIs.
+[dependencies.clap]
+version = "4.3"
+optional = true
+features = ["derive", "wrap_help", "string"]
+
+[dependencies.spcasm_derive]
+path = "spcasm_derive"
 
 [dependencies.shadow-rs]
 version = "0.23"
@@ -84,18 +96,6 @@ version = "0.23"
 optional = true
 default-features = false
 
-[dependencies.miette]
-features = ["fancy-no-backtrace"]
-version = "5"
-
-# Only compile clap for the CLIs.
-[dependencies.clap]
-version = "4.3"
-optional = true
-features = ["derive", "wrap_help", "string"]
-
-[dependencies.spcasm_derive]
-path = "spcasm_derive"
 
 [profile.release]
 opt-level = "s"

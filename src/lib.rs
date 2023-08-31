@@ -26,7 +26,6 @@
 use flexstr::{shared_str, IntoSharedStr, SharedStr, ToSharedStr};
 
 #[macro_use] extern crate lalrpop_util;
-#[macro_use] extern crate lazy_static;
 
 pub(crate) use change::Change;
 #[allow(clippy::wildcard_imports)]

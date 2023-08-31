@@ -231,7 +231,7 @@ impl AssembledData {
 		let Instruction { opcode: Opcode { first_operand, mnemonic, second_operand, .. }, span, .. } = instruction;
 
 		// Retrieve the table entry for the mnemonic.
-		let mnemonic_entry = assembly_table
+		let mnemonic_entry = assembly_table()
 			.get(mnemonic)
 			.unwrap_or_else(|| panic!("No codegen entries for mnemonic {}, this is a bug", mnemonic));
 

@@ -2,12 +2,11 @@
 #![deny(clippy::all, clippy::pedantic, clippy::nursery, unused_imports)]
 #![allow(non_upper_case_globals, clippy::default_trait_access)]
 
-use std::sync::Arc;
+use std::sync::{Arc, OnceLock};
 
 use flexstr::SharedStr;
 use html_escape::{decode_html_entities, encode_safe};
 use miette::{GraphicalReportHandler, GraphicalTheme};
-use once_cell::sync::Lazy;
 use options::WebOptions;
 use regex::{Captures, Regex};
 use spcasm::{pretty_hex, run_assembler, AssemblyCode};
@@ -29,16 +28,10 @@ macro_rules! log {
 #[global_allocator]
 static ALLOC: wee_alloc::WeeAlloc = wee_alloc::WeeAlloc::INIT;
 
-static NEWLINE_EQUIVALENT: Lazy<Regex> = Lazy::new(|| Regex::new(r"<br(/)?>").unwrap());
-static ANSI_CSI_ESCAPE: Lazy<Regex> = Lazy::new(|| Regex::new(r"\[(.+?)m").unwrap());
+static NEWLINE_EQUIVALENT: OnceLock<Regex> = OnceLock::new();
+static ANSI_CSI_ESCAPE: OnceLock<Regex> = OnceLock::new();
 
-static REPORT_HANDLER: Lazy<GraphicalReportHandler> = Lazy::new(|| {
-	GraphicalReportHandler::new_themed(GraphicalTheme::unicode())
-		.with_cause_chain()
-		.with_context_lines(3)
-		.tab_width(4)
-		.with_links(false)
-});
+static REPORT_HANDLER: OnceLock<GraphicalReportHandler> = OnceLock::new();
 
 fn htmlify(text: &str) -> SharedStr {
 	ansi_to_html(&encode_safe(text).replace(' ', "&nbsp;")).replace('\n', "<br/>").into()
@@ -49,6 +42,7 @@ fn ansi_to_html(text: &str) -> SharedStr {
 	let text = text.replace("[2m", "<span class=\"ansi-faint\">").replace("[0m", "</span>");
 
 	ANSI_CSI_ESCAPE
+		.get_or_init(|| Regex::new(r"\[(.+?)m").unwrap())
 		.replace_all(&text, |captures: &Captures| {
 			let csi_command = &captures[1];
 			let mut numbers =
@@ -114,6 +108,15 @@ const fn main() {}
 pub fn on_assembly_change(options: JsValue) {
 	set_panic_hook();
 
+	NEWLINE_EQUIVALENT.get_or_init(|| Regex::new(r"<br(/)?>").unwrap());
+	REPORT_HANDLER.get_or_init(|| {
+		GraphicalReportHandler::new_themed(GraphicalTheme::unicode())
+			.with_cause_chain()
+			.with_context_lines(3)
+			.tab_width(4)
+			.with_links(false)
+	});
+
 	let options: Arc<WebOptions> = Arc::new(serde_wasm_bindgen::from_value(options).unwrap());
 
 	let document = web_sys::window().unwrap().document().unwrap();
@@ -122,11 +125,11 @@ pub fn on_assembly_change(options: JsValue) {
 	let status_paragraph = document.query_selector("p#status").unwrap().unwrap();
 
 	let output_width = output_width() as usize;
-	let report_handler = REPORT_HANDLER.clone().with_width(output_width);
+	let report_handler = REPORT_HANDLER.get().unwrap().clone().with_width(output_width);
 
 	// Replace the divs that the browser inserts with newlines
 	let code_text = code_input.unchecked_into::<HtmlElement>().inner_text();
-	let code_text = NEWLINE_EQUIVALENT.replace_all(&code_text, "\n");
+	let code_text = NEWLINE_EQUIVALENT.get().unwrap().replace_all(&code_text, "\n");
 	// Decode other entities
 	let code_text = decode_html_entities(&code_text);
 

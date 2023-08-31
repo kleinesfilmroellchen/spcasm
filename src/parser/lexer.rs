@@ -109,7 +109,7 @@ pub fn lex(source_code: Arc<AssemblyCode>, options: &dyn Frontend) -> Result<Vec
 				if chars.peek().is_some_and(|chr| is_identifier!(chr)) {
 					tokens.push(parse_single_char_tokens('.', index.into()));
 					index += 1;
-					tokens.push(parse_identifier_like(&mut chars, chr, &mut index, &source_code)?);
+					tokens.push(parse_identifier_like(&mut chars, letter_after_dot, &mut index, &source_code)?);
 				} else {
 					index += 2;
 					tokens.push((if letter_after_dot == 'b' {Token::ExplicitDirectPage} else {Token::ExplicitNoDirectPage})

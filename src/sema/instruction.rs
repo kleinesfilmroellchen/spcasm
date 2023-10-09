@@ -513,6 +513,55 @@ impl Mnemonic {
 			_ => None,
 		}
 	}
+
+	/// Specifies if this mnemonic's instruction uses any kind of bit index.
+	#[must_use]
+	pub fn uses_any_bit_index(&self) -> bool {
+		[
+			Self::Bbc,
+			Self::Bbs,
+			Self::Set,
+			Self::Clr,
+			Self::Bbc0,
+			Self::Bbs0,
+			Self::Set0,
+			Self::Clr0,
+			Self::Bbc1,
+			Self::Bbs1,
+			Self::Set1,
+			Self::Clr1,
+			Self::Bbc2,
+			Self::Bbs2,
+			Self::Set2,
+			Self::Clr2,
+			Self::Bbc3,
+			Self::Bbs3,
+			Self::Set3,
+			Self::Clr3,
+			Self::Bbc4,
+			Self::Bbs4,
+			Self::Set4,
+			Self::Clr4,
+			Self::Bbc5,
+			Self::Bbs5,
+			Self::Set5,
+			Self::Clr5,
+			Self::Bbc6,
+			Self::Bbs6,
+			Self::Set6,
+			Self::Clr6,
+			Self::Bbc7,
+			Self::Bbs7,
+			Self::Set7,
+			Self::Clr7,
+			Self::And1,
+			Self::Or1,
+			Self::Eor1,
+			Self::Not1,
+			Self::Mov1,
+		]
+		.contains(self)
+	}
 }
 
 impl Display for Mnemonic {

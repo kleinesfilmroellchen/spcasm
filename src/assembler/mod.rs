@@ -225,8 +225,8 @@ impl AssembledData {
 		// Because the actions always expect to get a value, we need a fallback dummy value if there is none in the
 		// addressing mode. This is fine, since we control the codegen table and we can make sure that we never use a
 		// value where there is none in the operand.
-		// FIXME: Make this const once https://github.com/zkat/miette/issues/261 is resolved.
-		let dummy_value: AssemblyTimeValue = AssemblyTimeValue::Literal(0, (0, 0).into());
+		// FIXME: Still not constable.
+		let dummy_value: AssemblyTimeValue = AssemblyTimeValue::Literal(0, SourceSpan::new((0).into(), (0).into()));
 
 		let Instruction { opcode: Opcode { first_operand, mnemonic, second_operand, .. }, span, .. } = instruction;
 
@@ -295,30 +295,35 @@ impl AssembledData {
 					.into());
 				}
 
+				let first_bit_index = first_operand.bit_index().or_else(|| mnemonic.bit_index());
+				// Don't report an error yet if we have a second entry. The implicit bit index will be caught later in
+				// this case.
+				if mnemonic.uses_any_bit_index()
+					&& !matches!(first_operand_entry, EntryOrSecondOperandTable::Table(..))
+					&& first_bit_index.is_none()
+				{
+					self.options.report_diagnostic(AssemblyError::ImplicitBitIndex {
+						mnemonic: *mnemonic,
+						location: *span,
+						src:      self.source_code.clone(),
+					});
+				}
+				let first_bit_index = first_bit_index.unwrap_or(1);
+
 				match first_operand_entry {
 					EntryOrSecondOperandTable::Entry(opcode, action)
 					| EntryOrSecondOperandTable::ImplicitAEntry(opcode, action) => {
 						self.append_8_bits(MemoryAddress::from(*opcode), current_labels, *span)?;
-						action(
-							self,
-							*span,
-							first_operand.number_ref().unwrap_or(&dummy_value),
-							first_operand.bit_index().or_else(|| mnemonic.bit_index()).unwrap_or(1),
-						)
+						action(self, *span, first_operand.number_ref().unwrap_or(&dummy_value), first_bit_index)
 					},
 					EntryOrSecondOperandTable::BitEntry(opcode, action) => {
 						self.append_unresolved_opcode_with_bit_index(
 							AssemblyTimeValue::Literal(MemoryAddress::from(*opcode), *span),
-							first_operand.bit_index().or_else(|| mnemonic.bit_index()).unwrap_or(1),
+							first_bit_index,
 							current_labels,
 							*span,
 						)?;
-						action(
-							self,
-							*span,
-							first_operand.number_ref().unwrap_or(&dummy_value),
-							first_operand.bit_index().or_else(|| mnemonic.bit_index()).unwrap_or(1),
-						)
+						action(self, *span, first_operand.number_ref().unwrap_or(&dummy_value), first_bit_index)
 					},
 					EntryOrSecondOperandTable::TcallEntry(opcode) => self.append_8_bits_unresolved(
 						// Synthesize the operation `opcode | ((operand & 0x0F) << 4)` which is exactly how TCALL
@@ -376,8 +381,15 @@ impl AssembledData {
 						let bit_index = first_operand
 							.bit_index()
 							.or_else(|| second_operand.bit_index())
-							.or_else(|| mnemonic.bit_index())
-							.unwrap_or(1);
+							.or_else(|| mnemonic.bit_index());
+						if mnemonic.uses_any_bit_index() && bit_index.is_none() {
+							self.options.report_diagnostic(AssemblyError::ImplicitBitIndex {
+								mnemonic: *mnemonic,
+								location: *span,
+								src:      self.source_code.clone(),
+							});
+						}
+						let bit_index = bit_index.unwrap_or(1);
 
 						match second_operand_entry {
 							TwoOperandEntry::Entry(opcode, action) => {

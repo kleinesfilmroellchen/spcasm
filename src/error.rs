@@ -665,6 +665,23 @@ pub enum AssemblyError {
 		src:      Arc<AssemblyCode>,
 	},
 
+	#[error("An implicit default bit index of 1 will be used for the `{mnemonic}` instruction")]
+	#[diagnostic(
+		code(spcasm::instruction::implicit_bit_index),
+		severity(Warning),
+		help(
+			"Implicit bit indices are an Asar compatibility feature, but it is not recommended since the default of 1 \
+			 may be surprising."
+		)
+	)]
+	ImplicitBitIndex {
+		mnemonic: Mnemonic,
+		#[label("Should contain a bit index")]
+		location: SourceSpan,
+		#[source_code]
+		src:      Arc<AssemblyCode>,
+	},
+
 	#[error("Expected any of {}", expected.iter().map(std::string::ToString::to_string).collect::<Vec<_>>().join(", "))]
 	#[diagnostic(code(spcasm::syntax::missing_token), severity(Error))]
 	UnexpectedEndOfTokens {

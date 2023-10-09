@@ -63,7 +63,6 @@ pub enum EntryOrSecondOperandTable {
 	/// A direct table entry; the instruction allows an extra "A" as second operand.
 	ImplicitAEntry(u8, SingleOperandSegmentAction),
 	/// A direct table entry, but the opcode also takes a bit index in the highest three bits. This is filled in by the
-	/// A direct table entry, but the opcode also takes a bit index in the highest three bits. This is filled in by the
 	/// driver code; the table just provides the opcode and extra operands.
 	BitEntry(u8, SingleOperandSegmentAction),
 	/// A direct table entry for tcall, where the operand is put into the upper nybble of the opcode.
@@ -87,7 +86,7 @@ impl<const N: usize> From<[(AddressingModeCategory, TwoOperandEntry); N]> for En
 }
 
 /// An entry for two operand instructions.
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub enum TwoOperandEntry {
 	/// A normal entry with an opcode and an action.
 	Entry(u8, TwoOperandSegmentAction),

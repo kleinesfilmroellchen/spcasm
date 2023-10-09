@@ -101,6 +101,8 @@ Some instructions provide bit indexing, where a single bit of a memory address i
 - Direct page bit indexing: Used by `BBS`, `BBC`, `SET1`, `CLR1`, which operate on or inspect bits in the direct page. They encode the bit index within the opcode itself, so while the mnemonic and the bit index are usually written separately from each other, they are combined into the opcode byte and there are eight different opcodes for each of the mnemonics. Specifically, the bit index occupies the upper three bits of the opcode byte, and the lower five bits are determined by the mnemonic and can be found in the instruction reference.
 - General address bit indexing: Used by the other bit instructions `AND1`, `OR1`, `EOR1`, `NOT1`, `MOV1`. Here, the bit index is encoded in the upper three bits of the address itself. This is the reason that these instructions can only access memory up to 1FFF inclusive. Remember that because the SPC700 is little endian, the bit index is found in the third byte of the machine instruction, because the first byte is the opcode and the second byte is the low byte of the address.
 
+For Asar compatibility, you may omit the bit index, which then behaves like an implicit bit index of 1 like it would in Asar. This is not a recommended feature to use.
+
 ### `TCALL` encoding
 
 The `TCALL` instruction is similar to a direct page bit indexing instruction in that it encodes its parameter, the table index, into the opcode. However, the table index can range from 0 to 15, not just from 0 to 7. Therefore, `TCALL` uses the entire high nybble to store the table index.

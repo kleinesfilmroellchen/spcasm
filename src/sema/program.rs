@@ -162,8 +162,8 @@ impl std::fmt::Display for ProgramElement {
 				label,
 				label.location().map_or_else(String::new, |value| format!(" = {}", value),)
 			),
-			Self::Directive(directive) => write!(f, "{}", directive),
-			Self::Instruction(instruction) => write!(f, "{}", instruction),
+			Self::Directive(directive) => write!(f, "{directive}"),
+			Self::Instruction(instruction) => write!(f, "{instruction}"),
 			Self::IncludeSource { file, span } => write!(f, "{} include \"{}\"", span_to_string(*span), file),
 			Self::UserDefinedMacroCall { macro_name, arguments, span } => write!(
 				f,

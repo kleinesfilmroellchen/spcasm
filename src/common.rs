@@ -29,9 +29,9 @@ pub fn pretty_hex(bytes: &[u8], emphasis: Option<usize>) -> SharedStr {
 		let section = &bytes[index * 16 .. min((index + 1) * 16, bytes.len())];
 		for (column, byte) in section.iter().enumerate() {
 			string.push_str(if let Some(emphasis) = emphasis && index * 16 + column == emphasis {
-				format!(" [{:02X}]", byte)
+				format!(" [{byte:02X}]")
 			} else {
-				format!(" {:02X}", byte)
+				format!(" {byte:02X}")
 			}.as_ref());
 		}
 		string.push('\n');

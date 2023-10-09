@@ -379,7 +379,7 @@ impl Display for DirectiveValue {
 	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
 		f.pad(&match self {
 			Self::Placeholder => "[placeholder]".to_owned(),
-			Self::Org(value) => format!("org {:04X}", value),
+			Self::Org(value) => format!("org {value:04X}"),
 			Self::Table { values } => format!(
 				"table {}",
 				values.iter().map(ToString::to_string).intersperse(", ".to_string()).collect::<String>()
@@ -398,14 +398,14 @@ impl Display for DirectiveValue {
 				text.iter().map(|byte| *byte as char).collect::<String>(),
 				if *has_null_terminator { "\\0" } else { "" }
 			),
-			Self::AssignReference { reference, value } => format!("[reference] {} = {:04X}", reference, value),
+			Self::AssignReference { reference, value } => format!("[reference] {reference} = {value:04X}"),
 			Self::Include { file, range } =>
 				format!("include \"{}\"{}", file, range.map(span_to_string).unwrap_or_default()),
 			Self::End => "endasm".to_string(),
 			Self::PushSection => "push".to_string(),
 			Self::PopSection => "pop".to_string(),
 			Self::EndNamespace => "namespace off".to_string(),
-			Self::StartNamespace { name } => format!("namespace {}", name),
+			Self::StartNamespace { name } => format!("namespace {name}"),
 			Self::UserDefinedMacro { name, arguments, body } => format!(
 				"macro {} ({})\n    {}",
 				name,

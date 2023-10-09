@@ -100,6 +100,7 @@ type Table = HashMap<Mnemonic, EntryOrFirstOperandTable>;
 static assembly_table_storage: OnceLock<Table> = OnceLock::new();
 /// The [`assembly_table`] static data structure contains mappings from mnemonics and operands to the assembled data.
 /// This data is given in the form of functions executed on a [`crate::segments::Segments`] instance.
+#[allow(clippy::too_many_lines, clippy::similar_names)]
 pub fn assembly_table() -> &'static Table {
 	assembly_table_storage.get_or_init(|| {
 		let mut table = HashMap::new();

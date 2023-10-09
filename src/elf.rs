@@ -57,7 +57,7 @@ pub fn write_to_elf(output_stream: &mut impl Write, data: Segments<u8>) -> Resul
 	// Since segments is a BTreeMap, it will always be sorted by address, simplifying later write steps.
 	for (segment_start, segment_contents) in data.segments {
 		let metadata = Box::pin(SegmentMetadata {
-			name:            format!(".text_{:04X}", segment_start),
+			name:            format!(".text_{segment_start:04X}"),
 			name_id:         Cell::new(None),
 			section_index:   Cell::new(None),
 			elf_file_offset: Cell::new(None),

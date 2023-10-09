@@ -336,7 +336,7 @@ impl UpperHex for AssemblyTimeValue {
 		match self {
 			Self::Reference(reference, ..) => match reference.location() {
 				Some(ref numeric_address) => fmt::UpperHex::fmt(numeric_address, f),
-				None => write!(f, "{}", reference),
+				None => write!(f, "{reference}"),
 			},
 			Self::Literal(numeric_address, ..) => {
 				f.write_char('$')?;
@@ -351,7 +351,7 @@ impl UpperHex for AssemblyTimeValue {
 
 impl std::fmt::Display for AssemblyTimeValue {
 	fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-		write!(f, "{:X}", self)
+		write!(f, "{self:X}")
 	}
 }
 

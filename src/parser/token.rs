@@ -233,7 +233,7 @@ impl Token {
 impl Display for Token {
 	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> Result<(), std::fmt::Error> {
 		if let Self::Mnemonic(mnemonic, ..) = self {
-			return write!(f, "{}", mnemonic);
+			return write!(f, "{mnemonic}");
 		};
 		write!(f, "{}", match self {
 			Self::Identifier(..) => "identifier".to_string(),

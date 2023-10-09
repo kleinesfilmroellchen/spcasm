@@ -296,7 +296,7 @@ impl Display for Reference {
 		f.pad(&match self {
 			Self::Label(label) => label.read().to_string(),
 			Self::UnresolvedLabel { name, nesting_level, .. } => format!("{}{}", ".".repeat(*nesting_level), name),
-			Self::MacroArgument { name, .. } => format!("<{}>", name),
+			Self::MacroArgument { name, .. } => format!("<{name}>"),
 			Self::MacroGlobal { .. } => "\\@".to_string(),
 			Self::Relative { direction, id, .. } => direction.string().repeat(usize::try_from(u64::from(*id)).unwrap()),
 		})

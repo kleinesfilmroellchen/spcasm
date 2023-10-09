@@ -322,23 +322,23 @@ impl ReferenceResolvable for AddressingMode {
 impl Display for AddressingMode {
 	fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), std::fmt::Error> {
 		f.pad(&match self {
-			Self::Immediate(number) => format!("#{:02X}", number),
+			Self::Immediate(number) => format!("#{number:02X}"),
 			Self::IndirectX => "(X)".to_owned(),
 			Self::IndirectY => "(Y)".to_owned(),
 			Self::CarryFlag => "C".to_owned(),
 			Self::IndirectXAutoIncrement => "(X)+".to_owned(),
-			Self::DirectPage(address) => format!("{:02X}", address),
-			Self::DirectPageXIndexed(address) => format!("{:02X}+X", address),
-			Self::DirectPageYIndexed(address) => format!("{:02X}+Y", address),
-			Self::DirectPageXIndexedIndirect(address) => format!("({:02X}+X)", address),
-			Self::DirectPageIndirectYIndexed(address) => format!("({:02X})+Y", address),
-			Self::Address(address) => format!("{:04X}", address),
-			Self::XIndexed(address) => format!("{:04X}+X", address),
-			Self::YIndexed(address) => format!("{:04X}+Y", address),
-			Self::DirectPageBit(address, bit) => format!("{:02X}.{:01}", address, bit),
-			Self::AddressBit(address, bit) => format!("{:04X}.{:01}", address, bit),
-			Self::NegatedAddressBit(address, bit) => format!("/{:04X}.{:01}", address, bit),
-			Self::Register(register) => format!("{}", register),
+			Self::DirectPage(address) => format!("{address:02X}"),
+			Self::DirectPageXIndexed(address) => format!("{address:02X}+X"),
+			Self::DirectPageYIndexed(address) => format!("{address:02X}+Y"),
+			Self::DirectPageXIndexedIndirect(address) => format!("({address:02X}+X)"),
+			Self::DirectPageIndirectYIndexed(address) => format!("({address:02X})+Y"),
+			Self::Address(address) => format!("{address:04X}"),
+			Self::XIndexed(address) => format!("{address:04X}+X"),
+			Self::YIndexed(address) => format!("{address:04X}+Y"),
+			Self::DirectPageBit(address, bit) => format!("{address:02X}.{bit:01}"),
+			Self::AddressBit(address, bit) => format!("{address:04X}.{bit:01}"),
+			Self::NegatedAddressBit(address, bit) => format!("/{address:04X}.{bit:01}"),
+			Self::Register(register) => format!("{register}"),
 		})
 	}
 }

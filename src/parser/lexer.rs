@@ -391,9 +391,8 @@ fn next_escape_sequence(
 					}
 					.into());
 				}
-				let value =
-					char::from_u32(u32::from_str_radix(&format!("{}{}", first_number, second_number), 16).unwrap())
-						.unwrap();
+				let value = char::from_u32(u32::from_str_radix(&format!("{first_number}{second_number}"), 16).unwrap())
+					.unwrap();
 				*start_index += 2;
 				Ok(value)
 			},

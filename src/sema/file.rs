@@ -48,7 +48,7 @@ impl AssemblyFile {
 		})
 	}
 
-	fn source_span_contains(this: SourceSpan, offset: usize) -> bool {
+	const fn source_span_contains(this: SourceSpan, offset: usize) -> bool {
 		this.offset() <= offset && this.offset() + this.len() > offset
 	}
 
@@ -297,7 +297,7 @@ impl AssemblyFile {
 					if matches!(&directive.value, DirectiveValue::Brr { directory: true, .. })
 						&& current_labels.is_empty()
 					{
-						let label_name: SharedStr = format!("brr_sample_{}", brr_label_number).into();
+						let label_name: SharedStr = format!("brr_sample_{brr_label_number}").into();
 						let new_brr_label = Label::new_synthetic(label_name.clone(), directive.span);
 						brr_label_number += 1;
 
@@ -636,7 +636,7 @@ impl AssemblyFile {
 						// We use a unique reference name just to make sure that we don't combine different
 						// references accidentally. This is not a synthetic label!
 						Label::new_with_definition(
-							format!("{}_global_label_{}", macro_name, index).into(),
+							format!("{macro_name}_global_label_{index}").into(),
 							*definition_span,
 						),
 					);

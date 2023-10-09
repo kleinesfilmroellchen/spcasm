@@ -1,7 +1,7 @@
 #![doc = include_str!("../README.md")]
 #![feature(try_blocks)]
 #![deny(missing_docs, unused, clippy::all, clippy::pedantic, clippy::nursery)]
-#![allow(clippy::wildcard_imports, clippy::ignored_unit_patterns)]
+#![allow(clippy::wildcard_imports, clippy::ignored_unit_patterns, clippy::needless_raw_string_hashes)]
 
 use std::path::Path;
 use std::sync::Arc;
@@ -425,12 +425,12 @@ impl Backend {
 		let path = &uri.to_file_path().map_err(|()| tower_lsp::jsonrpc::Error {
 			code:    tower_lsp::jsonrpc::ErrorCode::InvalidParams,
 			data:    None,
-			message: format!("invalid document URI {}", uri),
+			message: format!("invalid document URI {uri}"),
 		})?;
 		self.environment.read().files.get::<Path>(path).cloned().ok_or_else(|| tower_lsp::jsonrpc::Error {
 			code:    tower_lsp::jsonrpc::ErrorCode::InvalidParams,
 			data:    None,
-			message: format!("no parsed document found for {}", uri),
+			message: format!("no parsed document found for {uri}"),
 		})
 	}
 }

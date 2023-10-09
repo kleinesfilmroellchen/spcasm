@@ -59,14 +59,14 @@ fn ansi_to_html(text: &str) -> SharedStr {
 					3 => replacement_text.push_str(" class=\"ansi-italic\""),
 					4 => replacement_text.push_str(" class=\"ansi-underline\""),
 					// Set foreground color
-					30 => replacement_text.push_str(&format!(" class=\"ansi-fg-black\"")),
-					31 => replacement_text.push_str(&format!(" class=\"ansi-fg-red\"")),
-					32 => replacement_text.push_str(&format!(" class=\"ansi-fg-green\"")),
-					33 => replacement_text.push_str(&format!(" class=\"ansi-fg-yellow\"")),
-					34 => replacement_text.push_str(&format!(" class=\"ansi-fg-blue\"")),
-					35 => replacement_text.push_str(&format!(" class=\"ansi-fg-magenta\"")),
-					36 => replacement_text.push_str(&format!(" class=\"ansi-fg-cyan\"")),
-					37 => replacement_text.push_str(&format!(" class=\"ansi-fg-white\"")),
+					30 => replacement_text.push_str(" class=\"ansi-fg-black\""),
+					31 => replacement_text.push_str(" class=\"ansi-fg-red\""),
+					32 => replacement_text.push_str(" class=\"ansi-fg-green\""),
+					33 => replacement_text.push_str(" class=\"ansi-fg-yellow\""),
+					34 => replacement_text.push_str(" class=\"ansi-fg-blue\""),
+					35 => replacement_text.push_str(" class=\"ansi-fg-magenta\""),
+					36 => replacement_text.push_str(" class=\"ansi-fg-cyan\""),
+					37 => replacement_text.push_str(" class=\"ansi-fg-white\""),
 					38 => {
 						let two = numbers.next().unwrap();
 						assert!(two == 2, "5;n not supported");
@@ -103,6 +103,9 @@ fn set_panic_hook() {
 const fn main() {}
 
 /// Callback for when the user changes assembly code.
+///
+/// # Panics
+/// Broken DOM and JavaScript weirdness.
 #[allow(clippy::cast_sign_loss, clippy::cast_possible_truncation)]
 #[wasm_bindgen]
 pub fn on_assembly_change(options: JsValue) {

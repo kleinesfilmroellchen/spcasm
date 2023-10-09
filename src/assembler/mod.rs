@@ -233,7 +233,7 @@ impl AssembledData {
 		// Retrieve the table entry for the mnemonic.
 		let mnemonic_entry = assembly_table()
 			.get(mnemonic)
-			.unwrap_or_else(|| panic!("No codegen entries for mnemonic {}, this is a bug", mnemonic));
+			.unwrap_or_else(|| panic!("No codegen entries for mnemonic {mnemonic}, this is a bug"));
 
 		match mnemonic_entry {
 			EntryOrFirstOperandTable::Entry(opcode) =>

@@ -431,7 +431,7 @@ impl Display for DirectiveValue {
 					FillOperation::ToAddress => "to address".to_owned(),
 					FillOperation::ToAlignment { offset } => format!(
 						"to alignment{}",
-						offset.as_ref().map(|offset| format!(" (offset {:04X})", offset)).unwrap_or_default()
+						offset.as_ref().map(|offset| format!(" (offset {offset:04X})")).unwrap_or_default()
 					),
 				},
 				parameter,

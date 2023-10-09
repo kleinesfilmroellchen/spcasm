@@ -54,7 +54,7 @@ fn dump_reference_tree_impl(references: &mut dyn Iterator<Item = &Arc<RwLock<Lab
 			.and_then(|location| {
 				location.try_value(global.source_span(), &Arc::new(AssemblyCode::new("", &String::new()))).ok()
 			})
-			.map_or_else(|| "(unknown)".to_string(), |location| format!("{:04X}", location));
+			.map_or_else(|| "(unknown)".to_string(), |location| format!("{location:04X}"));
 
 		println!(
 			"{:_<70}{:>8}",
@@ -70,7 +70,7 @@ fn dump_reference_tree_impl(references: &mut dyn Iterator<Item = &Arc<RwLock<Lab
 				.and_then(|location| {
 					location.try_value(global.source_span(), &Arc::new(AssemblyCode::new("", &String::new()))).ok()
 				})
-				.map_or_else(|| "(unknown)".to_string(), |location| format!("{:04X}", location))
+				.map_or_else(|| "(unknown)".to_string(), |location| format!("{location:04X}"))
 		});
 		dump_reference_tree_impl(&mut locals.into_iter(), level + 1);
 	}
@@ -94,7 +94,7 @@ pub fn byte_vec_to_string(vec: &Option<Vec<u8>>) -> std::string::String {
 			"(expected {})",
 			expected_value
 				.iter()
-				.map(|element| format!("{:02X}", element))
+				.map(|element| format!("{element:02X}"))
 				.intersperse(" ".to_string())
 				.collect::<String>()
 		)

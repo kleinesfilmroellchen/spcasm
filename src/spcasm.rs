@@ -44,7 +44,7 @@ pub fn main() -> miette::Result<()> {
 							)
 							.ok()
 					})
-					.map_or_else(|| "(unknown)".to_string(), |location| format!("{:04X}", location))
+					.map_or_else(|| "(unknown)".to_string(), |location| format!("{location:04X}"))
 			});
 			dump_reference_tree(&references);
 		}

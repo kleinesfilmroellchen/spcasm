@@ -235,11 +235,12 @@ impl AssemblyFile {
 	/// unresolved local labels did not provide memory locations before merging.
 	pub fn coerce_to_direct_page_addressing(&mut self) {
 		for element in &mut self.content {
-			if let ProgramElement::Instruction(Instruction {
-				opcode: Opcode { first_operand, second_operand, addressing_mode_optimization, .. },
-				..
-			}) = element
-			{
+			if let ProgramElement::Instruction(Instruction { opcode, .. }) = element {
+				if !opcode.can_use_direct_page_addressing() {
+					opcode.addressing_mode_optimization = AddressingModeOptimization::PreventDirectPage;
+				}
+				let Opcode { first_operand, second_operand, addressing_mode_optimization, .. } = opcode;
+
 				let coercion_function = match addressing_mode_optimization {
 					AddressingModeOptimization::ForceDirectPage => AddressingMode::force_to_direct_page_addressing,
 					AddressingModeOptimization::PreventDirectPage => AddressingMode::force_to_wide_addressing,

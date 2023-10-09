@@ -1,0 +1,4 @@
+ORG 0
+LOOP: MOV $F2,#$FC  ;= 8F FC F2 
+      MOV1 C,$F3.0 ;= AA F3 00
+      BCC LOOP     ;= 90 F8

@@ -63,6 +63,21 @@ fn errors() {
 	}
 }
 
+#[test]
+fn regressions() {
+	let sources = std::fs::read_dir("tests/regression").unwrap();
+	for source in sources {
+		let source = source.unwrap().path();
+		let source = &*source.to_string_lossy();
+		if source.ends_with(".spcasmtest") {
+			println!("assembling regression test {} ...", source);
+			test_file(source);
+		} else {
+			println!("skipping file {} (not a test)", source);
+		}
+	}
+}
+
 #[bench]
 // Slow test that doesn't cover more than the BRR tests themselves.
 #[cfg_attr(miri, ignore)]

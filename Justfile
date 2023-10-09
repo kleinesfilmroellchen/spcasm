@@ -4,7 +4,7 @@ set windows-shell := ["pwsh.exe", "-NoLogo", "-Command"]
 
 # Build all Rust binaries and run all tests
 test: build
-	cargo nextest run || cargo test
+	cargo nextest run
 
 coverage:
 	# The first two commands are expected to fail, since "run" is just a hack to get llvm-cov to compile the binaries.

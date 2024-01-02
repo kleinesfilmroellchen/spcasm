@@ -166,7 +166,9 @@ impl AssemblyFile {
 			}
 			element.set_current_label(&current_label, &self.source_code)?;
 			// Set any non-synthetic label as the current label.
-			if let ProgramElement::Label(Reference::Label(ref label)) = element && !label.read().synthetic {
+			if let ProgramElement::Label(Reference::Label(ref label)) = element
+				&& !label.read().synthetic
+			{
 				current_label = Some(label.clone());
 			}
 			element.resolve_relative_labels(RelativeReferenceDirection::Backward, &current_backward_relative_label_map);
@@ -432,7 +434,9 @@ impl AssemblyFile {
 		let mut last_segment = None;
 		for ReferencedObject { address, segment_start, object } in &mut referenced_objects {
 			// New segment started, let's reset the address offset since segments don't influence each other.
-			if let Some(last_segment) = last_segment && *segment_start != last_segment {
+			if let Some(last_segment) = last_segment
+				&& *segment_start != last_segment
+			{
 				address_offset = 0;
 			}
 			*address += address_offset;
@@ -472,7 +476,9 @@ impl AssemblyFile {
 			while index < referenced_objects.len().try_into().unwrap() {
 				let ReferencedObject { address, object, segment_start } = &mut referenced_objects[index as usize];
 				let segment_start = *segment_start;
-				if let Some(last_segment) = last_segment && segment_start != last_segment {
+				if let Some(last_segment) = last_segment
+					&& segment_start != last_segment
+				{
 					address_offset = 0;
 				}
 				*address += address_offset;
@@ -640,6 +646,7 @@ impl AssemblyFile {
 							*definition_span,
 						),
 					);
+					drop(arguments);
 					// FIXME: Doesn't handle macro-internal references correctly; also no support for the \@ special
 					// label.
 					let mut inserted_body = body.clone();

@@ -28,11 +28,16 @@ pub fn pretty_hex(bytes: &[u8], emphasis: Option<usize>) -> SharedStr {
 	while index * 16 < bytes.len() {
 		let section = &bytes[index * 16 .. min((index + 1) * 16, bytes.len())];
 		for (column, byte) in section.iter().enumerate() {
-			string.push_str(if let Some(emphasis) = emphasis && index * 16 + column == emphasis {
-				format!(" [{byte:02X}]")
-			} else {
-				format!(" {byte:02X}")
-			}.as_ref());
+			string.push_str(
+				if let Some(emphasis) = emphasis
+					&& index * 16 + column == emphasis
+				{
+					format!(" [{byte:02X}]")
+				} else {
+					format!(" {byte:02X}")
+				}
+				.as_ref(),
+			);
 		}
 		string.push('\n');
 		index += 1;
@@ -45,6 +50,7 @@ pub fn dump_reference_tree(global_references: &[Arc<RwLock<Label>>]) {
 	dump_reference_tree_impl(&mut global_references.iter(), 0);
 }
 
+#[allow(clippy::significant_drop_tightening)]
 fn dump_reference_tree_impl(references: &mut dyn Iterator<Item = &Arc<RwLock<Label>>>, level: usize) {
 	for global in references {
 		let global = global.read();

@@ -715,6 +715,7 @@ pub fn create_label_at_this_position(
 				LabelUsageKind::AsAddress => Label::new_with_use(label_name, label_location),
 			})
 			.clone();
+		drop(mutable_parent);
 		let mut mutable_label = local_label.write();
 		mutable_label.parent = Arc::downgrade(&parent_label);
 		if creation_kind == LabelUsageKind::AsAddress {

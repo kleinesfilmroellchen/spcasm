@@ -160,6 +160,7 @@ impl Environment {
 			} else {
 				mutable_matching_reference.usage_spans.push(span);
 			}
+			drop(mutable_matching_reference);
 			Ok(matching_reference.clone())
 		} else {
 			let new_reference = if usage_kind == LabelUsageKind::AsDefinition {

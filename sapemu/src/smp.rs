@@ -75,7 +75,7 @@ impl CpuIOPorts {
 }
 
 /// CPU clock rate (Hz)
-pub const CPU_RATE: usize = 2_048_000_000;
+pub const CPU_RATE: usize = 2_048_000;
 
 /// Internal CPU timers.
 pub struct Timers {

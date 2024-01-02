@@ -2,18 +2,21 @@
 
 This section details information useful for anyone working on or tinkering with spcasm.
 
+- auto-gen TOC;
+  {:toc}
+
 ## Components
 
-spcasm is structured into a few related components:
+Over time, spcasm has evolved from "just an SPC700 assembler" to a whole toolchain for the SPC700 platform. It now consists of several components, mainly a few Rust crates, documentation and build/test tooling.
 
 - The `spcasm` crate contains the assembler's core code. It further contains three targets:
+  - The crate is a library in itself, which is used by most other non-core tools. Some design decisions within the crate are based on other tools' requirements. For example: concurrency-safety is not needed by the single-threaded assembler, but by the language server.
   - `spcasm` is the main assembler binary.
-  - The crate can also be built as a library; this is mainly used for tests.
-  - `brr` is a BRR command-line utility that intends to replace BRRTools.
+  - `brr` is BRR command-line tooling that exposes a thin interface to the BRR support.
 - The `spcasm_derive` crate contains derive macros, as Rust requires those to be in a separate crate.
 - The `spcasm-web` crate contains WebAssembly APIs and a browser frontend allowing the assembler to run in the browser.
+- The `sals` crate contains the **s**pc**a**sm **l**anguage **s**erver, an experimental language server for SPC-700 assembly.
 - The `doc` folder contains [mdbook](https://rust-lang.github.io/mdBook/)-based documentation. You can read this documentation directly on GitHub, or build a statically servable website from it with mdbook.
-- The `sals` folder contains the **s**pc**a**sm **l**anguage **s**erver, an experimental language server for SPC-700 assembly.
 
 spcasm itself contains by far the most code, and [its entire documentation is available online](https://kleinesfilmroellchen.github.io/spcasm/doc/api/spcasm/index.html).
 
@@ -21,11 +24,11 @@ spcasm itself contains by far the most code, and [its entire documentation is av
 
 > `$ just spcasm`
 
-spcasm is written in Rust (2021 edition). Due to the use of many (really cool!) unstable features, it can only be compiled with a Rust nightly compiler. The minimum supported Rust version (MSRV) is nightly 1.68 on both Linux (gnu) and Windows (msvc).
+spcasm is written in Rust (2021 edition). Due to the use of many (really cool!) unstable features, it can only be compiled with a Rust nightly compiler. The minimum supported Rust version (MSRV) can be found in Cargo.toml.
 
 Because of `rust-toolchain.toml`, the nightly toolchain should automatically be selected if you run any Rustup-based command (like `cargo` or `rustc`).
 
-The standard binary is the assembler `spcasm` itself. There is an additional binary target `brr`, a BRR encoder and decoder with additional interactive functionality. Both require the `binaries` feature.
+The standard binary is the assembler `spcasm` itself. There is an additional binary target `brr`, a BRR encoder and decoder with additional interactive functionality. Both require the `binaries` feature. The other crates have their own (singular) targets.
 
 > `$ just test`
 
@@ -35,16 +38,16 @@ The crate has the following features:
 
 - `binaries`: Enable the two binaries `spcasm` and `brr` and their specific dependencies. If you want to run non-CLI tests or use spcasm as a library, this is not necessary, therefore although it is a default feature, it can be disabled.
 
-If you want to create a release build, please compile with the `spcasm-release` profile; the standard `release` profile needs to be reserved for `wasm-pack` as it is too inflexible at the moment.
+If you want to create an optimized build, please compile with the `spcasm-fastrelease` profile; the standard `release` profile needs to be reserved for `wasm-pack` as it is too inflexible at the moment.
 
 There's further ways of fiddling with the build config:
 
-- At substantial build time cost, you can enable "fat" LTO for the spcasm-release profile (in Cargo.toml) for additional ~500KiB of space savings in the binaries. This is only recommended for releases.
+- At substantial build time cost, you can enable "fat" LTO via the `spcasm-release` profile for additional ~500KiB of space savings in the binaries. This is only recommended for releases, not normal optimized builds, as it doesn't improve performance measurably!
 - Uncommenting the `rustflags` line in `.cargo/config.toml` enables linking with [Mold](https://github.com/rui314/mold) on Linux (you might have to adjust the path; the committed path is known to work for Arch and Manjaro). This currently only saves 0.5s but hasn't been tested extensively; feel free to experiment.
 
 ### Creating a release
 
-The release process requires `just` and a Windows machine, and it can take many minutes to run the multitude of compilations and checks.
+The release process requires `just` and a Windows machine with WSL, and it can take many minutes to run the multitude of compilations and checks.
 
 ```shell
 # Ensure up-to-date toolchains.
@@ -64,26 +67,20 @@ Finally, create a GitHub release and attach the two archives and four binaries f
 
 For this to work, you need to have llvm-profdata from the llvm-tools-preview Rustup component on your PATH. Remember to delete the target/pgo folder after every run so that stale profiling data doesn't stick around. As with any high-optimization build, this one takes a while.
 
+### Collect coverage data
+
+> `$ just coverage`
+
+For LLVM-based test coverage via `cargo llvm-cov`, care needs to be taken that build and coverage artifacts are not cleaned after building the binaries. If that were to be done, trycmd wouldn't execute the end-to-end binary tests and quite a bit of their coverage would be missing. Coverage data is only collected for the core library, since everything else is just glue and interface code that's not of interest.
+
+Currently, coverage data is not collected on CI.
+
 ### `spcasm-web`
 
 > `$ just web`
 
 Working with the WebAssembly bindings and webpage is quite straightforward, but you need to have `trunk` installed (`cargo install trunk`). Then, run `trunk build` in the `spcasm-web` folder. For a development server with auto-reload, use `trunk serve`; a browser window will open automatically.
 
-## Architectural Overview
+## Run HUDPAGS Analysis
 
-With the new parser, spcasm processes assembly code in several steps, which can be thought of as roughly equivalent to "passes" in traditional assemblers. The processing can be split up into three main steps: lexing and parsing (1-3), expanding and making the AST concrete (4-8), and assembly (9-11).
-
-1. **Lexing.** A custom lexer with minimal lookahead splits the input text into tokens and already performs some degree of high-level processing, like parsing numbers and test comments (if applicable) as well as distinguishing between directives, mnemonics and references.
-2. **Token stream transformation.** This step is necessary as the SPC700 assembly language with complex math expressions is not LR(1) (in fact, as far as I can tell it's context-sensitive), so we cannot pass the plain tokens to the parser. Instead, some transformations with significant lookahead need to happen, for example determining what parenthesis are used for (indexing as an addressing mode or math expressions?), combining "+X" and "+Y" and appending a newline to enable the top-level producer grammar.
-3. **LR(1) parsing.** The parser is an auto-generated [LALRPOP](https://github.com/lalrpop/lalrpop) parser that receives the more context-aware modified token stream. The .lalrpop file additionally contains driver code that builds the AST and performs various early decisions and resolutions, like selecting direct page addressing if possible.
-4. **Assembly source inclusion.** The `include` directives include the assembly source code from other files, and after the AST is finalized, all requested additional files are resolved. The assembler keeps a memory cache of already-parsed files, so that if you have commonly-included files, the cost of including them more than once is reduced. Handling other files goes through the exact same pipeline as the main file, so it repeats steps 1-5 and possibly 6 if there are included files in the included file. Circular includes are not possible for obvious reasons (though non-circular repeated includes are allowed as there are many valid use cases) and will be detected even before the lexer runs. After an included file's AST is finalized, it is copied into the original AST where it replaces the `include` directive.
-5. **User-defined macro resolution.** The assembler detects all user-defined macros and resolves them by replacing them with generated AST. This also means that spcasm's macro functionality is far more sophisticated than simple copy-paste, it can rather be thought of as a function inliner in a traditional compiler. This step includes resolving compile-time programming constructs such as conditional compilation with `if`.
-6. **Label resolution.** There are several kinds of labels who need to be resolved later than during parsing, such as relative labels, local labels, and pseudo labels. This is fixed in several independent analysis steps, and afterwards, only proper labels should exist in a well-formed program.
-7. **Segmentation.** The assembler splits the program into its physical segments by linearly traversing the fully expanded AST and handling segment control macros, such as `org` or `pushpc`. The result is a collection of segments with known starting addresses and the contained program elements, still in AST form.
-8. **Direct page references optimization.** Given the new knowledge of segments, the assembler can infer memory addresses for most kinds of program elements. Therefore, the assembler is able to deduce which references will live in the direct page. This is important as many instructions are smaller and faster when using direct page addressing, so they should be used whenever possible. The assembler uses an iterative optimization process that keeps as many labels as possible in the direct page. For a detailed explanation, see the well-commented `spcasm::parser::AssemblyFile::optimize_direct_page_labels` function. The optimization problem solved here has been compared to linker relaxation for jump offsets and thunks; however while optimal linker relaxation is most likely NP-hard, spcasm (minus some bugs) solves the direct page reference optimization problem, which is in P, optimally.
-9. **Partially-symbolic assembly.** The assembler assembles a mix of high and low-level memory data from instructions and directives. Where possible, concrete memory data is provided, but in other cases, symbolic data like "lowest byte of this reference's address" is used instead when necessary. It is important to notice that memory addresses are fixed after this step.
-10. **Final symbol resolution.** Because addresses were fixed in the last step, symbolic data can now be resolved to concrete data. This is done in several passes to allow e.g. mention of references before they are defined. The step both involves obtaining concrete values for symbols based on the fixed memory layout, and emplacing concrete data based on symbols that were newly resolved. For example, a reference's value can be resolved to the memory location of the data that is tagged to be the position of the reference. Then, references to the reference can be replaced by the actual memory address.
-11. **Output format assembly.** Before this section, the binary data exists in several independent segments. Now, depending on the output format, the data is assembled into its final form and written out. The details of this step of course depend on the format, such that a format like ELF will keep the segments separate while a ROM image will concatenate segments.
-
-In terms of performance, parsing and label resolution have consistently been the most expensive operations, each taking at least 20% of run time. No exact metrics on memory usage exist, since spcasm is a highly memory-efficient program that consumes only a few megabytes peak.
+[hyper-unspecific-data-parsing-and-graphing-scripts](https://github.com/linusg/hyper-unspecific-data-parsing-and-graphing-scripts) (HUDPAGS) is a tool for collecting interesting statistics on a repository over time, such as lines of code, occurrences of certain words in source code and commit messages, etc. spcasm has a HUDPAGS configuration (hudpags.toml) that runs several interesting analyses. Results can then be extracted from the hudpags-analysis.json file, for example via the provided scripts, or via your own tooling. I recommend using the matplotlib-based tools to look at some pretty graphs.

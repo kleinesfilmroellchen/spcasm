@@ -10,3 +10,4 @@
   - [Instructions](reference/instructions.md)
   - [Directives](reference/directives.md)
 - [Development](dev/README.md)
+  - [Architecture](dev/architecture.md)

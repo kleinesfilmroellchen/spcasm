@@ -12,10 +12,10 @@ repository.workspace = true
 log = "0.4.20"
 env_logger = "0.10.0"
 serde_json = "1.0.108"
-tokio = { version = "1.29.1", features = ["full"] }
+tokio = { version = "1.33", features = ["full"] }
 tower-lsp = { version = "0.19.0", features = ["proposed"] }
 serde = { version = "1.0", features = ["derive"] }
-dashmap = "5.1.0"
+dashmap = "5.5"
 parking_lot = "0.12"
 spcasm = { path = ".." }
 flexstr = { version = "0.9.2", features = ["int_convert", "serde"] }

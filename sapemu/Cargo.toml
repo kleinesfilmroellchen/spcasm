@@ -1,8 +1,30 @@
 [package]
 name = "sapemu"
-version = "0.1.0"
-edition = "2021"
-
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+description = "SNES S-APU emulator"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+license-file.workspace = true
+homepage.workspace = true
+repository.workspace = true
 
 [dependencies]
+human-panic = "1.1.4"
+log = "0.4"
+time = "0.3"
+
+object = { version = "0.32", features = [
+	"read",
+	"elf",
+], default-features = false }
+simple_logger = "4.3.3"
+bitflags = "2.4.1"
+
+[dependencies.spcasm]
+path = ".."
+features = ["binaries"]
+
+[dependencies.clap]
+version = "4.4"
+features = ["derive", "wrap_help", "string"]

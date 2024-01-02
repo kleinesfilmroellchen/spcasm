@@ -153,7 +153,7 @@ fn assert_segments_are_equal(
 	parsed_segment_start: MemoryAddress,
 	expected_segment: &[Option<u8>],
 	assembled_segment_start: MemoryAddress,
-	assembled: &Vec<u8>,
+	assembled: &[u8],
 	file: &str,
 ) {
 	assert_eq!(

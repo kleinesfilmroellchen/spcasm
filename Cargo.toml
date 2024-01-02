@@ -57,7 +57,7 @@ default = ["binaries"]
 binaries = ["dep:clap", "dep:object", "dep:shadow-rs"]
 
 [dependencies]
-object = { version = "0.31", features = [
+object = { version = "0.32", features = [
 	"write_core",
 	"write_std",
 	"elf",

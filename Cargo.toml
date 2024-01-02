@@ -18,7 +18,7 @@ version = "1.0.0"
 license-file = "LICENSE"
 
 edition = "2021"
-rust-version = "1.70"
+rust-version = "1.76"
 build = "build.rs"
 
 default-run = "spcasm"

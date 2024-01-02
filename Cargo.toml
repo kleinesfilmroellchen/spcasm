@@ -1,5 +1,5 @@
 [workspace]
-members = [".", "spcasm_derive", "spcasm-web", "sals"]
+members = [".", "spcasm_derive", "spcasm-web", "sals", "sapemu"]
 
 [package]
 version.workspace = true

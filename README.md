@@ -2,17 +2,23 @@
 
 ![architecture](https://img.shields.io/badge/SPC700-arch?logo=sony&label=architecture&color=brown) [![pre-commit](https://img.shields.io/badge/pre--commit-enabled-brightgreen?logo=pre-commit&logoColor=white)](https://github.com/pre-commit/pre-commit) [![Tests](https://github.com/kleinesfilmroellchen/spcasm/actions/workflows/rust.yml/badge.svg?branch=main)](https://github.com/kleinesfilmroellchen/spcasm/actions/workflows/rust.yml) [![Site](https://github.com/kleinesfilmroellchen/spcasm/actions/workflows/site.yml/badge.svg)](https://kleinesfilmroellchen.github.io/spcasm)
 
-spcasm is a modern assembler for the SPC700 processor architecture, famously used in the S-SMP as the sound co-processor of the SNES. spcasm is designed to be user-friendly, fast and feature-rich. Different from other assemblers for the SNES architecture family, spcasm is not intended for ROM hacking and patching in general, but regular from-scratch software development.
+> Modern SNES SPC700 toolchain
+
+spcasm is a modern toolchain for the SPC700 processor architecture, famously used in the S-SMP as the sound co-processor of the SNES. spcasm is designed to be user-friendly, fast and feature-rich. Different from other assemblers for the SNES architecture family, spcasm is not intended for ROM hacking and patching in general, but regular from-scratch software development.
+
+spcasm consists of:
+
+- The assembler `spcasm` itself
+- The `brr` binary, a command-line BRR tool
+- The assembly language server backend `sals` (LSP-compatible) and a Visual Studio Code frontend
+- The [in-browser live assembler `spcasm-web`](https://kleinesfilmroellchen.github.io/spcasm)
+- The (WIP) cycle-accurate emulator `sapemu`
 
 [This project is just for fun](https://justforfunnoreally.dev/). Still, there's many reasons to use spcasm:
 
-- **spcasm is fast. Best-in-class fast.** spcasm assembles about 365.714 KB/s on a modern computer, which is five times the entire address space. The assembler is between 1.3 (Windows) and 3.2 (Linux) times as fast as Asar. The BRR encoder runs at 1.6 MB/s on best compression, which is two times as fast as BRRTools.
-- **spcasm runs in your browser.** (No, really, no server.) This is achieved with the power of WebAssembly, allowing spcasm to run so fast that a compile button would be overkill. See <https://kleinesfilmroellchen.github.io/spcasm> for a live demo based on the master branch.
-- **BRR support and integration:** spcasm includes the `brr` binary which is intended to be a replacement for the functionality that BRRTools provides. However, including S-SMP samples ("BRR" samples) in your binary (useful if all your samples fit in ARAM at once) is as simple as
-
-```assembly
-brr "my-sample.wav"
-```
+- **spcasm is fast. Best-in-class fast.** The assembler is between 1.3 (Windows) and 3.2 (Linux) times as fast as Asar. The BRR encoder runs at 1.6 MB/s on best compression, which is two times as fast as BRRTools.
+- **spcasm runs in your browser.** (No, really, no server.) This is achieved with the power of WebAssembly, allowing spcasm to run so fast that a compile button would be overkill. See <https://kleinesfilmroellchen.github.io/spcasm> for a live demo based on the main branch.
+- **BRR support:** spcasm has first-class support for BRR samples via the `brr` assembler directive. It also provides dedicated BRR tooling for use with other assemblers and more complex setups.
 
 - Nice errors, helpful warnings and information about possible pitfalls. spcasm reports errors in a nice format, if your terminal supports it:
   ![](https://raw.githubusercontent.com/kleinesfilmroellchen/spcasm/main/doc/error-examples.gif)

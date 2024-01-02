@@ -16,6 +16,7 @@ Over time, spcasm has evolved from "just an SPC700 assembler" to a whole toolcha
 - The `spcasm_derive` crate contains derive macros, as Rust requires those to be in a separate crate.
 - The `spcasm-web` crate contains WebAssembly APIs and a browser frontend allowing the assembler to run in the browser.
 - The `sals` crate contains the **s**pc**a**sm **l**anguage **s**erver, an experimental language server for SPC-700 assembly.
+- The `sapemu` crate contains the (WIP) cycle-accurate S-APU emulator.
 - The `doc` folder contains [mdbook](https://rust-lang.github.io/mdBook/)-based documentation. You can read this documentation directly on GitHub, or build a statically servable website from it with mdbook.
 
 spcasm itself contains by far the most code, and [its entire documentation is available online](https://kleinesfilmroellchen.github.io/spcasm/doc/api/spcasm/index.html).

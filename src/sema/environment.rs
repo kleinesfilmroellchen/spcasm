@@ -7,11 +7,10 @@ use std::sync::Arc;
 
 #[allow(unused)]
 use flexstr::{shared_str, IntoSharedStr, SharedStr, ToSharedStr};
-use miette::SourceSpan;
 use parking_lot::RwLock;
 
 use super::reference::Label;
-use super::{AssemblyFile, LabelUsageKind};
+use super::AssemblyFile;
 use crate::cli::{default_backend_options, Frontend};
 use crate::error::AssemblyError;
 use crate::parser::{lalrpop_adaptor, Token};
@@ -129,46 +128,5 @@ impl Environment {
 		drop(file);
 
 		Ok(rc_file)
-	}
-
-	/// Lookup a global label in this environment, and create it if necessary.
-	///
-	/// # Errors
-	/// If the label is already defined, and the label usage kind is for a definition, a redefinition error is returned.
-	#[allow(clippy::result_large_err)] // simplifies lalrpop action code
-	pub fn get_global_label(
-		&mut self,
-		name: &'_ str,
-		span: SourceSpan,
-		usage_kind: LabelUsageKind,
-		source_code: &Arc<AssemblyCode>,
-	) -> Result<Arc<RwLock<Label>>, AssemblyError> {
-		if let Some(matching_reference) = self.globals.get(name) {
-			let mut mutable_matching_reference = matching_reference.write();
-			// If the caller flags this use of the reference as its definition, we check that this is the first
-			// definition.
-			if usage_kind == LabelUsageKind::AsDefinition {
-				if mutable_matching_reference.has_definition() {
-					return Err(AssemblyError::RedefinedReference {
-						redefine_location:  span,
-						reference_location: mutable_matching_reference.source_span(),
-						reference:          mutable_matching_reference.to_string().into(),
-						src:                source_code.clone(),
-					});
-				}
-				mutable_matching_reference.definition_span = Some(span);
-			} else {
-				mutable_matching_reference.usage_spans.push(span);
-			}
-			Ok(matching_reference.clone())
-		} else {
-			let new_reference = if usage_kind == LabelUsageKind::AsDefinition {
-				Label::new_with_definition(name.into(), span)
-			} else {
-				Label::new_with_use(name.into(), span)
-			};
-			self.globals.insert(name.into(), new_reference.clone());
-			Ok(new_reference)
-		}
 	}
 }

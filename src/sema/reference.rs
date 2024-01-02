@@ -148,6 +148,7 @@ impl Reference {
 						value.clone(),
 						kind,
 						current_label.clone(),
+						current_label.map(|label| label.read().namespace).unwrap_or_default(),
 						source_code,
 					)?)
 				},
@@ -402,6 +403,9 @@ pub struct Label {
 	pub children:        BTreeMap<SharedStr, Arc<RwLock<Label>>>,
 	/// Parent label of this label. If not set, this label is global.
 	pub parent:          Weak<RwLock<Label>>,
+	/// Namespace in which this label was defined, including synthesized sub-namespaces, possibly empty which means
+	/// this label is in the top level namespace.
+	pub namespace:       SharedStr,
 }
 
 impl Label {
@@ -433,7 +437,7 @@ impl Label {
 	}
 
 	/// Creates a new label with the given name and definition location.
-	pub fn new_with_definition(name: SharedStr, span: SourceSpan) -> Arc<RwLock<Self>> {
+	pub fn new_with_definition(name: SharedStr, span: SourceSpan, namespace: SharedStr) -> Arc<RwLock<Self>> {
 		Arc::new(RwLock::new(Self {
 			children: BTreeMap::default(),
 			location: None,
@@ -442,11 +446,12 @@ impl Label {
 			name,
 			usage_spans: Vec::default(),
 			parent: Weak::default(),
+			namespace,
 		}))
 	}
 
 	/// Creates a new synthetic label with the given name and definition location.
-	pub fn new_synthetic(name: SharedStr, span: SourceSpan) -> Arc<RwLock<Self>> {
+	pub fn new_synthetic(name: SharedStr, span: SourceSpan, namespace: SharedStr) -> Arc<RwLock<Self>> {
 		Arc::new(RwLock::new(Self {
 			children: BTreeMap::default(),
 			location: None,
@@ -455,11 +460,12 @@ impl Label {
 			name,
 			usage_spans: Vec::default(),
 			parent: Weak::default(),
+			namespace,
 		}))
 	}
 
 	/// Creates a new label with the given name and one usage location.
-	pub fn new_with_use(name: SharedStr, span: SourceSpan) -> Arc<RwLock<Self>> {
+	pub fn new_with_use(name: SharedStr, span: SourceSpan, namespace: SharedStr) -> Arc<RwLock<Self>> {
 		Arc::new(RwLock::new(Self {
 			children: BTreeMap::default(),
 			location: None,
@@ -468,6 +474,7 @@ impl Label {
 			name,
 			usage_spans: vec![span],
 			parent: Weak::default(),
+			namespace,
 		}))
 	}
 }
@@ -565,6 +572,7 @@ impl MacroParent {
 				usage_spans:     Vec::default(),
 				children:        BTreeMap::new(),
 				parent:          Weak::new(),
+				namespace:       SharedStr::EMPTY,
 			})),
 			parameters: MacroParameters::Formal(parameters.unwrap_or_default()),
 		}))
@@ -675,6 +683,7 @@ pub fn create_label_at_this_position(
 	label_value: Option<Box<AssemblyTimeValue>>,
 	creation_kind: LabelUsageKind,
 	current_label: Option<Arc<RwLock<Label>>>,
+	current_namespace: SharedStr,
 	source_code: &Arc<AssemblyCode>,
 ) -> Result<Arc<RwLock<Label>>, Box<AssemblyError>> {
 	if let Some(actual_current_label) = current_label {
@@ -711,8 +720,9 @@ pub fn create_label_at_this_position(
 			.children
 			.entry(label_name.clone())
 			.or_insert_with(|| match creation_kind {
-				LabelUsageKind::AsDefinition => Label::new_with_definition(label_name, label_location),
-				LabelUsageKind::AsAddress => Label::new_with_use(label_name, label_location),
+				LabelUsageKind::AsDefinition =>
+					Label::new_with_definition(label_name, label_location, current_namespace),
+				LabelUsageKind::AsAddress => Label::new_with_use(label_name, label_location, current_namespace),
 			})
 			.clone();
 		let mut mutable_label = local_label.write();

@@ -188,9 +188,9 @@ fn main() {
 		Command::EncodeBlock { samples, warm_up } => {
 			let warm_up: [i16; 2] = warm_up.unwrap_or_else(|| vec![0, 0]).try_into().expect("unreachable");
 			let samples: DecodedBlockSamples = samples.try_into().expect("unreachable");
-			println!("Encoding {:?} as BRR block. Warm-up: {:?}", samples, warm_up);
+			println!("Encoding {samples:?} as BRR block. Warm-up: {warm_up:?}");
 			for filter in LPCFilter::all_filters() {
-				println!("filter {}:", filter);
+				println!("filter {filter}:");
 				for shift in -1 ..= 11 {
 					let block = Block::encode_exact(warm_up, samples, filter, LoopEndFlags::Nothing, shift);
 					println!(
@@ -215,7 +215,7 @@ fn main() {
 		Command::DecodeBlock { block, warm_up } => {
 			let warm_up = warm_up.unwrap_or_else(|| vec![0, 0]).try_into().expect("unreachable");
 			let raw_block: [u8; 9] = block.try_into().expect("unreachable");
-			println!("Decoding BRR block {:X?}:", raw_block);
+			println!("Decoding BRR block {raw_block:X?}:");
 			let block = Block::from(raw_block);
 			println!(
 				"\tflags:           {:>11}(raw: {:02b})\n\tfilter:          {}\n\tshift:           {} (raw: \
@@ -229,14 +229,14 @@ fn main() {
 					.encoded_samples
 					.iter()
 					.map(|sample| SharedStr::from(std::string::String::from(
-						format!("{:01X}", sample).chars().last().unwrap()
+						format!("{sample:01X}").chars().last().unwrap()
 					)))
 					.collect::<Vec<_>>()
 					.join(" "),
 			);
 
 			let (decoded, _) = block.decode(warm_up);
-			println!("Decoded samples: {:?}", decoded);
+			println!("Decoded samples: {decoded:?}");
 		},
 		Command::Encode { input, output, compression, filter, loop_point } => {
 			let output = output.unwrap_or_else(|| input.with_extension("brr"));
@@ -244,7 +244,7 @@ fn main() {
 				.map_err(|err| err.to_string().into())
 				.and_then(wav::read_wav_for_brr)
 				.unwrap_or_else(|error| {
-					eprintln!("error: {}", error);
+					eprintln!("error: {error}");
 					std::process::exit(1);
 				});
 
@@ -274,12 +274,12 @@ fn main() {
 			}
 			let mut output_file = std::io::BufWriter::new(
 				File::options().write(true).create(true).append(false).open(output).unwrap_or_else(|error| {
-					eprintln!("error opening output: {}", error);
+					eprintln!("error opening output: {error}");
 					std::process::exit(1);
 				}),
 			);
 			output_file.write_all(&encoded).unwrap_or_else(|error| {
-				eprintln!("error while writing output: {}", error);
+				eprintln!("error while writing output: {error}");
 				std::process::exit(1);
 			});
 		},
@@ -291,7 +291,7 @@ fn main() {
 				.map_err(|err| err.to_string().into())
 				.and_then(|_| decode_from_brr(&encoded))
 				.unwrap_or_else(|error| {
-					eprintln!("error: {}", error);
+					eprintln!("error: {error}");
 					std::process::exit(1);
 				});
 
@@ -303,13 +303,13 @@ fn main() {
 
 			let mut output_file = std::io::BufWriter::new(
 				File::options().write(true).create(true).append(false).open(output).unwrap_or_else(|error| {
-					eprintln!("error opening output: {}", error);
+					eprintln!("error opening output: {error}");
 					std::process::exit(1);
 				}),
 			);
 
 			::wav::write(header, &samples.into(), &mut output_file).unwrap_or_else(|error| {
-				eprintln!("error writing output: {}", error);
+				eprintln!("error writing output: {error}");
 				std::process::exit(1);
 			});
 		},

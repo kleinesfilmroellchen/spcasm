@@ -15,8 +15,15 @@ const DSPADDR: u16 = 0x00F2;
 #[allow(unused)]
 const DSPDATA: u16 = 0x00F3;
 
+impl Default for Memory {
+	fn default() -> Self {
+		Self::new()
+	}
+}
+
 impl Memory {
 	/// Creates a new memory instance that reflects the hardware reset state.
+	#[must_use]
 	pub fn new() -> Self {
 		let mut ram = [0; MEMORY_SIZE];
 		ram.chunks_exact_mut(32).enumerate().for_each(|(block, values)| {
@@ -44,6 +51,6 @@ impl Memory {
 	/// Performs a 16-bit little endian read from memory at the given address.
 	#[inline]
 	pub fn read_word(&mut self, address: u16) -> u16 {
-		self.read(address) as u16 | ((self.read(address + 1) as u16) << 8)
+		u16::from(self.read(address)) | (u16::from(self.read(address + 1)) << 8)
 	}
 }

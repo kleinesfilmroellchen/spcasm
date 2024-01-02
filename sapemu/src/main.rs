@@ -28,6 +28,7 @@ struct CliArguments {
 	cycles:  usize,
 }
 
+#[allow(clippy::cast_precision_loss)]
 fn main() {
 	human_panic::setup_panic!(human_panic::metadata!());
 

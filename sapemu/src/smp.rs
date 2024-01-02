@@ -43,9 +43,7 @@ pub struct CpuIOPorts {
 impl CpuIOPorts {
 	#[inline]
 	fn check_port_number(port_number: u16) {
-		if port_number > 3 {
-			panic!("Illegal port number {}", port_number);
-		}
+		assert!(port_number <= 3, "Illegal port number {port_number}");
 	}
 
 	/// Perform a write to the main CPU.
@@ -77,7 +75,7 @@ impl CpuIOPorts {
 }
 
 /// CPU clock rate (Hz)
-pub const CPU_RATE: usize = 2048_000_000;
+pub const CPU_RATE: usize = 2_048_000_000;
 
 /// Internal CPU timers.
 pub struct Timers {
@@ -87,6 +85,12 @@ pub struct Timers {
 	pub timer_divisor:    [u8; 3],
 	/// How many CPU clock cycles until timer is incremented the next time.
 	timer_tick_remaining: [usize; 3],
+}
+
+impl Default for Timers {
+	fn default() -> Self {
+		Self::new()
+	}
 }
 
 impl Timers {
@@ -100,6 +104,7 @@ impl Timers {
 	const TIMER_RATES: [usize; 3] = [Self::T01_RATE, Self::T01_RATE, Self::T2_RATE];
 
 	/// Create new timers.
+	#[must_use]
 	pub fn new() -> Self {
 		let mut new = Self { timer_out: [0; 3], timer_divisor: [1; 3], timer_tick_remaining: [0; 3] };
 		new.reset_timers_if_necessary();

@@ -2,10 +2,15 @@
 members = [".", "spcasm_derive", "spcasm-web", "sals"]
 
 [package]
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+license-file.workspace = true
+homepage.workspace = true
+repository.workspace = true
 name = "spcasm"
 description = "A modern, user-friendly SPC700 assembler."
-homepage = "https://kleinesfilmroellchen.github.io/spcasm/"
-repository = "https://github.com/kleinesfilmroellchen/spcasm"
 keywords = ["spc-700", "s-smp", "snes"]
 categories = [
 	"compilers",
@@ -13,15 +18,19 @@ categories = [
 	"development-tools",
 	"multimedia::audio",
 ]
-authors = ["kleines Filmröllchen <filmroellchen@serenityos.org>"]
-version = "1.0.0"
-license-file = "LICENSE"
 
-edition = "2021"
-rust-version = "1.76"
 build = "build.rs"
 
 default-run = "spcasm"
+
+[workspace.package]
+version = "1.1.0"
+edition = "2021"
+rust-version = "1.76"
+authors = ["kleines Filmröllchen <filmroellchen@serenityos.org>"]
+license-file = "LICENSE"
+homepage = "https://kleinesfilmroellchen.github.io/spcasm/"
+repository = "https://github.com/kleinesfilmroellchen/spcasm"
 
 [lib]
 name = "spcasm"

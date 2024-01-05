@@ -85,3 +85,11 @@ Working with the WebAssembly bindings and webpage is quite straightforward, but 
 ## Run HUDPAGS Analysis
 
 [hyper-unspecific-data-parsing-and-graphing-scripts](https://github.com/linusg/hyper-unspecific-data-parsing-and-graphing-scripts) (HUDPAGS) is a tool for collecting interesting statistics on a repository over time, such as lines of code, occurrences of certain words in source code and commit messages, etc. spcasm has a HUDPAGS configuration (hudpags.toml) that runs several interesting analyses. Results can then be extracted from the hudpags-analysis.json file, for example via the provided scripts, or via your own tooling. I recommend using the matplotlib-based tools to look at some pretty graphs.
+
+## Using spcasm as a library
+
+Since spcasm provides a library crate, it can be reused in other crates. This is primarily important for the other crates in the spcasm project, like `spcasm-web` or `sals`. However, since you can use Rust crates from any GitHub repository (see the Cargo documentation), it is fairly easy to use spcasm as a library in an external project.
+
+However, an important caveat applies: **spcasm provides no API stability guarantees**, not even according to semver rules. (This is also the main reason that spcasm is not published to crates.io.) The semver versioning applies to stability guarantees in the end-user applications, such as a minor version bump when new options and assembler directives are introduced, and a major version bump when incompatible changes to assembler syntax are introduced. Since the main purpose of the spcasm library is the use within this repository, vast changes may happen without prior warning and without a new release. If you plan to use spcasm as a library, please pin the dependency to a specific commit or version, and prepare to rework a bunch of your spcasm API usage when you do upgrade.
+
+PRs and issues changing the public API may be accepted if the maintenance effort is not significant. In general, exposing more internal APIs is not a problem, but the lower-level APIs are even more in flux than higher-level ones.

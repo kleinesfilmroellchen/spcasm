@@ -51,25 +51,25 @@ Options:
 
   -l, --reference-pass-limit <REFERENCE_PASS_LIMIT>
           Limit for the number of reference resolution passes spcasm will perform.
-          
+
           Usually 2-3 passes are enough and very high pass numbers often indicate infinite loops. If
           this number of passes is exceeded during reference resolution, spcasm will report
           unresolved references as normal.
-          
+
           [default: 10]
 
   -r, --macro-recursion-limit <MACRO_RECURSION_LIMIT>
           Limit for the number of recursive macro calls allowed by spcasm.
-          
+
           Increase this limit carefully; very high recursion amounts are usually caused by
           infinitely recursive macros. Any recursion exceeding this value will cause a specific
           error.
-          
+
           [default: 1000]
 
   -f, --output-format <OUTPUT_FORMAT>
           Format to output to
-          
+
           [default: elf]
 
           Possible values:
@@ -83,7 +83,7 @@ Options:
   -a, --dump-ast
           Dump the program's abstract syntax tree. This is a debugging feature and most likely not
           useful to the end user.
-          
+
           WARNING: This option will, in specific circumstances, loop forever trying to print
           recursive data structures. This can happen on well-formed programs.
 
@@ -105,13 +105,15 @@ For all further information read the above.
 
 ## Contributing
 
-See the documentation for developer information, including further information on how to build and configure spcasm.
+Thank you for considering contributing to spcasm! Help is always appreciated.
 
 You can contribute by:
 
 - implementing missing features from Asar or vasm
 - reporting and/or fixing bugs
 - writing documentation
+
+See the [developer documentation](doc/src/dev/README.md) for developer information, including further information on how to build and configure spcasm.
 
 ## Acknowledgements
 

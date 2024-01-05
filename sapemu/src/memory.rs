@@ -15,6 +15,10 @@ const DSPADDR: u16 = 0x00F2;
 #[allow(unused)]
 const DSPDATA: u16 = 0x00F3;
 
+const BOOT_ROM_START: u16 = 0xFFC0;
+
+const BOOT_ROM: &[u8; MEMORY_SIZE - BOOT_ROM_START as usize] = include_bytes!("../boot.sfc");
+
 impl Default for Memory {
 	fn default() -> Self {
 		Self::new()
@@ -42,15 +46,19 @@ impl Memory {
 
 	/// Performs a read from memory at the given address.
 	#[inline]
-	pub fn read(&mut self, address: u16) -> u8 {
+	pub fn read(&mut self, address: u16, enable_boot_rom: bool) -> u8 {
 		// TODO: Doesn't handle external hardware registers.
-		trace!("read {0:04x} = {1:02x} ({1})", address, self.ram[address as usize]);
-		self.ram[address as usize]
+		let result = match address {
+			BOOT_ROM_START ..= 0xFFFF if enable_boot_rom => BOOT_ROM[(address - BOOT_ROM_START) as usize],
+			_ => self.ram[address as usize],
+		};
+		trace!("read {0:04x} = {1:02x} ({1})", address, result);
+		result
 	}
 
 	/// Performs a 16-bit little endian read from memory at the given address.
 	#[inline]
-	pub fn read_word(&mut self, address: u16) -> u16 {
-		u16::from(self.read(address)) | (u16::from(self.read(address + 1)) << 8)
+	pub fn read_word(&mut self, address: u16, enable_boot_rom: bool) -> u16 {
+		u16::from(self.read(address, enable_boot_rom)) | (u16::from(self.read(address + 1, enable_boot_rom)) << 8)
 	}
 }

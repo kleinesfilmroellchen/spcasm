@@ -1,9 +1,13 @@
 //! S-SMP (SPC700 CPU) emulator.
 
+mod ops;
+
 use bitflags::bitflags;
 use log::{debug, error, trace};
 
-use crate::memory::{Memory, MEMORY_SIZE};
+use self::ops::InstructionInternalState;
+use crate::memory::Memory;
+use crate::smp::ops::OPCODE_TABLE;
 
 /// State of the microprocessor.
 pub struct Smp {
@@ -29,6 +33,28 @@ pub struct Smp {
 	pub timers:    Timers,
 	/// Cycle counter for debugging purposes.
 	cycle_counter: u128,
+
+	/// Cycle within an instruction.
+	instruction_cycle:      usize,
+	/// Opcode of the instruction being executed.
+	current_opcode:         u8,
+	/// Last instruction state returned by the instruction.
+	last_instruction_state: InstructionInternalState,
+
+	/// CPU execution state.
+	run_state: RunState,
+}
+
+/// CPU execution state.
+#[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
+enum RunState {
+	#[default]
+	Running,
+	Crashed,
+	#[allow(unused)]
+	Halted,
+	#[allow(unused)]
+	WaitingForInterrupt,
 }
 
 /// Main CPU I/O ports.
@@ -139,22 +165,30 @@ impl Timers {
 
 	/// Emulate a CPU tick for the timers.
 	#[inline]
-	pub fn tick(&mut self) {
+	pub fn tick(&mut self, control: ControlRegister) {
 		self.reset_timers_if_necessary();
 
-		for timer in &mut self.timer_tick_remaining {
+		for (_, timer) in &mut self
+			.timer_tick_remaining
+			.iter_mut()
+			.enumerate()
+			.filter(|(i, _)| control.contains(ControlRegister(1 << i)))
+		{
 			*timer -= 1;
 		}
 	}
 }
 
 /// Internal TEST register.
+#[derive(Clone, Copy)]
 #[repr(transparent)]
 pub struct TestRegister(u8);
 /// Internal CONTROL register.
+#[derive(Clone, Copy)]
 #[repr(transparent)]
 pub struct ControlRegister(u8);
 /// Program Status Word (flags register).
+#[derive(Clone, Copy)]
 #[repr(transparent)]
 pub struct ProgramStatusWord(u8);
 
@@ -190,6 +224,25 @@ bitflags! {
 		/// Enable Boot ROM with flag = 1
 		const BootRomEnable = 0b1000_0000;
 	}
+
+	impl ProgramStatusWord: u8 {
+		/// N
+		const Sign = 0b1000_0000;
+		/// V
+		const Overflow = 0b0100_0000;
+		/// P
+		const DirectPage = 0b0010_0000;
+		/// B
+		const Break = 0b0001_0000;
+		/// H
+		const HalfCarry = 0b0000_1000;
+		/// I
+		const Interrupt = 0b0000_0100;
+		/// Z
+		const Zero = 0b0000_0010;
+		/// C
+		const Carry = 0b0000_0001;
+	}
 }
 
 const TEST: u16 = 0x00F0;
@@ -198,39 +251,92 @@ const CPUIO0: u16 = 0x00F4;
 const CPUIO1: u16 = 0x00F5;
 const CPUIO2: u16 = 0x00F6;
 const CPUIO3: u16 = 0x00F7;
-const BOOT_ROM_START: u16 = 0xFFC0;
-
-const BOOT_ROM: &[u8; MEMORY_SIZE - BOOT_ROM_START as usize] = include_bytes!("../boot.sfc");
 
 impl Smp {
 	/// Create a new reset CPU.
 	pub fn new(memory: &mut Memory) -> Self {
+		let control = ControlRegister(0xB0);
 		Self {
-			test:          TestRegister(0xA0),
-			control:       ControlRegister(0xB0),
+			test: TestRegister(0xA0),
+			control,
 			// Reset values of A, X, Y, SP seem to be unknown.
-			a:             0,
-			x:             0,
-			y:             0,
-			sp:            0,
-			pc:            memory.read_word(0xFFFE),
-			psw:           ProgramStatusWord(0),
-			ports:         CpuIOPorts::default(),
-			timers:        Timers::new(),
+			a: 0,
+			x: 0,
+			y: 0,
+			sp: 0,
+			pc: memory.read_word(0xFFFE, control.contains(ControlRegister::BootRomEnable)),
+			psw: ProgramStatusWord(0),
+			ports: CpuIOPorts::default(),
+			timers: Timers::new(),
 			cycle_counter: 0,
+			instruction_cycle: 0,
+			current_opcode: 0,
+			last_instruction_state: InstructionInternalState::default(),
+			run_state: RunState::default(),
 		}
 	}
 
 	/// Run a single CPU cycle.
-	pub fn tick(&mut self, _memory: &mut Memory) {
+	pub fn tick(&mut self, memory: &mut Memory) {
 		self.cycle_counter += 1;
-		if self.test.contains(TestRegister::Crash) {
+		if self.run_state != RunState::Running {
 			return;
 		}
 		#[cfg(debug_assertions)]
 		trace!("SMP tick {}", self.cycle_counter);
 
-		self.timers.tick();
+		self.timers.tick(self.control);
+
+		// Fetch next instruction
+		if self.instruction_cycle == 0 {
+			self.current_opcode = self.read_next_pc(memory);
+			debug!("fetch {:04x} = {:02x}", self.pc - 1, self.current_opcode);
+		}
+
+		// Execute tick
+		let instruction_result = OPCODE_TABLE[self.current_opcode as usize](
+			self,
+			memory,
+			self.instruction_cycle,
+			self.last_instruction_state,
+		);
+		// Decide whether to advance to next instruction or not
+		match instruction_result {
+			ops::MicroArchAction::Continue(new_state) => {
+				self.last_instruction_state = new_state;
+				self.instruction_cycle += 1;
+			},
+			ops::MicroArchAction::Next => {
+				self.instruction_cycle = 0;
+				trace!("----- next instruction");
+			},
+		}
+	}
+
+	#[inline]
+	fn direct_page_offset(&self) -> u16 {
+		((self.psw & ProgramStatusWord::DirectPage).0 as u16) << 3
+	}
+
+	#[inline]
+	fn set_zero(&mut self, value: u8) {
+		self.psw.set(ProgramStatusWord::Zero, value == 0);
+	}
+
+	#[inline]
+	fn set_negative(&mut self, value: u8) {
+		self.psw.set(ProgramStatusWord::Sign, (value as i8) < 0);
+	}
+
+	#[inline]
+	fn set_subtract_carry(&mut self, op1: i8, op2: i8) {
+		self.psw.set(ProgramStatusWord::Carry, op1.checked_sub(op2).is_none());
+	}
+
+	#[inline]
+	#[allow(unused)]
+	fn set_add_carry(&mut self, op1: i8, op2: i8) {
+		self.psw.set(ProgramStatusWord::Carry, op1.checked_add(op2).is_none());
 	}
 
 	#[allow(unused)]
@@ -243,16 +349,20 @@ impl Smp {
 		}
 	}
 
-	#[allow(unused)]
 	fn read(&mut self, address: u16, memory: &mut Memory) -> u8 {
 		match address {
 			TEST => self.test.0,
 			CONTROL => self.control.0,
 			CPUIO0 | CPUIO1 | CPUIO2 | CPUIO3 => self.ports.read(address - CPUIO0),
-			BOOT_ROM_START ..= 0xFFFF if self.control.contains(ControlRegister::BootRomEnable) =>
-				BOOT_ROM[(address - BOOT_ROM_START) as usize],
-			_ => memory.read(address),
+			_ => memory.read(address, self.control.contains(ControlRegister::BootRomEnable)),
 		}
+	}
+
+	/// Reads memory at the current program counter and advances it afterwards.
+	fn read_next_pc(&mut self, memory: &mut Memory) -> u8 {
+		let data = self.read(self.pc, memory);
+		self.pc += 1;
+		data
 	}
 
 	fn memory_write(&mut self, address: u16, value: u8, memory: &mut Memory) {
@@ -269,6 +379,7 @@ impl Smp {
 
 		if self.test.contains(TestRegister::Crash) {
 			error!("CPU was crashed via TEST register");
+			self.run_state = RunState::Crashed;
 		}
 	}
 

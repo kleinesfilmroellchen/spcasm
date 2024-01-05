@@ -9,7 +9,7 @@ use log::{info, warn, LevelFilter};
 use time::macros::format_description;
 
 use crate::memory::Memory;
-use crate::smp::Smp;
+use crate::smp::{Smp, CPU_RATE};
 
 pub mod dsp;
 pub mod memory;
@@ -56,10 +56,12 @@ fn main() {
 		smp.tick(&mut memory);
 	}
 	let end_time = Instant::now();
+	let frequency = arguments.cycles as f64 / (end_time - start_time).as_secs_f64();
 	info!(
-		"Ran {} cycles in {:?}, {:.0} Kcycles/s",
+		"Ran {} cycles in {:.2?}, {:6.0} kHz, {:5.2}× realtime",
 		arguments.cycles,
 		end_time - start_time,
-		arguments.cycles as f64 / (end_time - start_time).as_secs_f64() / 1000.
+		frequency / 1000.,
+		frequency / CPU_RATE as f64
 	);
 }

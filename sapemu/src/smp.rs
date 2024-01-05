@@ -1,5 +1,7 @@
 //! S-SMP (SPC700 CPU) emulator.
 
+#![allow(clippy::cast_possible_truncation, clippy::cast_possible_wrap, clippy::cast_sign_loss)]
+
 mod ops;
 pub mod upload;
 
@@ -101,23 +103,25 @@ impl CpuIOPorts {
 	}
 
 	/// Perform a read from the SMP.
+	///
+	/// # Panics
+	/// Panics if the port number is invalid.
 	#[inline]
 	pub fn read_from_smp<const PORT_NUMBER: u8>(&mut self) -> u8 {
 		// FIXME: Should always be a compile-time check...
-		if PORT_NUMBER > 4 {
-			panic!("Illegal port number {PORT_NUMBER}");
-		}
+		assert!(PORT_NUMBER <= 4, "Illegal port number {PORT_NUMBER}");
 		trace!("CPU read CPUIO {PORT_NUMBER} = {0:02x} ({0})", self.write_ports[PORT_NUMBER as usize]);
 		self.write_ports[PORT_NUMBER as usize]
 	}
 
 	/// Perform a read to the SMP.
+	///
+	/// # Panics
+	/// Panics if the port number is invalid.
 	#[inline]
 	pub fn write_to_smp<const PORT_NUMBER: u8>(&mut self, value: u8) {
 		// FIXME: Should always be a compile-time check...
-		if PORT_NUMBER > 4 {
-			panic!("Illegal port number {PORT_NUMBER}");
-		}
+		assert!(PORT_NUMBER <= 4, "Illegal port number {PORT_NUMBER}");
 		trace!("CPU write CPUIO {PORT_NUMBER} = {0:02x} ({0})", value);
 		self.read_ports[PORT_NUMBER as usize] = value;
 	}
@@ -338,7 +342,7 @@ impl Smp {
 
 	#[inline]
 	fn direct_page_offset(&self) -> u16 {
-		((self.psw & ProgramStatusWord::DirectPage).0 as u16) << 3
+		u16::from((self.psw & ProgramStatusWord::DirectPage).0) << 3
 	}
 
 	#[inline]

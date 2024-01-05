@@ -39,22 +39,22 @@ pub struct InstructionInternalState {
 }
 
 impl InstructionInternalState {
-	fn with_operand2(mut self, operand2: u8) -> Self {
+	const fn with_operand2(mut self, operand2: u8) -> Self {
 		self.operand2 = operand2;
 		self
 	}
 
-	fn with_operand(mut self, operand: u8) -> Self {
+	const fn with_operand(mut self, operand: u8) -> Self {
 		self.operand = operand;
 		self
 	}
 
-	fn with_relative(mut self, relative: i8) -> Self {
+	const fn with_relative(mut self, relative: i8) -> Self {
 		self.relative = relative;
 		self
 	}
 
-	fn with_address(mut self, address: u16) -> Self {
+	const fn with_address(mut self, address: u16) -> Self {
 		self.address = address;
 		self
 	}
@@ -816,7 +816,7 @@ fn cmp_dp_imm(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: Instructi
 			MicroArchAction::Continue(state.with_operand(immediate))
 		},
 		2 => {
-			let address = cpu.read_next_pc(memory) as u16 + cpu.direct_page_offset();
+			let address = u16::from(cpu.read_next_pc(memory)) + cpu.direct_page_offset();
 			MicroArchAction::Continue(state.with_address(address))
 		},
 		3 => {
@@ -926,7 +926,7 @@ fn mov_dp_imm(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: Instructi
 			MicroArchAction::Continue(state.with_operand(immediate))
 		},
 		2 => {
-			let address = cpu.read_next_pc(memory) as u16 + cpu.direct_page_offset();
+			let address = u16::from(cpu.read_next_pc(memory)) + cpu.direct_page_offset();
 			MicroArchAction::Continue(state.with_address(address))
 		},
 		3 => {
@@ -1158,7 +1158,7 @@ fn mov_x_indirect_a(
 		0 => MicroArchAction::Continue(InstructionInternalState::default()),
 		1 => {
 			// Does indeed perform a dummy read according to fullsnes.
-			let _ = cpu.read(cpu.x as u16 + cpu.direct_page_offset(), memory);
+			let _ = cpu.read(u16::from(cpu.x) + cpu.direct_page_offset(), memory);
 			MicroArchAction::Continue(InstructionInternalState::default())
 		},
 		2 => {
@@ -1166,7 +1166,7 @@ fn mov_x_indirect_a(
 			MicroArchAction::Continue(InstructionInternalState::default())
 		},
 		3 => {
-			cpu.write(cpu.x as u16 + cpu.direct_page_offset(), cpu.a, memory);
+			cpu.write(u16::from(cpu.x) + cpu.direct_page_offset(), cpu.a, memory);
 			MicroArchAction::Next
 		},
 		_ => unreachable!(),
@@ -1225,11 +1225,11 @@ fn bne(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInter
 		1 => {
 			let offset = cpu.read_next_pc(memory) as i8;
 			// branch if Z == 0
-			if !cpu.psw.contains(ProgramStatusWord::Zero) {
+			if cpu.psw.contains(ProgramStatusWord::Zero) {
+				MicroArchAction::Next
+			} else {
 				trace!("taking branch to {:+}", offset);
 				MicroArchAction::Continue(InstructionInternalState::default().with_relative(offset))
-			} else {
-				MicroArchAction::Next
 			}
 		},
 		2 => {

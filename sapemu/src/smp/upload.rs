@@ -55,8 +55,15 @@ enum UploaderState {
 	Finished,
 }
 
+impl Default for Uploader {
+	fn default() -> Self {
+		Self::new()
+	}
+}
+
 impl Uploader {
 	/// Create a new uploader without data.
+	#[must_use]
 	pub fn new() -> Self {
 		Self {
 			current_address:  0,
@@ -68,18 +75,21 @@ impl Uploader {
 
 	/// Specify a code entry point the uploader will send after all blocks have been transferred. This API should be
 	/// used as soon as possible, in particular before all data blocks are sent.
-	pub fn with_entry_point(mut self, entry_point: u16) -> Self {
+	#[must_use]
+	pub const fn with_entry_point(mut self, entry_point: u16) -> Self {
 		self.entry_point = entry_point;
 		self
 	}
 
 	/// Add another data block to be transferred.
+	#[must_use]
 	pub fn with_block(mut self, block: DataBlock) -> Self {
 		self.remaining_blocks.push(block);
 		self
 	}
 
 	/// Return the current byte the uploader needs to send.
+	#[must_use]
 	pub fn current_byte(&self) -> Option<u8> {
 		self.remaining_blocks
 			.first()

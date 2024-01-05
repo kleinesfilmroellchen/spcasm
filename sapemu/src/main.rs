@@ -2,6 +2,7 @@
 #![deny(missing_docs, unused, clippy::all, clippy::pedantic, clippy::nursery, rustdoc::all)]
 #![feature(slice_as_chunks)]
 
+use std::fs;
 use std::path::PathBuf;
 use std::time::Instant;
 
@@ -10,6 +11,7 @@ use log::{info, warn, LevelFilter};
 use time::macros::format_description;
 
 use crate::memory::Memory;
+use crate::smp::upload::Uploader;
 use crate::smp::{Smp, CPU_RATE};
 
 pub mod dsp;
@@ -19,7 +21,7 @@ pub mod smp;
 #[derive(Clone, Debug, Parser)]
 #[command(version = spcasm::buildinfo::PKG_VERSION, about, long_about = None)]
 struct CliArguments {
-	/// Input ELF to execute.
+	/// Input ELF to execute. This is always uploaded via a simulated CPU uploader at the moment.
 	input:   PathBuf,
 	/// Verbosity level to use.
 	#[arg(long, short, action = clap::ArgAction::Count)]
@@ -52,10 +54,17 @@ fn main() {
 	let mut memory = Box::new(Memory::new());
 	let mut smp = Smp::new(&mut memory);
 
+	let mut uploader =
+		Uploader::from_elf(&object::read::elf::ElfFile32::parse(&*fs::read(arguments.input).unwrap()).unwrap())
+			.unwrap();
+
 	let start_time = Instant::now();
+	// FIXME: Don't run the uploader all the time.
 	for _ in 0 .. arguments.cycles {
+		uploader.perform_step(&mut smp.ports);
 		smp.tick(&mut memory);
 	}
+
 	let end_time = Instant::now();
 	let frequency = arguments.cycles as f64 / (end_time - start_time).as_secs_f64();
 	info!(

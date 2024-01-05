@@ -2,6 +2,12 @@
 //!
 //! This package implements the main CPU side of the SPC700 data upload routine as defined in the boot ROM.
 
+use std::error::Error;
+
+use log::{debug, info};
+use object::read::elf::ElfFile32;
+use object::{Object, ObjectSegment};
+
 use super::CpuIOPorts;
 
 /// A single data block to be uploaded.
@@ -12,7 +18,7 @@ pub struct DataBlock {
 	data:        [u8; 256],
 	/// Amount of data in the block.
 	#[allow(unused)]
-	length:      u8,
+	length:      u16,
 }
 
 impl DataBlock {
@@ -23,12 +29,18 @@ impl DataBlock {
 			None
 		} else {
 			let mut data = [0; 256];
-			let length = elements.len() as u8;
+			let length = elements.len() as u16;
 			for (i, element) in elements.into_iter().enumerate() {
 				data[i] = element;
 			}
 			Some(Self { address, data, length })
 		}
+	}
+
+	/// Create a full 256-element data block.
+	#[must_use]
+	pub const fn new_full(address: u16, elements: [u8; 256]) -> Self {
+		Self { address, data: elements, length: 256 }
 	}
 }
 
@@ -50,7 +62,7 @@ enum UploaderState {
 	/// Uploader is waiting for signal value 0xBB in port 1.
 	WaitingForBB,
 	/// Uploader is waiting for acknowledge of 0xCC in port 0.
-	WaitingForAcknowledge,
+	WaitingForCC,
 	/// Uploader is done with uploading, all data has been sent.
 	Finished,
 }
@@ -71,6 +83,36 @@ impl Uploader {
 			entry_point:      0,
 			state:            UploaderState::default(),
 		}
+	}
+
+	/// Load uploader data from an ELF file.
+	///
+	/// # Errors
+	/// Any ELF loading errors are passed on.
+	///
+	/// # Panics
+	/// All panics are programming bugs.
+	pub fn from_elf(file: &ElfFile32) -> Result<Self, Box<dyn Error>> {
+		let entry_point = file.raw_header().e_entry.get(file.endian()) as u16;
+		let mut this = Self::new().with_entry_point(entry_point);
+
+		for segment in file.segments() {
+			let start_address = segment.address() as u16;
+			let data = segment.data()?;
+			let (blocks, last_block) = data.as_chunks::<256>();
+			this = blocks.iter().enumerate().fold(this, |this, (i, block)| {
+				this.with_block(DataBlock::new_full(start_address + (i * 256) as u16, *block))
+			});
+			if !last_block.is_empty() {
+				this = this.with_block(
+					DataBlock::new(start_address + (blocks.len() * 256) as u16, last_block.iter().copied()).unwrap(),
+				);
+			}
+		}
+
+		info!("Loaded {} blocks from ELF file.", this.remaining_blocks.len());
+
+		Ok(this)
 	}
 
 	/// Specify a code entry point the uploader will send after all blocks have been transferred. This API should be
@@ -101,18 +143,23 @@ impl Uploader {
 		match self.state {
 			UploaderState::WaitingForAA =>
 				if ports.read_from_smp::<0>() == 0xAA {
+					debug!("Read AA, waiting for BB...");
 					self.state = UploaderState::WaitingForBB;
 				},
 			UploaderState::WaitingForBB =>
 				if ports.read_from_smp::<1>() == 0xBB {
+					debug!("Read BB, sending CC and start address");
 					ports.write_to_smp::<1>(0x01);
 					self.write_address(ports);
 					ports.write_to_smp::<0>(0xCC);
-					self.state = UploaderState::WaitingForAcknowledge;
+					self.state = UploaderState::WaitingForCC;
 				},
-			UploaderState::WaitingForAcknowledge => {
-				todo!()
-			},
+			UploaderState::WaitingForCC =>
+				if ports.read_from_smp::<0>() == 0xCC {
+					debug!("Read CC, starting first block transfer");
+					ports.write_to_smp::<0>(0x00);
+					todo!();
+				},
 			UploaderState::Finished => {},
 		}
 	}

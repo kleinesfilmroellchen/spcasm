@@ -811,21 +811,21 @@ fn cmp_dp_imm(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: Instructi
 
 	match cycle {
 		0 => MicroArchAction::Continue(InstructionInternalState::default()),
-		2 => {
-			let immediate = cpu.read_next_pc(memory);
-			MicroArchAction::Continue(InstructionInternalState::default().with_operand(immediate))
-		},
 		1 => {
+			let immediate = cpu.read_next_pc(memory);
+			MicroArchAction::Continue(state.with_operand(immediate))
+		},
+		2 => {
 			let address = cpu.read_next_pc(memory) as u16 + cpu.direct_page_offset();
 			MicroArchAction::Continue(state.with_address(address))
 		},
 		3 => {
-			// Dummy read from destination address according to fullsnes.
 			let operand2 = cpu.read(state.address, memory);
 			MicroArchAction::Continue(state.with_operand2(operand2))
 		},
 		4 => {
 			let result = (state.operand2 as i8).wrapping_sub(state.operand as i8);
+			trace!("cmp {:02x} - {:02x} = {:+}", state.operand2, state.operand, result);
 			cpu.set_negative(result as u8);
 			cpu.set_zero(result as u8);
 			cpu.set_subtract_carry(state.operand2 as i8, state.operand as i8);
@@ -921,17 +921,13 @@ fn mov_dp_imm(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: Instructi
 
 	match cycle {
 		0 => MicroArchAction::Continue(InstructionInternalState::default()),
-		2 => {
-			let immediate = cpu.read_next_pc(memory);
-			MicroArchAction::Continue(InstructionInternalState { operand: immediate, ..Default::default() })
-		},
 		1 => {
+			let immediate = cpu.read_next_pc(memory);
+			MicroArchAction::Continue(state.with_operand(immediate))
+		},
+		2 => {
 			let address = cpu.read_next_pc(memory) as u16 + cpu.direct_page_offset();
-			MicroArchAction::Continue(InstructionInternalState {
-				address,
-				operand: state.operand,
-				..Default::default()
-			})
+			MicroArchAction::Continue(state.with_address(address))
 		},
 		3 => {
 			// Dummy read from destination address according to fullsnes.
@@ -1231,7 +1227,7 @@ fn bne(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInter
 			// branch if Z == 0
 			if !cpu.psw.contains(ProgramStatusWord::Zero) {
 				trace!("taking branch to {:+}", offset);
-				MicroArchAction::Continue(InstructionInternalState { relative: offset, ..Default::default() })
+				MicroArchAction::Continue(InstructionInternalState::default().with_relative(offset))
 			} else {
 				MicroArchAction::Next
 			}

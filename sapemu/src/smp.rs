@@ -1,6 +1,7 @@
 //! S-SMP (SPC700 CPU) emulator.
 
 mod ops;
+pub mod upload;
 
 use bitflags::bitflags;
 use log::{debug, error, trace};
@@ -77,7 +78,7 @@ impl CpuIOPorts {
 	pub fn write(&mut self, port_number: u16, value: u8) {
 		Self::check_port_number(port_number);
 
-		trace!("CPUIO {0} = {1:02x} ({1})", port_number, value);
+		trace!("Write CPUIO {0} = {1:02x} ({1})", port_number, value);
 		self.write_ports[port_number as usize] = value;
 	}
 
@@ -97,6 +98,28 @@ impl CpuIOPorts {
 
 		trace!("Reset CPUIO {0}", port_number);
 		self.read_ports[port_number as usize] = 0;
+	}
+
+	/// Perform a read from the SMP.
+	#[inline]
+	pub fn read_from_smp<const PORT_NUMBER: u8>(&mut self) -> u8 {
+		// FIXME: Should always be a compile-time check...
+		if PORT_NUMBER > 4 {
+			panic!("Illegal port number {PORT_NUMBER}");
+		}
+		trace!("CPU read CPUIO {PORT_NUMBER} = {0:02x} ({0})", self.write_ports[PORT_NUMBER as usize]);
+		self.write_ports[PORT_NUMBER as usize]
+	}
+
+	/// Perform a read to the SMP.
+	#[inline]
+	pub fn write_to_smp<const PORT_NUMBER: u8>(&mut self, value: u8) {
+		// FIXME: Should always be a compile-time check...
+		if PORT_NUMBER > 4 {
+			panic!("Illegal port number {PORT_NUMBER}");
+		}
+		trace!("CPU write CPUIO {PORT_NUMBER} = {0:02x} ({0})", value);
+		self.read_ports[PORT_NUMBER as usize] = value;
 	}
 }
 

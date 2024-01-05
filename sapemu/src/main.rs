@@ -1,5 +1,6 @@
 //! S-APU / SPC700 emulator.
 #![deny(missing_docs, unused, clippy::all, clippy::pedantic, clippy::nursery, rustdoc::all)]
+#![feature(slice_as_chunks)]
 
 use std::path::PathBuf;
 use std::time::Instant;

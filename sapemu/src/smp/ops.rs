@@ -14,6 +14,7 @@
 #![allow(unused)]
 
 use log::trace;
+use spcasm::sema::Register;
 
 use super::Smp;
 use crate::memory::Memory;
@@ -538,11 +539,32 @@ fn cbne(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInte
 	todo!()
 }
 fn bra(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInternalState) -> MicroArchAction {
-	todo!()
+	debug_instruction!("bra", cycle);
+
+	match cycle {
+		0 => MicroArchAction::Continue(InstructionInternalState::default()),
+		1 => {
+			let offset = cpu.read_next_pc(memory) as i8;
+			trace!("taking branch to {:+}", offset);
+			MicroArchAction::Continue(state.with_relative(offset))
+		},
+		2 => {
+			// Hardware calculates branch target in this step, we do everything at the very end since memory accesses
+			// don't happen.
+			MicroArchAction::Continue(state)
+		},
+		3 => {
+			cpu.pc = (cpu.pc as isize + state.relative as isize) as u16;
+			MicroArchAction::Next
+		},
+		_ => unreachable!(),
+	}
 }
 
 fn bmi(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInternalState) -> MicroArchAction {
-	todo!()
+	debug_instruction!("bmi", cycle);
+
+	branch_on(cpu, memory, cycle, state, ProgramStatusWord::Sign, true)
 }
 fn tcall_3(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInternalState) -> MicroArchAction {
 	todo!()
@@ -1101,7 +1123,35 @@ fn sbc_x_y_indirect(
 	todo!()
 }
 fn movw_ya_dp(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInternalState) -> MicroArchAction {
-	todo!()
+	debug_instruction!("movw ya, dp", cycle);
+
+	// TODO: Memory access pattern of this instruction is not known.
+	// Given that there's probably just one temporary address register, we assume:
+	// 1: TAR <- address + DP offset
+	// 2: A <- (TAR)
+	// 3: TAR <- address + 1 + DP offset
+	// 4: Y <- (TAR)
+	match cycle {
+		0 => MicroArchAction::Continue(InstructionInternalState::default()),
+		1 => {
+			let a_address = u16::from(cpu.read_next_pc(memory)) + cpu.direct_page_offset();
+			MicroArchAction::Continue(state.with_address(a_address))
+		},
+		2 => {
+			cpu.a = cpu.read(state.address, memory);
+			MicroArchAction::Continue(state)
+		},
+		3 => {
+			// wraparound at direct page boundary
+			let y_address = (state.address + 1) % 0xff;
+			MicroArchAction::Continue(state.with_address(y_address))
+		},
+		4 => {
+			cpu.y = cpu.read(state.address, memory);
+			MicroArchAction::Next
+		},
+		_ => unreachable!(),
+	}
 }
 fn inc_dp_x(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInternalState) -> MicroArchAction {
 	todo!()
@@ -1141,7 +1191,9 @@ fn bbs_6(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInt
 	todo!()
 }
 fn mov_dp_a(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInternalState) -> MicroArchAction {
-	todo!()
+	debug_instruction!("mov dp, a", cycle);
+
+	move_to_dp(cpu, memory, cycle, state, Register::A)
 }
 fn mov_addr_a(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInternalState) -> MicroArchAction {
 	todo!()
@@ -1190,7 +1242,9 @@ fn mov1_addr_c(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: Instruct
 	todo!()
 }
 fn mov_dp_y(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInternalState) -> MicroArchAction {
-	todo!()
+	debug_instruction!("mov dp, y", cycle);
+
+	move_to_dp(cpu, memory, cycle, state, Register::Y)
 }
 fn mov_addr_y(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInternalState) -> MicroArchAction {
 	todo!()
@@ -1220,29 +1274,7 @@ fn mul(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInter
 fn bne(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInternalState) -> MicroArchAction {
 	debug_instruction!("bne", cycle);
 
-	match cycle {
-		0 => MicroArchAction::Continue(InstructionInternalState::default()),
-		1 => {
-			let offset = cpu.read_next_pc(memory) as i8;
-			// branch if Z == 0
-			if cpu.psw.contains(ProgramStatusWord::Zero) {
-				MicroArchAction::Next
-			} else {
-				trace!("taking branch to {:+}", offset);
-				MicroArchAction::Continue(InstructionInternalState::default().with_relative(offset))
-			}
-		},
-		2 => {
-			// Hardware calculates branch target in this step, we do everything at the very end since memory accesses
-			// don't happen.
-			MicroArchAction::Continue(state)
-		},
-		3 => {
-			cpu.pc = (cpu.pc as isize + state.relative as isize) as u16;
-			MicroArchAction::Next
-		},
-		_ => unreachable!(),
-	}
+	branch_on(cpu, memory, cycle, state, ProgramStatusWord::Zero, true)
 }
 fn tcall_13(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInternalState) -> MicroArchAction {
 	todo!()
@@ -1271,13 +1303,43 @@ fn mov_dp_indirect_y_a(
 	todo!()
 }
 fn mov_dp_x(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInternalState) -> MicroArchAction {
-	todo!()
+	debug_instruction!("mov dp, x", cycle);
+
+	move_to_dp(cpu, memory, cycle, state, Register::X)
 }
 fn mov_dp_y_x(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInternalState) -> MicroArchAction {
 	todo!()
 }
 fn movw_dp_ya(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInternalState) -> MicroArchAction {
-	todo!()
+	debug_instruction!("movw dp, ya", cycle);
+
+	// TODO: Memory access pattern of this instruction is not known.
+	// Given that there's probably just one temporary address register, we assume:
+	// 1: TAR <- address + DP offset
+	// 2: A -> (TAR)
+	// 3: TAR <- address + 1 + DP offset
+	// 4: Y -> (TAR)
+	match cycle {
+		0 => MicroArchAction::Continue(InstructionInternalState::default()),
+		1 => {
+			let a_address = u16::from(cpu.read_next_pc(memory)) + cpu.direct_page_offset();
+			MicroArchAction::Continue(state.with_address(a_address))
+		},
+		2 => {
+			cpu.write(state.address, cpu.a, memory);
+			MicroArchAction::Continue(state)
+		},
+		3 => {
+			// wraparound at direct page boundary
+			let y_address = (state.address + 1) % 0xff;
+			MicroArchAction::Continue(state.with_address(y_address))
+		},
+		4 => {
+			cpu.write(state.address, cpu.y, memory);
+			MicroArchAction::Next
+		},
+		_ => unreachable!(),
+	}
 }
 fn mov_dp_x_y(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInternalState) -> MicroArchAction {
 	todo!()
@@ -1418,4 +1480,73 @@ fn dbnz_y(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionIn
 }
 fn stop(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInternalState) -> MicroArchAction {
 	todo!()
+}
+
+#[inline]
+fn branch_on(
+	cpu: &mut Smp,
+	memory: &mut Memory,
+	cycle: usize,
+	state: InstructionInternalState,
+	flag: ProgramStatusWord,
+	is_set: bool,
+) -> MicroArchAction {
+	match cycle {
+		0 => MicroArchAction::Continue(InstructionInternalState::default()),
+		1 => {
+			let offset = cpu.read_next_pc(memory) as i8;
+			// branch if flag set or cleared
+			if cpu.psw.contains(flag) == is_set {
+				MicroArchAction::Next
+			} else {
+				trace!("taking branch to {:+}", offset);
+				MicroArchAction::Continue(state.with_relative(offset))
+			}
+		},
+		2 => {
+			// Hardware calculates branch target in this step, we do everything at the very end since memory accesses
+			// don't happen.
+			MicroArchAction::Continue(state)
+		},
+		3 => {
+			cpu.pc = (cpu.pc as isize + state.relative as isize) as u16;
+			MicroArchAction::Next
+		},
+		_ => unreachable!(),
+	}
+}
+
+#[inline]
+fn move_to_dp(
+	cpu: &mut Smp,
+	memory: &mut Memory,
+	cycle: usize,
+	state: InstructionInternalState,
+	register: Register,
+) -> MicroArchAction {
+	match cycle {
+		0 => MicroArchAction::Continue(InstructionInternalState::default()),
+		1 => {
+			let address = u16::from(cpu.read_next_pc(memory)) + cpu.direct_page_offset();
+			MicroArchAction::Continue(state.with_address(address))
+		},
+		2 => {
+			let _ = cpu.read(state.address, memory);
+			MicroArchAction::Continue(state)
+		},
+		3 => {
+			cpu.write(
+				state.address,
+				match register {
+					Register::A => cpu.a,
+					Register::X => cpu.x,
+					Register::Y => cpu.y,
+					_ => unreachable!(),
+				},
+				memory,
+			);
+			MicroArchAction::Next
+		},
+		_ => unreachable!(),
+	}
 }

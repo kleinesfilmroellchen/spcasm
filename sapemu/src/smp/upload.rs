@@ -64,7 +64,7 @@ enum UploaderState {
 	/// Uploader is waiting for acknowledge of 0xCC in port 0.
 	WaitingForCC,
 	/// Uploader is waiting for a data byte to be acknowledged.
-	// WaitingForByteAck,
+	WaitingForByteAck,
 	// WaitingFor
 	/// Uploader is done with uploading, all data has been sent.
 	Finished,
@@ -74,6 +74,13 @@ impl Default for Uploader {
 	fn default() -> Self {
 		Self::new()
 	}
+}
+
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum NextByteStatus {
+	Normal,
+	NewBlock,
+	NoMoreBlocks,
 }
 
 impl Uploader {
@@ -141,7 +148,34 @@ impl Uploader {
 			.map(|current_block| current_block.data[(self.current_address - current_block.address) as usize])
 	}
 
+	fn current_index(&self) -> Option<u16> {
+		self.remaining_blocks.first().map(|current_block| self.current_address - current_block.address)
+	}
+
+	fn next_byte(&mut self) -> NextByteStatus {
+		if self.remaining_blocks.is_empty() {
+			return NextByteStatus::NoMoreBlocks;
+		}
+
+		self.current_address = self.current_address.wrapping_add(1);
+		if self.current_address >= self.remaining_blocks.first().map(|b| b.address + b.length).unwrap_or_default() {
+			self.remaining_blocks.remove(0);
+			self.current_address = self.remaining_blocks.first().map(|b| b.address).unwrap_or_default();
+
+			if self.remaining_blocks.is_empty() {
+				NextByteStatus::NoMoreBlocks
+			} else {
+				NextByteStatus::NewBlock
+			}
+		} else {
+			NextByteStatus::Normal
+		}
+	}
+
 	/// Runs the uploader as far as possible.
+	///
+	/// # Panics
+	/// All panics are programming bugs.
 	pub fn perform_step(&mut self, ports: &mut CpuIOPorts) {
 		match self.state {
 			UploaderState::WaitingForAA =>
@@ -160,9 +194,32 @@ impl Uploader {
 			UploaderState::WaitingForCC =>
 				if ports.read_from_smp::<0>() == 0xCC {
 					debug!("Read CC, starting first block transfer");
-					ports.write_to_smp::<0>(0x00);
-					todo!();
+					if let Some(first_byte) = self.current_byte() {
+						ports.write_to_smp::<0>(0x00);
+						ports.write_to_smp::<1>(first_byte);
+					}
+					self.state = UploaderState::WaitingForByteAck;
 				},
+			UploaderState::WaitingForByteAck => {
+				if self.current_index().is_some_and(|i| i == u16::from(ports.read_from_smp::<0>())) {
+					debug!("Got ACKed index {}, sending next byte", self.current_index().unwrap());
+					let status = self.next_byte();
+					match status {
+						NextByteStatus::Normal => {
+							ports.write_to_smp::<0>(self.current_index().unwrap() as u8);
+							ports.write_to_smp::<1>(self.current_byte().unwrap());
+						},
+						NextByteStatus::NewBlock => {
+							self.write_address(ports);
+							ports.write_to_smp::<0>(self.current_index().unwrap() as u8);
+							ports.write_to_smp::<1>(self.current_byte().unwrap());
+						},
+						NextByteStatus::NoMoreBlocks => {
+							todo!();
+						},
+					}
+				}
+			},
 			UploaderState::Finished => {},
 		}
 	}

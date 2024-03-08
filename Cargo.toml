@@ -75,7 +75,7 @@ flexstr = { version = "0.9.2", features = ["int_convert", "serde"] }
 
 [dependencies.miette]
 features = ["fancy-no-backtrace"]
-version = "5"
+version = "6"
 
 # Only compile clap for the CLIs.
 [dependencies.clap]

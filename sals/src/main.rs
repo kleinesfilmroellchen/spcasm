@@ -17,7 +17,6 @@ use spcasm::parser::Token;
 use spcasm::sema::AssemblyFile;
 use spcasm::{AssemblyCode, AssemblyError, Environment};
 use tower_lsp::jsonrpc::Result;
-use tower_lsp::lsp_types::notification::Notification;
 use tower_lsp::lsp_types::*;
 use tower_lsp::{Client, LanguageServer, LspService, Server};
 
@@ -365,14 +364,6 @@ impl LanguageServer for Backend {
 
 		Ok(None)
 	}
-}
-
-enum CustomNotification {}
-
-impl Notification for CustomNotification {
-	type Params = InlayHintParams;
-
-	const METHOD: &'static str = "custom/notification";
 }
 
 struct TextDocumentItem {

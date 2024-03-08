@@ -1,7 +1,6 @@
 //! Interactive BRR test program.
 #![deny(missing_docs, unused, clippy::all, clippy::pedantic, clippy::nursery)]
 
-use std::convert::TryInto;
 use std::fs::File;
 use std::io::{Read, Write};
 use std::path::PathBuf;
@@ -156,6 +155,7 @@ enum Command {
 enum PreEmphasisFilter {
 	/// A precise treble filter that inverts the hardware Gaussian filter exactly.
 	Treble,
+	#[allow(clippy::doc_markdown)]
 	/// BRRTools' treble filter, which is slightly imprecise, but provided for compatibility purposes.
 	Brrtools,
 }
@@ -273,10 +273,12 @@ fn main() {
 				);
 			}
 			let mut output_file = std::io::BufWriter::new(
-				File::options().write(true).create(true).append(false).open(output).unwrap_or_else(|error| {
-					eprintln!("error opening output: {error}");
-					std::process::exit(1);
-				}),
+				File::options().write(true).truncate(true).create(true).append(false).open(output).unwrap_or_else(
+					|error| {
+						eprintln!("error opening output: {error}");
+						std::process::exit(1);
+					},
+				),
 			);
 			output_file.write_all(&encoded).unwrap_or_else(|error| {
 				eprintln!("error while writing output: {error}");
@@ -302,10 +304,12 @@ fn main() {
 			let header = ::wav::Header::new(WAV_FORMAT_PCM, 1, 32_000, 16);
 
 			let mut output_file = std::io::BufWriter::new(
-				File::options().write(true).create(true).append(false).open(output).unwrap_or_else(|error| {
-					eprintln!("error opening output: {error}");
-					std::process::exit(1);
-				}),
+				File::options().write(true).truncate(true).create(true).append(false).open(output).unwrap_or_else(
+					|error| {
+						eprintln!("error opening output: {error}");
+						std::process::exit(1);
+					},
+				),
 			);
 
 			::wav::write(header, &samples.into(), &mut output_file).unwrap_or_else(|error| {

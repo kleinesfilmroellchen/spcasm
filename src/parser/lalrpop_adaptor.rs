@@ -63,7 +63,9 @@ pub fn preprocess_token_stream(tokens: Vec<Token>) -> Vec<Token> {
 				let mut inner_tokens = Vec::new();
 				let mut depth = 1usize;
 				let mut hit_newline = false;
-				while depth > 0 && let Some(next_inner_token) = tokens.next() {
+				while depth > 0
+					&& let Some(next_inner_token) = tokens.next()
+				{
 					inner_tokens.push(next_inner_token.clone());
 
 					match next_inner_token {
@@ -102,7 +104,9 @@ pub fn preprocess_token_stream(tokens: Vec<Token>) -> Vec<Token> {
 			Token::OpenParenthesis(..) if !expecting_indexing_addressing_mode && !in_mnemonic_line => {
 				result.push(next_token);
 				let mut depth = 1usize;
-				while depth > 0 && let Some(next_inner_token) = tokens.next() {
+				while depth > 0
+					&& let Some(next_inner_token) = tokens.next()
+				{
 					match &next_inner_token {
 						Token::CloseParenthesis(..) => depth -= 1,
 						Token::OpenParenthesis(..) => depth += 1,
@@ -172,14 +176,20 @@ pub fn preprocess_token_stream(tokens: Vec<Token>) -> Vec<Token> {
 	result.push(Token::Newline(last_offset.into()));
 
 	result.iter().fold(Vec::new(), |mut tokens, token| {
-		if let Some(plus @ Token::Plus(..)) = tokens.last().cloned() && let Token::Register(register @(Register::X | Register::Y), ..) = token {
+		if let Some(plus @ Token::Plus(..)) = tokens.last().cloned()
+			&& let Token::Register(register @ (Register::X | Register::Y), ..) = token
+		{
 			tokens.pop();
-			tokens.push(Token::PlusRegister(*register,
-				source_range(plus.source_span().into(), token.source_span().into())));
+			tokens.push(Token::PlusRegister(
+				*register,
+				source_range(plus.source_span().into(), token.source_span().into()),
+			));
 		} else {
 			tokens.push(match token {
-				Token::Register(register, location) => Token::Register(register.coerce_alternate_registers(), *location),
-				Token::Mnemonic(mnemonic, location) => Token::Mnemonic(mnemonic.coerce_alternate_mnemonics(), *location),
+				Token::Register(register, location) =>
+					Token::Register(register.coerce_alternate_registers(), *location),
+				Token::Mnemonic(mnemonic, location) =>
+					Token::Mnemonic(mnemonic.coerce_alternate_mnemonics(), *location),
 				others => others.clone(),
 			});
 		}

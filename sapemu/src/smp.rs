@@ -132,9 +132,9 @@ pub const CPU_RATE: usize = 2_048_000;
 
 /// Internal CPU timers.
 pub struct Timers {
-	/// Current timer output value (TnOUT).
+	/// Current timer output value (`TnOUT`).
 	pub timer_out:        [u8; 3],
-	/// Timer divisor values (TnDIV).
+	/// Timer divisor values (`TnDIV`).
 	pub timer_divisor:    [u8; 3],
 	/// How many CPU clock cycles until timer is incremented the next time.
 	timer_tick_remaining: [usize; 3],

@@ -44,9 +44,9 @@ where
 /// Used by LALRPOP action code to create source spans more easily.
 #[derive(Debug, Clone, Copy, Eq, PartialEq)]
 pub enum SpanOrOffset {
-	///
+	/// A [`SourceSpan`].
 	Span(SourceSpan),
-	///
+	/// A simple (zero-sized) offset
 	Offset(SourceOffset),
 }
 

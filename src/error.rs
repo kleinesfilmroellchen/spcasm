@@ -228,7 +228,7 @@ pub enum AssemblyError {
 	#[error("File \"{file_name}\" was not found")]
 	#[diagnostic(code(spcasm::io::file_not_found), severity(Error))]
 	FileNotFound {
-		/// std::io::Error is not clonable for performance and implementation detail reasons[rustissue].
+		/// `std::io::Error` is not clonable for performance and implementation detail reasons[rustissue].
 		///
 		/// [rustissue]: <https://github.com/rust-lang/rust/issues/24135>
 		#[source]

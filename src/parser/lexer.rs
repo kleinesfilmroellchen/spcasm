@@ -62,7 +62,10 @@ pub fn lex(source_code: Arc<AssemblyCode>, options: &dyn Frontend) -> Result<Vec
 			'"' => {
 				let start_index = index;
 				index += 1;
-				let text = next_string(&mut chars, source_code.clone(), &mut index)?.into_iter().map(|chr| chr as u8).collect();
+				let text = next_string(&mut chars, source_code.clone(), &mut index)?
+					.into_iter()
+					.map(|chr| chr as u8)
+					.collect();
 				let text_span = (start_index, index - start_index).into();
 				tokens.push(Token::String(text, text_span));
 			},
@@ -70,7 +73,12 @@ pub fn lex(source_code: Arc<AssemblyCode>, options: &dyn Frontend) -> Result<Vec
 				let start_index = index;
 				index += 1;
 				let chr = match chars.next() {
-					Some('\'') => Err(AssemblyError::UnexpectedCharacter { chr: '\'', location: (index, 1).into(), src: source_code.clone() }.into()),
+					Some('\'') => Err(AssemblyError::UnexpectedCharacter {
+						chr:      '\'',
+						location: (index, 1).into(),
+						src:      source_code.clone(),
+					}
+					.into()),
 					Some('\\') => {
 						index += 1;
 						next_escape_sequence(&mut chars, source_code.clone(), &mut index)
@@ -83,22 +91,39 @@ pub fn lex(source_code: Arc<AssemblyCode>, options: &dyn Frontend) -> Result<Vec
 						expected: vec!["\"".into()],
 						location: (source_code.text.len() - 1, 0).into(),
 						src:      source_code.clone(),
-					}.into()),
+					}
+					.into()),
 				}?;
 				let end = chars.next();
-				if let Some(end) = end && end != '\'' {
-					return Err(AssemblyError::UnexpectedCharacter { chr: end, location: (index, 1).into(), src: source_code.clone() }.into());
+				if let Some(end) = end
+					&& end != '\''
+				{
+					return Err(AssemblyError::UnexpectedCharacter {
+						chr:      end,
+						location: (index, 1).into(),
+						src:      source_code.clone(),
+					}
+					.into());
 				} else if end.is_none() {
-					return Err(AssemblyError::UnexpectedEndOfTokens { expected: vec!["'".into()], location: (index, 1).into(), src: source_code.clone() }.into());
+					return Err(AssemblyError::UnexpectedEndOfTokens {
+						expected: vec!["'".into()],
+						location: (index, 1).into(),
+						src:      source_code.clone(),
+					}
+					.into());
 				}
 				index += 1;
 				let end_index = index;
-				tokens.push(Token::Number(chr as MemoryAddress, source_code.text[start_index..=end_index].into(), (start_index, end_index - start_index).into()));
+				tokens.push(Token::Number(
+					chr as MemoryAddress,
+					source_code.text[start_index ..= end_index].into(),
+					(start_index, end_index - start_index).into(),
+				));
 			},
 			start_of_identifier!() => {
 				tokens.push(parse_identifier_like(&mut chars, chr, &mut index, &source_code)?);
 			},
-			'0'..='9' => {
+			'0' ..= '9' => {
 				let (number, size) = next_number(&mut chars, Some(chr), false, 10, index, &source_code, options)?;
 				tokens.push(number);
 				index += size;
@@ -112,8 +137,11 @@ pub fn lex(source_code: Arc<AssemblyCode>, options: &dyn Frontend) -> Result<Vec
 					tokens.push(parse_identifier_like(&mut chars, letter_after_dot, &mut index, &source_code)?);
 				} else {
 					index += 2;
-					tokens.push((if letter_after_dot == 'b' {Token::ExplicitDirectPage} else {Token::ExplicitNoDirectPage})
-						((index - 2, 2).into()));
+					tokens.push((if letter_after_dot == 'b' {
+						Token::ExplicitDirectPage
+					} else {
+						Token::ExplicitNoDirectPage
+					})((index - 2, 2).into()));
 				}
 			},
 			'*' if chars.peek().is_some_and(|chr| chr == &'*') => {
@@ -126,7 +154,7 @@ pub fn lex(source_code: Arc<AssemblyCode>, options: &dyn Frontend) -> Result<Vec
 				index += 2;
 				tokens.push(Token::DoubleOpenAngleBracket((index - 2, 2).into()));
 			},
-			'>' if chars.peek().is_some_and(|chr|chr == &'>') => {
+			'>' if chars.peek().is_some_and(|chr| chr == &'>') => {
 				chars.next();
 				index += 2;
 				tokens.push(Token::DoubleCloseAngleBracket((index - 2, 2).into()));
@@ -139,22 +167,22 @@ pub fn lex(source_code: Arc<AssemblyCode>, options: &dyn Frontend) -> Result<Vec
 				let identifier_span = (start_index, identifier.len() + 1).into();
 				tokens.push(Token::Identifier(identifier, identifier_span));
 			},
-			'!' if chars.peek().is_some_and(|chr|chr == &'=') => {
+			'!' if chars.peek().is_some_and(|chr| chr == &'=') => {
 				chars.next();
 				index += 2;
 				tokens.push(Token::ExclamationEquals((index - 2, 2).into()));
 			},
-			'=' if chars.peek().is_some_and(|chr|chr == &'=') => {
+			'=' if chars.peek().is_some_and(|chr| chr == &'=') => {
 				chars.next();
 				index += 2;
 				tokens.push(Token::DoubleEquals((index - 2, 2).into()));
 			},
-			'<' if chars.peek().is_some_and(|chr|chr == &'=') => {
+			'<' if chars.peek().is_some_and(|chr| chr == &'=') => {
 				chars.next();
 				index += 2;
 				tokens.push(Token::OpenAngleBracketEquals((index - 2, 2).into()));
 			},
-			'>' if chars.peek().is_some_and(|chr|chr == &'=') => {
+			'>' if chars.peek().is_some_and(|chr| chr == &'=') => {
 				chars.next();
 				index += 2;
 				tokens.push(Token::CloseAngleBracketEquals((index - 2, 2).into()));
@@ -169,19 +197,23 @@ pub fn lex(source_code: Arc<AssemblyCode>, options: &dyn Frontend) -> Result<Vec
 				let end = index;
 				// Multi-dash: reference!
 				if end - start > 1 {
-					tokens.push(Token::RelativeLabelMinus(NonZeroU64::new((end-start).try_into().unwrap()).unwrap(), (start, end-start).into()));
+					tokens.push(Token::RelativeLabelMinus(
+						NonZeroU64::new((end - start).try_into().unwrap()).unwrap(),
+						(start, end - start).into(),
+					));
 				} else {
 					tokens.push(parse_single_char_tokens(chr, start.into()));
 				}
 			},
-			'#' | ',' | '+' | '^' | '|' | '~' | '&' | '*' | '(' | ')' | '[' | ']' | ':' | '.' | '/' | '!' | '=' | '<' | '>' => {
+			'#' | ',' | '+' | '^' | '|' | '~' | '&' | '*' | '(' | ')' | '[' | ']' | ':' | '.' | '/' | '!' | '='
+			| '<' | '>' => {
 				tokens.push(parse_single_char_tokens(chr, index.into()));
 				index += 1;
 			},
 			'$' => {
 				let (number, size) = next_number(&mut chars, None, true, 16, index, &source_code, options)?;
 				tokens.push(number);
-				index += size+1;
+				index += size + 1;
 			},
 			'%' => {
 				let can_be_binary = chars.peek().map(|chr| ['0', '1'].contains(chr));
@@ -194,7 +226,10 @@ pub fn lex(source_code: Arc<AssemblyCode>, options: &dyn Frontend) -> Result<Vec
 				index += increment + 1;
 			},
 			';' =>
-				if cfg!(test) && let Some(chr) = chars.peek() && chr == &'=' {
+				if cfg!(test)
+					&& let Some(chr) = chars.peek()
+					&& chr == &'='
+				{
 					chars.next();
 					#[allow(unused)]
 					let start_index = index;
@@ -202,7 +237,9 @@ pub fn lex(source_code: Arc<AssemblyCode>, options: &dyn Frontend) -> Result<Vec
 					#[cfg(test)]
 					let mut comment_contents = String::new();
 					// Either stop at a newline or another regular comment.
-					while let Some(chr) = chars.peek() && chr != &'\n' && chr != &';' {
+					while let Some(chr) = chars.peek()
+						&& chr != &'\n' && chr != &';'
+					{
 						#[cfg(test)]
 						comment_contents.push(chars.next().unwrap());
 						index += 1;
@@ -210,27 +247,29 @@ pub fn lex(source_code: Arc<AssemblyCode>, options: &dyn Frontend) -> Result<Vec
 					// This cfg() is technically unnecessary, but the above check doesn't happen at compile time so
 					// Rust wouldn't find the conditionally-compiled token type.
 					#[cfg(test)]
-					tokens.push(Token::TestComment(comment_contents
-						.split_whitespace()
-						.map(|byte_string| u8::from_str_radix(byte_string, 16))
-						.try_collect::<Vec<u8>>()
-						.map_err(|parse_error| AssemblyError::InvalidTestComment {
-							basis: parse_error,
-							src: source_code.clone(),
-							location: (start_index, comment_contents.len()).into()
-						})?, (start_index, comment_contents.len()).into()));
+					tokens.push(Token::TestComment(
+						comment_contents
+							.split_whitespace()
+							.map(|byte_string| u8::from_str_radix(byte_string, 16))
+							.try_collect::<Vec<u8>>()
+							.map_err(|parse_error| AssemblyError::InvalidTestComment {
+								basis:    parse_error,
+								src:      source_code.clone(),
+								location: (start_index, comment_contents.len()).into(),
+							})?,
+						(start_index, comment_contents.len()).into(),
+					));
 				} else {
 					index += 1;
-					while let Some(chr) = chars.peek() && chr != &'\n' {
+					while let Some(chr) = chars.peek()
+						&& chr != &'\n'
+					{
 						chars.next();
 						index += 1;
 					}
 				},
-			_ => return Err(AssemblyError::UnexpectedCharacter {
-				chr,
-				location: index.into(),
-				src: source_code
-			}.into()),
+			_ =>
+				return Err(AssemblyError::UnexpectedCharacter { chr, location: index.into(), src: source_code }.into()),
 		}
 	}
 
@@ -240,7 +279,9 @@ pub fn lex(source_code: Arc<AssemblyCode>, options: &dyn Frontend) -> Result<Vec
 fn next_identifier(chars: &mut Peekable<std::str::Chars>, start: char) -> SharedStr {
 	let mut identifier = String::new();
 	identifier.push(start);
-	while let Some(chr) = chars.peek() && (chr.is_alphanumeric() || chr.is_ascii_digit() || ['_', '-', '@' ].contains(chr)) {
+	while let Some(chr) = chars.peek()
+		&& (chr.is_alphanumeric() || chr.is_ascii_digit() || ['_', '-', '@'].contains(chr))
+	{
 		identifier.push(chars.next().unwrap());
 	}
 	identifier.into()
@@ -292,7 +333,9 @@ fn next_number(
 	options: &dyn Frontend,
 ) -> Result<(Token, usize), Box<AssemblyError>> {
 	let mut number_chars: String = first_char.map_or_else(std::string::String::default, std::string::String::from);
-	while let Some(chr) = chars.peek() && chr.is_alphanumeric() {
+	while let Some(chr) = chars.peek()
+		&& chr.is_alphanumeric()
+	{
 		number_chars.push(chars.next().unwrap());
 	}
 	let number_chars = number_chars.into_shared_str();

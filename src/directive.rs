@@ -79,12 +79,11 @@ impl Directive {
 			},
 			DirectiveValue::Fill { value, operation, .. } =>
 				try {
-					*value = if operation.is_fill() {
+					value.clone_from(if operation.is_fill() {
 						&segments.directive_parameters.fill_value
 					} else {
 						&segments.directive_parameters.pad_value
-					}
-					.clone();
+					});
 				},
 			// For zero-sized strings, we would lose the preceding labels if we didn't remove the string here.
 			DirectiveValue::String { text, has_null_terminator: false } if text.is_empty() =>

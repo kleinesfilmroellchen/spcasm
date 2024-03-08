@@ -63,6 +63,9 @@ enum UploaderState {
 	WaitingForBB,
 	/// Uploader is waiting for acknowledge of 0xCC in port 0.
 	WaitingForCC,
+	/// Uploader is waiting for a data byte to be acknowledged.
+	// WaitingForByteAck,
+	// WaitingFor
 	/// Uploader is done with uploading, all data has been sent.
 	Finished,
 }

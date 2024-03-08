@@ -209,8 +209,8 @@ mod clap_dependent {
 		/// Binary output file.
 		#[arg()]
 		pub output:        Option<PathBuf>,
-		///
 		#[command(flatten)]
+		#[allow(missing_docs)]
 		pub warning_flags: CliOptions,
 		/// Format to output to.
 		#[arg(default_value = "elf", long, short = 'f')]

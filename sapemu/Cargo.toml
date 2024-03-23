@@ -19,7 +19,7 @@ object = { version = "0.32", features = [
 	"elf",
 ], default-features = false }
 simple_logger = "4.3.3"
-bitflags = "2.4.1"
+bitflags = "2.5.0"
 
 [dependencies.spcasm]
 path = ".."

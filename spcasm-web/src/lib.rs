@@ -24,9 +24,10 @@ macro_rules! log {
 	}
 }
 
-#[cfg(feature = "wee_alloc")]
+#[cfg(target_family = "wasm")]
 #[global_allocator]
-static ALLOC: wee_alloc::WeeAlloc = wee_alloc::WeeAlloc::INIT;
+static ALLOCATOR: talc::Talck<parking_lot::RawMutex, talc::WasmHandler> =
+	talc::Talc::new(unsafe { talc::WasmHandler::new() }).lock();
 
 static NEWLINE_EQUIVALENT: OnceLock<Regex> = OnceLock::new();
 static ANSI_CSI_ESCAPE: OnceLock<Regex> = OnceLock::new();

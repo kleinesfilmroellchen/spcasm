@@ -226,7 +226,8 @@ impl AssembledData {
 		// addressing mode. This is fine, since we control the codegen table and we can make sure that we never use a
 		// value where there is none in the operand.
 		// FIXME: Still not constable.
-		let dummy_value: AssemblyTimeValue = AssemblyTimeValue::Literal(0, SourceSpan::new((0).into(), (0).into()));
+		let dummy_value: AssemblyTimeValue =
+			AssemblyTimeValue::Literal(0, SourceSpan::new(0usize.into(), 0usize.into()));
 
 		let Instruction { opcode: Opcode { first_operand, mnemonic, second_operand, .. }, span, .. } = instruction;
 

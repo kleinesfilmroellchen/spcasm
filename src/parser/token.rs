@@ -182,7 +182,7 @@ impl Token {
 			| Self::Tilde(location)
 			| Self::Caret(location)
 			| Self::Ampersand(location)
-			| Self::Plus(location) => (*location, SourceOffset::from(1)).into(),
+			| Self::Plus(location) => (*location, 1).into(),
 			Self::Identifier(_, location)
 			| Self::ExplicitDirectPage(location)
 			| Self::ExplicitNoDirectPage(location)

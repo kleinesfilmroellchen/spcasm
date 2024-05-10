@@ -13,7 +13,7 @@ use crate::{
 pub fn main() -> miette::Result<()> {
 	use clap::Parser;
 
-	#[cfg(feature = "dep:human-panic")]
+	#[cfg(feature = "human-panic")]
 	human_panic::setup_panic!(human_panic::metadata!());
 	miette::set_hook(Box::new(|_| {
 		Box::new(

@@ -10,16 +10,16 @@ homepage.workspace = true
 repository.workspace = true
 
 [dependencies]
-human-panic = "1.1.4"
+human-panic = "2"
 log = "0.4"
 time = "0.3"
 
-object = { version = "0.32", features = [
+object = { version = "0.35", features = [
 	"read",
 	"elf",
 ], default-features = false }
-simple_logger = "4.3.3"
-bitflags = "2.4.1"
+simple_logger = "4"
+bitflags = "2"
 
 [dependencies.spcasm]
 path = ".."

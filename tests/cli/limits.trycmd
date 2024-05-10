@@ -10,7 +10,7 @@ spcasm::user_macro::recursive_use
 
   × Maximum recursion depth 1 was exceeded while expanding user macro
   │ 'has_argument'
-    ╭─[tests/user-macro.spcasmtest:11:1]
+    ╭─[tests/user-macro.spcasmtest:14:3]
  11 │ macro do_stuff(first, second)
  12 │   mov a,<first>-7
  13 │   %do_nothing()
@@ -35,7 +35,7 @@ spcasm::user_macro::recursive_use
 
   × Maximum recursion depth 0 was exceeded while expanding user macro
   │ 'do_nothing'
-    ╭─[tests/user-macro.spcasmtest:10:1]
+    ╭─[tests/user-macro.spcasmtest:13:3]
  10 │ ; Macro with argument and simple recursion
  11 │ macro do_stuff(first, second)
  12 │   mov a,<first>-7
@@ -69,7 +69,7 @@ $ spcasm -w all -l 0 tests/opcodes.s
 spcasm::reference::unresolved
 
   × Reference 'data' can not be resolved to a value
-    ╭─[tests/opcodes.s:10:1]
+    ╭─[tests/opcodes.s:13:1]
  10 │    MOV A,$3320+X ;= F5 20 33
  11 │    MOV A,$FF00+Y ;= F6 00 FF
  12 │    MOV A,($40+X) ;= E7 40

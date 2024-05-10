@@ -72,7 +72,7 @@ spcasm::value_too_large
 
   ⚠ The value `FFFFFFFFFFFFFF4D` is being used as a 8-bit operand here, but it
   │ is larger than this. The extra upper bits are truncated.
-    ╭─[tests/parse.spcasmtest:27:1]
+    ╭─[tests/parse.spcasmtest:30:10]
  27 │ mov a, # 8 >>2 ;= E8 02
  28 │ mov a , #$ff &%11 ;= E8 03
  29 │  mov a,# $0F |$f0 ;= E8 FF
@@ -89,7 +89,7 @@ spcasm::value_too_large
 
   ⚠ The value `ABCD` is being used as a 8-bit operand here, but it is larger
   │ than this. The extra upper bits are truncated.
-    ╭─[tests/parse.spcasmtest:42:1]
+    ╭─[tests/parse.spcasmtest:45:9]
  42 │ mov a,#(7 <=12) ;= E8 01
  43 │ 
  44 │ + mov a,$abcd    ;= E5 CD AB
@@ -116,7 +116,7 @@ spcasm::relative_offset_too_large
 
   ⚠ The relative offset to address `0200` is out of range, the result will
   │ be wrong.
-   ╭─[tests/relative-large-offset.spcasmtest:1:1]
+   ╭─[tests/relative-large-offset.spcasmtest:3:1]
  1 │ org $200
  2 │ 
  3 │ start:
@@ -156,7 +156,7 @@ spcasm::syntax::number_identifier
 
   ⚠ "07x" was expected to be a number, but it is parsed as an identifier
   │ instead
-   ╭─[tests/number-identifier.spcasmtest:5:1]
+   ╭─[tests/number-identifier.spcasmtest:8:2]
  5 │ 
  6 │ 
  7 │ 
@@ -232,7 +232,7 @@ $ spcasm -w all tests/errors/parser-invalid-range.spcasmtest
 spcasm::directive::invalid_range
 
   × 4 is greater than 2
-   ╭─[tests/errors/parser-invalid-range.spcasmtest:1:1]
+   ╭─[tests/errors/parser-invalid-range.spcasmtest:2:23]
  1 │ org 0
  2 │ incbin "../binary.bin":4-2
    ·                       ─┬
@@ -253,7 +253,7 @@ $ spcasm -w all tests/errors/math-pri.spcasmtest
 spcasm::directive::math_pri_unsupported
 
   × `math pri` is not supported by spcasm
-   ╭─[tests/errors/math-pri.spcasmtest:1:1]
+   ╭─[tests/errors/math-pri.spcasmtest:2:1]
  1 │ 
  2 │ math pri off
    · ──┬─
@@ -282,7 +282,7 @@ $ spcasm -w all tests/errors/missing-fill-value.spcasmtest
 spcasm::directive::missing_fill_pad_parameter
 
   × No value specified for `fill`
-   ╭─[tests/errors/missing-fill-value.spcasmtest:1:1]
+   ╭─[tests/errors/missing-fill-value.spcasmtest:2:1]
  1 │ org 0
  2 │ fill 7
    · ───┬──
@@ -304,7 +304,7 @@ $ spcasm -w all tests/errors/range-out-of-bounds.spcasmtest
 spcasm::directive::range_out_of_bounds
 
   × The range 20000-50000 is out of bounds for the input file "../binary.bin"
-   ╭─[tests/errors/range-out-of-bounds.spcasmtest:1:1]
+   ╭─[tests/errors/range-out-of-bounds.spcasmtest:2:1]
  1 │ org 0
  2 │ incbin "../binary.bin":20000-50000
    · ─────────────────┬────────────────
@@ -325,7 +325,7 @@ $ spcasm -w all tests/errors/label-in-org.spcasmtest
 spcasm::directive::references_as_argument
 
   × Invalid use of labels in an argument for `org`
-   ╭─[tests/errors/label-in-org.spcasmtest:3:1]
+   ╭─[tests/errors/label-in-org.spcasmtest:6:1]
  3 │ dp_label:
  4 │    nop       ; dummy
  5 │ 
@@ -373,7 +373,7 @@ $ spcasm -w all tests/errors/sample-table-too-large.spcasmtest
 spcasm::directive::sample_table_too_large
 
   × BRR sample table has more than 256 entries
-   ╭─[tests/errors/sample-table-too-large.spcasmtest:1:1]
+   ╭─[tests/errors/sample-table-too-large.spcasmtest:3:1]
  1 │ org 0
  2 │ 
  3 │ sampletable
@@ -402,7 +402,7 @@ $ spcasm -w all tests/errors/sample-table-unaligned.spcasmtest
 spcasm::directive::unaligned_sample_table
 
   × Sample table at address `0057` is not correctly aligned
-   ╭─[tests/errors/sample-table-unaligned.spcasmtest:1:1]
+   ╭─[tests/errors/sample-table-unaligned.spcasmtest:4:1]
  1 │ org $56
  2 │ db $aa
  3 │ 
@@ -474,7 +474,7 @@ $ spcasm -w all tests/errors/addressing-mode.spcasmtest
 spcasm::instruction::invalid_addressing_mode
 
   × Invalid addressing mode `PSW` as first operand for `MOV`
-   ╭─[tests/errors/addressing-mode.spcasmtest:1:1]
+   ╭─[tests/errors/addressing-mode.spcasmtest:3:1]
  1 │ org 0
  2 │ 
  3 │ MOV PSW,Y
@@ -506,7 +506,7 @@ $ spcasm -w all tests/errors/missing-operand.spcasmtest
 spcasm::instruction::missing_operand
 
   × `MOV` takes at least one operand
-   ╭─[tests/errors/missing-operand.spcasmtest:1:1]
+   ╭─[tests/errors/missing-operand.spcasmtest:2:1]
  1 │ org 0
  2 │ mov
    · ─┬─
@@ -529,7 +529,7 @@ $ spcasm -w all tests/errors/missing-second-operand.spcasmtest
 spcasm::instruction::missing_second_operand
 
   × `MOV` takes two operands
-   ╭─[tests/errors/missing-second-operand.spcasmtest:1:1]
+   ╭─[tests/errors/missing-second-operand.spcasmtest:2:1]
  1 │ org 0
  2 │ mov a
    · ──┬──
@@ -552,7 +552,7 @@ $ spcasm -w all tests/errors/no-operand.spcasmtest
 spcasm::instruction::operand_not_allowed
 
   × `NOP` doesn't take any operands
-   ╭─[tests/errors/no-operand.spcasmtest:1:1]
+   ╭─[tests/errors/no-operand.spcasmtest:2:1]
  1 │ org 0
  2 │ nop a
    · ──┬──
@@ -573,7 +573,7 @@ $ spcasm -w all tests/errors/two-operands.spcasmtest
 spcasm::instruction::two_operands_not_allowed
 
   × Two operands are not allowed for `POP`
-   ╭─[tests/errors/two-operands.spcasmtest:1:1]
+   ╭─[tests/errors/two-operands.spcasmtest:2:1]
  1 │ org 0
  2 │ pop x,a
    · ───┬───
@@ -598,7 +598,7 @@ $ spcasm -w all tests/errors/audio-processing.spcasmtest
 spcasm::io::audio_processing_error
 
   × failed to fill whole buffer
-   ╭─[tests/errors/audio-processing.spcasmtest:1:1]
+   ╭─[tests/errors/audio-processing.spcasmtest:3:1]
  1 │ org 0
  2 │ 
  3 │ brr "../binary.bin"
@@ -649,7 +649,7 @@ $ spcasm -w all tests/errors/missing-global.spcasmtest
 spcasm::reference::missing_global
 
   × There is no global label defined before the local label 'local_label'
-   ╭─[tests/errors/missing-global.spcasmtest:1:1]
+   ╭─[tests/errors/missing-global.spcasmtest:2:2]
  1 │ org 0
  2 │ .local_label:
    ·  ─────┬─────
@@ -671,7 +671,7 @@ $ spcasm -w all tests/errors/double-define.spcasmtest
 spcasm::reference::redefine
 
   × Reference 'here' was defined more than once
-   ╭─[tests/errors/double-define.spcasmtest:1:1]
+   ╭─[tests/errors/double-define.spcasmtest:3:1]
  1 │ org 0
  2 │ 
  3 │ here:
@@ -701,7 +701,7 @@ $ spcasm -w all tests/errors/unresolved-label.spcasmtest
 spcasm::reference::unresolved
 
   × Reference 'no_exist' can not be resolved to a value
-   ╭─[tests/errors/unresolved-label.spcasmtest:1:1]
+   ╭─[tests/errors/unresolved-label.spcasmtest:2:1]
  1 │ org 0
  2 │ mov a,no_exist
    · ───────┬──────┬
@@ -738,7 +738,7 @@ $ spcasm -w all tests/errors/empty-segment-stack.spcasmtest
 spcasm::segment::empty_stack
 
   × There is no segment on the stack
-   ╭─[tests/errors/empty-segment-stack.spcasmtest:1:1]
+   ╭─[tests/errors/empty-segment-stack.spcasmtest:3:1]
  1 │ org 0
  2 │ 
  3 │ pullpc
@@ -761,7 +761,7 @@ $ spcasm -w all tests/errors/segment-mismatch.spcasmtest
 spcasm::segment::mismatch
 
   × Segment at 0005 starts before the end of the previous one, which is 000a
-   ╭─[tests/errors/segment-mismatch.spcasmtest:1:1]
+   ╭─[tests/errors/segment-mismatch.spcasmtest:1:17]
  1 │  00 01 02 03 04 [05] 06 07 08 09
    ·                 ─┬
    ·                  ╰── Unexpected
@@ -780,7 +780,7 @@ $ spcasm -w all tests/errors/missing-segment-after-pop.spcasmtest
 spcasm::segment::missing
 
   × There is no active segment here
-   ╭─[tests/errors/missing-segment-after-pop.spcasmtest:1:1]
+   ╭─[tests/errors/missing-segment-after-pop.spcasmtest:3:1]
  1 │ org 0
  2 │ pushpc
  3 │ db 0
@@ -812,7 +812,7 @@ $ spcasm -w all tests/errors/parser-dangling.spcasmtest
 spcasm::syntax::expected_token
 
   × Expected any of "/n", ";="
-   ╭─[tests/errors/parser-dangling.spcasmtest:1:1]
+   ╭─[tests/errors/parser-dangling.spcasmtest:3:8]
  1 │ org 0
  2 │ adc a,x
  3 │ endasm 50
@@ -833,7 +833,7 @@ $ spcasm -w all tests/errors/parser-bit-index.spcasmtest
 spcasm::syntax::invalid_bit_index
 
   × Invalid bit index `8`
-   ╭─[tests/errors/parser-bit-index.spcasmtest:1:1]
+   ╭─[tests/errors/parser-bit-index.spcasmtest:2:9]
  1 │ org 0
  2 │ set1 33.8
    ·         ┬
@@ -854,7 +854,7 @@ $ spcasm -w all tests/errors/parser-invalid-number.spcasmtest
 spcasm::syntax::invalid_number
 
   × Invalid number: invalid digit found in string
-   ╭─[tests/errors/parser-invalid-number.spcasmtest:1:1]
+   ╭─[tests/errors/parser-invalid-number.spcasmtest:2:9]
  1 │ org 0
  2 │ label = %134af
    ·         ───┬──
@@ -870,7 +870,7 @@ $ spcasm -w all tests/errors/parser-too-large-number.spcasmtest
 spcasm::syntax::invalid_number
 
   × Invalid number: number too large to fit in target type
-   ╭─[tests/errors/parser-too-large-number.spcasmtest:1:1]
+   ╭─[tests/errors/parser-too-large-number.spcasmtest:1:5]
  1 │ org $99999999999999999999999999999999999999
    ·     ───────────────────┬───────────────────
    ·                        ╰── number too large to fit in target type
@@ -908,7 +908,7 @@ spcasm::syntax::missing_token
   │ "identifier", "if", "incbin", "include", "incsrc", "macro", "math",
   │ "mnemonic", "namespace", "org", "pad", "padbyte", "paddword", "padlong",
   │ "padword", "pullpc", "pushpc", "sampletable", "startpos", "word"
-   ╭─[tests/errors/parser-missing-token.spcasmtest:1:1]
+   ╭─[tests/errors/parser-missing-token.spcasmtest:3:1]
  1 │ org 0
  2 │ label:
    ╰────
@@ -959,7 +959,7 @@ $ spcasm -w all tests/errors/assign-to-argument.spcasmtest
 spcasm::reference::assign_invalid
 
   × Assigning a value to macro argument '<first>' is not possible
-   ╭─[tests/errors/assign-to-argument.spcasmtest:1:1]
+   ╭─[tests/errors/assign-to-argument.spcasmtest:4:2]
  1 │ org 0
  2 │ 
  3 │ macro my_macro(first)
@@ -991,16 +991,16 @@ $ spcasm -w all tests/errors/too-few-arguments.spcasmtest
 spcasm::user_macro::incorrect_number_of_arguments
 
   × Macro 'my_macro' takes 1 arguments, but 0 were supplied
-   ╭─[tests/errors/too-few-arguments.spcasmtest:1:1]
+   ╭─[tests/errors/too-few-arguments.spcasmtest:3:1]
  1 │     org 0
  2 │     
  3 │ ╭─▶ macro my_macro(one)
  4 │ ├─▶ endmacro
    · ╰──── 'my_macro' defined here with 1 arguments
  5 │     
- 6 │ ╭─▶ %my_macro()
-   · │ ─────┬─────
-   · │      ╰── In this macro call
+ 6 │     %my_macro()
+   ·     ─────┬─────
+   ·          ╰── In this macro call
    ╰────
   help: Add arguments
 
@@ -1017,7 +1017,7 @@ $ spcasm -w all tests/errors/recursive-definition.spcasmtest
 spcasm::user_macro::recursive_definition
 
   × User macro 'inner' is defined inside another user macro
-   ╭─[tests/errors/recursive-definition.spcasmtest:1:1]
+   ╭─[tests/errors/recursive-definition.spcasmtest:3:7]
  1 │ org 0
  2 │ 
  3 │ macro outer
@@ -1049,7 +1049,7 @@ spcasm::user_macro::recursive_use
 
   × Maximum recursion depth 1000 was exceeded while expanding user macro
   │ 'recursive'
-   ╭─[tests/errors/recursive-macro.spcasmtest:2:1]
+   ╭─[tests/errors/recursive-macro.spcasmtest:5:3]
  2 │ 
  3 │ macro recursive
  4 │   mov a,#4
@@ -1077,7 +1077,7 @@ $ spcasm -w all tests/errors/undefined-macro.spcasmtest
 spcasm::user_macro::undefined
 
   × Macro 'does_not_exist' is not defined
-   ╭─[tests/errors/undefined-macro.spcasmtest:3:1]
+   ╭─[tests/errors/undefined-macro.spcasmtest:6:1]
  3 │ macro does_ot_exist
  4 │ endmacro
  5 │ 
@@ -1100,7 +1100,7 @@ $ spcasm -w all tests/errors/undefined-macro-argument.spcasmtest
 spcasm::user_macro::undefined_argument
 
   × Macro argument 'two' has not been defined in this macro
-   ╭─[tests/errors/undefined-macro-argument.spcasmtest:1:1]
+   ╭─[tests/errors/undefined-macro-argument.spcasmtest:4:9]
  1 │ org 0
  2 │ 
  3 │ macro my_macro(one)

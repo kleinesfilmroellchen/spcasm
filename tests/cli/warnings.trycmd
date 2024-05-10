@@ -19,7 +19,7 @@ spcasm::relative_offset_too_large
 
   ⚠ The relative offset to address `002C` is out of range, the result will
   │ be wrong.
-     ╭─[tests/opcodes.s:203:1]
+     ╭─[tests/opcodes.s:206:13]
  203 │    bvc reltarget+8  ;= 50 F8
  204 │    bmi reltarget+10 ;= 30 F8
  205 │    bpl reltarget+12 ;= 10 F8
@@ -39,7 +39,7 @@ spcasm::relative_offset_too_large
 
   ⚠ The relative offset to address `002E` is out of range, the result will
   │ be wrong.
-     ╭─[tests/opcodes.s:204:1]
+     ╭─[tests/opcodes.s:207:15]
  204 │    bmi reltarget+10 ;= 30 F8
  205 │    bpl reltarget+12 ;= 10 F8
  206 │    cbne $2B,$2C  ;= 2E 2B B7
@@ -59,7 +59,7 @@ spcasm::relative_offset_too_large
 
   ⚠ The relative offset to address `0030` is out of range, the result will
   │ be wrong.
-     ╭─[tests/opcodes.s:205:1]
+     ╭─[tests/opcodes.s:208:13]
  205 │    bpl reltarget+12 ;= 10 F8
  206 │    cbne $2B,$2C  ;= 2E 2B B7
  207 │    cbne $2D+X,$2E;= DE 2D B6
@@ -79,7 +79,7 @@ spcasm::relative_offset_too_large
 
   ⚠ The relative offset to address `0031` is out of range, the result will
   │ be wrong.
-     ╭─[tests/opcodes.s:206:1]
+     ╭─[tests/opcodes.s:209:11]
  206 │    cbne $2B,$2C  ;= 2E 2B B7
  207 │    cbne $2D+X,$2E;= DE 2D B6
  208 │    dbnz $2F,$30  ;= 6E 2F B5
@@ -99,7 +99,7 @@ spcasm::relative_offset_too_large
 
   ⚠ The relative offset to address `00F9` is out of range, the result will
   │ be wrong.
-     ╭─[tests/opcodes.s:223:1]
+     ╭─[tests/opcodes.s:226:15]
  223 │ global_selftarget:
  224 │    bne global_selftarget ;= D0 FE
  225 │ 
@@ -119,7 +119,7 @@ spcasm::relative_offset_too_large
 
   ⚠ The relative offset to address `00F9` is out of range, the result will
   │ be wrong.
-     ╭─[tests/opcodes.s:224:1]
+     ╭─[tests/opcodes.s:227:14]
  224 │    bne global_selftarget ;= D0 FE
  225 │ 
  226 │    bbs data.0,$F9 ;= 03 13 64
@@ -139,7 +139,7 @@ spcasm::relative_offset_too_large
 
   ⚠ The relative offset to address `00F9` is out of range, the result will
   │ be wrong.
-     ╭─[tests/opcodes.s:225:1]
+     ╭─[tests/opcodes.s:228:14]
  225 │ 
  226 │    bbs data.0,$F9 ;= 03 13 64
  227 │    bbs $30.1,$F9 ;= 23 30 61
@@ -159,7 +159,7 @@ spcasm::relative_offset_too_large
 
   ⚠ The relative offset to address `00F9` is out of range, the result will
   │ be wrong.
-     ╭─[tests/opcodes.s:226:1]
+     ╭─[tests/opcodes.s:229:14]
  226 │    bbs data.0,$F9 ;= 03 13 64
  227 │    bbs $30.1,$F9 ;= 23 30 61
  228 │    bbs $30.2,$F9 ;= 43 30 5E
@@ -179,7 +179,7 @@ spcasm::relative_offset_too_large
 
   ⚠ The relative offset to address `00F9` is out of range, the result will
   │ be wrong.
-     ╭─[tests/opcodes.s:227:1]
+     ╭─[tests/opcodes.s:230:14]
  227 │    bbs $30.1,$F9 ;= 23 30 61
  228 │    bbs $30.2,$F9 ;= 43 30 5E
  229 │    bbs $30.3,$F9 ;= 63 30 5B
@@ -199,7 +199,7 @@ spcasm::relative_offset_too_large
 
   ⚠ The relative offset to address `00F9` is out of range, the result will
   │ be wrong.
-     ╭─[tests/opcodes.s:228:1]
+     ╭─[tests/opcodes.s:231:14]
  228 │    bbs $30.2,$F9 ;= 43 30 5E
  229 │    bbs $30.3,$F9 ;= 63 30 5B
  230 │    bbs $30.4,$F9 ;= 83 30 58
@@ -219,7 +219,7 @@ spcasm::relative_offset_too_large
 
   ⚠ The relative offset to address `00F9` is out of range, the result will
   │ be wrong.
-     ╭─[tests/opcodes.s:229:1]
+     ╭─[tests/opcodes.s:232:14]
  229 │    bbs $30.3,$F9 ;= 63 30 5B
  230 │    bbs $30.4,$F9 ;= 83 30 58
  231 │    bbs $30.5,$F9 ;= A3 30 55
@@ -239,7 +239,7 @@ spcasm::relative_offset_too_large
 
   ⚠ The relative offset to address `00F9` is out of range, the result will
   │ be wrong.
-     ╭─[tests/opcodes.s:230:1]
+     ╭─[tests/opcodes.s:233:14]
  230 │    bbs $30.4,$F9 ;= 83 30 58
  231 │    bbs $30.5,$F9 ;= A3 30 55
  232 │    bbs $30.6,$F9 ;= C3 30 52
@@ -259,7 +259,7 @@ spcasm::relative_offset_too_large
 
   ⚠ The relative offset to address `0005` is out of range, the result will
   │ be wrong.
-     ╭─[tests/opcodes.s:231:1]
+     ╭─[tests/opcodes.s:234:16]
  231 │    bbs $30.5,$F9 ;= A3 30 55
  232 │    bbs $30.6,$F9 ;= C3 30 52
  233 │    bbs $30.7,$F9 ;= E3 30 4F
@@ -279,7 +279,7 @@ spcasm::relative_offset_too_large
 
   ⚠ The relative offset to address `0005` is out of range, the result will
   │ be wrong.
-     ╭─[tests/opcodes.s:232:1]
+     ╭─[tests/opcodes.s:235:14]
  232 │    bbs $30.6,$F9 ;= C3 30 52
  233 │    bbs $30.7,$F9 ;= E3 30 4F
  234 │    bbc start.0,$05 ;= 13 00 58
@@ -299,7 +299,7 @@ spcasm::relative_offset_too_large
 
   ⚠ The relative offset to address `0005` is out of range, the result will
   │ be wrong.
-     ╭─[tests/opcodes.s:233:1]
+     ╭─[tests/opcodes.s:236:14]
  233 │    bbs $30.7,$F9 ;= E3 30 4F
  234 │    bbc start.0,$05 ;= 13 00 58
  235 │    bbc $31.1,$05 ;= 33 31 55
@@ -319,7 +319,7 @@ spcasm::relative_offset_too_large
 
   ⚠ The relative offset to address `0005` is out of range, the result will
   │ be wrong.
-     ╭─[tests/opcodes.s:234:1]
+     ╭─[tests/opcodes.s:237:14]
  234 │    bbc start.0,$05 ;= 13 00 58
  235 │    bbc $31.1,$05 ;= 33 31 55
  236 │    bbc $31.2,$05 ;= 53 31 52
@@ -339,7 +339,7 @@ spcasm::relative_offset_too_large
 
   ⚠ The relative offset to address `0005` is out of range, the result will
   │ be wrong.
-     ╭─[tests/opcodes.s:235:1]
+     ╭─[tests/opcodes.s:238:14]
  235 │    bbc $31.1,$05 ;= 33 31 55
  236 │    bbc $31.2,$05 ;= 53 31 52
  237 │    bbc $31.3,$05 ;= 73 31 4F
@@ -359,7 +359,7 @@ spcasm::relative_offset_too_large
 
   ⚠ The relative offset to address `0005` is out of range, the result will
   │ be wrong.
-     ╭─[tests/opcodes.s:236:1]
+     ╭─[tests/opcodes.s:239:14]
  236 │    bbc $31.2,$05 ;= 53 31 52
  237 │    bbc $31.3,$05 ;= 73 31 4F
  238 │    bbc $31.4,$05 ;= 93 31 4C
@@ -379,7 +379,7 @@ spcasm::relative_offset_too_large
 
   ⚠ The relative offset to address `0005` is out of range, the result will
   │ be wrong.
-     ╭─[tests/opcodes.s:237:1]
+     ╭─[tests/opcodes.s:240:14]
  237 │    bbc $31.3,$05 ;= 73 31 4F
  238 │    bbc $31.4,$05 ;= 93 31 4C
  239 │    bbc $31.5,$05 ;= B3 31 49
@@ -399,7 +399,7 @@ spcasm::relative_offset_too_large
 
   ⚠ The relative offset to address `0005` is out of range, the result will
   │ be wrong.
-     ╭─[tests/opcodes.s:238:1]
+     ╭─[tests/opcodes.s:241:14]
  238 │    bbc $31.4,$05 ;= 93 31 4C
  239 │    bbc $31.5,$05 ;= B3 31 49
  240 │    bbc $31.6,$05 ;= D3 31 46
@@ -445,7 +445,7 @@ spcasm::relative_offset_too_large
 
   ⚠ The relative offset to address `002C` is out of range, the result will
   │ be wrong.
-     ╭─[tests/opcodes.s:203:1]
+     ╭─[tests/opcodes.s:206:13]
  203 │    bvc reltarget+8  ;= 50 F8
  204 │    bmi reltarget+10 ;= 30 F8
  205 │    bpl reltarget+12 ;= 10 F8
@@ -465,7 +465,7 @@ spcasm::relative_offset_too_large
 
   ⚠ The relative offset to address `002E` is out of range, the result will
   │ be wrong.
-     ╭─[tests/opcodes.s:204:1]
+     ╭─[tests/opcodes.s:207:15]
  204 │    bmi reltarget+10 ;= 30 F8
  205 │    bpl reltarget+12 ;= 10 F8
  206 │    cbne $2B,$2C  ;= 2E 2B B7
@@ -485,7 +485,7 @@ spcasm::relative_offset_too_large
 
   ⚠ The relative offset to address `0030` is out of range, the result will
   │ be wrong.
-     ╭─[tests/opcodes.s:205:1]
+     ╭─[tests/opcodes.s:208:13]
  205 │    bpl reltarget+12 ;= 10 F8
  206 │    cbne $2B,$2C  ;= 2E 2B B7
  207 │    cbne $2D+X,$2E;= DE 2D B6
@@ -505,7 +505,7 @@ spcasm::relative_offset_too_large
 
   ⚠ The relative offset to address `0031` is out of range, the result will
   │ be wrong.
-     ╭─[tests/opcodes.s:206:1]
+     ╭─[tests/opcodes.s:209:11]
  206 │    cbne $2B,$2C  ;= 2E 2B B7
  207 │    cbne $2D+X,$2E;= DE 2D B6
  208 │    dbnz $2F,$30  ;= 6E 2F B5
@@ -525,7 +525,7 @@ spcasm::relative_offset_too_large
 
   ⚠ The relative offset to address `00F9` is out of range, the result will
   │ be wrong.
-     ╭─[tests/opcodes.s:223:1]
+     ╭─[tests/opcodes.s:226:15]
  223 │ global_selftarget:
  224 │    bne global_selftarget ;= D0 FE
  225 │ 
@@ -545,7 +545,7 @@ spcasm::relative_offset_too_large
 
   ⚠ The relative offset to address `00F9` is out of range, the result will
   │ be wrong.
-     ╭─[tests/opcodes.s:224:1]
+     ╭─[tests/opcodes.s:227:14]
  224 │    bne global_selftarget ;= D0 FE
  225 │ 
  226 │    bbs data.0,$F9 ;= 03 13 64
@@ -565,7 +565,7 @@ spcasm::relative_offset_too_large
 
   ⚠ The relative offset to address `00F9` is out of range, the result will
   │ be wrong.
-     ╭─[tests/opcodes.s:225:1]
+     ╭─[tests/opcodes.s:228:14]
  225 │ 
  226 │    bbs data.0,$F9 ;= 03 13 64
  227 │    bbs $30.1,$F9 ;= 23 30 61
@@ -585,7 +585,7 @@ spcasm::relative_offset_too_large
 
   ⚠ The relative offset to address `00F9` is out of range, the result will
   │ be wrong.
-     ╭─[tests/opcodes.s:226:1]
+     ╭─[tests/opcodes.s:229:14]
  226 │    bbs data.0,$F9 ;= 03 13 64
  227 │    bbs $30.1,$F9 ;= 23 30 61
  228 │    bbs $30.2,$F9 ;= 43 30 5E
@@ -605,7 +605,7 @@ spcasm::relative_offset_too_large
 
   ⚠ The relative offset to address `00F9` is out of range, the result will
   │ be wrong.
-     ╭─[tests/opcodes.s:227:1]
+     ╭─[tests/opcodes.s:230:14]
  227 │    bbs $30.1,$F9 ;= 23 30 61
  228 │    bbs $30.2,$F9 ;= 43 30 5E
  229 │    bbs $30.3,$F9 ;= 63 30 5B
@@ -625,7 +625,7 @@ spcasm::relative_offset_too_large
 
   ⚠ The relative offset to address `00F9` is out of range, the result will
   │ be wrong.
-     ╭─[tests/opcodes.s:228:1]
+     ╭─[tests/opcodes.s:231:14]
  228 │    bbs $30.2,$F9 ;= 43 30 5E
  229 │    bbs $30.3,$F9 ;= 63 30 5B
  230 │    bbs $30.4,$F9 ;= 83 30 58
@@ -645,7 +645,7 @@ spcasm::relative_offset_too_large
 
   ⚠ The relative offset to address `00F9` is out of range, the result will
   │ be wrong.
-     ╭─[tests/opcodes.s:229:1]
+     ╭─[tests/opcodes.s:232:14]
  229 │    bbs $30.3,$F9 ;= 63 30 5B
  230 │    bbs $30.4,$F9 ;= 83 30 58
  231 │    bbs $30.5,$F9 ;= A3 30 55
@@ -665,7 +665,7 @@ spcasm::relative_offset_too_large
 
   ⚠ The relative offset to address `00F9` is out of range, the result will
   │ be wrong.
-     ╭─[tests/opcodes.s:230:1]
+     ╭─[tests/opcodes.s:233:14]
  230 │    bbs $30.4,$F9 ;= 83 30 58
  231 │    bbs $30.5,$F9 ;= A3 30 55
  232 │    bbs $30.6,$F9 ;= C3 30 52
@@ -685,7 +685,7 @@ spcasm::relative_offset_too_large
 
   ⚠ The relative offset to address `0005` is out of range, the result will
   │ be wrong.
-     ╭─[tests/opcodes.s:231:1]
+     ╭─[tests/opcodes.s:234:16]
  231 │    bbs $30.5,$F9 ;= A3 30 55
  232 │    bbs $30.6,$F9 ;= C3 30 52
  233 │    bbs $30.7,$F9 ;= E3 30 4F
@@ -705,7 +705,7 @@ spcasm::relative_offset_too_large
 
   ⚠ The relative offset to address `0005` is out of range, the result will
   │ be wrong.
-     ╭─[tests/opcodes.s:232:1]
+     ╭─[tests/opcodes.s:235:14]
  232 │    bbs $30.6,$F9 ;= C3 30 52
  233 │    bbs $30.7,$F9 ;= E3 30 4F
  234 │    bbc start.0,$05 ;= 13 00 58
@@ -725,7 +725,7 @@ spcasm::relative_offset_too_large
 
   ⚠ The relative offset to address `0005` is out of range, the result will
   │ be wrong.
-     ╭─[tests/opcodes.s:233:1]
+     ╭─[tests/opcodes.s:236:14]
  233 │    bbs $30.7,$F9 ;= E3 30 4F
  234 │    bbc start.0,$05 ;= 13 00 58
  235 │    bbc $31.1,$05 ;= 33 31 55
@@ -745,7 +745,7 @@ spcasm::relative_offset_too_large
 
   ⚠ The relative offset to address `0005` is out of range, the result will
   │ be wrong.
-     ╭─[tests/opcodes.s:234:1]
+     ╭─[tests/opcodes.s:237:14]
  234 │    bbc start.0,$05 ;= 13 00 58
  235 │    bbc $31.1,$05 ;= 33 31 55
  236 │    bbc $31.2,$05 ;= 53 31 52
@@ -765,7 +765,7 @@ spcasm::relative_offset_too_large
 
   ⚠ The relative offset to address `0005` is out of range, the result will
   │ be wrong.
-     ╭─[tests/opcodes.s:235:1]
+     ╭─[tests/opcodes.s:238:14]
  235 │    bbc $31.1,$05 ;= 33 31 55
  236 │    bbc $31.2,$05 ;= 53 31 52
  237 │    bbc $31.3,$05 ;= 73 31 4F
@@ -785,7 +785,7 @@ spcasm::relative_offset_too_large
 
   ⚠ The relative offset to address `0005` is out of range, the result will
   │ be wrong.
-     ╭─[tests/opcodes.s:236:1]
+     ╭─[tests/opcodes.s:239:14]
  236 │    bbc $31.2,$05 ;= 53 31 52
  237 │    bbc $31.3,$05 ;= 73 31 4F
  238 │    bbc $31.4,$05 ;= 93 31 4C
@@ -805,7 +805,7 @@ spcasm::relative_offset_too_large
 
   ⚠ The relative offset to address `0005` is out of range, the result will
   │ be wrong.
-     ╭─[tests/opcodes.s:237:1]
+     ╭─[tests/opcodes.s:240:14]
  237 │    bbc $31.3,$05 ;= 73 31 4F
  238 │    bbc $31.4,$05 ;= 93 31 4C
  239 │    bbc $31.5,$05 ;= B3 31 49
@@ -825,7 +825,7 @@ spcasm::relative_offset_too_large
 
   ⚠ The relative offset to address `0005` is out of range, the result will
   │ be wrong.
-     ╭─[tests/opcodes.s:238:1]
+     ╭─[tests/opcodes.s:241:14]
  238 │    bbc $31.4,$05 ;= 93 31 4C
  239 │    bbc $31.5,$05 ;= B3 31 49
  240 │    bbc $31.6,$05 ;= D3 31 46
@@ -865,7 +865,7 @@ spcasm::relative_offset_too_large
 
   ⚠ The relative offset to address `002C` is out of range, the result will
   │ be wrong.
-     ╭─[tests/opcodes.s:203:1]
+     ╭─[tests/opcodes.s:206:13]
  203 │    bvc reltarget+8  ;= 50 F8
  204 │    bmi reltarget+10 ;= 30 F8
  205 │    bpl reltarget+12 ;= 10 F8
@@ -885,7 +885,7 @@ spcasm::relative_offset_too_large
 
   ⚠ The relative offset to address `002E` is out of range, the result will
   │ be wrong.
-     ╭─[tests/opcodes.s:204:1]
+     ╭─[tests/opcodes.s:207:15]
  204 │    bmi reltarget+10 ;= 30 F8
  205 │    bpl reltarget+12 ;= 10 F8
  206 │    cbne $2B,$2C  ;= 2E 2B B7
@@ -905,7 +905,7 @@ spcasm::relative_offset_too_large
 
   ⚠ The relative offset to address `0030` is out of range, the result will
   │ be wrong.
-     ╭─[tests/opcodes.s:205:1]
+     ╭─[tests/opcodes.s:208:13]
  205 │    bpl reltarget+12 ;= 10 F8
  206 │    cbne $2B,$2C  ;= 2E 2B B7
  207 │    cbne $2D+X,$2E;= DE 2D B6
@@ -925,7 +925,7 @@ spcasm::relative_offset_too_large
 
   ⚠ The relative offset to address `0031` is out of range, the result will
   │ be wrong.
-     ╭─[tests/opcodes.s:206:1]
+     ╭─[tests/opcodes.s:209:11]
  206 │    cbne $2B,$2C  ;= 2E 2B B7
  207 │    cbne $2D+X,$2E;= DE 2D B6
  208 │    dbnz $2F,$30  ;= 6E 2F B5
@@ -945,7 +945,7 @@ spcasm::relative_offset_too_large
 
   ⚠ The relative offset to address `00F9` is out of range, the result will
   │ be wrong.
-     ╭─[tests/opcodes.s:223:1]
+     ╭─[tests/opcodes.s:226:15]
  223 │ global_selftarget:
  224 │    bne global_selftarget ;= D0 FE
  225 │ 
@@ -965,7 +965,7 @@ spcasm::relative_offset_too_large
 
   ⚠ The relative offset to address `00F9` is out of range, the result will
   │ be wrong.
-     ╭─[tests/opcodes.s:224:1]
+     ╭─[tests/opcodes.s:227:14]
  224 │    bne global_selftarget ;= D0 FE
  225 │ 
  226 │    bbs data.0,$F9 ;= 03 13 64
@@ -985,7 +985,7 @@ spcasm::relative_offset_too_large
 
   ⚠ The relative offset to address `00F9` is out of range, the result will
   │ be wrong.
-     ╭─[tests/opcodes.s:225:1]
+     ╭─[tests/opcodes.s:228:14]
  225 │ 
  226 │    bbs data.0,$F9 ;= 03 13 64
  227 │    bbs $30.1,$F9 ;= 23 30 61
@@ -1005,7 +1005,7 @@ spcasm::relative_offset_too_large
 
   ⚠ The relative offset to address `00F9` is out of range, the result will
   │ be wrong.
-     ╭─[tests/opcodes.s:226:1]
+     ╭─[tests/opcodes.s:229:14]
  226 │    bbs data.0,$F9 ;= 03 13 64
  227 │    bbs $30.1,$F9 ;= 23 30 61
  228 │    bbs $30.2,$F9 ;= 43 30 5E
@@ -1025,7 +1025,7 @@ spcasm::relative_offset_too_large
 
   ⚠ The relative offset to address `00F9` is out of range, the result will
   │ be wrong.
-     ╭─[tests/opcodes.s:227:1]
+     ╭─[tests/opcodes.s:230:14]
  227 │    bbs $30.1,$F9 ;= 23 30 61
  228 │    bbs $30.2,$F9 ;= 43 30 5E
  229 │    bbs $30.3,$F9 ;= 63 30 5B
@@ -1045,7 +1045,7 @@ spcasm::relative_offset_too_large
 
   ⚠ The relative offset to address `00F9` is out of range, the result will
   │ be wrong.
-     ╭─[tests/opcodes.s:228:1]
+     ╭─[tests/opcodes.s:231:14]
  228 │    bbs $30.2,$F9 ;= 43 30 5E
  229 │    bbs $30.3,$F9 ;= 63 30 5B
  230 │    bbs $30.4,$F9 ;= 83 30 58
@@ -1065,7 +1065,7 @@ spcasm::relative_offset_too_large
 
   ⚠ The relative offset to address `00F9` is out of range, the result will
   │ be wrong.
-     ╭─[tests/opcodes.s:229:1]
+     ╭─[tests/opcodes.s:232:14]
  229 │    bbs $30.3,$F9 ;= 63 30 5B
  230 │    bbs $30.4,$F9 ;= 83 30 58
  231 │    bbs $30.5,$F9 ;= A3 30 55
@@ -1085,7 +1085,7 @@ spcasm::relative_offset_too_large
 
   ⚠ The relative offset to address `00F9` is out of range, the result will
   │ be wrong.
-     ╭─[tests/opcodes.s:230:1]
+     ╭─[tests/opcodes.s:233:14]
  230 │    bbs $30.4,$F9 ;= 83 30 58
  231 │    bbs $30.5,$F9 ;= A3 30 55
  232 │    bbs $30.6,$F9 ;= C3 30 52
@@ -1105,7 +1105,7 @@ spcasm::relative_offset_too_large
 
   ⚠ The relative offset to address `0005` is out of range, the result will
   │ be wrong.
-     ╭─[tests/opcodes.s:231:1]
+     ╭─[tests/opcodes.s:234:16]
  231 │    bbs $30.5,$F9 ;= A3 30 55
  232 │    bbs $30.6,$F9 ;= C3 30 52
  233 │    bbs $30.7,$F9 ;= E3 30 4F
@@ -1125,7 +1125,7 @@ spcasm::relative_offset_too_large
 
   ⚠ The relative offset to address `0005` is out of range, the result will
   │ be wrong.
-     ╭─[tests/opcodes.s:232:1]
+     ╭─[tests/opcodes.s:235:14]
  232 │    bbs $30.6,$F9 ;= C3 30 52
  233 │    bbs $30.7,$F9 ;= E3 30 4F
  234 │    bbc start.0,$05 ;= 13 00 58
@@ -1145,7 +1145,7 @@ spcasm::relative_offset_too_large
 
   ⚠ The relative offset to address `0005` is out of range, the result will
   │ be wrong.
-     ╭─[tests/opcodes.s:233:1]
+     ╭─[tests/opcodes.s:236:14]
  233 │    bbs $30.7,$F9 ;= E3 30 4F
  234 │    bbc start.0,$05 ;= 13 00 58
  235 │    bbc $31.1,$05 ;= 33 31 55
@@ -1165,7 +1165,7 @@ spcasm::relative_offset_too_large
 
   ⚠ The relative offset to address `0005` is out of range, the result will
   │ be wrong.
-     ╭─[tests/opcodes.s:234:1]
+     ╭─[tests/opcodes.s:237:14]
  234 │    bbc start.0,$05 ;= 13 00 58
  235 │    bbc $31.1,$05 ;= 33 31 55
  236 │    bbc $31.2,$05 ;= 53 31 52
@@ -1185,7 +1185,7 @@ spcasm::relative_offset_too_large
 
   ⚠ The relative offset to address `0005` is out of range, the result will
   │ be wrong.
-     ╭─[tests/opcodes.s:235:1]
+     ╭─[tests/opcodes.s:238:14]
  235 │    bbc $31.1,$05 ;= 33 31 55
  236 │    bbc $31.2,$05 ;= 53 31 52
  237 │    bbc $31.3,$05 ;= 73 31 4F
@@ -1205,7 +1205,7 @@ spcasm::relative_offset_too_large
 
   ⚠ The relative offset to address `0005` is out of range, the result will
   │ be wrong.
-     ╭─[tests/opcodes.s:236:1]
+     ╭─[tests/opcodes.s:239:14]
  236 │    bbc $31.2,$05 ;= 53 31 52
  237 │    bbc $31.3,$05 ;= 73 31 4F
  238 │    bbc $31.4,$05 ;= 93 31 4C
@@ -1225,7 +1225,7 @@ spcasm::relative_offset_too_large
 
   ⚠ The relative offset to address `0005` is out of range, the result will
   │ be wrong.
-     ╭─[tests/opcodes.s:237:1]
+     ╭─[tests/opcodes.s:240:14]
  237 │    bbc $31.3,$05 ;= 73 31 4F
  238 │    bbc $31.4,$05 ;= 93 31 4C
  239 │    bbc $31.5,$05 ;= B3 31 49
@@ -1245,7 +1245,7 @@ spcasm::relative_offset_too_large
 
   ⚠ The relative offset to address `0005` is out of range, the result will
   │ be wrong.
-     ╭─[tests/opcodes.s:238:1]
+     ╭─[tests/opcodes.s:241:14]
  238 │    bbc $31.4,$05 ;= 93 31 4C
  239 │    bbc $31.5,$05 ;= B3 31 49
  240 │    bbc $31.6,$05 ;= D3 31 46
@@ -1285,7 +1285,7 @@ spcasm::relative_offset_too_large
 
   ⚠ The relative offset to address `002C` is out of range, the result will
   │ be wrong.
-     ╭─[tests/opcodes.s:203:1]
+     ╭─[tests/opcodes.s:206:13]
  203 │    bvc reltarget+8  ;= 50 F8
  204 │    bmi reltarget+10 ;= 30 F8
  205 │    bpl reltarget+12 ;= 10 F8
@@ -1305,7 +1305,7 @@ spcasm::relative_offset_too_large
 
   ⚠ The relative offset to address `002E` is out of range, the result will
   │ be wrong.
-     ╭─[tests/opcodes.s:204:1]
+     ╭─[tests/opcodes.s:207:15]
  204 │    bmi reltarget+10 ;= 30 F8
  205 │    bpl reltarget+12 ;= 10 F8
  206 │    cbne $2B,$2C  ;= 2E 2B B7
@@ -1325,7 +1325,7 @@ spcasm::relative_offset_too_large
 
   ⚠ The relative offset to address `0030` is out of range, the result will
   │ be wrong.
-     ╭─[tests/opcodes.s:205:1]
+     ╭─[tests/opcodes.s:208:13]
  205 │    bpl reltarget+12 ;= 10 F8
  206 │    cbne $2B,$2C  ;= 2E 2B B7
  207 │    cbne $2D+X,$2E;= DE 2D B6
@@ -1345,7 +1345,7 @@ spcasm::relative_offset_too_large
 
   ⚠ The relative offset to address `0031` is out of range, the result will
   │ be wrong.
-     ╭─[tests/opcodes.s:206:1]
+     ╭─[tests/opcodes.s:209:11]
  206 │    cbne $2B,$2C  ;= 2E 2B B7
  207 │    cbne $2D+X,$2E;= DE 2D B6
  208 │    dbnz $2F,$30  ;= 6E 2F B5
@@ -1365,7 +1365,7 @@ spcasm::relative_offset_too_large
 
   ⚠ The relative offset to address `00F9` is out of range, the result will
   │ be wrong.
-     ╭─[tests/opcodes.s:223:1]
+     ╭─[tests/opcodes.s:226:15]
  223 │ global_selftarget:
  224 │    bne global_selftarget ;= D0 FE
  225 │ 
@@ -1385,7 +1385,7 @@ spcasm::relative_offset_too_large
 
   ⚠ The relative offset to address `00F9` is out of range, the result will
   │ be wrong.
-     ╭─[tests/opcodes.s:224:1]
+     ╭─[tests/opcodes.s:227:14]
  224 │    bne global_selftarget ;= D0 FE
  225 │ 
  226 │    bbs data.0,$F9 ;= 03 13 64
@@ -1405,7 +1405,7 @@ spcasm::relative_offset_too_large
 
   ⚠ The relative offset to address `00F9` is out of range, the result will
   │ be wrong.
-     ╭─[tests/opcodes.s:225:1]
+     ╭─[tests/opcodes.s:228:14]
  225 │ 
  226 │    bbs data.0,$F9 ;= 03 13 64
  227 │    bbs $30.1,$F9 ;= 23 30 61
@@ -1425,7 +1425,7 @@ spcasm::relative_offset_too_large
 
   ⚠ The relative offset to address `00F9` is out of range, the result will
   │ be wrong.
-     ╭─[tests/opcodes.s:226:1]
+     ╭─[tests/opcodes.s:229:14]
  226 │    bbs data.0,$F9 ;= 03 13 64
  227 │    bbs $30.1,$F9 ;= 23 30 61
  228 │    bbs $30.2,$F9 ;= 43 30 5E
@@ -1445,7 +1445,7 @@ spcasm::relative_offset_too_large
 
   ⚠ The relative offset to address `00F9` is out of range, the result will
   │ be wrong.
-     ╭─[tests/opcodes.s:227:1]
+     ╭─[tests/opcodes.s:230:14]
  227 │    bbs $30.1,$F9 ;= 23 30 61
  228 │    bbs $30.2,$F9 ;= 43 30 5E
  229 │    bbs $30.3,$F9 ;= 63 30 5B
@@ -1465,7 +1465,7 @@ spcasm::relative_offset_too_large
 
   ⚠ The relative offset to address `00F9` is out of range, the result will
   │ be wrong.
-     ╭─[tests/opcodes.s:228:1]
+     ╭─[tests/opcodes.s:231:14]
  228 │    bbs $30.2,$F9 ;= 43 30 5E
  229 │    bbs $30.3,$F9 ;= 63 30 5B
  230 │    bbs $30.4,$F9 ;= 83 30 58
@@ -1485,7 +1485,7 @@ spcasm::relative_offset_too_large
 
   ⚠ The relative offset to address `00F9` is out of range, the result will
   │ be wrong.
-     ╭─[tests/opcodes.s:229:1]
+     ╭─[tests/opcodes.s:232:14]
  229 │    bbs $30.3,$F9 ;= 63 30 5B
  230 │    bbs $30.4,$F9 ;= 83 30 58
  231 │    bbs $30.5,$F9 ;= A3 30 55
@@ -1505,7 +1505,7 @@ spcasm::relative_offset_too_large
 
   ⚠ The relative offset to address `00F9` is out of range, the result will
   │ be wrong.
-     ╭─[tests/opcodes.s:230:1]
+     ╭─[tests/opcodes.s:233:14]
  230 │    bbs $30.4,$F9 ;= 83 30 58
  231 │    bbs $30.5,$F9 ;= A3 30 55
  232 │    bbs $30.6,$F9 ;= C3 30 52
@@ -1525,7 +1525,7 @@ spcasm::relative_offset_too_large
 
   ⚠ The relative offset to address `0005` is out of range, the result will
   │ be wrong.
-     ╭─[tests/opcodes.s:231:1]
+     ╭─[tests/opcodes.s:234:16]
  231 │    bbs $30.5,$F9 ;= A3 30 55
  232 │    bbs $30.6,$F9 ;= C3 30 52
  233 │    bbs $30.7,$F9 ;= E3 30 4F
@@ -1545,7 +1545,7 @@ spcasm::relative_offset_too_large
 
   ⚠ The relative offset to address `0005` is out of range, the result will
   │ be wrong.
-     ╭─[tests/opcodes.s:232:1]
+     ╭─[tests/opcodes.s:235:14]
  232 │    bbs $30.6,$F9 ;= C3 30 52
  233 │    bbs $30.7,$F9 ;= E3 30 4F
  234 │    bbc start.0,$05 ;= 13 00 58
@@ -1565,7 +1565,7 @@ spcasm::relative_offset_too_large
 
   ⚠ The relative offset to address `0005` is out of range, the result will
   │ be wrong.
-     ╭─[tests/opcodes.s:233:1]
+     ╭─[tests/opcodes.s:236:14]
  233 │    bbs $30.7,$F9 ;= E3 30 4F
  234 │    bbc start.0,$05 ;= 13 00 58
  235 │    bbc $31.1,$05 ;= 33 31 55
@@ -1585,7 +1585,7 @@ spcasm::relative_offset_too_large
 
   ⚠ The relative offset to address `0005` is out of range, the result will
   │ be wrong.
-     ╭─[tests/opcodes.s:234:1]
+     ╭─[tests/opcodes.s:237:14]
  234 │    bbc start.0,$05 ;= 13 00 58
  235 │    bbc $31.1,$05 ;= 33 31 55
  236 │    bbc $31.2,$05 ;= 53 31 52
@@ -1605,7 +1605,7 @@ spcasm::relative_offset_too_large
 
   ⚠ The relative offset to address `0005` is out of range, the result will
   │ be wrong.
-     ╭─[tests/opcodes.s:235:1]
+     ╭─[tests/opcodes.s:238:14]
  235 │    bbc $31.1,$05 ;= 33 31 55
  236 │    bbc $31.2,$05 ;= 53 31 52
  237 │    bbc $31.3,$05 ;= 73 31 4F
@@ -1625,7 +1625,7 @@ spcasm::relative_offset_too_large
 
   ⚠ The relative offset to address `0005` is out of range, the result will
   │ be wrong.
-     ╭─[tests/opcodes.s:236:1]
+     ╭─[tests/opcodes.s:239:14]
  236 │    bbc $31.2,$05 ;= 53 31 52
  237 │    bbc $31.3,$05 ;= 73 31 4F
  238 │    bbc $31.4,$05 ;= 93 31 4C
@@ -1645,7 +1645,7 @@ spcasm::relative_offset_too_large
 
   ⚠ The relative offset to address `0005` is out of range, the result will
   │ be wrong.
-     ╭─[tests/opcodes.s:237:1]
+     ╭─[tests/opcodes.s:240:14]
  237 │    bbc $31.3,$05 ;= 73 31 4F
  238 │    bbc $31.4,$05 ;= 93 31 4C
  239 │    bbc $31.5,$05 ;= B3 31 49
@@ -1665,7 +1665,7 @@ spcasm::relative_offset_too_large
 
   ⚠ The relative offset to address `0005` is out of range, the result will
   │ be wrong.
-     ╭─[tests/opcodes.s:238:1]
+     ╭─[tests/opcodes.s:241:14]
  238 │    bbc $31.4,$05 ;= 93 31 4C
  239 │    bbc $31.5,$05 ;= B3 31 49
  240 │    bbc $31.6,$05 ;= D3 31 46

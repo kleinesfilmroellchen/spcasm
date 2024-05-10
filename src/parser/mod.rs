@@ -79,7 +79,7 @@ impl Into<SourceSpan> for SpanOrOffset {
 	fn into(self) -> SourceSpan {
 		match self {
 			Self::Span(span) => span,
-			Self::Offset(offset) => (offset, 0.into()).into(),
+			Self::Offset(offset) => (offset, 0).into(),
 		}
 	}
 }

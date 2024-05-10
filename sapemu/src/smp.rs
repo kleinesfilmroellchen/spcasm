@@ -86,6 +86,7 @@ impl CpuIOPorts {
 
 	/// Perform a read from the main CPU.
 	#[inline]
+	#[allow(clippy::needless_pass_by_ref_mut)]
 	pub fn read(&mut self, port_number: u16) -> u8 {
 		Self::check_port_number(port_number);
 
@@ -107,6 +108,7 @@ impl CpuIOPorts {
 	/// # Panics
 	/// Panics if the port number is invalid.
 	#[inline]
+	#[allow(clippy::needless_pass_by_ref_mut)]
 	pub fn read_from_smp<const PORT_NUMBER: u8>(&mut self) -> u8 {
 		// FIXME: Should always be a compile-time check...
 		assert!(PORT_NUMBER <= 4, "Illegal port number {PORT_NUMBER}");
@@ -392,6 +394,7 @@ impl Smp {
 		data
 	}
 
+	#[allow(clippy::needless_pass_by_ref_mut)]
 	fn memory_write(&mut self, address: u16, value: u8, memory: &mut Memory) {
 		if self.test.contains(TestRegister::RamWriteDisable) {
 			debug!("RAM write to {} is disabled via TEST register", address);

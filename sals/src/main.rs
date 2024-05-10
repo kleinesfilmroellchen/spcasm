@@ -1,7 +1,12 @@
 #![doc = include_str!("../README.md")]
 #![feature(try_blocks)]
 #![deny(missing_docs, unused, clippy::all, clippy::pedantic, clippy::nursery)]
-#![allow(clippy::wildcard_imports, clippy::ignored_unit_patterns, clippy::needless_raw_string_hashes)]
+#![allow(
+	clippy::wildcard_imports,
+	clippy::ignored_unit_patterns,
+	clippy::needless_raw_string_hashes,
+	clippy::doc_markdown
+)]
 
 use std::path::Path;
 use std::sync::Arc;

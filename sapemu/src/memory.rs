@@ -46,6 +46,7 @@ impl Memory {
 
 	/// Performs a read from memory at the given address.
 	#[inline]
+	#[allow(clippy::needless_pass_by_ref_mut)]
 	pub fn read(&mut self, address: u16, enable_boot_rom: bool) -> u8 {
 		// TODO: Doesn't handle external hardware registers.
 		let result = match address {

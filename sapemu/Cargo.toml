@@ -18,7 +18,7 @@ object = { version = "0.35", features = [
 	"read",
 	"elf",
 ], default-features = false }
-simple_logger = "4"
+simple_logger = "5"
 bitflags = "2"
 
 [dependencies.spcasm]

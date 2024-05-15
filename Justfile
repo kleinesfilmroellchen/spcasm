@@ -51,7 +51,6 @@ doc-watch:
 # Assemble the GitHub Pages site
 github-pages:
 	cd spcasm-web && trunk build --dist ../site --release --no-default-features --public-url spcasm
-	chmod +x doc/copy-readme-for-gh-pages.sh && doc/copy-readme-for-gh-pages.sh
 	just doc
 	cp -rT doc/book/html site/doc
 	cp -rT target/doc site/doc/api

@@ -13,9 +13,6 @@ follow-web-links = false
 exclude = ['doc/src/SUMMARY\.md']
 warning-policy = "ignore"
 
-[output.pdf]
-optional = true
-
 [preprocessor.toc]
 command = "mdbook-toc"
 renderer = ["html"]

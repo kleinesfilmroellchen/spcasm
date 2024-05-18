@@ -80,7 +80,6 @@ release-finalize-common version:
 	wsl './spcasm-{{version}}/brr' --version
 	./spcasm-{{version}}/brr.exe --version
 	cd doc && mdbook build
-	cp doc/book/pdf/output.pdf 'spcasm-{{version}}/spcasm-manual.pdf'
 	wsl -e cp -rT include 'spcasm-{{version}}/include'
 	cd spcasm-{{version}} && zip spcasm-{{version}}.zip '*' 'include/*' -x spcasm brr
 	wsl -e tar -caz --exclude '*.exe' --exclude '*.zip' -f spcasm-{{version}}.tar.xz -C spcasm-{{version}} .

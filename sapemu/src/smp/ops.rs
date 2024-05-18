@@ -33,8 +33,11 @@ pub enum MicroArchAction {
 /// Internal state of an instruction.
 #[derive(Clone, Copy, Debug, Default)]
 pub struct InstructionInternalState {
+	/// An 8-bit relative value, usually used for branch targets.
 	relative: i8,
+	/// A 16-bit address immediate.
 	address:  u16,
+	/// An 8-bit operand, usually the value stored to memory or loaded from memory.
 	operand:  u8,
 	operand2: u8,
 }
@@ -171,7 +174,7 @@ pub const OPCODE_TABLE: [InstructionImpl; 256] = [
 	cmpw_ya_dp,
 	lsr_dp_x,
 	lsr_a,
-	mov_x_y,
+	mov_x_a,
 	cmp_y_addr,
 	jmp_addr,
 	// 0x60
@@ -347,9 +350,9 @@ pub const OPCODE_TABLE: [InstructionImpl; 256] = [
 ];
 
 macro_rules! debug_instruction {
-	($assembly:expr, $cycle:expr) => {
+	($assembly:expr, $cycle:expr, $cpu:expr) => {
 		if $cycle == 0 {
-			log::debug!($assembly);
+			log::debug!(concat!("[{:04x}] ", $assembly), $cpu.pc - 1);
 		}
 	};
 }
@@ -414,7 +417,9 @@ fn brk(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInter
 }
 
 fn bpl(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInternalState) -> MicroArchAction {
-	todo!()
+	debug_instruction!("bpl", cycle, cpu);
+
+	branch_on::<{ ProgramStatusWord::Sign }, false>(cpu, memory, cycle, state)
 }
 fn tcall_1(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInternalState) -> MicroArchAction {
 	todo!()
@@ -463,18 +468,9 @@ fn asl_a(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInt
 	todo!()
 }
 fn dec_x(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInternalState) -> MicroArchAction {
-	debug_instruction!("dec x", cycle);
+	debug_instruction!("dec x", cycle, cpu);
 
-	match cycle {
-		0 => MicroArchAction::Continue(InstructionInternalState::default()),
-		1 => {
-			cpu.x -= 1;
-			cpu.set_negative(cpu.x);
-			cpu.set_zero(cpu.x);
-			MicroArchAction::Next
-		},
-		_ => unreachable!(),
-	}
+	dec_register::<{ Register::X }>(cpu, cycle)
 }
 fn cmp_x_addr(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInternalState) -> MicroArchAction {
 	todo!()
@@ -539,7 +535,7 @@ fn cbne(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInte
 	todo!()
 }
 fn bra(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInternalState) -> MicroArchAction {
-	debug_instruction!("bra", cycle);
+	debug_instruction!("bra", cycle, cpu);
 
 	match cycle {
 		0 => MicroArchAction::Continue(InstructionInternalState::default()),
@@ -562,9 +558,9 @@ fn bra(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInter
 }
 
 fn bmi(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInternalState) -> MicroArchAction {
-	debug_instruction!("bmi", cycle);
+	debug_instruction!("bmi", cycle, cpu);
 
-	branch_on(cpu, memory, cycle, state, ProgramStatusWord::Sign, true)
+	branch_on::<{ ProgramStatusWord::Sign }, true>(cpu, memory, cycle, state)
 }
 fn tcall_3(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInternalState) -> MicroArchAction {
 	todo!()
@@ -730,8 +726,18 @@ fn lsr_dp_x(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: Instruction
 fn lsr_a(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInternalState) -> MicroArchAction {
 	todo!()
 }
-fn mov_x_y(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInternalState) -> MicroArchAction {
-	todo!()
+fn mov_x_a(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInternalState) -> MicroArchAction {
+	debug_instruction!("mov x, a", cycle, cpu);
+
+	match cycle {
+		0 => MicroArchAction::Continue(InstructionInternalState::default()),
+		1 => {
+			cpu.x = cpu.a;
+			cpu.set_negative_zero(cpu.x);
+			MicroArchAction::Next
+		},
+		_ => unreachable!(),
+	}
 }
 fn cmp_y_addr(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInternalState) -> MicroArchAction {
 	todo!()
@@ -829,7 +835,7 @@ fn cmp_a_dp_y_indirect(
 	todo!()
 }
 fn cmp_dp_imm(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInternalState) -> MicroArchAction {
-	debug_instruction!("cmp dp, #imm", cycle);
+	debug_instruction!("cmp dp, #imm", cycle, cpu);
 
 	match cycle {
 		0 => MicroArchAction::Continue(InstructionInternalState::default()),
@@ -848,8 +854,7 @@ fn cmp_dp_imm(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: Instructi
 		4 => {
 			let result = (state.operand2 as i8).wrapping_sub(state.operand as i8);
 			trace!("cmp {:02x} - {:02x} = {:+}", state.operand2, state.operand, result);
-			cpu.set_negative(result as u8);
-			cpu.set_zero(result as u8);
+			cpu.set_negative_zero(result as u8);
 			cpu.set_subtract_carry(state.operand2 as i8, state.operand as i8);
 			MicroArchAction::Next
 		},
@@ -877,7 +882,9 @@ fn mov_a_x(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionI
 	todo!()
 }
 fn cmp_y_dp(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInternalState) -> MicroArchAction {
-	todo!()
+	debug_instruction!("cmp y, dp", cycle, cpu);
+
+	cmp_register_dp::<{ Register::Y }>(cpu, memory, cycle, state)
 }
 fn reti(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInternalState) -> MicroArchAction {
 	todo!()
@@ -939,7 +946,7 @@ fn pop_psw(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionI
 	todo!()
 }
 fn mov_dp_imm(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInternalState) -> MicroArchAction {
-	debug_instruction!("mov dp, #imm", cycle);
+	debug_instruction!("mov dp, #imm", cycle, cpu);
 
 	match cycle {
 		0 => MicroArchAction::Continue(InstructionInternalState::default()),
@@ -1011,7 +1018,9 @@ fn dec_dp_x(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: Instruction
 	todo!()
 }
 fn dec_a(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInternalState) -> MicroArchAction {
-	todo!()
+	debug_instruction!("dec a", cycle, cpu);
+
+	dec_register::<{ Register::A }>(cpu, cycle)
 }
 fn mov_x_sp(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInternalState) -> MicroArchAction {
 	todo!()
@@ -1083,7 +1092,9 @@ fn mov_x_inc_a(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: Instruct
 }
 
 fn bcs(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInternalState) -> MicroArchAction {
-	todo!()
+	debug_instruction!("bcs", cycle, cpu);
+
+	branch_on::<{ ProgramStatusWord::Carry }, true>(cpu, memory, cycle, state)
 }
 fn tcall_11(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInternalState) -> MicroArchAction {
 	todo!()
@@ -1122,8 +1133,9 @@ fn sbc_x_y_indirect(
 ) -> MicroArchAction {
 	todo!()
 }
+#[allow(clippy::cast_lossless)]
 fn movw_ya_dp(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInternalState) -> MicroArchAction {
-	debug_instruction!("movw ya, dp", cycle);
+	debug_instruction!("movw ya, dp", cycle, cpu);
 
 	// TODO: Memory access pattern of this instruction is not known.
 	// Given that there's probably just one temporary address register, we assume:
@@ -1148,6 +1160,12 @@ fn movw_ya_dp(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: Instructi
 		},
 		4 => {
 			cpu.y = cpu.read(state.address, memory);
+
+			// TODO: assume that negative and zero flags are set for the entire word, which is how I would design it :)
+			let value_16bit = ((cpu.y as u16) << 8) | cpu.a as u16;
+			cpu.psw.set(ProgramStatusWord::Sign, (value_16bit as i16) < 0);
+			cpu.psw.set(ProgramStatusWord::Zero, value_16bit == 0);
+
 			MicroArchAction::Next
 		},
 		_ => unreachable!(),
@@ -1160,7 +1178,7 @@ fn inc_a(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInt
 	todo!()
 }
 fn mov_sp_x(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInternalState) -> MicroArchAction {
-	debug_instruction!("mov sp, x", cycle);
+	debug_instruction!("mov sp, x", cycle, cpu);
 
 	match cycle {
 		0 => MicroArchAction::Continue(InstructionInternalState::default()),
@@ -1191,9 +1209,9 @@ fn bbs_6(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInt
 	todo!()
 }
 fn mov_dp_a(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInternalState) -> MicroArchAction {
-	debug_instruction!("mov dp, a", cycle);
+	debug_instruction!("mov dp, a", cycle, cpu);
 
-	move_to_dp(cpu, memory, cycle, state, Register::A)
+	move_to_dp::<{ Register::A }>(cpu, memory, cycle, state)
 }
 fn mov_addr_a(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInternalState) -> MicroArchAction {
 	todo!()
@@ -1204,7 +1222,7 @@ fn mov_x_indirect_a(
 	cycle: usize,
 	state: InstructionInternalState,
 ) -> MicroArchAction {
-	debug_instruction!("mov (x), a", cycle);
+	debug_instruction!("mov (x), a", cycle, cpu);
 
 	match cycle {
 		0 => MicroArchAction::Continue(InstructionInternalState::default()),
@@ -1242,23 +1260,22 @@ fn mov1_addr_c(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: Instruct
 	todo!()
 }
 fn mov_dp_y(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInternalState) -> MicroArchAction {
-	debug_instruction!("mov dp, y", cycle);
+	debug_instruction!("mov dp, y", cycle, cpu);
 
-	move_to_dp(cpu, memory, cycle, state, Register::Y)
+	move_to_dp::<{ Register::Y }>(cpu, memory, cycle, state)
 }
 fn mov_addr_y(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInternalState) -> MicroArchAction {
 	todo!()
 }
 fn mov_x_imm(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInternalState) -> MicroArchAction {
-	debug_instruction!("mov x, #imm", cycle);
+	debug_instruction!("mov x, #imm", cycle, cpu);
 
 	match cycle {
 		0 => MicroArchAction::Continue(InstructionInternalState::default()),
 		1 => {
 			let immediate = cpu.read_next_pc(memory);
 			cpu.x = immediate;
-			cpu.set_negative(cpu.x);
-			cpu.set_zero(cpu.x);
+			cpu.set_negative_zero(cpu.x);
 			MicroArchAction::Next
 		},
 		_ => unreachable!(),
@@ -1272,9 +1289,9 @@ fn mul(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInter
 }
 
 fn bne(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInternalState) -> MicroArchAction {
-	debug_instruction!("bne", cycle);
+	debug_instruction!("bne", cycle, cpu);
 
-	branch_on(cpu, memory, cycle, state, ProgramStatusWord::Zero, true)
+	branch_on::<{ ProgramStatusWord::Zero }, false>(cpu, memory, cycle, state)
 }
 fn tcall_13(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInternalState) -> MicroArchAction {
 	todo!()
@@ -1294,24 +1311,62 @@ fn mov_addr_x_a(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: Instruc
 fn mov_addr_y_a(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInternalState) -> MicroArchAction {
 	todo!()
 }
+#[allow(clippy::cast_lossless)]
 fn mov_dp_indirect_y_a(
 	cpu: &mut Smp,
 	memory: &mut Memory,
 	cycle: usize,
 	state: InstructionInternalState,
 ) -> MicroArchAction {
-	todo!()
+	// This one is very involved, since it needs to store A at byte[word[dp]+Y].
+	match cycle {
+		0 => MicroArchAction::Continue(InstructionInternalState::default()),
+		1 => {
+			// read direct page address of 16-bit pointer
+			let address = u16::from(cpu.read_next_pc(memory)) + cpu.direct_page_offset();
+			MicroArchAction::Continue(state.with_address(address))
+		},
+		2 => {
+			// read lower byte of 16-bit pointer
+			let pointer_low = cpu.read(state.address, memory);
+			MicroArchAction::Continue(state.with_operand(pointer_low))
+		},
+		3 => {
+			// read upper byte of 16-bit pointer
+			let pointer_high = cpu.read(state.address.wrapping_add(1), memory);
+			MicroArchAction::Continue(state.with_operand2(pointer_high))
+		},
+		4 => {
+			// calculate target address
+			// TODO: Does this actually happen here? The cycle count implies it...
+			let base_address = (state.operand as u16) | ((state.operand2 as u16) << 8);
+			let indexed_address = base_address.wrapping_add(cpu.y as u16);
+			trace!("write to [{:04x}+{:02x}] = [{:04x}]", base_address, cpu.y, indexed_address);
+			MicroArchAction::Continue(state.with_address(indexed_address))
+		},
+		5 => {
+			// issue dummy read, as with almost all stores
+			let _ = cpu.read(state.address, memory);
+			MicroArchAction::Continue(state)
+		},
+		6 => {
+			// write A to memory
+			cpu.write(state.address, cpu.a, memory);
+			MicroArchAction::Next
+		},
+		_ => unreachable!(),
+	}
 }
 fn mov_dp_x(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInternalState) -> MicroArchAction {
-	debug_instruction!("mov dp, x", cycle);
+	debug_instruction!("mov dp, x", cycle, cpu);
 
-	move_to_dp(cpu, memory, cycle, state, Register::X)
+	move_to_dp::<{ Register::X }>(cpu, memory, cycle, state)
 }
 fn mov_dp_y_x(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInternalState) -> MicroArchAction {
 	todo!()
 }
 fn movw_dp_ya(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInternalState) -> MicroArchAction {
-	debug_instruction!("movw dp, ya", cycle);
+	debug_instruction!("movw dp, ya", cycle, cpu);
 
 	// TODO: Memory access pattern of this instruction is not known.
 	// Given that there's probably just one temporary address register, we assume:
@@ -1345,10 +1400,22 @@ fn mov_dp_x_y(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: Instructi
 	todo!()
 }
 fn dec_y(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInternalState) -> MicroArchAction {
-	todo!()
+	debug_instruction!("dec y", cycle, cpu);
+
+	dec_register::<{ Register::Y }>(cpu, cycle)
 }
 fn mov_a_y(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInternalState) -> MicroArchAction {
-	todo!()
+	debug_instruction!("mov a, y", cycle, cpu);
+
+	match cycle {
+		0 => MicroArchAction::Continue(InstructionInternalState::default()),
+		1 => {
+			cpu.a = cpu.y;
+			cpu.set_negative_zero(cpu.a);
+			MicroArchAction::Next
+		},
+		_ => unreachable!(),
+	}
 }
 fn cbne_dp_x(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInternalState) -> MicroArchAction {
 	todo!()
@@ -1370,7 +1437,9 @@ fn bbs_7(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInt
 	todo!()
 }
 fn mov_a_dp(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInternalState) -> MicroArchAction {
-	todo!()
+	debug_instruction!("mov a, dp", cycle, cpu);
+
+	move_from_dp::<{ Register::A }>(cpu, memory, cycle, state)
 }
 fn mov_a_addr(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInternalState) -> MicroArchAction {
 	todo!()
@@ -1392,7 +1461,7 @@ fn mov_a_dp_x_indirect(
 	todo!()
 }
 fn mov_a_imm(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInternalState) -> MicroArchAction {
-	debug_instruction!("mov a, #imm", cycle);
+	debug_instruction!("mov a, #imm", cycle, cpu);
 
 	match cycle {
 		0 => MicroArchAction::Continue(InstructionInternalState::default()),
@@ -1413,7 +1482,9 @@ fn not1(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInte
 	todo!()
 }
 fn mov_y_dp(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInternalState) -> MicroArchAction {
-	todo!()
+	debug_instruction!("mov y, dp", cycle, cpu);
+
+	move_from_dp::<{ Register::Y }>(cpu, memory, cycle, state)
 }
 fn mov_y_addr(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInternalState) -> MicroArchAction {
 	todo!()
@@ -1429,7 +1500,9 @@ fn sleep(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInt
 }
 
 fn beq(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInternalState) -> MicroArchAction {
-	todo!()
+	debug_instruction!("beq", cycle, cpu);
+
+	branch_on::<{ ProgramStatusWord::Zero }, true>(cpu, memory, cycle, state)
 }
 fn tcall_15(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInternalState) -> MicroArchAction {
 	todo!()
@@ -1458,7 +1531,9 @@ fn mov_a_dp_indirect_y(
 	todo!()
 }
 fn mov_x_dp(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInternalState) -> MicroArchAction {
-	todo!()
+	debug_instruction!("mov x, dp", cycle, cpu);
+
+	move_from_dp::<{ Register::X }>(cpu, memory, cycle, state)
 }
 fn mov_x_dp_y(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInternalState) -> MicroArchAction {
 	todo!()
@@ -1482,25 +1557,25 @@ fn stop(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInte
 	todo!()
 }
 
+/// Common implementation for all conditional branches. The flag to branch on and its state when to branch are constant
+/// parameters since they are determined at compile time, hopefully improving optimizations around flag checks.
 #[inline]
-fn branch_on(
+fn branch_on<const FLAG: ProgramStatusWord, const IS_SET: bool>(
 	cpu: &mut Smp,
 	memory: &mut Memory,
 	cycle: usize,
 	state: InstructionInternalState,
-	flag: ProgramStatusWord,
-	is_set: bool,
 ) -> MicroArchAction {
 	match cycle {
 		0 => MicroArchAction::Continue(InstructionInternalState::default()),
 		1 => {
 			let offset = cpu.read_next_pc(memory) as i8;
-			// branch if flag set or cleared
-			if cpu.psw.contains(flag) == is_set {
-				MicroArchAction::Next
-			} else {
-				trace!("taking branch to {:+}", offset);
+			// branch if flag set or cleared as the caller requested
+			if cpu.psw.contains(FLAG) == IS_SET {
+				trace!("flag {} = {}, taking branch to {:+}", FLAG, cpu.psw.contains(FLAG), offset);
 				MicroArchAction::Continue(state.with_relative(offset))
+			} else {
+				MicroArchAction::Next
 			}
 		},
 		2 => {
@@ -1517,12 +1592,11 @@ fn branch_on(
 }
 
 #[inline]
-fn move_to_dp(
+fn move_to_dp<const REGISTER: Register>(
 	cpu: &mut Smp,
 	memory: &mut Memory,
 	cycle: usize,
 	state: InstructionInternalState,
-	register: Register,
 ) -> MicroArchAction {
 	match cycle {
 		0 => MicroArchAction::Continue(InstructionInternalState::default()),
@@ -1535,16 +1609,69 @@ fn move_to_dp(
 			MicroArchAction::Continue(state)
 		},
 		3 => {
-			cpu.write(
-				state.address,
-				match register {
-					Register::A => cpu.a,
-					Register::X => cpu.x,
-					Register::Y => cpu.y,
-					_ => unreachable!(),
-				},
-				memory,
-			);
+			cpu.write(state.address, cpu.register_read::<REGISTER>(), memory);
+			MicroArchAction::Next
+		},
+		_ => unreachable!(),
+	}
+}
+
+#[inline]
+fn move_from_dp<const REGISTER: Register>(
+	cpu: &mut Smp,
+	memory: &mut Memory,
+	cycle: usize,
+	state: InstructionInternalState,
+) -> MicroArchAction {
+	match cycle {
+		0 => MicroArchAction::Continue(InstructionInternalState::default()),
+		1 => {
+			let a_address = u16::from(cpu.read_next_pc(memory)) + cpu.direct_page_offset();
+			MicroArchAction::Continue(state.with_address(a_address))
+		},
+		2 => {
+			let value = cpu.read(state.address, memory);
+			cpu.register_write::<REGISTER>(value);
+			cpu.set_negative_zero(value);
+			MicroArchAction::Next
+		},
+		_ => unreachable!(),
+	}
+}
+
+#[inline]
+fn cmp_register_dp<const REGISTER: Register>(
+	cpu: &mut Smp,
+	memory: &mut Memory,
+	cycle: usize,
+	state: InstructionInternalState,
+) -> MicroArchAction {
+	match cycle {
+		0 => MicroArchAction::Continue(InstructionInternalState::default()),
+		1 => {
+			let address = u16::from(cpu.read_next_pc(memory)) + cpu.direct_page_offset();
+			MicroArchAction::Continue(state.with_address(address))
+		},
+		2 => {
+			let operand = cpu.read(state.address, memory);
+			let register = cpu.register_read::<REGISTER>();
+			let result = (register as i8).wrapping_sub(operand as i8);
+			trace!("cmp {:02x} - {:02x} = {:+}", register, operand, result);
+			cpu.set_negative_zero(result as u8);
+			cpu.set_subtract_carry(register as i8, operand as i8);
+			MicroArchAction::Next
+		},
+		_ => unreachable!(),
+	}
+}
+
+#[inline]
+fn dec_register<const REGISTER: Register>(cpu: &mut Smp, cycle: usize) -> MicroArchAction {
+	match cycle {
+		0 => MicroArchAction::Continue(InstructionInternalState::default()),
+		1 => {
+			cpu.register_write::<REGISTER>(cpu.register_read::<REGISTER>().wrapping_sub(1));
+			cpu.set_negative_zero(cpu.register_read::<REGISTER>());
 			MicroArchAction::Next
 		},
 		_ => unreachable!(),

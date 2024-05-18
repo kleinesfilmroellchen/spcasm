@@ -3,6 +3,7 @@
 #![allow(clippy::use_self)]
 
 use std::fmt::Display;
+use std::marker::ConstParamTy;
 
 #[allow(unused)]
 use flexstr::{shared_str, IntoSharedStr, SharedStr, ToSharedStr};
@@ -11,7 +12,7 @@ use spcasm_derive::{Parse, VariantName};
 use crate::VariantName;
 
 /// Registers.
-#[derive(Clone, Copy, Debug, Eq, PartialEq, Parse, VariantName)]
+#[derive(Clone, Copy, Debug, Eq, PartialEq, Parse, VariantName, ConstParamTy)]
 pub enum Register {
 	/// Accumulator.
 	A,

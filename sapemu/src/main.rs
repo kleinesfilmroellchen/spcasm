@@ -1,6 +1,7 @@
 //! S-APU / SPC700 emulator.
 #![deny(missing_docs, unused, clippy::all, clippy::pedantic, clippy::nursery, rustdoc::all)]
-#![feature(slice_as_chunks)]
+#![allow(incomplete_features)]
+#![feature(slice_as_chunks, generic_const_exprs, adt_const_params)]
 
 use std::fs;
 use std::path::PathBuf;
@@ -45,7 +46,7 @@ fn main() {
 	simple_logger::SimpleLogger::new()
 		.with_level(log_level)
 		.with_local_timestamps()
-		.with_timestamp_format(format_description!(version = 2, "[year]-[month]-[day] [hour]:[minute]:[second]"))
+		.with_timestamp_format(format_description!(version = 2, "[hour]:[minute]:[second]"))
 		.init()
 		.unwrap();
 

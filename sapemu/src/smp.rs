@@ -5,8 +5,11 @@
 mod ops;
 pub mod upload;
 
+use std::marker::ConstParamTy;
+
 use bitflags::bitflags;
 use log::{debug, error, trace};
+use spcasm::sema::Register;
 
 use self::ops::InstructionInternalState;
 use crate::memory::Memory;
@@ -109,22 +112,25 @@ impl CpuIOPorts {
 	/// Panics if the port number is invalid.
 	#[inline]
 	#[allow(clippy::needless_pass_by_ref_mut)]
-	pub fn read_from_smp<const PORT_NUMBER: u8>(&mut self) -> u8 {
-		// FIXME: Should always be a compile-time check...
-		assert!(PORT_NUMBER <= 4, "Illegal port number {PORT_NUMBER}");
-		trace!("CPU read CPUIO {PORT_NUMBER} = {0:02x} ({0})", self.write_ports[PORT_NUMBER as usize]);
+	pub fn read_from_smp<const PORT_NUMBER: u8>(&mut self) -> u8
+	where
+		// FIXME: currently accepted hack to create arbitrary expression bounds.
+		//        This expression is designed so it will overflow for values >= 4.
+		[(); (PORT_NUMBER + (0xff - 3)) as usize]:, // Only port numbers between 0 and 3 inclusive are allowed
+	{
+		trace!("[SNES-CPU] read CPUIO {PORT_NUMBER} = {0:02x} ({0})", self.write_ports[PORT_NUMBER as usize]);
 		self.write_ports[PORT_NUMBER as usize]
 	}
 
 	/// Perform a read to the SMP.
-	///
-	/// # Panics
-	/// Panics if the port number is invalid.
 	#[inline]
-	pub fn write_to_smp<const PORT_NUMBER: u8>(&mut self, value: u8) {
-		// FIXME: Should always be a compile-time check...
-		assert!(PORT_NUMBER <= 4, "Illegal port number {PORT_NUMBER}");
-		trace!("CPU write CPUIO {PORT_NUMBER} = {0:02x} ({0})", value);
+	pub fn write_to_smp<const PORT_NUMBER: u8>(&mut self, value: u8)
+	where
+		// FIXME: currently accepted hack to create arbitrary expression bounds.
+		//        This expression is designed so it will overflow for values >= 4.
+		[(); (PORT_NUMBER + (0xff - 3)) as usize]:, // Only port numbers between 0 and 3 inclusive are allowed
+	{
+		trace!("[SNES-CPU] write CPUIO {PORT_NUMBER} = {0:02x} ({0})", value);
 		self.read_ports[PORT_NUMBER as usize] = value;
 	}
 }
@@ -217,7 +223,7 @@ pub struct TestRegister(u8);
 #[repr(transparent)]
 pub struct ControlRegister(u8);
 /// Program Status Word (flags register).
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, PartialEq, Eq, ConstParamTy)]
 #[repr(transparent)]
 pub struct ProgramStatusWord(u8);
 
@@ -274,6 +280,23 @@ bitflags! {
 	}
 }
 
+impl std::fmt::Display for ProgramStatusWord {
+	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+		write!(
+			f,
+			"{}{}{}{}{}{}{}{}",
+			if self.contains(Self::Sign) { "N" } else { "-" },
+			if self.contains(Self::Overflow) { "V" } else { "-" },
+			if self.contains(Self::DirectPage) { "P" } else { "-" },
+			if self.contains(Self::Break) { "B" } else { "-" },
+			if self.contains(Self::HalfCarry) { "H" } else { "-" },
+			if self.contains(Self::Interrupt) { "I" } else { "-" },
+			if self.contains(Self::Zero) { "Z" } else { "-" },
+			if self.contains(Self::Carry) { "C" } else { "-" },
+		)
+	}
+}
+
 const TEST: u16 = 0x00F0;
 const CONTROL: u16 = 0x00F1;
 const CPUIO0: u16 = 0x00F4;
@@ -319,7 +342,7 @@ impl Smp {
 		// Fetch next instruction
 		if self.instruction_cycle == 0 {
 			self.current_opcode = self.read_next_pc(memory);
-			debug!("fetch {:04x} = {:02x}", self.pc - 1, self.current_opcode);
+			trace!("(@{}) fetch instruction [{:04x}] = {:02x}", self.cycle_counter, self.pc - 1, self.current_opcode);
 		}
 
 		// Execute tick
@@ -357,11 +380,20 @@ impl Smp {
 		self.psw.set(ProgramStatusWord::Sign, (value as i8) < 0);
 	}
 
+	/// Set the negative and zero flags depending on the input value.
+	#[inline]
+	fn set_negative_zero(&mut self, value: u8) {
+		self.set_zero(value);
+		self.set_negative(value);
+	}
+
+	/// Set the carry flag if the subtraction overflows.
 	#[inline]
 	fn set_subtract_carry(&mut self, op1: i8, op2: i8) {
 		self.psw.set(ProgramStatusWord::Carry, op1.checked_sub(op2).is_none());
 	}
 
+	/// Set the carry flag if the addition overflows.
 	#[inline]
 	#[allow(unused)]
 	fn set_add_carry(&mut self, op1: i8, op2: i8) {
@@ -425,6 +457,32 @@ impl Smp {
 		if self.control.contains(ControlRegister::ResetPorts23) {
 			self.ports.reset_port(2);
 			self.ports.reset_port(3);
+		}
+	}
+
+	/// Writes to a register determined at compile-time.
+	fn register_write<const REGISTER: Register>(&mut self, value: u8) {
+		match REGISTER {
+			Register::A => self.a = value,
+			Register::X => self.x = value,
+			Register::Y => self.y = value,
+			Register::SP => self.sp = value,
+			Register::PSW | Register::P => self.psw = ProgramStatusWord(value),
+			Register::YA => unreachable!("16-bit YA not allowed for 8-bit register write"),
+			Register::C => self.psw.set(ProgramStatusWord::Carry, value != 0),
+		}
+	}
+
+	/// Reads from a register determined at compile-time.
+	fn register_read<const REGISTER: Register>(&self) -> u8 {
+		match REGISTER {
+			Register::A => self.a,
+			Register::X => self.x,
+			Register::Y => self.y,
+			Register::SP => self.sp,
+			Register::PSW | Register::P => self.psw.0,
+			Register::YA => unreachable!("16-bit YA not allowed for 8-bit register read"),
+			Register::C => u8::from(self.psw.contains(ProgramStatusWord::Carry)),
 		}
 	}
 }

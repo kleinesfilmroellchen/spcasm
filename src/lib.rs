@@ -17,9 +17,10 @@
 	extend_one,
 	try_blocks,
 	option_get_or_insert_default,
-	maybe_uninit_array_assume_init
+	maybe_uninit_array_assume_init,
+	adt_const_params
 )]
-#![allow(non_upper_case_globals)]
+#![allow(non_upper_case_globals, incomplete_features)]
 
 #[allow(unused)]
 use flexstr::{shared_str, IntoSharedStr, SharedStr, ToSharedStr};

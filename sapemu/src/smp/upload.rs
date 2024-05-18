@@ -158,6 +158,7 @@ impl Uploader {
 		}
 
 		self.current_address = self.current_address.wrapping_add(1);
+		// If address is past current block length, remove this block and move on to the next
 		if self.current_address >= self.remaining_blocks.first().map(|b| b.address + b.length).unwrap_or_default() {
 			self.remaining_blocks.remove(0);
 			self.current_address = self.remaining_blocks.first().map(|b| b.address).unwrap_or_default();
@@ -224,7 +225,7 @@ impl Uploader {
 		}
 	}
 
-	/// Write the current address to the
+	/// Write the current address to the corresponding IO ports (2 and 3)
 	fn write_address(&self, ports: &mut CpuIOPorts) {
 		ports.write_to_smp::<2>((self.current_address & 0xFF) as u8);
 		ports.write_to_smp::<3>(((self.current_address >> 8) & 0xFF) as u8);

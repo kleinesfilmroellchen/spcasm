@@ -1499,7 +1499,7 @@ dependencies = [
  "parking_lot",
  "serde",
  "serde_json",
- "shadow-rs 0.21.0",
+ "shadow-rs",
  "spcasm",
  "tokio",
  "tower-lsp",
@@ -1642,17 +1642,6 @@ dependencies = [
 
 [[package]]
 name = "shadow-rs"
-version = "0.21.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "427f07ab5f873000cf55324882e12a88c0a7ea7025df4fc1e7e35e688877a583"
-dependencies = [
- "const_format",
- "is_debug",
- "time",
-]
-
-[[package]]
-name = "shadow-rs"
 version = "0.27.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7960cbd6ba74691bb15e7ebf97f7136bd02d1115f5695a58c1f31d5645750128"
@@ -1780,7 +1769,7 @@ dependencies = [
  "parking_lot",
  "proc-macro2",
  "reqwest",
- "shadow-rs 0.27.1",
+ "shadow-rs",
  "spcasm_derive",
  "thiserror",
  "trycmd",

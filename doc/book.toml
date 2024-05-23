@@ -13,6 +13,12 @@ follow-web-links = false
 exclude = ['doc/src/SUMMARY\.md']
 warning-policy = "ignore"
 
+[output.man]
+optional = true
+filename = "output.man"
+output-dir = "."
+split-chapters = true
+
 [preprocessor.toc]
 command = "mdbook-toc"
 renderer = ["html"]

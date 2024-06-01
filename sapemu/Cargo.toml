@@ -14,7 +14,7 @@ human-panic = "2"
 log = "0.4"
 time = "0.3"
 
-object = { version = "0.35", features = [
+object = { version = "0.36", features = [
 	"read",
 	"elf",
 ], default-features = false }

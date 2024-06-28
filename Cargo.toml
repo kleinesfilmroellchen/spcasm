@@ -29,7 +29,7 @@ edition = "2021"
 rust-version = "1.79"
 authors = ["kleines Filmröllchen <filmroellchen@serenityos.org>"]
 license-file = "LICENSE"
-homepage = "https://kleinesfilmroellchen.github.io/spcasm/"
+homepage = "https://spcasm.filmroellchen.eu/"
 repository = "https://github.com/kleinesfilmroellchen/spcasm"
 
 [lib]

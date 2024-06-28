@@ -19,7 +19,7 @@ Over time, spcasm has evolved from "just an SPC700 assembler" to a whole toolcha
 - The `sapemu` crate contains the (WIP) cycle-accurate S-APU emulator.
 - The `doc` folder contains [mdbook](https://rust-lang.github.io/mdBook/)-based documentation. You can read this documentation directly on GitHub, or build a statically servable website from it with mdbook.
 
-spcasm itself contains by far the most code, and [its entire documentation is available online](https://kleinesfilmroellchen.github.io/spcasm/doc/api/spcasm/index.html).
+spcasm itself contains by far the most code, and [its entire documentation is available online](../api/spcasm/index.html).
 
 ## Toolchain and workflow
 

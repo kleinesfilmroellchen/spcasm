@@ -11,13 +11,13 @@ spcasm consists of:
 - The assembler `spcasm` itself
 - The `brr` binary, a command-line BRR tool
 - The assembly language server backend `sals` (LSP-compatible) and a Visual Studio Code frontend
-- The [in-browser live assembler `spcasm-web`](https://kleinesfilmroellchen.github.io/spcasm)
+- The [in-browser live assembler `spcasm-web`](https://spcasm.filmroellchen.eu)
 - The (WIP) cycle-accurate emulator `sapemu`
 
 [This project is just for fun](https://justforfunnoreally.dev/). Still, there's many reasons to use spcasm:
 
 - **spcasm is fast. Best-in-class fast.** The assembler is between 1.3 (Windows) and 3.2 (Linux) times as fast as Asar. The BRR encoder runs at 1.6 MB/s on best compression, which is two times as fast as BRRTools.
-- **spcasm runs in your browser.** (No, really, no server.) This is achieved with the power of WebAssembly, allowing spcasm to run so fast that a compile button would be overkill. See <https://kleinesfilmroellchen.github.io/spcasm> for a live demo based on the main branch.
+- **spcasm runs in your browser.** (No, really, no server.) This is achieved with the power of WebAssembly, allowing spcasm to run so fast that a compile button would be overkill. See <https://spcasm.filmroellchen.eu> for a live demo based on the main branch.
 - **BRR support:** spcasm has first-class support for BRR samples via the `brr` assembler directive. It also provides dedicated BRR tooling for use with other assemblers and more complex setups.
 
 - Nice errors, helpful warnings and information about possible pitfalls. spcasm reports errors in a nice format, if your terminal supports it:
@@ -51,25 +51,25 @@ Options:
 
   -l, --reference-pass-limit <REFERENCE_PASS_LIMIT>
           Limit for the number of reference resolution passes spcasm will perform.
-          
+
           Usually 2-3 passes are enough and very high pass numbers often indicate infinite loops. If
           this number of passes is exceeded during reference resolution, spcasm will report
           unresolved references as normal.
-          
+
           [default: 10]
 
   -r, --macro-recursion-limit <MACRO_RECURSION_LIMIT>
           Limit for the number of recursive macro calls allowed by spcasm.
-          
+
           Increase this limit carefully; very high recursion amounts are usually caused by
           infinitely recursive macros. Any recursion exceeding this value will cause a specific
           error.
-          
+
           [default: 1000]
 
   -f, --output-format <OUTPUT_FORMAT>
           Format to output to
-          
+
           [default: elf]
 
           Possible values:
@@ -83,7 +83,7 @@ Options:
   -a, --dump-ast
           Dump the program's abstract syntax tree. This is a debugging feature and most likely not
           useful to the end user.
-          
+
           WARNING: This option will, in specific circumstances, loop forever trying to print
           recursive data structures. This can happen on well-formed programs.
 

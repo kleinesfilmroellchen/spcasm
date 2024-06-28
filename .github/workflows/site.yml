@@ -61,7 +61,7 @@ jobs:
           name: just
 
       - name: Build and assemble site
-        run: just github-pages
+        run: just website
 
       - name: Fix permissions
         run: |

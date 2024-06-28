@@ -10,7 +10,7 @@ title = "spcasm Manual"
 optional = true
 follow-web-links = false
 # Because of how we include the README, linkcheck gets confused about this.
-exclude = ['doc/src/SUMMARY\.md']
+exclude = ['doc/src/SUMMARY\.md', '../api/spcasm/index.html']
 warning-policy = "ignore"
 
 [output.man]

@@ -160,6 +160,7 @@ impl Frontend for DummyOptions {
 
 #[derive(Debug, Clone, Eq, PartialEq)]
 #[repr(transparent)]
+#[allow(unused)]
 pub(crate) struct ErrorCodeSpec(Discriminant<AssemblyError>);
 
 impl From<Discriminant<AssemblyError>> for ErrorCodeSpec {
@@ -168,6 +169,7 @@ impl From<Discriminant<AssemblyError>> for ErrorCodeSpec {
 	}
 }
 
+#[allow(unused)]
 const error_prefix: &str = "spcasm::";
 
 impl FromStr for ErrorCodeSpec {

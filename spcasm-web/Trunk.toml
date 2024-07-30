@@ -4,4 +4,4 @@ pattern_script = "<script type=\"module\">import init, * as with_bindings from '
 filehash = false
 
 [serve]
-open = true
+open = false

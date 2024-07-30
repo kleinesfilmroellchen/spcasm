@@ -20,6 +20,7 @@ use crate::sema::AssemblyTimeValue;
 use crate::AssemblyCode;
 
 #[allow(clippy::module_name_repetitions)]
+#[allow(unused)]
 pub trait ErrorCodes {
 	fn all_codes() -> HashMap<Discriminant<AssemblyError>, SharedStr>;
 }

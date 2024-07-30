@@ -227,7 +227,8 @@ fn extract_asar_expected_output(file: &str) -> Vec<u8> {
 	clippy::redundant_clone,
 	clippy::unnecessary_struct_initialization,
 	clippy::clone_on_copy,
-	clippy::too_many_lines
+	clippy::too_many_lines,
+	unused_must_use
 )]
 fn coverage() {
 	use std::collections::BTreeMap;

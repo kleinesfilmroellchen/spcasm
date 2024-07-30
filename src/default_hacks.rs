@@ -1,10 +1,9 @@
 //! HACK: There's two things we need to do here:
 //! 1. Circumvent Rust's orphaning rules by writing our own Default trait we can implement for third-party types.
 //! 2. Prevent "implementation collisions" that occur because we want all actually Default-implementing types to also
-//! implement the custom Default. There are no collisions at the moment; Rust is just worried there might be in the
-//! future. So we just tell Rust what types we want to copy the Default implementation for and add to that list if
-//! necessary.
-
+//!    implement the custom Default. There are no collisions at the moment; Rust is just worried there might be in the
+//!    future. So we just tell Rust what types we want to copy the Default implementation for and add to that list if
+//!    necessary.
 use std::num::ParseIntError;
 use std::sync::Arc;
 

@@ -82,6 +82,7 @@ impl Environment {
 		tokens: Vec<Token>,
 		source_code: &Arc<AssemblyCode>,
 	) -> Result<Arc<RwLock<AssemblyFile>>, Box<AssemblyError>> {
+		#[allow(clippy::significant_drop_in_scrutinee)]
 		if let Some(already_parsed_file) = this.read_recursive().find_file_by_source(source_code)? {
 			// If we're in a cycle, the already parsed file still has unresolved references.
 			// I'm not sure whether this can happen in the first place given that find_file_by_source can't borrow such

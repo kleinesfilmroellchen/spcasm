@@ -103,7 +103,7 @@ impl Uploader {
 	/// # Panics
 	/// All panics are programming bugs.
 	pub fn from_elf(file: &ElfFile32) -> Result<Self, Box<dyn Error>> {
-		let entry_point = file.raw_header().e_entry.get(file.endian()) as u16;
+		let entry_point = file.elf_header().e_entry.get(file.endian()) as u16;
 		let mut this = Self::new().with_entry_point(entry_point);
 
 		for segment in file.segments() {

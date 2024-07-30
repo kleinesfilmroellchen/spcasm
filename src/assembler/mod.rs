@@ -622,6 +622,7 @@ impl AssembledData {
 	/// * All data with a reference has that reference assigned the current memory location.
 	/// * All data that references a reference has a resolution attempted, which succeeds if the reference has "gained"
 	///   an actual memory location. The reference reference is then gone.
+	///
 	/// This means that data which uses references declared later needs one additional resolution pass.
 	/// # Returns
 	/// Whether any modifications were actually done during the resolution pass.

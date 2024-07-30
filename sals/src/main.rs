@@ -208,6 +208,7 @@ impl LanguageServer for Backend {
 			let offset = lsp_position_to_source_offset(params.text_document_position_params.position, &source_code);
 
 			// Use reference itself if it can be found.
+			#[allow(clippy::significant_drop_in_scrutinee)]
 			let spans = if let Some(reference) = file.read().reference_at(offset) {
 				vec![reference.source_span()]
 			} else {

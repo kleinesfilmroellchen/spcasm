@@ -22,7 +22,7 @@ mod memory;
 pub(crate) mod sample_table;
 mod table;
 
-pub use table::assembly_table;
+pub use table::ASSEMBLY_TABLE;
 use table::{EntryOrFirstOperandTable, EntryOrSecondOperandTable, TwoOperandEntry};
 
 use self::memory::{LabeledMemoryValue, MemoryValue};
@@ -231,7 +231,7 @@ impl AssembledData {
 		let Instruction { opcode: Opcode { first_operand, mnemonic, second_operand, .. }, span, .. } = instruction;
 
 		// Retrieve the table entry for the mnemonic.
-		let mnemonic_entry = assembly_table()
+		let mnemonic_entry = ASSEMBLY_TABLE
 			.get(mnemonic)
 			.unwrap_or_else(|| panic!("No codegen entries for mnemonic {mnemonic}, this is a bug"));
 

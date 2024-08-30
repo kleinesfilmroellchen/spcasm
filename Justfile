@@ -49,7 +49,7 @@ doc-watch:
 	cd doc && mdbook serve
 
 # Assemble the website
-website url="spcasm":
+website url="/":
 	cd spcasm-web && trunk build --dist ../site --release --no-default-features --public-url {{url}}
 	just doc
 	cp -rT doc/book/html site/doc

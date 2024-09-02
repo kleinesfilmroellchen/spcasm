@@ -65,7 +65,6 @@ enum UploaderState {
 	WaitingForCC,
 	/// Uploader is waiting for a data byte to be acknowledged.
 	WaitingForByteAck,
-	// WaitingFor
 	/// Uploader is done with uploading, all data has been sent.
 	Finished,
 }
@@ -76,7 +75,7 @@ impl Default for Uploader {
 	}
 }
 
-#[derive(Clone, Copy, PartialEq, Eq)]
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
 enum NextByteStatus {
 	Normal,
 	NewBlock,
@@ -136,6 +135,9 @@ impl Uploader {
 	/// Add another data block to be transferred.
 	#[must_use]
 	pub fn with_block(mut self, block: DataBlock) -> Self {
+		if self.remaining_blocks.is_empty() {
+			self.current_address = block.address;
+		}
 		self.remaining_blocks.push(block);
 		self
 	}
@@ -202,9 +204,11 @@ impl Uploader {
 					self.state = UploaderState::WaitingForByteAck;
 				},
 			UploaderState::WaitingForByteAck => {
-				if self.current_index().is_some_and(|i| i == u16::from(ports.read_from_smp::<0>())) {
-					debug!("Got ACKed index {}, sending next byte", self.current_index().unwrap());
+				if let Some(i) = self.current_index()
+					&& i == u16::from(ports.read_from_smp::<0>())
+				{
 					let status = self.next_byte();
+					debug!("Got ACKed index {}, sending next byte ({:?})", i, status);
 					match status {
 						NextByteStatus::Normal => {
 							ports.write_to_smp::<0>(self.current_index().unwrap() as u8);
@@ -216,7 +220,11 @@ impl Uploader {
 							ports.write_to_smp::<1>(self.current_byte().unwrap());
 						},
 						NextByteStatus::NoMoreBlocks => {
-							todo!();
+							self.current_address = self.entry_point;
+							self.write_address(ports);
+							ports.write_to_smp::<0>(0);
+							ports.write_to_smp::<1>(0);
+							self.state = UploaderState::Finished;
 						},
 					}
 				}

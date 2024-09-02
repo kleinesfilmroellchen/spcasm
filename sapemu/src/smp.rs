@@ -63,6 +63,15 @@ enum RunState {
 	WaitingForInterrupt,
 }
 
+impl RunState {
+	/// Whether this is a running state (where the CPU may continue executing at some point without a reset.)
+	#[inline]
+	#[must_use]
+	pub fn is_running(self) -> bool {
+		![Self::Halted, Self::Crashed].contains(&self)
+	}
+}
+
 /// Main CPU I/O ports.
 #[derive(Default)]
 pub struct CpuIOPorts {
@@ -80,6 +89,7 @@ impl CpuIOPorts {
 
 	/// Perform a write to the main CPU.
 	#[inline]
+	#[track_caller]
 	pub fn write(&mut self, port_number: u16, value: u8) {
 		Self::check_port_number(port_number);
 
@@ -89,6 +99,7 @@ impl CpuIOPorts {
 
 	/// Perform a read from the main CPU.
 	#[inline]
+	#[track_caller]
 	#[allow(clippy::needless_pass_by_ref_mut)]
 	pub fn read(&mut self, port_number: u16) -> u8 {
 		Self::check_port_number(port_number);
@@ -99,6 +110,7 @@ impl CpuIOPorts {
 
 	/// Reset the main CPU input port to 0.
 	#[inline]
+	#[track_caller]
 	pub fn reset_port(&mut self, port_number: u16) {
 		Self::check_port_number(port_number);
 
@@ -111,6 +123,7 @@ impl CpuIOPorts {
 	/// # Panics
 	/// Panics if the port number is invalid.
 	#[inline]
+	#[track_caller]
 	#[allow(clippy::needless_pass_by_ref_mut)]
 	pub fn read_from_smp<const PORT_NUMBER: u8>(&mut self) -> u8
 	where
@@ -122,8 +135,9 @@ impl CpuIOPorts {
 		self.write_ports[PORT_NUMBER as usize]
 	}
 
-	/// Perform a read to the SMP.
+	/// Perform a write to the SMP.
 	#[inline]
+	#[track_caller]
 	pub fn write_to_smp<const PORT_NUMBER: u8>(&mut self, value: u8)
 	where
 		// FIXME: currently accepted hack to create arbitrary expression bounds.
@@ -401,6 +415,7 @@ impl Smp {
 	}
 
 	#[allow(unused)]
+	#[track_caller]
 	fn write(&mut self, address: u16, value: u8, memory: &mut Memory) {
 		match address {
 			TEST => self.test_write(value),
@@ -410,6 +425,7 @@ impl Smp {
 		}
 	}
 
+	#[track_caller]
 	fn read(&mut self, address: u16, memory: &mut Memory) -> u8 {
 		match address {
 			TEST => self.test.0,
@@ -427,6 +443,7 @@ impl Smp {
 	}
 
 	#[allow(clippy::needless_pass_by_ref_mut)]
+	#[track_caller]
 	fn memory_write(&mut self, address: u16, value: u8, memory: &mut Memory) {
 		if self.test.contains(TestRegister::RamWriteDisable) {
 			debug!("RAM write to {} is disabled via TEST register", address);
@@ -435,6 +452,7 @@ impl Smp {
 		memory.write(address, value);
 	}
 
+	#[track_caller]
 	fn test_write(&mut self, value: u8) {
 		trace!("TEST = {:08b}", value);
 		self.test = TestRegister(value);
@@ -445,6 +463,7 @@ impl Smp {
 		}
 	}
 
+	#[track_caller]
 	fn control_write(&mut self, value: u8) {
 		trace!("CONTROL = {:08b}", value);
 		self.control = ControlRegister(value);
@@ -461,6 +480,7 @@ impl Smp {
 	}
 
 	/// Writes to a register determined at compile-time.
+	#[track_caller]
 	fn register_write<const REGISTER: Register>(&mut self, value: u8) {
 		match REGISTER {
 			Register::A => self.a = value,
@@ -474,6 +494,7 @@ impl Smp {
 	}
 
 	/// Reads from a register determined at compile-time.
+	#[track_caller]
 	fn register_read<const REGISTER: Register>(&self) -> u8 {
 		match REGISTER {
 			Register::A => self.a,
@@ -484,5 +505,11 @@ impl Smp {
 			Register::YA => unreachable!("16-bit YA not allowed for 8-bit register read"),
 			Register::C => u8::from(self.psw.contains(ProgramStatusWord::Carry)),
 		}
+	}
+
+	/// Returns whether the CPU is halted or not. A halted CPU must be reset to continue execution.
+	#[must_use]
+	pub fn is_halted(&self) -> bool {
+		!self.run_state.is_running() || self.test.contains(TestRegister::Crash)
 	}
 }

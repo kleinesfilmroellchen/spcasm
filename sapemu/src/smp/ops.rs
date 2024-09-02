@@ -418,7 +418,6 @@ fn brk(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInter
 
 fn bpl(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInternalState) -> MicroArchAction {
 	debug_instruction!("bpl", cycle, cpu);
-
 	branch_on::<{ ProgramStatusWord::Sign }, false>(cpu, memory, cycle, state)
 }
 fn tcall_1(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInternalState) -> MicroArchAction {
@@ -559,7 +558,6 @@ fn bra(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInter
 
 fn bmi(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInternalState) -> MicroArchAction {
 	debug_instruction!("bmi", cycle, cpu);
-
 	branch_on::<{ ProgramStatusWord::Sign }, true>(cpu, memory, cycle, state)
 }
 fn tcall_3(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInternalState) -> MicroArchAction {
@@ -609,7 +607,7 @@ fn rol_a(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInt
 	todo!()
 }
 fn inc_x(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInternalState) -> MicroArchAction {
-	todo!()
+	inc_register::<{ Register::X }>(cpu, cycle)
 }
 fn cmp_x_dp(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInternalState) -> MicroArchAction {
 	todo!()
@@ -678,7 +676,8 @@ fn pcall(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInt
 }
 
 fn bvc(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInternalState) -> MicroArchAction {
-	todo!()
+	debug_instruction!("bvc", cycle, cpu);
+	branch_on::<{ ProgramStatusWord::Overflow }, false>(cpu, memory, cycle, state)
 }
 fn tcall_5(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInternalState) -> MicroArchAction {
 	todo!()
@@ -806,7 +805,8 @@ fn ret(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInter
 }
 
 fn bvs(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInternalState) -> MicroArchAction {
-	todo!()
+	debug_instruction!("bvs", cycle, cpu);
+	branch_on::<{ ProgramStatusWord::Overflow }, true>(cpu, memory, cycle, state)
 }
 fn tcall_7(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInternalState) -> MicroArchAction {
 	todo!()
@@ -1076,10 +1076,48 @@ fn mov1_c_addr(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: Instruct
 	todo!()
 }
 fn inc_dp(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInternalState) -> MicroArchAction {
-	todo!()
+	debug_instruction!("inc dp", cycle, cpu);
+	match cycle {
+		0 => MicroArchAction::Continue(InstructionInternalState::default()),
+		1 => {
+			let address = u16::from(cpu.read_next_pc(memory)) + cpu.direct_page_offset();
+			MicroArchAction::Continue(state.with_address(address))
+		},
+		2 => {
+			let value = cpu.read(state.address, memory).wrapping_add(1);
+			cpu.set_negative_zero(value);
+			MicroArchAction::Continue(state.with_operand(value))
+		},
+		3 => {
+			cpu.write(state.address, state.operand, memory);
+			MicroArchAction::Next
+		},
+		_ => unreachable!(),
+	}
 }
 fn inc_addr(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInternalState) -> MicroArchAction {
-	todo!()
+	debug_instruction!("inc addr", cycle, cpu);
+	match cycle {
+		0 => MicroArchAction::Continue(InstructionInternalState::default()),
+		1 => {
+			let address_low = u16::from(cpu.read_next_pc(memory));
+			MicroArchAction::Continue(state.with_address(address_low))
+		},
+		2 => {
+			let address = u16::from(cpu.read_next_pc(memory)) << 8 & state.address;
+			MicroArchAction::Continue(state.with_address(address))
+		},
+		3 => {
+			let value = cpu.read(state.address, memory).wrapping_add(1);
+			cpu.set_negative_zero(value);
+			MicroArchAction::Continue(state.with_operand(value))
+		},
+		4 => {
+			cpu.write(state.address, state.operand, memory);
+			MicroArchAction::Next
+		},
+		_ => unreachable!(),
+	}
 }
 fn cmp_y_imm(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInternalState) -> MicroArchAction {
 	todo!()
@@ -1093,7 +1131,6 @@ fn mov_x_inc_a(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: Instruct
 
 fn bcs(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInternalState) -> MicroArchAction {
 	debug_instruction!("bcs", cycle, cpu);
-
 	branch_on::<{ ProgramStatusWord::Carry }, true>(cpu, memory, cycle, state)
 }
 fn tcall_11(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInternalState) -> MicroArchAction {
@@ -1175,7 +1212,7 @@ fn inc_dp_x(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: Instruction
 	todo!()
 }
 fn inc_a(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInternalState) -> MicroArchAction {
-	todo!()
+	inc_register::<{ Register::A }>(cpu, cycle)
 }
 fn mov_sp_x(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInternalState) -> MicroArchAction {
 	debug_instruction!("mov sp, x", cycle, cpu);
@@ -1290,7 +1327,6 @@ fn mul(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInter
 
 fn bne(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInternalState) -> MicroArchAction {
 	debug_instruction!("bne", cycle, cpu);
-
 	branch_on::<{ ProgramStatusWord::Zero }, false>(cpu, memory, cycle, state)
 }
 fn tcall_13(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInternalState) -> MicroArchAction {
@@ -1303,12 +1339,15 @@ fn bbc_6(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInt
 	todo!()
 }
 fn mov_dp_x_a(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInternalState) -> MicroArchAction {
+	debug_instruction!("mov dp+x, a", cycle, cpu);
 	todo!()
 }
 fn mov_addr_x_a(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInternalState) -> MicroArchAction {
+	debug_instruction!("mov addr+x, a", cycle, cpu);
 	todo!()
 }
 fn mov_addr_y_a(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInternalState) -> MicroArchAction {
+	debug_instruction!("mov addr+y, a", cycle, cpu);
 	todo!()
 }
 #[allow(clippy::cast_lossless)]
@@ -1318,6 +1357,8 @@ fn mov_dp_indirect_y_a(
 	cycle: usize,
 	state: InstructionInternalState,
 ) -> MicroArchAction {
+	debug_instruction!("mov (dp)+y, a", cycle, cpu);
+
 	// This one is very involved, since it needs to store A at byte[word[dp]+Y].
 	match cycle {
 		0 => MicroArchAction::Continue(InstructionInternalState::default()),
@@ -1501,7 +1542,6 @@ fn sleep(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInt
 
 fn beq(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInternalState) -> MicroArchAction {
 	debug_instruction!("beq", cycle, cpu);
-
 	branch_on::<{ ProgramStatusWord::Zero }, true>(cpu, memory, cycle, state)
 }
 fn tcall_15(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInternalState) -> MicroArchAction {
@@ -1545,7 +1585,7 @@ fn mov_y_dp_x(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: Instructi
 	todo!()
 }
 fn inc_y(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInternalState) -> MicroArchAction {
-	todo!()
+	inc_register::<{ Register::Y }>(cpu, cycle)
 }
 fn mov_y_a(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInternalState) -> MicroArchAction {
 	todo!()
@@ -1671,6 +1711,19 @@ fn dec_register<const REGISTER: Register>(cpu: &mut Smp, cycle: usize) -> MicroA
 		0 => MicroArchAction::Continue(InstructionInternalState::default()),
 		1 => {
 			cpu.register_write::<REGISTER>(cpu.register_read::<REGISTER>().wrapping_sub(1));
+			cpu.set_negative_zero(cpu.register_read::<REGISTER>());
+			MicroArchAction::Next
+		},
+		_ => unreachable!(),
+	}
+}
+
+#[inline]
+fn inc_register<const REGISTER: Register>(cpu: &mut Smp, cycle: usize) -> MicroArchAction {
+	match cycle {
+		0 => MicroArchAction::Continue(InstructionInternalState::default()),
+		1 => {
+			cpu.register_write::<REGISTER>(cpu.register_read::<REGISTER>().wrapping_add(1));
 			cpu.set_negative_zero(cpu.register_read::<REGISTER>());
 			MicroArchAction::Next
 		},

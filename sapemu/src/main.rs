@@ -1,7 +1,7 @@
 //! S-APU / SPC700 emulator.
 #![deny(missing_docs, unused, clippy::all, clippy::pedantic, clippy::nursery, rustdoc::all)]
 #![allow(incomplete_features)]
-#![feature(slice_as_chunks, generic_const_exprs, adt_const_params)]
+#![feature(slice_as_chunks, generic_const_exprs, adt_const_params, let_chains)]
 
 use std::fs;
 use std::path::PathBuf;
@@ -29,7 +29,7 @@ struct CliArguments {
 	verbose: u8,
 	/// CPU cycles to execute at maximum.
 	#[arg(long)]
-	cycles:  usize,
+	cycles:  Option<usize>,
 }
 
 #[allow(clippy::cast_precision_loss)]
@@ -60,17 +60,22 @@ fn main() {
 			.unwrap();
 
 	let start_time = Instant::now();
+	let mut ticks = 0;
 	// FIXME: Don't run the uploader all the time.
-	for _ in 0 .. arguments.cycles {
+	while arguments.cycles.map_or(true, |cycles| ticks < cycles) {
 		uploader.perform_step(&mut smp.ports);
 		smp.tick(&mut memory);
+		ticks += 1;
+		if smp.is_halted() {
+			break;
+		}
 	}
 
 	let end_time = Instant::now();
-	let frequency = arguments.cycles as f64 / (end_time - start_time).as_secs_f64();
+	let frequency = ticks as f64 / (end_time - start_time).as_secs_f64();
 	info!(
 		"Ran {} cycles in {:.2?}, {:6.0} kHz, {:5.2}× realtime",
-		arguments.cycles,
+		ticks,
 		end_time - start_time,
 		frequency / 1000.,
 		frequency / CPU_RATE as f64

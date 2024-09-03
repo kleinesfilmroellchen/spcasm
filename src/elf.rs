@@ -11,6 +11,7 @@ use object::elf::{ELFOSABI_STANDALONE, EM_PDSP, ET_EXEC, PT_LOAD, SHF_ALLOC, SHF
 use object::write::elf::{FileHeader, ProgramHeader, SectionHeader, SectionIndex};
 use object::write::StringId;
 
+use crate::sema::instruction::MemoryAddress;
 use crate::Segments;
 
 /// Save all the metadata since object is too dumb to do this itself.
@@ -29,7 +30,11 @@ struct SegmentMetadata {
 /// # Errors
 /// I/O errors.
 #[allow(clippy::missing_panics_doc, clippy::cast_sign_loss, clippy::cast_possible_truncation, clippy::cast_lossless)]
-pub fn write_to_elf(output_stream: &mut impl Write, data: Segments<u8>) -> Result<(), std::io::Error> {
+pub fn write_to_elf(
+	output_stream: &mut impl Write,
+	data: Segments<u8>,
+	entry_point: MemoryAddress,
+) -> Result<(), std::io::Error> {
 	// FIXME: This appears to be a bug with object; it can't write past a Vec's capacity though it has a mutable
 	// reference and can totally do it. Therefore, preallocate a gigantic buffer, which is inefficient but works.
 	let mut buffer = Vec::with_capacity(65536);
@@ -97,7 +102,7 @@ pub fn write_to_elf(output_stream: &mut impl Write, data: Segments<u8>) -> Resul
 		// "Sony DSP processor", It might be us? :^)
 		e_machine:   EM_PDSP,
 		// Doesn't really matter for the ROM, but in practice this is the reset address.
-		e_entry:     0xFFC0,
+		e_entry:     entry_point.try_into().expect("entry point value out of range???"),
 		e_flags:     0,
 	})
 	.map_err(|_| std::io::Error::from(std::io::ErrorKind::Other))?;

@@ -218,7 +218,6 @@ impl Token {
 		match identifier {
 			"offset" => Ok("offset"),
 			"align" => Ok("align"),
-			"startpos" => Ok("startpos"),
 			_ => Err(AssemblyError::ExpectedToken {
 				expected: shared_str!("identifier"),
 				actual: Self::Identifier(identifier.into(), span),

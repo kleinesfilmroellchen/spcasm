@@ -156,6 +156,22 @@ org $4000+30
 
 Because segment start locations must be known early on, using references in the value is quite restricted.
 
+### `startpos`
+
+The `startpos` directive specifies that the program’s entry point should be at the current position (that is, at the next instruction). The entry point is what the program executes after being loaded by the ROM loader.
+
+Note that this directive is not always required depending on the output format. If you are assembling a raw RAM image, the entry point will not stored anywhere anyways.
+
+If you implement a custom fastloader, the code at the entry point is what should be uploaded with the bootrom uploader.
+
+```asm
+org $1000
+startpos
+  ; your entry point code, e.g. initialization...
+main_function:
+  mov a, #2
+```
+
 ### Segment stack
 
 The segment stack can be controlled with the `pushpc` and `pullpc` instructions. `pushpc` pushes the current segment to the segment stack, and there will not be an active segment afterwards. `pullpc` pulls the last segment from the segment stack, reactivating it and allowing you to continue appending data to its end. This is currently the only way of continuing to put data into an already-existing segment that was "interrupted", so to speak.

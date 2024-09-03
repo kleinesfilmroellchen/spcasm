@@ -11,6 +11,7 @@ use parking_lot::RwLock;
 pub use super::directive::Directive;
 pub use super::error::AssemblyError;
 pub use super::sema::Environment;
+use crate::assembler::EntryPoint;
 use crate::cli::{default_backend_options, Frontend};
 use crate::sema::reference::Label;
 use crate::sema::ProgramElement;
@@ -167,11 +168,12 @@ pub fn run_assembler_into_symbolic_segments(
 pub fn run_assembler_into_segments(
 	source_code: &Arc<AssemblyCode>,
 	options: Arc<dyn Frontend>,
-) -> Result<(Segments<ProgramElement>, Segments<u8>), Box<AssemblyError>> {
+) -> Result<(Segments<ProgramElement>, Segments<u8>, EntryPoint), Box<AssemblyError>> {
 	let (_, mut segmented_program) = run_assembler_into_symbolic_segments(source_code, options.clone())?;
-	let assembled = crate::assembler::assemble_inside_segments(&mut segmented_program, source_code, options)
-		.map_err(AssemblyError::from)?;
-	Ok((segmented_program, assembled))
+	let (assembled, entry_point) =
+		crate::assembler::assemble_inside_segments(&mut segmented_program, source_code, options)
+			.map_err(AssemblyError::from)?;
+	Ok((segmented_program, assembled, entry_point))
 }
 
 /// Provides a name for enum variants.

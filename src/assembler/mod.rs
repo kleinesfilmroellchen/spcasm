@@ -27,6 +27,13 @@ use table::{EntryOrFirstOperandTable, EntryOrSecondOperandTable, TwoOperandEntry
 
 use self::memory::{LabeledMemoryValue, MemoryValue};
 
+#[derive(Debug, Default, Copy, Clone, Eq, PartialEq)]
+enum ClearLabels {
+	#[default]
+	Yes,
+	No,
+}
+
 /// Assembles the instructions into a byte sequence. This function receives already-separated sections as input, so it
 /// does not do section splitting itself. It might modify the input segments as well during optimization.
 ///
@@ -52,8 +59,9 @@ pub fn assemble_inside_segments(
 	segments: &mut Segments<ProgramElement>,
 	source_code: &Arc<AssemblyCode>,
 	options: Arc<dyn Frontend>,
-) -> Result<Segments<u8>, Box<AssemblyError>> {
-	assemble_to_data(segments, source_code, options)?.resolve_segments()
+) -> Result<(Segments<u8>, EntryPoint), Box<AssemblyError>> {
+	let data = assemble_to_data(segments, source_code, options)?;
+	Ok((data.resolve_segments()?, data.entry_point))
 }
 
 /// Assembles a [`ProgramElement`] inside a loop.
@@ -68,8 +76,12 @@ macro_rules! assemble_element {
 				},
 				$crate::sema::ProgramElement::Instruction(instruction) =>
 					$data.assemble_instruction(instruction, &$current_labels)?,
-				$crate::sema::ProgramElement::Directive(directive) =>
-					$data.assemble_directive(directive, &$current_labels)?,
+				$crate::sema::ProgramElement::Directive(directive) => {
+					let clear_labels = $data.assemble_directive(directive, &$current_labels)?;
+					if clear_labels == ClearLabels::No {
+						continue;
+					}
+				},
 				$crate::sema::ProgramElement::IncludeSource { .. } =>
 					unreachable!("there should not be any remaining unincluded source code at assembly time"),
 				$crate::sema::ProgramElement::UserDefinedMacroCall { .. } =>
@@ -119,6 +131,9 @@ pub(crate) fn resolve_file(source_code: &Arc<AssemblyCode>, target_file: &str) -
 		.expect("file path was root, this makes no sense")
 }
 
+/// Entry point specification.
+pub type EntryPoint = Option<MemoryAddress>;
+
 /// The assembled data, which consists of multiple sections.
 #[derive(Debug)]
 pub struct AssembledData {
@@ -128,6 +143,8 @@ pub struct AssembledData {
 	pub source_code: Arc<AssemblyCode>,
 	/// Assembler subroutines use this as a flag to signal an end of assembly as soon as possible.
 	should_stop:     bool,
+	/// Execution entry point of the code after being loaded.
+	pub entry_point: EntryPoint,
 	/// Options that command line received; used for determining what to do with warnings.
 	options:         Arc<dyn Frontend>,
 }
@@ -193,7 +210,13 @@ impl AssembledData {
 	#[must_use]
 	#[inline]
 	pub fn new(source_code: Arc<AssemblyCode>) -> Self {
-		Self { segments: Segments::default(), source_code, should_stop: false, options: default_backend_options() }
+		Self {
+			segments: Segments::default(),
+			source_code,
+			should_stop: false,
+			entry_point: None,
+			options: default_backend_options(),
+		}
 	}
 
 	/// Change the error options for assembler warning and error reporting.

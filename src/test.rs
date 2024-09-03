@@ -23,6 +23,17 @@ fn boot_rom() {
 }
 
 #[test]
+fn entry_point() {
+	let code = crate::AssemblyCode::from_file_or_assembly_error("tests/entrypoint.s").unwrap();
+	let (_, _, entry_point) = super::run_assembler_into_segments(&code, default_backend_options()).unwrap();
+	assert_eq!(entry_point, Some(0xFF00));
+
+	let code = crate::AssemblyCode::from_file_or_assembly_error("tests/references.spcasmtest").unwrap();
+	let (_, _, entry_point) = super::run_assembler_into_segments(&code, default_backend_options()).unwrap();
+	assert_eq!(entry_point, None);
+}
+
+#[test]
 fn assembler() {
 	#[cfg(miri)]
 	const ignored_miri_tests: [&str; 1] = ["tests/brr.spcasmtest"];
@@ -114,7 +125,7 @@ fn asar_opcode_test() -> Result<(), Box<AssemblyError>> {
 	let maybe_test_file: Result<_, reqwest::Error> = try { reqwest::blocking::get(test_file_url)?.text()? };
 	match maybe_test_file {
 		Ok(test_file) => {
-			let (_, mut assembled) = super::run_assembler_into_segments(
+			let (_, mut assembled, _) = super::run_assembler_into_segments(
 				&Arc::new(crate::AssemblyCode {
 					name: file_name.into(),
 					text: test_file.clone().into(),
@@ -135,7 +146,7 @@ fn asar_opcode_test() -> Result<(), Box<AssemblyError>> {
 
 fn test_file(file: &str) {
 	let code = crate::AssemblyCode::from_file_or_assembly_error(file).unwrap();
-	let (parsed, assembled) = super::run_assembler_into_segments(&code, default_backend_options()).unwrap();
+	let (parsed, assembled, _) = super::run_assembler_into_segments(&code, default_backend_options()).unwrap();
 	let (environment, _) = super::run_assembler_with_default_options(file).unwrap();
 
 	dump_reference_tree(&environment.read_recursive().globals.values().cloned().collect::<Vec<_>>());

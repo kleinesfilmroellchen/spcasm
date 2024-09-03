@@ -49,8 +49,8 @@ spcasm::arch::valid
    · ───────┬───────
    ·        ╰── `arch` directive
  2 │ org 0
- 3 │ start:        ; @ 0
- 4 │    MOV A,#$10    ;= E8 10
+ 3 │ startpos
+ 4 │ start:        ; @ 0
    ╰────
   help: spcasm supports `arch` directives for compatibility with the Asar
         multi-architecture assembler. This arch directive points to the
@@ -203,6 +203,32 @@ See [arch::valid](#spcasmarchvalid); when compiling files originally targeted at
 
 This category contains directive-related errors.
 
+#### spcasm::directive::duplicate_startpos
+
+```trycmd
+$ spcasm -w all tests/errors/duplicate-startpos.spcasmtest
+? 1
+spcasm::directive::duplicate_startpos
+
+  × Duplicate startpos directive
+   ╭─[tests/errors/duplicate-startpos.spcasmtest:6:1]
+ 3 │ nop
+ 4 │ 
+ 5 │ org $300
+ 6 │ startpos
+   · ────┬───
+   ·     ╰── `startpos` directive
+ 7 │ nop
+   ╰────
+  help: the `startpos` directive defines the execution entry point of the
+        ROM after it was loaded. There can only be one entry point.
+
+
+```
+
+The [`startpos` directive](reference/directives.md#startpos) can only be specified once, since there can only be one program entry point.
+
+
 #### spcasm::directive::invalid_directive_option
 
 ```trycmd
@@ -245,7 +271,7 @@ spcasm::directive::invalid_range
 
 For range specifications, like when including binary files, the Asar style range syntax is a `start-end` format. Obviously, the start then needs to be before (or the same as) the end. Often you just accidentally swapped these limits.
 
-#### spcasm::math_pri_unsupported
+#### spcasm::directive::math_pri_unsupported
 
 ```trycmd
 $ spcasm -w all tests/errors/math-pri.spcasmtest

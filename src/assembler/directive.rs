@@ -8,7 +8,7 @@ use flexstr::{shared_str, IntoSharedStr, SharedStr, ToSharedStr};
 use miette::SourceSpan;
 use num_traits::{FromPrimitive, ToPrimitive};
 
-use super::{resolve_file, AssembledData};
+use super::{resolve_file, AssembledData, ClearLabels};
 use crate::brr::wav;
 use crate::directive::{symbolic_directives, DirectiveValue, FillOperation};
 use crate::sema::instruction::MemoryAddress;
@@ -18,7 +18,8 @@ use crate::sema::AssemblyTimeValue;
 use crate::{brr, AssemblyError, Directive};
 
 impl AssembledData {
-	/// Assemble a single assembler directive into this assembly data.
+	/// Assemble a single assembler directive into this assembly data. Returns whether the label list needs to be
+	/// cleared or (if the directive is transparent to labels) not.
 	///
 	/// # Errors
 	/// Any error caused by the directive assembly process is returned.
@@ -26,39 +27,37 @@ impl AssembledData {
 	/// # Panics
 	/// All panics are programming bugs.
 	#[allow(clippy::unnecessary_wraps)]
-	pub fn assemble_directive(
+	pub(super) fn assemble_directive(
 		&mut self,
 		directive: &mut Directive,
 		current_labels: &Vec<Reference>,
-	) -> Result<(), Box<AssemblyError>> {
+	) -> Result<ClearLabels, Box<AssemblyError>> {
 		match directive.value {
 			// Symbolic directives should not be around anymore.
 			symbolic_directives!() => unreachable!(),
-			DirectiveValue::Table { ref values } =>
-				try {
-					let mut is_first = true;
-					for value in values {
-						self.append_sized_unresolved(
-							value.clone(),
-							if is_first { current_labels } else { Self::DEFAULT_VEC },
-							directive.span,
-						)?;
-						is_first = false;
-					}
-				},
-			DirectiveValue::Brr { ref file, range, auto_trim, .. } =>
-				self.assemble_brr(directive, file, range, auto_trim, current_labels),
-			DirectiveValue::String { ref text, has_null_terminator } =>
-				try {
-					self.append_bytes(text.clone(), current_labels, directive.span)?;
-					if has_null_terminator {
-						self.append(
-							0,
-							if text.is_empty() { current_labels } else { Self::DEFAULT_VEC },
-							directive.span,
-						)?;
-					}
-				},
+			DirectiveValue::Table { ref values } => {
+				let mut is_first = true;
+				for value in values {
+					self.append_sized_unresolved(
+						value.clone(),
+						if is_first { current_labels } else { Self::DEFAULT_VEC },
+						directive.span,
+					)?;
+					is_first = false;
+				}
+				Ok(ClearLabels::Yes)
+			},
+			DirectiveValue::Brr { ref file, range, auto_trim, .. } => {
+				self.assemble_brr(directive, file, range, auto_trim, current_labels)?;
+				Ok(ClearLabels::Yes)
+			},
+			DirectiveValue::String { ref text, has_null_terminator } => {
+				self.append_bytes(text.clone(), current_labels, directive.span)?;
+				if has_null_terminator {
+					self.append(0, if text.is_empty() { current_labels } else { Self::DEFAULT_VEC }, directive.span)?;
+				}
+				Ok(ClearLabels::Yes)
+			},
 			DirectiveValue::Include { ref file, range } => {
 				let binary_file = resolve_file(&self.source_code, file);
 				let mut binary_data = std::fs::read(binary_file).map_err(|os_error| AssemblyError::FileNotFound {
@@ -69,7 +68,8 @@ impl AssembledData {
 				})?;
 
 				binary_data = self.slice_data_if_necessary(file, directive.span, binary_data, range)?;
-				self.append_bytes(binary_data, current_labels, directive.span)
+				self.append_bytes(binary_data, current_labels, directive.span)?;
+				Ok(ClearLabels::Yes)
 			},
 			DirectiveValue::SampleTable { auto_align } => {
 				let current_address = self.segments.current_location().unwrap();
@@ -88,11 +88,20 @@ impl AssembledData {
 					}
 					.into());
 				}
-				self.assemble_sample_table(current_labels, directive.span)
+				self.assemble_sample_table(current_labels, directive.span)?;
+				Ok(ClearLabels::Yes)
 			},
 			DirectiveValue::Fill { ref operation, ref parameter, ref value } => {
 				let current_address = self.segments.current_location().unwrap();
-				self.assemble_fill(operation, parameter, value.clone(), current_address, current_labels, directive.span)
+				self.assemble_fill(
+					operation,
+					parameter,
+					value.clone(),
+					current_address,
+					current_labels,
+					directive.span,
+				)?;
+				Ok(ClearLabels::Yes)
 			},
 			DirectiveValue::Conditional { ref mut condition, ref mut true_block, ref mut false_block } => {
 				let condition = condition.try_value(directive.span, &self.source_code)?;
@@ -100,6 +109,24 @@ impl AssembledData {
 					self.assemble_all_from_list(false_block)
 				} else {
 					self.assemble_all_from_list(true_block)
+				}?;
+				Ok(ClearLabels::Yes)
+			},
+			DirectiveValue::Startpos => {
+				let current = self.segments.current_location().map_err(|()| AssemblyError::MissingSegment {
+					location: directive.span,
+					src:      self.source_code.clone(),
+				})?;
+
+				if self.entry_point.is_some() {
+					Err(AssemblyError::DuplicateStartpos {
+						src:      self.source_code.clone(),
+						location: directive.span,
+					}
+					.into())
+				} else {
+					self.entry_point = Some(current);
+					Ok(ClearLabels::No)
 				}
 			},
 		}

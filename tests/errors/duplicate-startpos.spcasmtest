@@ -1,0 +1,7 @@
+org $200
+startpos
+nop
+
+org $300
+startpos
+nop

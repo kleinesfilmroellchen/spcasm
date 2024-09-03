@@ -69,29 +69,29 @@ $ spcasm -w all -l 0 tests/opcodes.s
 spcasm::reference::unresolved
 
   × Reference 'data' can not be resolved to a value
-    ╭─[tests/opcodes.s:13:1]
- 10 │    MOV A,$3320+X ;= F5 20 33
- 11 │    MOV A,$FF00+Y ;= F6 00 FF
- 12 │    MOV A,($40+X) ;= E7 40
- 13 │ data:         ; @ 13
+    ╭─[tests/opcodes.s:14:1]
+ 11 │    MOV A,$3320+X ;= F5 20 33
+ 12 │    MOV A,$FF00+Y ;= F6 00 FF
+ 13 │    MOV A,($40+X) ;= E7 40
+ 14 │ data:         ; @ 13
     · ──┬─
     ·   ╰── 'data' defined here
- 14 │    MOV A,(%00100000)+Y ;= F7 20
- 15 │    MOV X,#$60    ;= CD 60
- 16 │    MOV X,$9A     ;= F8 9A
- 17 │    MOV X,$2E+Y   ;= F9 2E
- 18 │    MOV X,$2F00   ;= E9 00 2F
- 19 │    MOV Y,#$0F    ;= 8D 0F
- 20 │    MOV Y,$48     ;= EB 48
- 21 │    MOV Y,%01+X   ;= FB 01
- 22 │    MOV Y,$2100   ;= EC 00 21
- 23 │ 
- 24 │    MOV A,#data     ;= E8 13
+ 15 │    MOV A,(%00100000)+Y ;= F7 20
+ 16 │    MOV X,#$60    ;= CD 60
+ 17 │    MOV X,$9A     ;= F8 9A
+ 18 │    MOV X,$2E+Y   ;= F9 2E
+ 19 │    MOV X,$2F00   ;= E9 00 2F
+ 20 │    MOV Y,#$0F    ;= 8D 0F
+ 21 │    MOV Y,$48     ;= EB 48
+ 22 │    MOV Y,%01+X   ;= FB 01
+ 23 │    MOV Y,$2100   ;= EC 00 21
+ 24 │ 
+ 25 │    MOV A,#data     ;= E8 13
     ·    ────────────┬───────────
     ·                ╰── Used here
- 25 │    MOV A,data      ;= E4 13
- 26 │    MOV A,data+X    ;= F4 13
- 27 │    MOV A,data+Y    ;= F6 13 00
+ 26 │    MOV A,data      ;= E4 13
+ 27 │    MOV A,data+X    ;= F4 13
+ 28 │    MOV A,data+Y    ;= F6 13 00
     ╰────
   help: Any symbolic reference must be defined somewhere. Did you misspell
         the reference's name?

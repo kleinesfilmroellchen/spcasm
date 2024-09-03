@@ -8,8 +8,8 @@ spcasm::arch::valid
    · ───────┬───────
    ·        ╰── `arch` directive
  2 │ org 0
- 3 │ start:        ; @ 0
- 4 │    MOV A,#$10    ;= E8 10
+ 3 │ startpos
+ 4 │ start:        ; @ 0
    ╰────
   help: spcasm supports `arch` directives for compatibility with the Asar
         multi-architecture assembler. This arch directive points to the
@@ -19,16 +19,16 @@ spcasm::relative_offset_too_large
 
   ⚠ The relative offset to address `002C` is out of range, the result will
   │ be wrong.
-     ╭─[tests/opcodes.s:206:13]
- 203 │    bvc reltarget+8  ;= 50 F8
- 204 │    bmi reltarget+10 ;= 30 F8
- 205 │    bpl reltarget+12 ;= 10 F8
- 206 │    cbne $2B,$2C  ;= 2E 2B B7
+     ╭─[tests/opcodes.s:207:13]
+ 204 │    bvc reltarget+8  ;= 50 F8
+ 205 │    bmi reltarget+10 ;= 30 F8
+ 206 │    bpl reltarget+12 ;= 10 F8
+ 207 │    cbne $2B,$2C  ;= 2E 2B B7
      ·             ─┬─
      ·              ╰── Difference of -329 to current address
- 207 │    cbne $2D+X,$2E;= DE 2D B6
- 208 │    dbnz $2F,$30  ;= 6E 2F B5
- 209 │    dbnz Y,$31    ;= FE B4
+ 208 │    cbne $2D+X,$2E;= DE 2D B6
+ 209 │    dbnz $2F,$30  ;= 6E 2F B5
+ 210 │    dbnz Y,$31    ;= FE B4
      ╰────
   help: The current address is `0174` and therefore the difference is -329.
         This difference exceeds the range [-128, 127] and will wrap around,
@@ -39,16 +39,16 @@ spcasm::relative_offset_too_large
 
   ⚠ The relative offset to address `002E` is out of range, the result will
   │ be wrong.
-     ╭─[tests/opcodes.s:207:15]
- 204 │    bmi reltarget+10 ;= 30 F8
- 205 │    bpl reltarget+12 ;= 10 F8
- 206 │    cbne $2B,$2C  ;= 2E 2B B7
- 207 │    cbne $2D+X,$2E;= DE 2D B6
+     ╭─[tests/opcodes.s:208:15]
+ 205 │    bmi reltarget+10 ;= 30 F8
+ 206 │    bpl reltarget+12 ;= 10 F8
+ 207 │    cbne $2B,$2C  ;= 2E 2B B7
+ 208 │    cbne $2D+X,$2E;= DE 2D B6
      ·               ─┬─
      ·                ╰── Difference of -330 to current address
- 208 │    dbnz $2F,$30  ;= 6E 2F B5
- 209 │    dbnz Y,$31    ;= FE B4
- 210 │    jmp $2122     ;= 5F 22 21
+ 209 │    dbnz $2F,$30  ;= 6E 2F B5
+ 210 │    dbnz Y,$31    ;= FE B4
+ 211 │    jmp $2122     ;= 5F 22 21
      ╰────
   help: The current address is `0177` and therefore the difference is -330.
         This difference exceeds the range [-128, 127] and will wrap around,
@@ -59,16 +59,16 @@ spcasm::relative_offset_too_large
 
   ⚠ The relative offset to address `0030` is out of range, the result will
   │ be wrong.
-     ╭─[tests/opcodes.s:208:13]
- 205 │    bpl reltarget+12 ;= 10 F8
- 206 │    cbne $2B,$2C  ;= 2E 2B B7
- 207 │    cbne $2D+X,$2E;= DE 2D B6
- 208 │    dbnz $2F,$30  ;= 6E 2F B5
+     ╭─[tests/opcodes.s:209:13]
+ 206 │    bpl reltarget+12 ;= 10 F8
+ 207 │    cbne $2B,$2C  ;= 2E 2B B7
+ 208 │    cbne $2D+X,$2E;= DE 2D B6
+ 209 │    dbnz $2F,$30  ;= 6E 2F B5
      ·             ─┬─
      ·              ╰── Difference of -331 to current address
- 209 │    dbnz Y,$31    ;= FE B4
- 210 │    jmp $2122     ;= 5F 22 21
- 211 │    jmp ($2324+X)     ;= 1F 24 23
+ 210 │    dbnz Y,$31    ;= FE B4
+ 211 │    jmp $2122     ;= 5F 22 21
+ 212 │    jmp ($2324+X)     ;= 1F 24 23
      ╰────
   help: The current address is `017A` and therefore the difference is -331.
         This difference exceeds the range [-128, 127] and will wrap around,
@@ -79,16 +79,16 @@ spcasm::relative_offset_too_large
 
   ⚠ The relative offset to address `0031` is out of range, the result will
   │ be wrong.
-     ╭─[tests/opcodes.s:209:11]
- 206 │    cbne $2B,$2C  ;= 2E 2B B7
- 207 │    cbne $2D+X,$2E;= DE 2D B6
- 208 │    dbnz $2F,$30  ;= 6E 2F B5
- 209 │    dbnz Y,$31    ;= FE B4
+     ╭─[tests/opcodes.s:210:11]
+ 207 │    cbne $2B,$2C  ;= 2E 2B B7
+ 208 │    cbne $2D+X,$2E;= DE 2D B6
+ 209 │    dbnz $2F,$30  ;= 6E 2F B5
+ 210 │    dbnz Y,$31    ;= FE B4
      ·           ─┬─
      ·            ╰── Difference of -332 to current address
- 210 │    jmp $2122     ;= 5F 22 21
- 211 │    jmp ($2324+X)     ;= 1F 24 23
- 212 │ 
+ 211 │    jmp $2122     ;= 5F 22 21
+ 212 │    jmp ($2324+X)     ;= 1F 24 23
+ 213 │ 
      ╰────
   help: The current address is `017C` and therefore the difference is -332.
         This difference exceeds the range [-128, 127] and will wrap around,
@@ -99,16 +99,16 @@ spcasm::relative_offset_too_large
 
   ⚠ The relative offset to address `00F9` is out of range, the result will
   │ be wrong.
-     ╭─[tests/opcodes.s:226:15]
- 223 │ global_selftarget:
- 224 │    bne global_selftarget ;= D0 FE
- 225 │ 
- 226 │    bbs data.0,$F9 ;= 03 13 64
+     ╭─[tests/opcodes.s:227:15]
+ 224 │ global_selftarget:
+ 225 │    bne global_selftarget ;= D0 FE
+ 226 │ 
+ 227 │    bbs data.0,$F9 ;= 03 13 64
      ·               ─┬─
      ·                ╰── Difference of -156 to current address
- 227 │    bbs $30.1,$F9 ;= 23 30 61
- 228 │    bbs $30.2,$F9 ;= 43 30 5E
- 229 │    bbs $30.3,$F9 ;= 63 30 5B
+ 228 │    bbs $30.1,$F9 ;= 23 30 61
+ 229 │    bbs $30.2,$F9 ;= 43 30 5E
+ 230 │    bbs $30.3,$F9 ;= 63 30 5B
      ╰────
   help: The current address is `0194` and therefore the difference is -156.
         This difference exceeds the range [-128, 127] and will wrap around,
@@ -119,16 +119,16 @@ spcasm::relative_offset_too_large
 
   ⚠ The relative offset to address `00F9` is out of range, the result will
   │ be wrong.
-     ╭─[tests/opcodes.s:227:14]
- 224 │    bne global_selftarget ;= D0 FE
- 225 │ 
- 226 │    bbs data.0,$F9 ;= 03 13 64
- 227 │    bbs $30.1,$F9 ;= 23 30 61
+     ╭─[tests/opcodes.s:228:14]
+ 225 │    bne global_selftarget ;= D0 FE
+ 226 │ 
+ 227 │    bbs data.0,$F9 ;= 03 13 64
+ 228 │    bbs $30.1,$F9 ;= 23 30 61
      ·              ─┬─
      ·               ╰── Difference of -159 to current address
- 228 │    bbs $30.2,$F9 ;= 43 30 5E
- 229 │    bbs $30.3,$F9 ;= 63 30 5B
- 230 │    bbs $30.4,$F9 ;= 83 30 58
+ 229 │    bbs $30.2,$F9 ;= 43 30 5E
+ 230 │    bbs $30.3,$F9 ;= 63 30 5B
+ 231 │    bbs $30.4,$F9 ;= 83 30 58
      ╰────
   help: The current address is `0197` and therefore the difference is -159.
         This difference exceeds the range [-128, 127] and will wrap around,
@@ -139,16 +139,16 @@ spcasm::relative_offset_too_large
 
   ⚠ The relative offset to address `00F9` is out of range, the result will
   │ be wrong.
-     ╭─[tests/opcodes.s:228:14]
- 225 │ 
- 226 │    bbs data.0,$F9 ;= 03 13 64
- 227 │    bbs $30.1,$F9 ;= 23 30 61
- 228 │    bbs $30.2,$F9 ;= 43 30 5E
+     ╭─[tests/opcodes.s:229:14]
+ 226 │ 
+ 227 │    bbs data.0,$F9 ;= 03 13 64
+ 228 │    bbs $30.1,$F9 ;= 23 30 61
+ 229 │    bbs $30.2,$F9 ;= 43 30 5E
      ·              ─┬─
      ·               ╰── Difference of -162 to current address
- 229 │    bbs $30.3,$F9 ;= 63 30 5B
- 230 │    bbs $30.4,$F9 ;= 83 30 58
- 231 │    bbs $30.5,$F9 ;= A3 30 55
+ 230 │    bbs $30.3,$F9 ;= 63 30 5B
+ 231 │    bbs $30.4,$F9 ;= 83 30 58
+ 232 │    bbs $30.5,$F9 ;= A3 30 55
      ╰────
   help: The current address is `019A` and therefore the difference is -162.
         This difference exceeds the range [-128, 127] and will wrap around,
@@ -159,16 +159,16 @@ spcasm::relative_offset_too_large
 
   ⚠ The relative offset to address `00F9` is out of range, the result will
   │ be wrong.
-     ╭─[tests/opcodes.s:229:14]
- 226 │    bbs data.0,$F9 ;= 03 13 64
- 227 │    bbs $30.1,$F9 ;= 23 30 61
- 228 │    bbs $30.2,$F9 ;= 43 30 5E
- 229 │    bbs $30.3,$F9 ;= 63 30 5B
+     ╭─[tests/opcodes.s:230:14]
+ 227 │    bbs data.0,$F9 ;= 03 13 64
+ 228 │    bbs $30.1,$F9 ;= 23 30 61
+ 229 │    bbs $30.2,$F9 ;= 43 30 5E
+ 230 │    bbs $30.3,$F9 ;= 63 30 5B
      ·              ─┬─
      ·               ╰── Difference of -165 to current address
- 230 │    bbs $30.4,$F9 ;= 83 30 58
- 231 │    bbs $30.5,$F9 ;= A3 30 55
- 232 │    bbs $30.6,$F9 ;= C3 30 52
+ 231 │    bbs $30.4,$F9 ;= 83 30 58
+ 232 │    bbs $30.5,$F9 ;= A3 30 55
+ 233 │    bbs $30.6,$F9 ;= C3 30 52
      ╰────
   help: The current address is `019D` and therefore the difference is -165.
         This difference exceeds the range [-128, 127] and will wrap around,
@@ -179,16 +179,16 @@ spcasm::relative_offset_too_large
 
   ⚠ The relative offset to address `00F9` is out of range, the result will
   │ be wrong.
-     ╭─[tests/opcodes.s:230:14]
- 227 │    bbs $30.1,$F9 ;= 23 30 61
- 228 │    bbs $30.2,$F9 ;= 43 30 5E
- 229 │    bbs $30.3,$F9 ;= 63 30 5B
- 230 │    bbs $30.4,$F9 ;= 83 30 58
+     ╭─[tests/opcodes.s:231:14]
+ 228 │    bbs $30.1,$F9 ;= 23 30 61
+ 229 │    bbs $30.2,$F9 ;= 43 30 5E
+ 230 │    bbs $30.3,$F9 ;= 63 30 5B
+ 231 │    bbs $30.4,$F9 ;= 83 30 58
      ·              ─┬─
      ·               ╰── Difference of -168 to current address
- 231 │    bbs $30.5,$F9 ;= A3 30 55
- 232 │    bbs $30.6,$F9 ;= C3 30 52
- 233 │    bbs $30.7,$F9 ;= E3 30 4F
+ 232 │    bbs $30.5,$F9 ;= A3 30 55
+ 233 │    bbs $30.6,$F9 ;= C3 30 52
+ 234 │    bbs $30.7,$F9 ;= E3 30 4F
      ╰────
   help: The current address is `01A0` and therefore the difference is -168.
         This difference exceeds the range [-128, 127] and will wrap around,
@@ -199,16 +199,16 @@ spcasm::relative_offset_too_large
 
   ⚠ The relative offset to address `00F9` is out of range, the result will
   │ be wrong.
-     ╭─[tests/opcodes.s:231:14]
- 228 │    bbs $30.2,$F9 ;= 43 30 5E
- 229 │    bbs $30.3,$F9 ;= 63 30 5B
- 230 │    bbs $30.4,$F9 ;= 83 30 58
- 231 │    bbs $30.5,$F9 ;= A3 30 55
+     ╭─[tests/opcodes.s:232:14]
+ 229 │    bbs $30.2,$F9 ;= 43 30 5E
+ 230 │    bbs $30.3,$F9 ;= 63 30 5B
+ 231 │    bbs $30.4,$F9 ;= 83 30 58
+ 232 │    bbs $30.5,$F9 ;= A3 30 55
      ·              ─┬─
      ·               ╰── Difference of -171 to current address
- 232 │    bbs $30.6,$F9 ;= C3 30 52
- 233 │    bbs $30.7,$F9 ;= E3 30 4F
- 234 │    bbc start.0,$05 ;= 13 00 58
+ 233 │    bbs $30.6,$F9 ;= C3 30 52
+ 234 │    bbs $30.7,$F9 ;= E3 30 4F
+ 235 │    bbc start.0,$05 ;= 13 00 58
      ╰────
   help: The current address is `01A3` and therefore the difference is -171.
         This difference exceeds the range [-128, 127] and will wrap around,
@@ -219,16 +219,16 @@ spcasm::relative_offset_too_large
 
   ⚠ The relative offset to address `00F9` is out of range, the result will
   │ be wrong.
-     ╭─[tests/opcodes.s:232:14]
- 229 │    bbs $30.3,$F9 ;= 63 30 5B
- 230 │    bbs $30.4,$F9 ;= 83 30 58
- 231 │    bbs $30.5,$F9 ;= A3 30 55
- 232 │    bbs $30.6,$F9 ;= C3 30 52
+     ╭─[tests/opcodes.s:233:14]
+ 230 │    bbs $30.3,$F9 ;= 63 30 5B
+ 231 │    bbs $30.4,$F9 ;= 83 30 58
+ 232 │    bbs $30.5,$F9 ;= A3 30 55
+ 233 │    bbs $30.6,$F9 ;= C3 30 52
      ·              ─┬─
      ·               ╰── Difference of -174 to current address
- 233 │    bbs $30.7,$F9 ;= E3 30 4F
- 234 │    bbc start.0,$05 ;= 13 00 58
- 235 │    bbc $31.1,$05 ;= 33 31 55
+ 234 │    bbs $30.7,$F9 ;= E3 30 4F
+ 235 │    bbc start.0,$05 ;= 13 00 58
+ 236 │    bbc $31.1,$05 ;= 33 31 55
      ╰────
   help: The current address is `01A6` and therefore the difference is -174.
         This difference exceeds the range [-128, 127] and will wrap around,
@@ -239,16 +239,16 @@ spcasm::relative_offset_too_large
 
   ⚠ The relative offset to address `00F9` is out of range, the result will
   │ be wrong.
-     ╭─[tests/opcodes.s:233:14]
- 230 │    bbs $30.4,$F9 ;= 83 30 58
- 231 │    bbs $30.5,$F9 ;= A3 30 55
- 232 │    bbs $30.6,$F9 ;= C3 30 52
- 233 │    bbs $30.7,$F9 ;= E3 30 4F
+     ╭─[tests/opcodes.s:234:14]
+ 231 │    bbs $30.4,$F9 ;= 83 30 58
+ 232 │    bbs $30.5,$F9 ;= A3 30 55
+ 233 │    bbs $30.6,$F9 ;= C3 30 52
+ 234 │    bbs $30.7,$F9 ;= E3 30 4F
      ·              ─┬─
      ·               ╰── Difference of -177 to current address
- 234 │    bbc start.0,$05 ;= 13 00 58
- 235 │    bbc $31.1,$05 ;= 33 31 55
- 236 │    bbc $31.2,$05 ;= 53 31 52
+ 235 │    bbc start.0,$05 ;= 13 00 58
+ 236 │    bbc $31.1,$05 ;= 33 31 55
+ 237 │    bbc $31.2,$05 ;= 53 31 52
      ╰────
   help: The current address is `01A9` and therefore the difference is -177.
         This difference exceeds the range [-128, 127] and will wrap around,
@@ -259,16 +259,16 @@ spcasm::relative_offset_too_large
 
   ⚠ The relative offset to address `0005` is out of range, the result will
   │ be wrong.
-     ╭─[tests/opcodes.s:234:16]
- 231 │    bbs $30.5,$F9 ;= A3 30 55
- 232 │    bbs $30.6,$F9 ;= C3 30 52
- 233 │    bbs $30.7,$F9 ;= E3 30 4F
- 234 │    bbc start.0,$05 ;= 13 00 58
+     ╭─[tests/opcodes.s:235:16]
+ 232 │    bbs $30.5,$F9 ;= A3 30 55
+ 233 │    bbs $30.6,$F9 ;= C3 30 52
+ 234 │    bbs $30.7,$F9 ;= E3 30 4F
+ 235 │    bbc start.0,$05 ;= 13 00 58
      ·                ─┬─
      ·                 ╰── Difference of -424 to current address
- 235 │    bbc $31.1,$05 ;= 33 31 55
- 236 │    bbc $31.2,$05 ;= 53 31 52
- 237 │    bbc $31.3,$05 ;= 73 31 4F
+ 236 │    bbc $31.1,$05 ;= 33 31 55
+ 237 │    bbc $31.2,$05 ;= 53 31 52
+ 238 │    bbc $31.3,$05 ;= 73 31 4F
      ╰────
   help: The current address is `01AC` and therefore the difference is -424.
         This difference exceeds the range [-128, 127] and will wrap around,
@@ -279,16 +279,16 @@ spcasm::relative_offset_too_large
 
   ⚠ The relative offset to address `0005` is out of range, the result will
   │ be wrong.
-     ╭─[tests/opcodes.s:235:14]
- 232 │    bbs $30.6,$F9 ;= C3 30 52
- 233 │    bbs $30.7,$F9 ;= E3 30 4F
- 234 │    bbc start.0,$05 ;= 13 00 58
- 235 │    bbc $31.1,$05 ;= 33 31 55
+     ╭─[tests/opcodes.s:236:14]
+ 233 │    bbs $30.6,$F9 ;= C3 30 52
+ 234 │    bbs $30.7,$F9 ;= E3 30 4F
+ 235 │    bbc start.0,$05 ;= 13 00 58
+ 236 │    bbc $31.1,$05 ;= 33 31 55
      ·              ─┬─
      ·               ╰── Difference of -427 to current address
- 236 │    bbc $31.2,$05 ;= 53 31 52
- 237 │    bbc $31.3,$05 ;= 73 31 4F
- 238 │    bbc $31.4,$05 ;= 93 31 4C
+ 237 │    bbc $31.2,$05 ;= 53 31 52
+ 238 │    bbc $31.3,$05 ;= 73 31 4F
+ 239 │    bbc $31.4,$05 ;= 93 31 4C
      ╰────
   help: The current address is `01AF` and therefore the difference is -427.
         This difference exceeds the range [-128, 127] and will wrap around,
@@ -299,16 +299,16 @@ spcasm::relative_offset_too_large
 
   ⚠ The relative offset to address `0005` is out of range, the result will
   │ be wrong.
-     ╭─[tests/opcodes.s:236:14]
- 233 │    bbs $30.7,$F9 ;= E3 30 4F
- 234 │    bbc start.0,$05 ;= 13 00 58
- 235 │    bbc $31.1,$05 ;= 33 31 55
- 236 │    bbc $31.2,$05 ;= 53 31 52
+     ╭─[tests/opcodes.s:237:14]
+ 234 │    bbs $30.7,$F9 ;= E3 30 4F
+ 235 │    bbc start.0,$05 ;= 13 00 58
+ 236 │    bbc $31.1,$05 ;= 33 31 55
+ 237 │    bbc $31.2,$05 ;= 53 31 52
      ·              ─┬─
      ·               ╰── Difference of -430 to current address
- 237 │    bbc $31.3,$05 ;= 73 31 4F
- 238 │    bbc $31.4,$05 ;= 93 31 4C
- 239 │    bbc $31.5,$05 ;= B3 31 49
+ 238 │    bbc $31.3,$05 ;= 73 31 4F
+ 239 │    bbc $31.4,$05 ;= 93 31 4C
+ 240 │    bbc $31.5,$05 ;= B3 31 49
      ╰────
   help: The current address is `01B2` and therefore the difference is -430.
         This difference exceeds the range [-128, 127] and will wrap around,
@@ -319,16 +319,16 @@ spcasm::relative_offset_too_large
 
   ⚠ The relative offset to address `0005` is out of range, the result will
   │ be wrong.
-     ╭─[tests/opcodes.s:237:14]
- 234 │    bbc start.0,$05 ;= 13 00 58
- 235 │    bbc $31.1,$05 ;= 33 31 55
- 236 │    bbc $31.2,$05 ;= 53 31 52
- 237 │    bbc $31.3,$05 ;= 73 31 4F
+     ╭─[tests/opcodes.s:238:14]
+ 235 │    bbc start.0,$05 ;= 13 00 58
+ 236 │    bbc $31.1,$05 ;= 33 31 55
+ 237 │    bbc $31.2,$05 ;= 53 31 52
+ 238 │    bbc $31.3,$05 ;= 73 31 4F
      ·              ─┬─
      ·               ╰── Difference of -433 to current address
- 238 │    bbc $31.4,$05 ;= 93 31 4C
- 239 │    bbc $31.5,$05 ;= B3 31 49
- 240 │    bbc $31.6,$05 ;= D3 31 46
+ 239 │    bbc $31.4,$05 ;= 93 31 4C
+ 240 │    bbc $31.5,$05 ;= B3 31 49
+ 241 │    bbc $31.6,$05 ;= D3 31 46
      ╰────
   help: The current address is `01B5` and therefore the difference is -433.
         This difference exceeds the range [-128, 127] and will wrap around,
@@ -339,16 +339,16 @@ spcasm::relative_offset_too_large
 
   ⚠ The relative offset to address `0005` is out of range, the result will
   │ be wrong.
-     ╭─[tests/opcodes.s:238:14]
- 235 │    bbc $31.1,$05 ;= 33 31 55
- 236 │    bbc $31.2,$05 ;= 53 31 52
- 237 │    bbc $31.3,$05 ;= 73 31 4F
- 238 │    bbc $31.4,$05 ;= 93 31 4C
+     ╭─[tests/opcodes.s:239:14]
+ 236 │    bbc $31.1,$05 ;= 33 31 55
+ 237 │    bbc $31.2,$05 ;= 53 31 52
+ 238 │    bbc $31.3,$05 ;= 73 31 4F
+ 239 │    bbc $31.4,$05 ;= 93 31 4C
      ·              ─┬─
      ·               ╰── Difference of -436 to current address
- 239 │    bbc $31.5,$05 ;= B3 31 49
- 240 │    bbc $31.6,$05 ;= D3 31 46
- 241 │    bbc $31.7,$05 ;= F3 31 43
+ 240 │    bbc $31.5,$05 ;= B3 31 49
+ 241 │    bbc $31.6,$05 ;= D3 31 46
+ 242 │    bbc $31.7,$05 ;= F3 31 43
      ╰────
   help: The current address is `01B8` and therefore the difference is -436.
         This difference exceeds the range [-128, 127] and will wrap around,
@@ -359,16 +359,16 @@ spcasm::relative_offset_too_large
 
   ⚠ The relative offset to address `0005` is out of range, the result will
   │ be wrong.
-     ╭─[tests/opcodes.s:239:14]
- 236 │    bbc $31.2,$05 ;= 53 31 52
- 237 │    bbc $31.3,$05 ;= 73 31 4F
- 238 │    bbc $31.4,$05 ;= 93 31 4C
- 239 │    bbc $31.5,$05 ;= B3 31 49
+     ╭─[tests/opcodes.s:240:14]
+ 237 │    bbc $31.2,$05 ;= 53 31 52
+ 238 │    bbc $31.3,$05 ;= 73 31 4F
+ 239 │    bbc $31.4,$05 ;= 93 31 4C
+ 240 │    bbc $31.5,$05 ;= B3 31 49
      ·              ─┬─
      ·               ╰── Difference of -439 to current address
- 240 │    bbc $31.6,$05 ;= D3 31 46
- 241 │    bbc $31.7,$05 ;= F3 31 43
- 242 │ 
+ 241 │    bbc $31.6,$05 ;= D3 31 46
+ 242 │    bbc $31.7,$05 ;= F3 31 43
+ 243 │ 
      ╰────
   help: The current address is `01BB` and therefore the difference is -439.
         This difference exceeds the range [-128, 127] and will wrap around,
@@ -379,16 +379,16 @@ spcasm::relative_offset_too_large
 
   ⚠ The relative offset to address `0005` is out of range, the result will
   │ be wrong.
-     ╭─[tests/opcodes.s:240:14]
- 237 │    bbc $31.3,$05 ;= 73 31 4F
- 238 │    bbc $31.4,$05 ;= 93 31 4C
- 239 │    bbc $31.5,$05 ;= B3 31 49
- 240 │    bbc $31.6,$05 ;= D3 31 46
+     ╭─[tests/opcodes.s:241:14]
+ 238 │    bbc $31.3,$05 ;= 73 31 4F
+ 239 │    bbc $31.4,$05 ;= 93 31 4C
+ 240 │    bbc $31.5,$05 ;= B3 31 49
+ 241 │    bbc $31.6,$05 ;= D3 31 46
      ·              ─┬─
      ·               ╰── Difference of -442 to current address
- 241 │    bbc $31.7,$05 ;= F3 31 43
- 242 │ 
- 243 │    call $5060 ;= 3F 60 50
+ 242 │    bbc $31.7,$05 ;= F3 31 43
+ 243 │ 
+ 244 │    call $5060 ;= 3F 60 50
      ╰────
   help: The current address is `01BE` and therefore the difference is -442.
         This difference exceeds the range [-128, 127] and will wrap around,
@@ -399,16 +399,16 @@ spcasm::relative_offset_too_large
 
   ⚠ The relative offset to address `0005` is out of range, the result will
   │ be wrong.
-     ╭─[tests/opcodes.s:241:14]
- 238 │    bbc $31.4,$05 ;= 93 31 4C
- 239 │    bbc $31.5,$05 ;= B3 31 49
- 240 │    bbc $31.6,$05 ;= D3 31 46
- 241 │    bbc $31.7,$05 ;= F3 31 43
+     ╭─[tests/opcodes.s:242:14]
+ 239 │    bbc $31.4,$05 ;= 93 31 4C
+ 240 │    bbc $31.5,$05 ;= B3 31 49
+ 241 │    bbc $31.6,$05 ;= D3 31 46
+ 242 │    bbc $31.7,$05 ;= F3 31 43
      ·              ─┬─
      ·               ╰── Difference of -445 to current address
- 242 │ 
- 243 │    call $5060 ;= 3F 60 50
- 244 │    pcall $02  ;= 4F 02
+ 243 │ 
+ 244 │    call $5060 ;= 3F 60 50
+ 245 │    pcall $02  ;= 4F 02
      ╰────
   help: The current address is `01C1` and therefore the difference is -445.
         This difference exceeds the range [-128, 127] and will wrap around,
@@ -434,8 +434,8 @@ spcasm::arch::valid
    · ───────┬───────
    ·        ╰── `arch` directive
  2 │ org 0
- 3 │ start:        ; @ 0
- 4 │    MOV A,#$10    ;= E8 10
+ 3 │ startpos
+ 4 │ start:        ; @ 0
    ╰────
   help: spcasm supports `arch` directives for compatibility with the Asar
         multi-architecture assembler. This arch directive points to the
@@ -445,16 +445,16 @@ spcasm::relative_offset_too_large
 
   ⚠ The relative offset to address `002C` is out of range, the result will
   │ be wrong.
-     ╭─[tests/opcodes.s:206:13]
- 203 │    bvc reltarget+8  ;= 50 F8
- 204 │    bmi reltarget+10 ;= 30 F8
- 205 │    bpl reltarget+12 ;= 10 F8
- 206 │    cbne $2B,$2C  ;= 2E 2B B7
+     ╭─[tests/opcodes.s:207:13]
+ 204 │    bvc reltarget+8  ;= 50 F8
+ 205 │    bmi reltarget+10 ;= 30 F8
+ 206 │    bpl reltarget+12 ;= 10 F8
+ 207 │    cbne $2B,$2C  ;= 2E 2B B7
      ·             ─┬─
      ·              ╰── Difference of -329 to current address
- 207 │    cbne $2D+X,$2E;= DE 2D B6
- 208 │    dbnz $2F,$30  ;= 6E 2F B5
- 209 │    dbnz Y,$31    ;= FE B4
+ 208 │    cbne $2D+X,$2E;= DE 2D B6
+ 209 │    dbnz $2F,$30  ;= 6E 2F B5
+ 210 │    dbnz Y,$31    ;= FE B4
      ╰────
   help: The current address is `0174` and therefore the difference is -329.
         This difference exceeds the range [-128, 127] and will wrap around,
@@ -465,16 +465,16 @@ spcasm::relative_offset_too_large
 
   ⚠ The relative offset to address `002E` is out of range, the result will
   │ be wrong.
-     ╭─[tests/opcodes.s:207:15]
- 204 │    bmi reltarget+10 ;= 30 F8
- 205 │    bpl reltarget+12 ;= 10 F8
- 206 │    cbne $2B,$2C  ;= 2E 2B B7
- 207 │    cbne $2D+X,$2E;= DE 2D B6
+     ╭─[tests/opcodes.s:208:15]
+ 205 │    bmi reltarget+10 ;= 30 F8
+ 206 │    bpl reltarget+12 ;= 10 F8
+ 207 │    cbne $2B,$2C  ;= 2E 2B B7
+ 208 │    cbne $2D+X,$2E;= DE 2D B6
      ·               ─┬─
      ·                ╰── Difference of -330 to current address
- 208 │    dbnz $2F,$30  ;= 6E 2F B5
- 209 │    dbnz Y,$31    ;= FE B4
- 210 │    jmp $2122     ;= 5F 22 21
+ 209 │    dbnz $2F,$30  ;= 6E 2F B5
+ 210 │    dbnz Y,$31    ;= FE B4
+ 211 │    jmp $2122     ;= 5F 22 21
      ╰────
   help: The current address is `0177` and therefore the difference is -330.
         This difference exceeds the range [-128, 127] and will wrap around,
@@ -485,16 +485,16 @@ spcasm::relative_offset_too_large
 
   ⚠ The relative offset to address `0030` is out of range, the result will
   │ be wrong.
-     ╭─[tests/opcodes.s:208:13]
- 205 │    bpl reltarget+12 ;= 10 F8
- 206 │    cbne $2B,$2C  ;= 2E 2B B7
- 207 │    cbne $2D+X,$2E;= DE 2D B6
- 208 │    dbnz $2F,$30  ;= 6E 2F B5
+     ╭─[tests/opcodes.s:209:13]
+ 206 │    bpl reltarget+12 ;= 10 F8
+ 207 │    cbne $2B,$2C  ;= 2E 2B B7
+ 208 │    cbne $2D+X,$2E;= DE 2D B6
+ 209 │    dbnz $2F,$30  ;= 6E 2F B5
      ·             ─┬─
      ·              ╰── Difference of -331 to current address
- 209 │    dbnz Y,$31    ;= FE B4
- 210 │    jmp $2122     ;= 5F 22 21
- 211 │    jmp ($2324+X)     ;= 1F 24 23
+ 210 │    dbnz Y,$31    ;= FE B4
+ 211 │    jmp $2122     ;= 5F 22 21
+ 212 │    jmp ($2324+X)     ;= 1F 24 23
      ╰────
   help: The current address is `017A` and therefore the difference is -331.
         This difference exceeds the range [-128, 127] and will wrap around,
@@ -505,16 +505,16 @@ spcasm::relative_offset_too_large
 
   ⚠ The relative offset to address `0031` is out of range, the result will
   │ be wrong.
-     ╭─[tests/opcodes.s:209:11]
- 206 │    cbne $2B,$2C  ;= 2E 2B B7
- 207 │    cbne $2D+X,$2E;= DE 2D B6
- 208 │    dbnz $2F,$30  ;= 6E 2F B5
- 209 │    dbnz Y,$31    ;= FE B4
+     ╭─[tests/opcodes.s:210:11]
+ 207 │    cbne $2B,$2C  ;= 2E 2B B7
+ 208 │    cbne $2D+X,$2E;= DE 2D B6
+ 209 │    dbnz $2F,$30  ;= 6E 2F B5
+ 210 │    dbnz Y,$31    ;= FE B4
      ·           ─┬─
      ·            ╰── Difference of -332 to current address
- 210 │    jmp $2122     ;= 5F 22 21
- 211 │    jmp ($2324+X)     ;= 1F 24 23
- 212 │ 
+ 211 │    jmp $2122     ;= 5F 22 21
+ 212 │    jmp ($2324+X)     ;= 1F 24 23
+ 213 │ 
      ╰────
   help: The current address is `017C` and therefore the difference is -332.
         This difference exceeds the range [-128, 127] and will wrap around,
@@ -525,16 +525,16 @@ spcasm::relative_offset_too_large
 
   ⚠ The relative offset to address `00F9` is out of range, the result will
   │ be wrong.
-     ╭─[tests/opcodes.s:226:15]
- 223 │ global_selftarget:
- 224 │    bne global_selftarget ;= D0 FE
- 225 │ 
- 226 │    bbs data.0,$F9 ;= 03 13 64
+     ╭─[tests/opcodes.s:227:15]
+ 224 │ global_selftarget:
+ 225 │    bne global_selftarget ;= D0 FE
+ 226 │ 
+ 227 │    bbs data.0,$F9 ;= 03 13 64
      ·               ─┬─
      ·                ╰── Difference of -156 to current address
- 227 │    bbs $30.1,$F9 ;= 23 30 61
- 228 │    bbs $30.2,$F9 ;= 43 30 5E
- 229 │    bbs $30.3,$F9 ;= 63 30 5B
+ 228 │    bbs $30.1,$F9 ;= 23 30 61
+ 229 │    bbs $30.2,$F9 ;= 43 30 5E
+ 230 │    bbs $30.3,$F9 ;= 63 30 5B
      ╰────
   help: The current address is `0194` and therefore the difference is -156.
         This difference exceeds the range [-128, 127] and will wrap around,
@@ -545,16 +545,16 @@ spcasm::relative_offset_too_large
 
   ⚠ The relative offset to address `00F9` is out of range, the result will
   │ be wrong.
-     ╭─[tests/opcodes.s:227:14]
- 224 │    bne global_selftarget ;= D0 FE
- 225 │ 
- 226 │    bbs data.0,$F9 ;= 03 13 64
- 227 │    bbs $30.1,$F9 ;= 23 30 61
+     ╭─[tests/opcodes.s:228:14]
+ 225 │    bne global_selftarget ;= D0 FE
+ 226 │ 
+ 227 │    bbs data.0,$F9 ;= 03 13 64
+ 228 │    bbs $30.1,$F9 ;= 23 30 61
      ·              ─┬─
      ·               ╰── Difference of -159 to current address
- 228 │    bbs $30.2,$F9 ;= 43 30 5E
- 229 │    bbs $30.3,$F9 ;= 63 30 5B
- 230 │    bbs $30.4,$F9 ;= 83 30 58
+ 229 │    bbs $30.2,$F9 ;= 43 30 5E
+ 230 │    bbs $30.3,$F9 ;= 63 30 5B
+ 231 │    bbs $30.4,$F9 ;= 83 30 58
      ╰────
   help: The current address is `0197` and therefore the difference is -159.
         This difference exceeds the range [-128, 127] and will wrap around,
@@ -565,16 +565,16 @@ spcasm::relative_offset_too_large
 
   ⚠ The relative offset to address `00F9` is out of range, the result will
   │ be wrong.
-     ╭─[tests/opcodes.s:228:14]
- 225 │ 
- 226 │    bbs data.0,$F9 ;= 03 13 64
- 227 │    bbs $30.1,$F9 ;= 23 30 61
- 228 │    bbs $30.2,$F9 ;= 43 30 5E
+     ╭─[tests/opcodes.s:229:14]
+ 226 │ 
+ 227 │    bbs data.0,$F9 ;= 03 13 64
+ 228 │    bbs $30.1,$F9 ;= 23 30 61
+ 229 │    bbs $30.2,$F9 ;= 43 30 5E
      ·              ─┬─
      ·               ╰── Difference of -162 to current address
- 229 │    bbs $30.3,$F9 ;= 63 30 5B
- 230 │    bbs $30.4,$F9 ;= 83 30 58
- 231 │    bbs $30.5,$F9 ;= A3 30 55
+ 230 │    bbs $30.3,$F9 ;= 63 30 5B
+ 231 │    bbs $30.4,$F9 ;= 83 30 58
+ 232 │    bbs $30.5,$F9 ;= A3 30 55
      ╰────
   help: The current address is `019A` and therefore the difference is -162.
         This difference exceeds the range [-128, 127] and will wrap around,
@@ -585,16 +585,16 @@ spcasm::relative_offset_too_large
 
   ⚠ The relative offset to address `00F9` is out of range, the result will
   │ be wrong.
-     ╭─[tests/opcodes.s:229:14]
- 226 │    bbs data.0,$F9 ;= 03 13 64
- 227 │    bbs $30.1,$F9 ;= 23 30 61
- 228 │    bbs $30.2,$F9 ;= 43 30 5E
- 229 │    bbs $30.3,$F9 ;= 63 30 5B
+     ╭─[tests/opcodes.s:230:14]
+ 227 │    bbs data.0,$F9 ;= 03 13 64
+ 228 │    bbs $30.1,$F9 ;= 23 30 61
+ 229 │    bbs $30.2,$F9 ;= 43 30 5E
+ 230 │    bbs $30.3,$F9 ;= 63 30 5B
      ·              ─┬─
      ·               ╰── Difference of -165 to current address
- 230 │    bbs $30.4,$F9 ;= 83 30 58
- 231 │    bbs $30.5,$F9 ;= A3 30 55
- 232 │    bbs $30.6,$F9 ;= C3 30 52
+ 231 │    bbs $30.4,$F9 ;= 83 30 58
+ 232 │    bbs $30.5,$F9 ;= A3 30 55
+ 233 │    bbs $30.6,$F9 ;= C3 30 52
      ╰────
   help: The current address is `019D` and therefore the difference is -165.
         This difference exceeds the range [-128, 127] and will wrap around,
@@ -605,16 +605,16 @@ spcasm::relative_offset_too_large
 
   ⚠ The relative offset to address `00F9` is out of range, the result will
   │ be wrong.
-     ╭─[tests/opcodes.s:230:14]
- 227 │    bbs $30.1,$F9 ;= 23 30 61
- 228 │    bbs $30.2,$F9 ;= 43 30 5E
- 229 │    bbs $30.3,$F9 ;= 63 30 5B
- 230 │    bbs $30.4,$F9 ;= 83 30 58
+     ╭─[tests/opcodes.s:231:14]
+ 228 │    bbs $30.1,$F9 ;= 23 30 61
+ 229 │    bbs $30.2,$F9 ;= 43 30 5E
+ 230 │    bbs $30.3,$F9 ;= 63 30 5B
+ 231 │    bbs $30.4,$F9 ;= 83 30 58
      ·              ─┬─
      ·               ╰── Difference of -168 to current address
- 231 │    bbs $30.5,$F9 ;= A3 30 55
- 232 │    bbs $30.6,$F9 ;= C3 30 52
- 233 │    bbs $30.7,$F9 ;= E3 30 4F
+ 232 │    bbs $30.5,$F9 ;= A3 30 55
+ 233 │    bbs $30.6,$F9 ;= C3 30 52
+ 234 │    bbs $30.7,$F9 ;= E3 30 4F
      ╰────
   help: The current address is `01A0` and therefore the difference is -168.
         This difference exceeds the range [-128, 127] and will wrap around,
@@ -625,16 +625,16 @@ spcasm::relative_offset_too_large
 
   ⚠ The relative offset to address `00F9` is out of range, the result will
   │ be wrong.
-     ╭─[tests/opcodes.s:231:14]
- 228 │    bbs $30.2,$F9 ;= 43 30 5E
- 229 │    bbs $30.3,$F9 ;= 63 30 5B
- 230 │    bbs $30.4,$F9 ;= 83 30 58
- 231 │    bbs $30.5,$F9 ;= A3 30 55
+     ╭─[tests/opcodes.s:232:14]
+ 229 │    bbs $30.2,$F9 ;= 43 30 5E
+ 230 │    bbs $30.3,$F9 ;= 63 30 5B
+ 231 │    bbs $30.4,$F9 ;= 83 30 58
+ 232 │    bbs $30.5,$F9 ;= A3 30 55
      ·              ─┬─
      ·               ╰── Difference of -171 to current address
- 232 │    bbs $30.6,$F9 ;= C3 30 52
- 233 │    bbs $30.7,$F9 ;= E3 30 4F
- 234 │    bbc start.0,$05 ;= 13 00 58
+ 233 │    bbs $30.6,$F9 ;= C3 30 52
+ 234 │    bbs $30.7,$F9 ;= E3 30 4F
+ 235 │    bbc start.0,$05 ;= 13 00 58
      ╰────
   help: The current address is `01A3` and therefore the difference is -171.
         This difference exceeds the range [-128, 127] and will wrap around,
@@ -645,16 +645,16 @@ spcasm::relative_offset_too_large
 
   ⚠ The relative offset to address `00F9` is out of range, the result will
   │ be wrong.
-     ╭─[tests/opcodes.s:232:14]
- 229 │    bbs $30.3,$F9 ;= 63 30 5B
- 230 │    bbs $30.4,$F9 ;= 83 30 58
- 231 │    bbs $30.5,$F9 ;= A3 30 55
- 232 │    bbs $30.6,$F9 ;= C3 30 52
+     ╭─[tests/opcodes.s:233:14]
+ 230 │    bbs $30.3,$F9 ;= 63 30 5B
+ 231 │    bbs $30.4,$F9 ;= 83 30 58
+ 232 │    bbs $30.5,$F9 ;= A3 30 55
+ 233 │    bbs $30.6,$F9 ;= C3 30 52
      ·              ─┬─
      ·               ╰── Difference of -174 to current address
- 233 │    bbs $30.7,$F9 ;= E3 30 4F
- 234 │    bbc start.0,$05 ;= 13 00 58
- 235 │    bbc $31.1,$05 ;= 33 31 55
+ 234 │    bbs $30.7,$F9 ;= E3 30 4F
+ 235 │    bbc start.0,$05 ;= 13 00 58
+ 236 │    bbc $31.1,$05 ;= 33 31 55
      ╰────
   help: The current address is `01A6` and therefore the difference is -174.
         This difference exceeds the range [-128, 127] and will wrap around,
@@ -665,16 +665,16 @@ spcasm::relative_offset_too_large
 
   ⚠ The relative offset to address `00F9` is out of range, the result will
   │ be wrong.
-     ╭─[tests/opcodes.s:233:14]
- 230 │    bbs $30.4,$F9 ;= 83 30 58
- 231 │    bbs $30.5,$F9 ;= A3 30 55
- 232 │    bbs $30.6,$F9 ;= C3 30 52
- 233 │    bbs $30.7,$F9 ;= E3 30 4F
+     ╭─[tests/opcodes.s:234:14]
+ 231 │    bbs $30.4,$F9 ;= 83 30 58
+ 232 │    bbs $30.5,$F9 ;= A3 30 55
+ 233 │    bbs $30.6,$F9 ;= C3 30 52
+ 234 │    bbs $30.7,$F9 ;= E3 30 4F
      ·              ─┬─
      ·               ╰── Difference of -177 to current address
- 234 │    bbc start.0,$05 ;= 13 00 58
- 235 │    bbc $31.1,$05 ;= 33 31 55
- 236 │    bbc $31.2,$05 ;= 53 31 52
+ 235 │    bbc start.0,$05 ;= 13 00 58
+ 236 │    bbc $31.1,$05 ;= 33 31 55
+ 237 │    bbc $31.2,$05 ;= 53 31 52
      ╰────
   help: The current address is `01A9` and therefore the difference is -177.
         This difference exceeds the range [-128, 127] and will wrap around,
@@ -685,16 +685,16 @@ spcasm::relative_offset_too_large
 
   ⚠ The relative offset to address `0005` is out of range, the result will
   │ be wrong.
-     ╭─[tests/opcodes.s:234:16]
- 231 │    bbs $30.5,$F9 ;= A3 30 55
- 232 │    bbs $30.6,$F9 ;= C3 30 52
- 233 │    bbs $30.7,$F9 ;= E3 30 4F
- 234 │    bbc start.0,$05 ;= 13 00 58
+     ╭─[tests/opcodes.s:235:16]
+ 232 │    bbs $30.5,$F9 ;= A3 30 55
+ 233 │    bbs $30.6,$F9 ;= C3 30 52
+ 234 │    bbs $30.7,$F9 ;= E3 30 4F
+ 235 │    bbc start.0,$05 ;= 13 00 58
      ·                ─┬─
      ·                 ╰── Difference of -424 to current address
- 235 │    bbc $31.1,$05 ;= 33 31 55
- 236 │    bbc $31.2,$05 ;= 53 31 52
- 237 │    bbc $31.3,$05 ;= 73 31 4F
+ 236 │    bbc $31.1,$05 ;= 33 31 55
+ 237 │    bbc $31.2,$05 ;= 53 31 52
+ 238 │    bbc $31.3,$05 ;= 73 31 4F
      ╰────
   help: The current address is `01AC` and therefore the difference is -424.
         This difference exceeds the range [-128, 127] and will wrap around,
@@ -705,16 +705,16 @@ spcasm::relative_offset_too_large
 
   ⚠ The relative offset to address `0005` is out of range, the result will
   │ be wrong.
-     ╭─[tests/opcodes.s:235:14]
- 232 │    bbs $30.6,$F9 ;= C3 30 52
- 233 │    bbs $30.7,$F9 ;= E3 30 4F
- 234 │    bbc start.0,$05 ;= 13 00 58
- 235 │    bbc $31.1,$05 ;= 33 31 55
+     ╭─[tests/opcodes.s:236:14]
+ 233 │    bbs $30.6,$F9 ;= C3 30 52
+ 234 │    bbs $30.7,$F9 ;= E3 30 4F
+ 235 │    bbc start.0,$05 ;= 13 00 58
+ 236 │    bbc $31.1,$05 ;= 33 31 55
      ·              ─┬─
      ·               ╰── Difference of -427 to current address
- 236 │    bbc $31.2,$05 ;= 53 31 52
- 237 │    bbc $31.3,$05 ;= 73 31 4F
- 238 │    bbc $31.4,$05 ;= 93 31 4C
+ 237 │    bbc $31.2,$05 ;= 53 31 52
+ 238 │    bbc $31.3,$05 ;= 73 31 4F
+ 239 │    bbc $31.4,$05 ;= 93 31 4C
      ╰────
   help: The current address is `01AF` and therefore the difference is -427.
         This difference exceeds the range [-128, 127] and will wrap around,
@@ -725,16 +725,16 @@ spcasm::relative_offset_too_large
 
   ⚠ The relative offset to address `0005` is out of range, the result will
   │ be wrong.
-     ╭─[tests/opcodes.s:236:14]
- 233 │    bbs $30.7,$F9 ;= E3 30 4F
- 234 │    bbc start.0,$05 ;= 13 00 58
- 235 │    bbc $31.1,$05 ;= 33 31 55
- 236 │    bbc $31.2,$05 ;= 53 31 52
+     ╭─[tests/opcodes.s:237:14]
+ 234 │    bbs $30.7,$F9 ;= E3 30 4F
+ 235 │    bbc start.0,$05 ;= 13 00 58
+ 236 │    bbc $31.1,$05 ;= 33 31 55
+ 237 │    bbc $31.2,$05 ;= 53 31 52
      ·              ─┬─
      ·               ╰── Difference of -430 to current address
- 237 │    bbc $31.3,$05 ;= 73 31 4F
- 238 │    bbc $31.4,$05 ;= 93 31 4C
- 239 │    bbc $31.5,$05 ;= B3 31 49
+ 238 │    bbc $31.3,$05 ;= 73 31 4F
+ 239 │    bbc $31.4,$05 ;= 93 31 4C
+ 240 │    bbc $31.5,$05 ;= B3 31 49
      ╰────
   help: The current address is `01B2` and therefore the difference is -430.
         This difference exceeds the range [-128, 127] and will wrap around,
@@ -745,16 +745,16 @@ spcasm::relative_offset_too_large
 
   ⚠ The relative offset to address `0005` is out of range, the result will
   │ be wrong.
-     ╭─[tests/opcodes.s:237:14]
- 234 │    bbc start.0,$05 ;= 13 00 58
- 235 │    bbc $31.1,$05 ;= 33 31 55
- 236 │    bbc $31.2,$05 ;= 53 31 52
- 237 │    bbc $31.3,$05 ;= 73 31 4F
+     ╭─[tests/opcodes.s:238:14]
+ 235 │    bbc start.0,$05 ;= 13 00 58
+ 236 │    bbc $31.1,$05 ;= 33 31 55
+ 237 │    bbc $31.2,$05 ;= 53 31 52
+ 238 │    bbc $31.3,$05 ;= 73 31 4F
      ·              ─┬─
      ·               ╰── Difference of -433 to current address
- 238 │    bbc $31.4,$05 ;= 93 31 4C
- 239 │    bbc $31.5,$05 ;= B3 31 49
- 240 │    bbc $31.6,$05 ;= D3 31 46
+ 239 │    bbc $31.4,$05 ;= 93 31 4C
+ 240 │    bbc $31.5,$05 ;= B3 31 49
+ 241 │    bbc $31.6,$05 ;= D3 31 46
      ╰────
   help: The current address is `01B5` and therefore the difference is -433.
         This difference exceeds the range [-128, 127] and will wrap around,
@@ -765,16 +765,16 @@ spcasm::relative_offset_too_large
 
   ⚠ The relative offset to address `0005` is out of range, the result will
   │ be wrong.
-     ╭─[tests/opcodes.s:238:14]
- 235 │    bbc $31.1,$05 ;= 33 31 55
- 236 │    bbc $31.2,$05 ;= 53 31 52
- 237 │    bbc $31.3,$05 ;= 73 31 4F
- 238 │    bbc $31.4,$05 ;= 93 31 4C
+     ╭─[tests/opcodes.s:239:14]
+ 236 │    bbc $31.1,$05 ;= 33 31 55
+ 237 │    bbc $31.2,$05 ;= 53 31 52
+ 238 │    bbc $31.3,$05 ;= 73 31 4F
+ 239 │    bbc $31.4,$05 ;= 93 31 4C
      ·              ─┬─
      ·               ╰── Difference of -436 to current address
- 239 │    bbc $31.5,$05 ;= B3 31 49
- 240 │    bbc $31.6,$05 ;= D3 31 46
- 241 │    bbc $31.7,$05 ;= F3 31 43
+ 240 │    bbc $31.5,$05 ;= B3 31 49
+ 241 │    bbc $31.6,$05 ;= D3 31 46
+ 242 │    bbc $31.7,$05 ;= F3 31 43
      ╰────
   help: The current address is `01B8` and therefore the difference is -436.
         This difference exceeds the range [-128, 127] and will wrap around,
@@ -785,16 +785,16 @@ spcasm::relative_offset_too_large
 
   ⚠ The relative offset to address `0005` is out of range, the result will
   │ be wrong.
-     ╭─[tests/opcodes.s:239:14]
- 236 │    bbc $31.2,$05 ;= 53 31 52
- 237 │    bbc $31.3,$05 ;= 73 31 4F
- 238 │    bbc $31.4,$05 ;= 93 31 4C
- 239 │    bbc $31.5,$05 ;= B3 31 49
+     ╭─[tests/opcodes.s:240:14]
+ 237 │    bbc $31.2,$05 ;= 53 31 52
+ 238 │    bbc $31.3,$05 ;= 73 31 4F
+ 239 │    bbc $31.4,$05 ;= 93 31 4C
+ 240 │    bbc $31.5,$05 ;= B3 31 49
      ·              ─┬─
      ·               ╰── Difference of -439 to current address
- 240 │    bbc $31.6,$05 ;= D3 31 46
- 241 │    bbc $31.7,$05 ;= F3 31 43
- 242 │ 
+ 241 │    bbc $31.6,$05 ;= D3 31 46
+ 242 │    bbc $31.7,$05 ;= F3 31 43
+ 243 │ 
      ╰────
   help: The current address is `01BB` and therefore the difference is -439.
         This difference exceeds the range [-128, 127] and will wrap around,
@@ -805,16 +805,16 @@ spcasm::relative_offset_too_large
 
   ⚠ The relative offset to address `0005` is out of range, the result will
   │ be wrong.
-     ╭─[tests/opcodes.s:240:14]
- 237 │    bbc $31.3,$05 ;= 73 31 4F
- 238 │    bbc $31.4,$05 ;= 93 31 4C
- 239 │    bbc $31.5,$05 ;= B3 31 49
- 240 │    bbc $31.6,$05 ;= D3 31 46
+     ╭─[tests/opcodes.s:241:14]
+ 238 │    bbc $31.3,$05 ;= 73 31 4F
+ 239 │    bbc $31.4,$05 ;= 93 31 4C
+ 240 │    bbc $31.5,$05 ;= B3 31 49
+ 241 │    bbc $31.6,$05 ;= D3 31 46
      ·              ─┬─
      ·               ╰── Difference of -442 to current address
- 241 │    bbc $31.7,$05 ;= F3 31 43
- 242 │ 
- 243 │    call $5060 ;= 3F 60 50
+ 242 │    bbc $31.7,$05 ;= F3 31 43
+ 243 │ 
+ 244 │    call $5060 ;= 3F 60 50
      ╰────
   help: The current address is `01BE` and therefore the difference is -442.
         This difference exceeds the range [-128, 127] and will wrap around,
@@ -825,16 +825,16 @@ spcasm::relative_offset_too_large
 
   ⚠ The relative offset to address `0005` is out of range, the result will
   │ be wrong.
-     ╭─[tests/opcodes.s:241:14]
- 238 │    bbc $31.4,$05 ;= 93 31 4C
- 239 │    bbc $31.5,$05 ;= B3 31 49
- 240 │    bbc $31.6,$05 ;= D3 31 46
- 241 │    bbc $31.7,$05 ;= F3 31 43
+     ╭─[tests/opcodes.s:242:14]
+ 239 │    bbc $31.4,$05 ;= 93 31 4C
+ 240 │    bbc $31.5,$05 ;= B3 31 49
+ 241 │    bbc $31.6,$05 ;= D3 31 46
+ 242 │    bbc $31.7,$05 ;= F3 31 43
      ·              ─┬─
      ·               ╰── Difference of -445 to current address
- 242 │ 
- 243 │    call $5060 ;= 3F 60 50
- 244 │    pcall $02  ;= 4F 02
+ 243 │ 
+ 244 │    call $5060 ;= 3F 60 50
+ 245 │    pcall $02  ;= 4F 02
      ╰────
   help: The current address is `01C1` and therefore the difference is -445.
         This difference exceeds the range [-128, 127] and will wrap around,
@@ -854,8 +854,8 @@ spcasm::arch::valid
    · ───────┬───────
    ·        ╰── `arch` directive
  2 │ org 0
- 3 │ start:        ; @ 0
- 4 │    MOV A,#$10    ;= E8 10
+ 3 │ startpos
+ 4 │ start:        ; @ 0
    ╰────
   help: spcasm supports `arch` directives for compatibility with the Asar
         multi-architecture assembler. This arch directive points to the
@@ -865,16 +865,16 @@ spcasm::relative_offset_too_large
 
   ⚠ The relative offset to address `002C` is out of range, the result will
   │ be wrong.
-     ╭─[tests/opcodes.s:206:13]
- 203 │    bvc reltarget+8  ;= 50 F8
- 204 │    bmi reltarget+10 ;= 30 F8
- 205 │    bpl reltarget+12 ;= 10 F8
- 206 │    cbne $2B,$2C  ;= 2E 2B B7
+     ╭─[tests/opcodes.s:207:13]
+ 204 │    bvc reltarget+8  ;= 50 F8
+ 205 │    bmi reltarget+10 ;= 30 F8
+ 206 │    bpl reltarget+12 ;= 10 F8
+ 207 │    cbne $2B,$2C  ;= 2E 2B B7
      ·             ─┬─
      ·              ╰── Difference of -329 to current address
- 207 │    cbne $2D+X,$2E;= DE 2D B6
- 208 │    dbnz $2F,$30  ;= 6E 2F B5
- 209 │    dbnz Y,$31    ;= FE B4
+ 208 │    cbne $2D+X,$2E;= DE 2D B6
+ 209 │    dbnz $2F,$30  ;= 6E 2F B5
+ 210 │    dbnz Y,$31    ;= FE B4
      ╰────
   help: The current address is `0174` and therefore the difference is -329.
         This difference exceeds the range [-128, 127] and will wrap around,
@@ -885,16 +885,16 @@ spcasm::relative_offset_too_large
 
   ⚠ The relative offset to address `002E` is out of range, the result will
   │ be wrong.
-     ╭─[tests/opcodes.s:207:15]
- 204 │    bmi reltarget+10 ;= 30 F8
- 205 │    bpl reltarget+12 ;= 10 F8
- 206 │    cbne $2B,$2C  ;= 2E 2B B7
- 207 │    cbne $2D+X,$2E;= DE 2D B6
+     ╭─[tests/opcodes.s:208:15]
+ 205 │    bmi reltarget+10 ;= 30 F8
+ 206 │    bpl reltarget+12 ;= 10 F8
+ 207 │    cbne $2B,$2C  ;= 2E 2B B7
+ 208 │    cbne $2D+X,$2E;= DE 2D B6
      ·               ─┬─
      ·                ╰── Difference of -330 to current address
- 208 │    dbnz $2F,$30  ;= 6E 2F B5
- 209 │    dbnz Y,$31    ;= FE B4
- 210 │    jmp $2122     ;= 5F 22 21
+ 209 │    dbnz $2F,$30  ;= 6E 2F B5
+ 210 │    dbnz Y,$31    ;= FE B4
+ 211 │    jmp $2122     ;= 5F 22 21
      ╰────
   help: The current address is `0177` and therefore the difference is -330.
         This difference exceeds the range [-128, 127] and will wrap around,
@@ -905,16 +905,16 @@ spcasm::relative_offset_too_large
 
   ⚠ The relative offset to address `0030` is out of range, the result will
   │ be wrong.
-     ╭─[tests/opcodes.s:208:13]
- 205 │    bpl reltarget+12 ;= 10 F8
- 206 │    cbne $2B,$2C  ;= 2E 2B B7
- 207 │    cbne $2D+X,$2E;= DE 2D B6
- 208 │    dbnz $2F,$30  ;= 6E 2F B5
+     ╭─[tests/opcodes.s:209:13]
+ 206 │    bpl reltarget+12 ;= 10 F8
+ 207 │    cbne $2B,$2C  ;= 2E 2B B7
+ 208 │    cbne $2D+X,$2E;= DE 2D B6
+ 209 │    dbnz $2F,$30  ;= 6E 2F B5
      ·             ─┬─
      ·              ╰── Difference of -331 to current address
- 209 │    dbnz Y,$31    ;= FE B4
- 210 │    jmp $2122     ;= 5F 22 21
- 211 │    jmp ($2324+X)     ;= 1F 24 23
+ 210 │    dbnz Y,$31    ;= FE B4
+ 211 │    jmp $2122     ;= 5F 22 21
+ 212 │    jmp ($2324+X)     ;= 1F 24 23
      ╰────
   help: The current address is `017A` and therefore the difference is -331.
         This difference exceeds the range [-128, 127] and will wrap around,
@@ -925,16 +925,16 @@ spcasm::relative_offset_too_large
 
   ⚠ The relative offset to address `0031` is out of range, the result will
   │ be wrong.
-     ╭─[tests/opcodes.s:209:11]
- 206 │    cbne $2B,$2C  ;= 2E 2B B7
- 207 │    cbne $2D+X,$2E;= DE 2D B6
- 208 │    dbnz $2F,$30  ;= 6E 2F B5
- 209 │    dbnz Y,$31    ;= FE B4
+     ╭─[tests/opcodes.s:210:11]
+ 207 │    cbne $2B,$2C  ;= 2E 2B B7
+ 208 │    cbne $2D+X,$2E;= DE 2D B6
+ 209 │    dbnz $2F,$30  ;= 6E 2F B5
+ 210 │    dbnz Y,$31    ;= FE B4
      ·           ─┬─
      ·            ╰── Difference of -332 to current address
- 210 │    jmp $2122     ;= 5F 22 21
- 211 │    jmp ($2324+X)     ;= 1F 24 23
- 212 │ 
+ 211 │    jmp $2122     ;= 5F 22 21
+ 212 │    jmp ($2324+X)     ;= 1F 24 23
+ 213 │ 
      ╰────
   help: The current address is `017C` and therefore the difference is -332.
         This difference exceeds the range [-128, 127] and will wrap around,
@@ -945,16 +945,16 @@ spcasm::relative_offset_too_large
 
   ⚠ The relative offset to address `00F9` is out of range, the result will
   │ be wrong.
-     ╭─[tests/opcodes.s:226:15]
- 223 │ global_selftarget:
- 224 │    bne global_selftarget ;= D0 FE
- 225 │ 
- 226 │    bbs data.0,$F9 ;= 03 13 64
+     ╭─[tests/opcodes.s:227:15]
+ 224 │ global_selftarget:
+ 225 │    bne global_selftarget ;= D0 FE
+ 226 │ 
+ 227 │    bbs data.0,$F9 ;= 03 13 64
      ·               ─┬─
      ·                ╰── Difference of -156 to current address
- 227 │    bbs $30.1,$F9 ;= 23 30 61
- 228 │    bbs $30.2,$F9 ;= 43 30 5E
- 229 │    bbs $30.3,$F9 ;= 63 30 5B
+ 228 │    bbs $30.1,$F9 ;= 23 30 61
+ 229 │    bbs $30.2,$F9 ;= 43 30 5E
+ 230 │    bbs $30.3,$F9 ;= 63 30 5B
      ╰────
   help: The current address is `0194` and therefore the difference is -156.
         This difference exceeds the range [-128, 127] and will wrap around,
@@ -965,16 +965,16 @@ spcasm::relative_offset_too_large
 
   ⚠ The relative offset to address `00F9` is out of range, the result will
   │ be wrong.
-     ╭─[tests/opcodes.s:227:14]
- 224 │    bne global_selftarget ;= D0 FE
- 225 │ 
- 226 │    bbs data.0,$F9 ;= 03 13 64
- 227 │    bbs $30.1,$F9 ;= 23 30 61
+     ╭─[tests/opcodes.s:228:14]
+ 225 │    bne global_selftarget ;= D0 FE
+ 226 │ 
+ 227 │    bbs data.0,$F9 ;= 03 13 64
+ 228 │    bbs $30.1,$F9 ;= 23 30 61
      ·              ─┬─
      ·               ╰── Difference of -159 to current address
- 228 │    bbs $30.2,$F9 ;= 43 30 5E
- 229 │    bbs $30.3,$F9 ;= 63 30 5B
- 230 │    bbs $30.4,$F9 ;= 83 30 58
+ 229 │    bbs $30.2,$F9 ;= 43 30 5E
+ 230 │    bbs $30.3,$F9 ;= 63 30 5B
+ 231 │    bbs $30.4,$F9 ;= 83 30 58
      ╰────
   help: The current address is `0197` and therefore the difference is -159.
         This difference exceeds the range [-128, 127] and will wrap around,
@@ -985,16 +985,16 @@ spcasm::relative_offset_too_large
 
   ⚠ The relative offset to address `00F9` is out of range, the result will
   │ be wrong.
-     ╭─[tests/opcodes.s:228:14]
- 225 │ 
- 226 │    bbs data.0,$F9 ;= 03 13 64
- 227 │    bbs $30.1,$F9 ;= 23 30 61
- 228 │    bbs $30.2,$F9 ;= 43 30 5E
+     ╭─[tests/opcodes.s:229:14]
+ 226 │ 
+ 227 │    bbs data.0,$F9 ;= 03 13 64
+ 228 │    bbs $30.1,$F9 ;= 23 30 61
+ 229 │    bbs $30.2,$F9 ;= 43 30 5E
      ·              ─┬─
      ·               ╰── Difference of -162 to current address
- 229 │    bbs $30.3,$F9 ;= 63 30 5B
- 230 │    bbs $30.4,$F9 ;= 83 30 58
- 231 │    bbs $30.5,$F9 ;= A3 30 55
+ 230 │    bbs $30.3,$F9 ;= 63 30 5B
+ 231 │    bbs $30.4,$F9 ;= 83 30 58
+ 232 │    bbs $30.5,$F9 ;= A3 30 55
      ╰────
   help: The current address is `019A` and therefore the difference is -162.
         This difference exceeds the range [-128, 127] and will wrap around,
@@ -1005,16 +1005,16 @@ spcasm::relative_offset_too_large
 
   ⚠ The relative offset to address `00F9` is out of range, the result will
   │ be wrong.
-     ╭─[tests/opcodes.s:229:14]
- 226 │    bbs data.0,$F9 ;= 03 13 64
- 227 │    bbs $30.1,$F9 ;= 23 30 61
- 228 │    bbs $30.2,$F9 ;= 43 30 5E
- 229 │    bbs $30.3,$F9 ;= 63 30 5B
+     ╭─[tests/opcodes.s:230:14]
+ 227 │    bbs data.0,$F9 ;= 03 13 64
+ 228 │    bbs $30.1,$F9 ;= 23 30 61
+ 229 │    bbs $30.2,$F9 ;= 43 30 5E
+ 230 │    bbs $30.3,$F9 ;= 63 30 5B
      ·              ─┬─
      ·               ╰── Difference of -165 to current address
- 230 │    bbs $30.4,$F9 ;= 83 30 58
- 231 │    bbs $30.5,$F9 ;= A3 30 55
- 232 │    bbs $30.6,$F9 ;= C3 30 52
+ 231 │    bbs $30.4,$F9 ;= 83 30 58
+ 232 │    bbs $30.5,$F9 ;= A3 30 55
+ 233 │    bbs $30.6,$F9 ;= C3 30 52
      ╰────
   help: The current address is `019D` and therefore the difference is -165.
         This difference exceeds the range [-128, 127] and will wrap around,
@@ -1025,16 +1025,16 @@ spcasm::relative_offset_too_large
 
   ⚠ The relative offset to address `00F9` is out of range, the result will
   │ be wrong.
-     ╭─[tests/opcodes.s:230:14]
- 227 │    bbs $30.1,$F9 ;= 23 30 61
- 228 │    bbs $30.2,$F9 ;= 43 30 5E
- 229 │    bbs $30.3,$F9 ;= 63 30 5B
- 230 │    bbs $30.4,$F9 ;= 83 30 58
+     ╭─[tests/opcodes.s:231:14]
+ 228 │    bbs $30.1,$F9 ;= 23 30 61
+ 229 │    bbs $30.2,$F9 ;= 43 30 5E
+ 230 │    bbs $30.3,$F9 ;= 63 30 5B
+ 231 │    bbs $30.4,$F9 ;= 83 30 58
      ·              ─┬─
      ·               ╰── Difference of -168 to current address
- 231 │    bbs $30.5,$F9 ;= A3 30 55
- 232 │    bbs $30.6,$F9 ;= C3 30 52
- 233 │    bbs $30.7,$F9 ;= E3 30 4F
+ 232 │    bbs $30.5,$F9 ;= A3 30 55
+ 233 │    bbs $30.6,$F9 ;= C3 30 52
+ 234 │    bbs $30.7,$F9 ;= E3 30 4F
      ╰────
   help: The current address is `01A0` and therefore the difference is -168.
         This difference exceeds the range [-128, 127] and will wrap around,
@@ -1045,16 +1045,16 @@ spcasm::relative_offset_too_large
 
   ⚠ The relative offset to address `00F9` is out of range, the result will
   │ be wrong.
-     ╭─[tests/opcodes.s:231:14]
- 228 │    bbs $30.2,$F9 ;= 43 30 5E
- 229 │    bbs $30.3,$F9 ;= 63 30 5B
- 230 │    bbs $30.4,$F9 ;= 83 30 58
- 231 │    bbs $30.5,$F9 ;= A3 30 55
+     ╭─[tests/opcodes.s:232:14]
+ 229 │    bbs $30.2,$F9 ;= 43 30 5E
+ 230 │    bbs $30.3,$F9 ;= 63 30 5B
+ 231 │    bbs $30.4,$F9 ;= 83 30 58
+ 232 │    bbs $30.5,$F9 ;= A3 30 55
      ·              ─┬─
      ·               ╰── Difference of -171 to current address
- 232 │    bbs $30.6,$F9 ;= C3 30 52
- 233 │    bbs $30.7,$F9 ;= E3 30 4F
- 234 │    bbc start.0,$05 ;= 13 00 58
+ 233 │    bbs $30.6,$F9 ;= C3 30 52
+ 234 │    bbs $30.7,$F9 ;= E3 30 4F
+ 235 │    bbc start.0,$05 ;= 13 00 58
      ╰────
   help: The current address is `01A3` and therefore the difference is -171.
         This difference exceeds the range [-128, 127] and will wrap around,
@@ -1065,16 +1065,16 @@ spcasm::relative_offset_too_large
 
   ⚠ The relative offset to address `00F9` is out of range, the result will
   │ be wrong.
-     ╭─[tests/opcodes.s:232:14]
- 229 │    bbs $30.3,$F9 ;= 63 30 5B
- 230 │    bbs $30.4,$F9 ;= 83 30 58
- 231 │    bbs $30.5,$F9 ;= A3 30 55
- 232 │    bbs $30.6,$F9 ;= C3 30 52
+     ╭─[tests/opcodes.s:233:14]
+ 230 │    bbs $30.3,$F9 ;= 63 30 5B
+ 231 │    bbs $30.4,$F9 ;= 83 30 58
+ 232 │    bbs $30.5,$F9 ;= A3 30 55
+ 233 │    bbs $30.6,$F9 ;= C3 30 52
      ·              ─┬─
      ·               ╰── Difference of -174 to current address
- 233 │    bbs $30.7,$F9 ;= E3 30 4F
- 234 │    bbc start.0,$05 ;= 13 00 58
- 235 │    bbc $31.1,$05 ;= 33 31 55
+ 234 │    bbs $30.7,$F9 ;= E3 30 4F
+ 235 │    bbc start.0,$05 ;= 13 00 58
+ 236 │    bbc $31.1,$05 ;= 33 31 55
      ╰────
   help: The current address is `01A6` and therefore the difference is -174.
         This difference exceeds the range [-128, 127] and will wrap around,
@@ -1085,16 +1085,16 @@ spcasm::relative_offset_too_large
 
   ⚠ The relative offset to address `00F9` is out of range, the result will
   │ be wrong.
-     ╭─[tests/opcodes.s:233:14]
- 230 │    bbs $30.4,$F9 ;= 83 30 58
- 231 │    bbs $30.5,$F9 ;= A3 30 55
- 232 │    bbs $30.6,$F9 ;= C3 30 52
- 233 │    bbs $30.7,$F9 ;= E3 30 4F
+     ╭─[tests/opcodes.s:234:14]
+ 231 │    bbs $30.4,$F9 ;= 83 30 58
+ 232 │    bbs $30.5,$F9 ;= A3 30 55
+ 233 │    bbs $30.6,$F9 ;= C3 30 52
+ 234 │    bbs $30.7,$F9 ;= E3 30 4F
      ·              ─┬─
      ·               ╰── Difference of -177 to current address
- 234 │    bbc start.0,$05 ;= 13 00 58
- 235 │    bbc $31.1,$05 ;= 33 31 55
- 236 │    bbc $31.2,$05 ;= 53 31 52
+ 235 │    bbc start.0,$05 ;= 13 00 58
+ 236 │    bbc $31.1,$05 ;= 33 31 55
+ 237 │    bbc $31.2,$05 ;= 53 31 52
      ╰────
   help: The current address is `01A9` and therefore the difference is -177.
         This difference exceeds the range [-128, 127] and will wrap around,
@@ -1105,16 +1105,16 @@ spcasm::relative_offset_too_large
 
   ⚠ The relative offset to address `0005` is out of range, the result will
   │ be wrong.
-     ╭─[tests/opcodes.s:234:16]
- 231 │    bbs $30.5,$F9 ;= A3 30 55
- 232 │    bbs $30.6,$F9 ;= C3 30 52
- 233 │    bbs $30.7,$F9 ;= E3 30 4F
- 234 │    bbc start.0,$05 ;= 13 00 58
+     ╭─[tests/opcodes.s:235:16]
+ 232 │    bbs $30.5,$F9 ;= A3 30 55
+ 233 │    bbs $30.6,$F9 ;= C3 30 52
+ 234 │    bbs $30.7,$F9 ;= E3 30 4F
+ 235 │    bbc start.0,$05 ;= 13 00 58
      ·                ─┬─
      ·                 ╰── Difference of -424 to current address
- 235 │    bbc $31.1,$05 ;= 33 31 55
- 236 │    bbc $31.2,$05 ;= 53 31 52
- 237 │    bbc $31.3,$05 ;= 73 31 4F
+ 236 │    bbc $31.1,$05 ;= 33 31 55
+ 237 │    bbc $31.2,$05 ;= 53 31 52
+ 238 │    bbc $31.3,$05 ;= 73 31 4F
      ╰────
   help: The current address is `01AC` and therefore the difference is -424.
         This difference exceeds the range [-128, 127] and will wrap around,
@@ -1125,16 +1125,16 @@ spcasm::relative_offset_too_large
 
   ⚠ The relative offset to address `0005` is out of range, the result will
   │ be wrong.
-     ╭─[tests/opcodes.s:235:14]
- 232 │    bbs $30.6,$F9 ;= C3 30 52
- 233 │    bbs $30.7,$F9 ;= E3 30 4F
- 234 │    bbc start.0,$05 ;= 13 00 58
- 235 │    bbc $31.1,$05 ;= 33 31 55
+     ╭─[tests/opcodes.s:236:14]
+ 233 │    bbs $30.6,$F9 ;= C3 30 52
+ 234 │    bbs $30.7,$F9 ;= E3 30 4F
+ 235 │    bbc start.0,$05 ;= 13 00 58
+ 236 │    bbc $31.1,$05 ;= 33 31 55
      ·              ─┬─
      ·               ╰── Difference of -427 to current address
- 236 │    bbc $31.2,$05 ;= 53 31 52
- 237 │    bbc $31.3,$05 ;= 73 31 4F
- 238 │    bbc $31.4,$05 ;= 93 31 4C
+ 237 │    bbc $31.2,$05 ;= 53 31 52
+ 238 │    bbc $31.3,$05 ;= 73 31 4F
+ 239 │    bbc $31.4,$05 ;= 93 31 4C
      ╰────
   help: The current address is `01AF` and therefore the difference is -427.
         This difference exceeds the range [-128, 127] and will wrap around,
@@ -1145,16 +1145,16 @@ spcasm::relative_offset_too_large
 
   ⚠ The relative offset to address `0005` is out of range, the result will
   │ be wrong.
-     ╭─[tests/opcodes.s:236:14]
- 233 │    bbs $30.7,$F9 ;= E3 30 4F
- 234 │    bbc start.0,$05 ;= 13 00 58
- 235 │    bbc $31.1,$05 ;= 33 31 55
- 236 │    bbc $31.2,$05 ;= 53 31 52
+     ╭─[tests/opcodes.s:237:14]
+ 234 │    bbs $30.7,$F9 ;= E3 30 4F
+ 235 │    bbc start.0,$05 ;= 13 00 58
+ 236 │    bbc $31.1,$05 ;= 33 31 55
+ 237 │    bbc $31.2,$05 ;= 53 31 52
      ·              ─┬─
      ·               ╰── Difference of -430 to current address
- 237 │    bbc $31.3,$05 ;= 73 31 4F
- 238 │    bbc $31.4,$05 ;= 93 31 4C
- 239 │    bbc $31.5,$05 ;= B3 31 49
+ 238 │    bbc $31.3,$05 ;= 73 31 4F
+ 239 │    bbc $31.4,$05 ;= 93 31 4C
+ 240 │    bbc $31.5,$05 ;= B3 31 49
      ╰────
   help: The current address is `01B2` and therefore the difference is -430.
         This difference exceeds the range [-128, 127] and will wrap around,
@@ -1165,16 +1165,16 @@ spcasm::relative_offset_too_large
 
   ⚠ The relative offset to address `0005` is out of range, the result will
   │ be wrong.
-     ╭─[tests/opcodes.s:237:14]
- 234 │    bbc start.0,$05 ;= 13 00 58
- 235 │    bbc $31.1,$05 ;= 33 31 55
- 236 │    bbc $31.2,$05 ;= 53 31 52
- 237 │    bbc $31.3,$05 ;= 73 31 4F
+     ╭─[tests/opcodes.s:238:14]
+ 235 │    bbc start.0,$05 ;= 13 00 58
+ 236 │    bbc $31.1,$05 ;= 33 31 55
+ 237 │    bbc $31.2,$05 ;= 53 31 52
+ 238 │    bbc $31.3,$05 ;= 73 31 4F
      ·              ─┬─
      ·               ╰── Difference of -433 to current address
- 238 │    bbc $31.4,$05 ;= 93 31 4C
- 239 │    bbc $31.5,$05 ;= B3 31 49
- 240 │    bbc $31.6,$05 ;= D3 31 46
+ 239 │    bbc $31.4,$05 ;= 93 31 4C
+ 240 │    bbc $31.5,$05 ;= B3 31 49
+ 241 │    bbc $31.6,$05 ;= D3 31 46
      ╰────
   help: The current address is `01B5` and therefore the difference is -433.
         This difference exceeds the range [-128, 127] and will wrap around,
@@ -1185,16 +1185,16 @@ spcasm::relative_offset_too_large
 
   ⚠ The relative offset to address `0005` is out of range, the result will
   │ be wrong.
-     ╭─[tests/opcodes.s:238:14]
- 235 │    bbc $31.1,$05 ;= 33 31 55
- 236 │    bbc $31.2,$05 ;= 53 31 52
- 237 │    bbc $31.3,$05 ;= 73 31 4F
- 238 │    bbc $31.4,$05 ;= 93 31 4C
+     ╭─[tests/opcodes.s:239:14]
+ 236 │    bbc $31.1,$05 ;= 33 31 55
+ 237 │    bbc $31.2,$05 ;= 53 31 52
+ 238 │    bbc $31.3,$05 ;= 73 31 4F
+ 239 │    bbc $31.4,$05 ;= 93 31 4C
      ·              ─┬─
      ·               ╰── Difference of -436 to current address
- 239 │    bbc $31.5,$05 ;= B3 31 49
- 240 │    bbc $31.6,$05 ;= D3 31 46
- 241 │    bbc $31.7,$05 ;= F3 31 43
+ 240 │    bbc $31.5,$05 ;= B3 31 49
+ 241 │    bbc $31.6,$05 ;= D3 31 46
+ 242 │    bbc $31.7,$05 ;= F3 31 43
      ╰────
   help: The current address is `01B8` and therefore the difference is -436.
         This difference exceeds the range [-128, 127] and will wrap around,
@@ -1205,16 +1205,16 @@ spcasm::relative_offset_too_large
 
   ⚠ The relative offset to address `0005` is out of range, the result will
   │ be wrong.
-     ╭─[tests/opcodes.s:239:14]
- 236 │    bbc $31.2,$05 ;= 53 31 52
- 237 │    bbc $31.3,$05 ;= 73 31 4F
- 238 │    bbc $31.4,$05 ;= 93 31 4C
- 239 │    bbc $31.5,$05 ;= B3 31 49
+     ╭─[tests/opcodes.s:240:14]
+ 237 │    bbc $31.2,$05 ;= 53 31 52
+ 238 │    bbc $31.3,$05 ;= 73 31 4F
+ 239 │    bbc $31.4,$05 ;= 93 31 4C
+ 240 │    bbc $31.5,$05 ;= B3 31 49
      ·              ─┬─
      ·               ╰── Difference of -439 to current address
- 240 │    bbc $31.6,$05 ;= D3 31 46
- 241 │    bbc $31.7,$05 ;= F3 31 43
- 242 │ 
+ 241 │    bbc $31.6,$05 ;= D3 31 46
+ 242 │    bbc $31.7,$05 ;= F3 31 43
+ 243 │ 
      ╰────
   help: The current address is `01BB` and therefore the difference is -439.
         This difference exceeds the range [-128, 127] and will wrap around,
@@ -1225,16 +1225,16 @@ spcasm::relative_offset_too_large
 
   ⚠ The relative offset to address `0005` is out of range, the result will
   │ be wrong.
-     ╭─[tests/opcodes.s:240:14]
- 237 │    bbc $31.3,$05 ;= 73 31 4F
- 238 │    bbc $31.4,$05 ;= 93 31 4C
- 239 │    bbc $31.5,$05 ;= B3 31 49
- 240 │    bbc $31.6,$05 ;= D3 31 46
+     ╭─[tests/opcodes.s:241:14]
+ 238 │    bbc $31.3,$05 ;= 73 31 4F
+ 239 │    bbc $31.4,$05 ;= 93 31 4C
+ 240 │    bbc $31.5,$05 ;= B3 31 49
+ 241 │    bbc $31.6,$05 ;= D3 31 46
      ·              ─┬─
      ·               ╰── Difference of -442 to current address
- 241 │    bbc $31.7,$05 ;= F3 31 43
- 242 │ 
- 243 │    call $5060 ;= 3F 60 50
+ 242 │    bbc $31.7,$05 ;= F3 31 43
+ 243 │ 
+ 244 │    call $5060 ;= 3F 60 50
      ╰────
   help: The current address is `01BE` and therefore the difference is -442.
         This difference exceeds the range [-128, 127] and will wrap around,
@@ -1245,16 +1245,16 @@ spcasm::relative_offset_too_large
 
   ⚠ The relative offset to address `0005` is out of range, the result will
   │ be wrong.
-     ╭─[tests/opcodes.s:241:14]
- 238 │    bbc $31.4,$05 ;= 93 31 4C
- 239 │    bbc $31.5,$05 ;= B3 31 49
- 240 │    bbc $31.6,$05 ;= D3 31 46
- 241 │    bbc $31.7,$05 ;= F3 31 43
+     ╭─[tests/opcodes.s:242:14]
+ 239 │    bbc $31.4,$05 ;= 93 31 4C
+ 240 │    bbc $31.5,$05 ;= B3 31 49
+ 241 │    bbc $31.6,$05 ;= D3 31 46
+ 242 │    bbc $31.7,$05 ;= F3 31 43
      ·              ─┬─
      ·               ╰── Difference of -445 to current address
- 242 │ 
- 243 │    call $5060 ;= 3F 60 50
- 244 │    pcall $02  ;= 4F 02
+ 243 │ 
+ 244 │    call $5060 ;= 3F 60 50
+ 245 │    pcall $02  ;= 4F 02
      ╰────
   help: The current address is `01C1` and therefore the difference is -445.
         This difference exceeds the range [-128, 127] and will wrap around,
@@ -1274,8 +1274,8 @@ spcasm::arch::valid
    · ───────┬───────
    ·        ╰── `arch` directive
  2 │ org 0
- 3 │ start:        ; @ 0
- 4 │    MOV A,#$10    ;= E8 10
+ 3 │ startpos
+ 4 │ start:        ; @ 0
    ╰────
   help: spcasm supports `arch` directives for compatibility with the Asar
         multi-architecture assembler. This arch directive points to the
@@ -1285,16 +1285,16 @@ spcasm::relative_offset_too_large
 
   ⚠ The relative offset to address `002C` is out of range, the result will
   │ be wrong.
-     ╭─[tests/opcodes.s:206:13]
- 203 │    bvc reltarget+8  ;= 50 F8
- 204 │    bmi reltarget+10 ;= 30 F8
- 205 │    bpl reltarget+12 ;= 10 F8
- 206 │    cbne $2B,$2C  ;= 2E 2B B7
+     ╭─[tests/opcodes.s:207:13]
+ 204 │    bvc reltarget+8  ;= 50 F8
+ 205 │    bmi reltarget+10 ;= 30 F8
+ 206 │    bpl reltarget+12 ;= 10 F8
+ 207 │    cbne $2B,$2C  ;= 2E 2B B7
      ·             ─┬─
      ·              ╰── Difference of -329 to current address
- 207 │    cbne $2D+X,$2E;= DE 2D B6
- 208 │    dbnz $2F,$30  ;= 6E 2F B5
- 209 │    dbnz Y,$31    ;= FE B4
+ 208 │    cbne $2D+X,$2E;= DE 2D B6
+ 209 │    dbnz $2F,$30  ;= 6E 2F B5
+ 210 │    dbnz Y,$31    ;= FE B4
      ╰────
   help: The current address is `0174` and therefore the difference is -329.
         This difference exceeds the range [-128, 127] and will wrap around,
@@ -1305,16 +1305,16 @@ spcasm::relative_offset_too_large
 
   ⚠ The relative offset to address `002E` is out of range, the result will
   │ be wrong.
-     ╭─[tests/opcodes.s:207:15]
- 204 │    bmi reltarget+10 ;= 30 F8
- 205 │    bpl reltarget+12 ;= 10 F8
- 206 │    cbne $2B,$2C  ;= 2E 2B B7
- 207 │    cbne $2D+X,$2E;= DE 2D B6
+     ╭─[tests/opcodes.s:208:15]
+ 205 │    bmi reltarget+10 ;= 30 F8
+ 206 │    bpl reltarget+12 ;= 10 F8
+ 207 │    cbne $2B,$2C  ;= 2E 2B B7
+ 208 │    cbne $2D+X,$2E;= DE 2D B6
      ·               ─┬─
      ·                ╰── Difference of -330 to current address
- 208 │    dbnz $2F,$30  ;= 6E 2F B5
- 209 │    dbnz Y,$31    ;= FE B4
- 210 │    jmp $2122     ;= 5F 22 21
+ 209 │    dbnz $2F,$30  ;= 6E 2F B5
+ 210 │    dbnz Y,$31    ;= FE B4
+ 211 │    jmp $2122     ;= 5F 22 21
      ╰────
   help: The current address is `0177` and therefore the difference is -330.
         This difference exceeds the range [-128, 127] and will wrap around,
@@ -1325,16 +1325,16 @@ spcasm::relative_offset_too_large
 
   ⚠ The relative offset to address `0030` is out of range, the result will
   │ be wrong.
-     ╭─[tests/opcodes.s:208:13]
- 205 │    bpl reltarget+12 ;= 10 F8
- 206 │    cbne $2B,$2C  ;= 2E 2B B7
- 207 │    cbne $2D+X,$2E;= DE 2D B6
- 208 │    dbnz $2F,$30  ;= 6E 2F B5
+     ╭─[tests/opcodes.s:209:13]
+ 206 │    bpl reltarget+12 ;= 10 F8
+ 207 │    cbne $2B,$2C  ;= 2E 2B B7
+ 208 │    cbne $2D+X,$2E;= DE 2D B6
+ 209 │    dbnz $2F,$30  ;= 6E 2F B5
      ·             ─┬─
      ·              ╰── Difference of -331 to current address
- 209 │    dbnz Y,$31    ;= FE B4
- 210 │    jmp $2122     ;= 5F 22 21
- 211 │    jmp ($2324+X)     ;= 1F 24 23
+ 210 │    dbnz Y,$31    ;= FE B4
+ 211 │    jmp $2122     ;= 5F 22 21
+ 212 │    jmp ($2324+X)     ;= 1F 24 23
      ╰────
   help: The current address is `017A` and therefore the difference is -331.
         This difference exceeds the range [-128, 127] and will wrap around,
@@ -1345,16 +1345,16 @@ spcasm::relative_offset_too_large
 
   ⚠ The relative offset to address `0031` is out of range, the result will
   │ be wrong.
-     ╭─[tests/opcodes.s:209:11]
- 206 │    cbne $2B,$2C  ;= 2E 2B B7
- 207 │    cbne $2D+X,$2E;= DE 2D B6
- 208 │    dbnz $2F,$30  ;= 6E 2F B5
- 209 │    dbnz Y,$31    ;= FE B4
+     ╭─[tests/opcodes.s:210:11]
+ 207 │    cbne $2B,$2C  ;= 2E 2B B7
+ 208 │    cbne $2D+X,$2E;= DE 2D B6
+ 209 │    dbnz $2F,$30  ;= 6E 2F B5
+ 210 │    dbnz Y,$31    ;= FE B4
      ·           ─┬─
      ·            ╰── Difference of -332 to current address
- 210 │    jmp $2122     ;= 5F 22 21
- 211 │    jmp ($2324+X)     ;= 1F 24 23
- 212 │ 
+ 211 │    jmp $2122     ;= 5F 22 21
+ 212 │    jmp ($2324+X)     ;= 1F 24 23
+ 213 │ 
      ╰────
   help: The current address is `017C` and therefore the difference is -332.
         This difference exceeds the range [-128, 127] and will wrap around,
@@ -1365,16 +1365,16 @@ spcasm::relative_offset_too_large
 
   ⚠ The relative offset to address `00F9` is out of range, the result will
   │ be wrong.
-     ╭─[tests/opcodes.s:226:15]
- 223 │ global_selftarget:
- 224 │    bne global_selftarget ;= D0 FE
- 225 │ 
- 226 │    bbs data.0,$F9 ;= 03 13 64
+     ╭─[tests/opcodes.s:227:15]
+ 224 │ global_selftarget:
+ 225 │    bne global_selftarget ;= D0 FE
+ 226 │ 
+ 227 │    bbs data.0,$F9 ;= 03 13 64
      ·               ─┬─
      ·                ╰── Difference of -156 to current address
- 227 │    bbs $30.1,$F9 ;= 23 30 61
- 228 │    bbs $30.2,$F9 ;= 43 30 5E
- 229 │    bbs $30.3,$F9 ;= 63 30 5B
+ 228 │    bbs $30.1,$F9 ;= 23 30 61
+ 229 │    bbs $30.2,$F9 ;= 43 30 5E
+ 230 │    bbs $30.3,$F9 ;= 63 30 5B
      ╰────
   help: The current address is `0194` and therefore the difference is -156.
         This difference exceeds the range [-128, 127] and will wrap around,
@@ -1385,16 +1385,16 @@ spcasm::relative_offset_too_large
 
   ⚠ The relative offset to address `00F9` is out of range, the result will
   │ be wrong.
-     ╭─[tests/opcodes.s:227:14]
- 224 │    bne global_selftarget ;= D0 FE
- 225 │ 
- 226 │    bbs data.0,$F9 ;= 03 13 64
- 227 │    bbs $30.1,$F9 ;= 23 30 61
+     ╭─[tests/opcodes.s:228:14]
+ 225 │    bne global_selftarget ;= D0 FE
+ 226 │ 
+ 227 │    bbs data.0,$F9 ;= 03 13 64
+ 228 │    bbs $30.1,$F9 ;= 23 30 61
      ·              ─┬─
      ·               ╰── Difference of -159 to current address
- 228 │    bbs $30.2,$F9 ;= 43 30 5E
- 229 │    bbs $30.3,$F9 ;= 63 30 5B
- 230 │    bbs $30.4,$F9 ;= 83 30 58
+ 229 │    bbs $30.2,$F9 ;= 43 30 5E
+ 230 │    bbs $30.3,$F9 ;= 63 30 5B
+ 231 │    bbs $30.4,$F9 ;= 83 30 58
      ╰────
   help: The current address is `0197` and therefore the difference is -159.
         This difference exceeds the range [-128, 127] and will wrap around,
@@ -1405,16 +1405,16 @@ spcasm::relative_offset_too_large
 
   ⚠ The relative offset to address `00F9` is out of range, the result will
   │ be wrong.
-     ╭─[tests/opcodes.s:228:14]
- 225 │ 
- 226 │    bbs data.0,$F9 ;= 03 13 64
- 227 │    bbs $30.1,$F9 ;= 23 30 61
- 228 │    bbs $30.2,$F9 ;= 43 30 5E
+     ╭─[tests/opcodes.s:229:14]
+ 226 │ 
+ 227 │    bbs data.0,$F9 ;= 03 13 64
+ 228 │    bbs $30.1,$F9 ;= 23 30 61
+ 229 │    bbs $30.2,$F9 ;= 43 30 5E
      ·              ─┬─
      ·               ╰── Difference of -162 to current address
- 229 │    bbs $30.3,$F9 ;= 63 30 5B
- 230 │    bbs $30.4,$F9 ;= 83 30 58
- 231 │    bbs $30.5,$F9 ;= A3 30 55
+ 230 │    bbs $30.3,$F9 ;= 63 30 5B
+ 231 │    bbs $30.4,$F9 ;= 83 30 58
+ 232 │    bbs $30.5,$F9 ;= A3 30 55
      ╰────
   help: The current address is `019A` and therefore the difference is -162.
         This difference exceeds the range [-128, 127] and will wrap around,
@@ -1425,16 +1425,16 @@ spcasm::relative_offset_too_large
 
   ⚠ The relative offset to address `00F9` is out of range, the result will
   │ be wrong.
-     ╭─[tests/opcodes.s:229:14]
- 226 │    bbs data.0,$F9 ;= 03 13 64
- 227 │    bbs $30.1,$F9 ;= 23 30 61
- 228 │    bbs $30.2,$F9 ;= 43 30 5E
- 229 │    bbs $30.3,$F9 ;= 63 30 5B
+     ╭─[tests/opcodes.s:230:14]
+ 227 │    bbs data.0,$F9 ;= 03 13 64
+ 228 │    bbs $30.1,$F9 ;= 23 30 61
+ 229 │    bbs $30.2,$F9 ;= 43 30 5E
+ 230 │    bbs $30.3,$F9 ;= 63 30 5B
      ·              ─┬─
      ·               ╰── Difference of -165 to current address
- 230 │    bbs $30.4,$F9 ;= 83 30 58
- 231 │    bbs $30.5,$F9 ;= A3 30 55
- 232 │    bbs $30.6,$F9 ;= C3 30 52
+ 231 │    bbs $30.4,$F9 ;= 83 30 58
+ 232 │    bbs $30.5,$F9 ;= A3 30 55
+ 233 │    bbs $30.6,$F9 ;= C3 30 52
      ╰────
   help: The current address is `019D` and therefore the difference is -165.
         This difference exceeds the range [-128, 127] and will wrap around,
@@ -1445,16 +1445,16 @@ spcasm::relative_offset_too_large
 
   ⚠ The relative offset to address `00F9` is out of range, the result will
   │ be wrong.
-     ╭─[tests/opcodes.s:230:14]
- 227 │    bbs $30.1,$F9 ;= 23 30 61
- 228 │    bbs $30.2,$F9 ;= 43 30 5E
- 229 │    bbs $30.3,$F9 ;= 63 30 5B
- 230 │    bbs $30.4,$F9 ;= 83 30 58
+     ╭─[tests/opcodes.s:231:14]
+ 228 │    bbs $30.1,$F9 ;= 23 30 61
+ 229 │    bbs $30.2,$F9 ;= 43 30 5E
+ 230 │    bbs $30.3,$F9 ;= 63 30 5B
+ 231 │    bbs $30.4,$F9 ;= 83 30 58
      ·              ─┬─
      ·               ╰── Difference of -168 to current address
- 231 │    bbs $30.5,$F9 ;= A3 30 55
- 232 │    bbs $30.6,$F9 ;= C3 30 52
- 233 │    bbs $30.7,$F9 ;= E3 30 4F
+ 232 │    bbs $30.5,$F9 ;= A3 30 55
+ 233 │    bbs $30.6,$F9 ;= C3 30 52
+ 234 │    bbs $30.7,$F9 ;= E3 30 4F
      ╰────
   help: The current address is `01A0` and therefore the difference is -168.
         This difference exceeds the range [-128, 127] and will wrap around,
@@ -1465,16 +1465,16 @@ spcasm::relative_offset_too_large
 
   ⚠ The relative offset to address `00F9` is out of range, the result will
   │ be wrong.
-     ╭─[tests/opcodes.s:231:14]
- 228 │    bbs $30.2,$F9 ;= 43 30 5E
- 229 │    bbs $30.3,$F9 ;= 63 30 5B
- 230 │    bbs $30.4,$F9 ;= 83 30 58
- 231 │    bbs $30.5,$F9 ;= A3 30 55
+     ╭─[tests/opcodes.s:232:14]
+ 229 │    bbs $30.2,$F9 ;= 43 30 5E
+ 230 │    bbs $30.3,$F9 ;= 63 30 5B
+ 231 │    bbs $30.4,$F9 ;= 83 30 58
+ 232 │    bbs $30.5,$F9 ;= A3 30 55
      ·              ─┬─
      ·               ╰── Difference of -171 to current address
- 232 │    bbs $30.6,$F9 ;= C3 30 52
- 233 │    bbs $30.7,$F9 ;= E3 30 4F
- 234 │    bbc start.0,$05 ;= 13 00 58
+ 233 │    bbs $30.6,$F9 ;= C3 30 52
+ 234 │    bbs $30.7,$F9 ;= E3 30 4F
+ 235 │    bbc start.0,$05 ;= 13 00 58
      ╰────
   help: The current address is `01A3` and therefore the difference is -171.
         This difference exceeds the range [-128, 127] and will wrap around,
@@ -1485,16 +1485,16 @@ spcasm::relative_offset_too_large
 
   ⚠ The relative offset to address `00F9` is out of range, the result will
   │ be wrong.
-     ╭─[tests/opcodes.s:232:14]
- 229 │    bbs $30.3,$F9 ;= 63 30 5B
- 230 │    bbs $30.4,$F9 ;= 83 30 58
- 231 │    bbs $30.5,$F9 ;= A3 30 55
- 232 │    bbs $30.6,$F9 ;= C3 30 52
+     ╭─[tests/opcodes.s:233:14]
+ 230 │    bbs $30.3,$F9 ;= 63 30 5B
+ 231 │    bbs $30.4,$F9 ;= 83 30 58
+ 232 │    bbs $30.5,$F9 ;= A3 30 55
+ 233 │    bbs $30.6,$F9 ;= C3 30 52
      ·              ─┬─
      ·               ╰── Difference of -174 to current address
- 233 │    bbs $30.7,$F9 ;= E3 30 4F
- 234 │    bbc start.0,$05 ;= 13 00 58
- 235 │    bbc $31.1,$05 ;= 33 31 55
+ 234 │    bbs $30.7,$F9 ;= E3 30 4F
+ 235 │    bbc start.0,$05 ;= 13 00 58
+ 236 │    bbc $31.1,$05 ;= 33 31 55
      ╰────
   help: The current address is `01A6` and therefore the difference is -174.
         This difference exceeds the range [-128, 127] and will wrap around,
@@ -1505,16 +1505,16 @@ spcasm::relative_offset_too_large
 
   ⚠ The relative offset to address `00F9` is out of range, the result will
   │ be wrong.
-     ╭─[tests/opcodes.s:233:14]
- 230 │    bbs $30.4,$F9 ;= 83 30 58
- 231 │    bbs $30.5,$F9 ;= A3 30 55
- 232 │    bbs $30.6,$F9 ;= C3 30 52
- 233 │    bbs $30.7,$F9 ;= E3 30 4F
+     ╭─[tests/opcodes.s:234:14]
+ 231 │    bbs $30.4,$F9 ;= 83 30 58
+ 232 │    bbs $30.5,$F9 ;= A3 30 55
+ 233 │    bbs $30.6,$F9 ;= C3 30 52
+ 234 │    bbs $30.7,$F9 ;= E3 30 4F
      ·              ─┬─
      ·               ╰── Difference of -177 to current address
- 234 │    bbc start.0,$05 ;= 13 00 58
- 235 │    bbc $31.1,$05 ;= 33 31 55
- 236 │    bbc $31.2,$05 ;= 53 31 52
+ 235 │    bbc start.0,$05 ;= 13 00 58
+ 236 │    bbc $31.1,$05 ;= 33 31 55
+ 237 │    bbc $31.2,$05 ;= 53 31 52
      ╰────
   help: The current address is `01A9` and therefore the difference is -177.
         This difference exceeds the range [-128, 127] and will wrap around,
@@ -1525,16 +1525,16 @@ spcasm::relative_offset_too_large
 
   ⚠ The relative offset to address `0005` is out of range, the result will
   │ be wrong.
-     ╭─[tests/opcodes.s:234:16]
- 231 │    bbs $30.5,$F9 ;= A3 30 55
- 232 │    bbs $30.6,$F9 ;= C3 30 52
- 233 │    bbs $30.7,$F9 ;= E3 30 4F
- 234 │    bbc start.0,$05 ;= 13 00 58
+     ╭─[tests/opcodes.s:235:16]
+ 232 │    bbs $30.5,$F9 ;= A3 30 55
+ 233 │    bbs $30.6,$F9 ;= C3 30 52
+ 234 │    bbs $30.7,$F9 ;= E3 30 4F
+ 235 │    bbc start.0,$05 ;= 13 00 58
      ·                ─┬─
      ·                 ╰── Difference of -424 to current address
- 235 │    bbc $31.1,$05 ;= 33 31 55
- 236 │    bbc $31.2,$05 ;= 53 31 52
- 237 │    bbc $31.3,$05 ;= 73 31 4F
+ 236 │    bbc $31.1,$05 ;= 33 31 55
+ 237 │    bbc $31.2,$05 ;= 53 31 52
+ 238 │    bbc $31.3,$05 ;= 73 31 4F
      ╰────
   help: The current address is `01AC` and therefore the difference is -424.
         This difference exceeds the range [-128, 127] and will wrap around,
@@ -1545,16 +1545,16 @@ spcasm::relative_offset_too_large
 
   ⚠ The relative offset to address `0005` is out of range, the result will
   │ be wrong.
-     ╭─[tests/opcodes.s:235:14]
- 232 │    bbs $30.6,$F9 ;= C3 30 52
- 233 │    bbs $30.7,$F9 ;= E3 30 4F
- 234 │    bbc start.0,$05 ;= 13 00 58
- 235 │    bbc $31.1,$05 ;= 33 31 55
+     ╭─[tests/opcodes.s:236:14]
+ 233 │    bbs $30.6,$F9 ;= C3 30 52
+ 234 │    bbs $30.7,$F9 ;= E3 30 4F
+ 235 │    bbc start.0,$05 ;= 13 00 58
+ 236 │    bbc $31.1,$05 ;= 33 31 55
      ·              ─┬─
      ·               ╰── Difference of -427 to current address
- 236 │    bbc $31.2,$05 ;= 53 31 52
- 237 │    bbc $31.3,$05 ;= 73 31 4F
- 238 │    bbc $31.4,$05 ;= 93 31 4C
+ 237 │    bbc $31.2,$05 ;= 53 31 52
+ 238 │    bbc $31.3,$05 ;= 73 31 4F
+ 239 │    bbc $31.4,$05 ;= 93 31 4C
      ╰────
   help: The current address is `01AF` and therefore the difference is -427.
         This difference exceeds the range [-128, 127] and will wrap around,
@@ -1565,16 +1565,16 @@ spcasm::relative_offset_too_large
 
   ⚠ The relative offset to address `0005` is out of range, the result will
   │ be wrong.
-     ╭─[tests/opcodes.s:236:14]
- 233 │    bbs $30.7,$F9 ;= E3 30 4F
- 234 │    bbc start.0,$05 ;= 13 00 58
- 235 │    bbc $31.1,$05 ;= 33 31 55
- 236 │    bbc $31.2,$05 ;= 53 31 52
+     ╭─[tests/opcodes.s:237:14]
+ 234 │    bbs $30.7,$F9 ;= E3 30 4F
+ 235 │    bbc start.0,$05 ;= 13 00 58
+ 236 │    bbc $31.1,$05 ;= 33 31 55
+ 237 │    bbc $31.2,$05 ;= 53 31 52
      ·              ─┬─
      ·               ╰── Difference of -430 to current address
- 237 │    bbc $31.3,$05 ;= 73 31 4F
- 238 │    bbc $31.4,$05 ;= 93 31 4C
- 239 │    bbc $31.5,$05 ;= B3 31 49
+ 238 │    bbc $31.3,$05 ;= 73 31 4F
+ 239 │    bbc $31.4,$05 ;= 93 31 4C
+ 240 │    bbc $31.5,$05 ;= B3 31 49
      ╰────
   help: The current address is `01B2` and therefore the difference is -430.
         This difference exceeds the range [-128, 127] and will wrap around,
@@ -1585,16 +1585,16 @@ spcasm::relative_offset_too_large
 
   ⚠ The relative offset to address `0005` is out of range, the result will
   │ be wrong.
-     ╭─[tests/opcodes.s:237:14]
- 234 │    bbc start.0,$05 ;= 13 00 58
- 235 │    bbc $31.1,$05 ;= 33 31 55
- 236 │    bbc $31.2,$05 ;= 53 31 52
- 237 │    bbc $31.3,$05 ;= 73 31 4F
+     ╭─[tests/opcodes.s:238:14]
+ 235 │    bbc start.0,$05 ;= 13 00 58
+ 236 │    bbc $31.1,$05 ;= 33 31 55
+ 237 │    bbc $31.2,$05 ;= 53 31 52
+ 238 │    bbc $31.3,$05 ;= 73 31 4F
      ·              ─┬─
      ·               ╰── Difference of -433 to current address
- 238 │    bbc $31.4,$05 ;= 93 31 4C
- 239 │    bbc $31.5,$05 ;= B3 31 49
- 240 │    bbc $31.6,$05 ;= D3 31 46
+ 239 │    bbc $31.4,$05 ;= 93 31 4C
+ 240 │    bbc $31.5,$05 ;= B3 31 49
+ 241 │    bbc $31.6,$05 ;= D3 31 46
      ╰────
   help: The current address is `01B5` and therefore the difference is -433.
         This difference exceeds the range [-128, 127] and will wrap around,
@@ -1605,16 +1605,16 @@ spcasm::relative_offset_too_large
 
   ⚠ The relative offset to address `0005` is out of range, the result will
   │ be wrong.
-     ╭─[tests/opcodes.s:238:14]
- 235 │    bbc $31.1,$05 ;= 33 31 55
- 236 │    bbc $31.2,$05 ;= 53 31 52
- 237 │    bbc $31.3,$05 ;= 73 31 4F
- 238 │    bbc $31.4,$05 ;= 93 31 4C
+     ╭─[tests/opcodes.s:239:14]
+ 236 │    bbc $31.1,$05 ;= 33 31 55
+ 237 │    bbc $31.2,$05 ;= 53 31 52
+ 238 │    bbc $31.3,$05 ;= 73 31 4F
+ 239 │    bbc $31.4,$05 ;= 93 31 4C
      ·              ─┬─
      ·               ╰── Difference of -436 to current address
- 239 │    bbc $31.5,$05 ;= B3 31 49
- 240 │    bbc $31.6,$05 ;= D3 31 46
- 241 │    bbc $31.7,$05 ;= F3 31 43
+ 240 │    bbc $31.5,$05 ;= B3 31 49
+ 241 │    bbc $31.6,$05 ;= D3 31 46
+ 242 │    bbc $31.7,$05 ;= F3 31 43
      ╰────
   help: The current address is `01B8` and therefore the difference is -436.
         This difference exceeds the range [-128, 127] and will wrap around,
@@ -1625,16 +1625,16 @@ spcasm::relative_offset_too_large
 
   ⚠ The relative offset to address `0005` is out of range, the result will
   │ be wrong.
-     ╭─[tests/opcodes.s:239:14]
- 236 │    bbc $31.2,$05 ;= 53 31 52
- 237 │    bbc $31.3,$05 ;= 73 31 4F
- 238 │    bbc $31.4,$05 ;= 93 31 4C
- 239 │    bbc $31.5,$05 ;= B3 31 49
+     ╭─[tests/opcodes.s:240:14]
+ 237 │    bbc $31.2,$05 ;= 53 31 52
+ 238 │    bbc $31.3,$05 ;= 73 31 4F
+ 239 │    bbc $31.4,$05 ;= 93 31 4C
+ 240 │    bbc $31.5,$05 ;= B3 31 49
      ·              ─┬─
      ·               ╰── Difference of -439 to current address
- 240 │    bbc $31.6,$05 ;= D3 31 46
- 241 │    bbc $31.7,$05 ;= F3 31 43
- 242 │ 
+ 241 │    bbc $31.6,$05 ;= D3 31 46
+ 242 │    bbc $31.7,$05 ;= F3 31 43
+ 243 │ 
      ╰────
   help: The current address is `01BB` and therefore the difference is -439.
         This difference exceeds the range [-128, 127] and will wrap around,
@@ -1645,16 +1645,16 @@ spcasm::relative_offset_too_large
 
   ⚠ The relative offset to address `0005` is out of range, the result will
   │ be wrong.
-     ╭─[tests/opcodes.s:240:14]
- 237 │    bbc $31.3,$05 ;= 73 31 4F
- 238 │    bbc $31.4,$05 ;= 93 31 4C
- 239 │    bbc $31.5,$05 ;= B3 31 49
- 240 │    bbc $31.6,$05 ;= D3 31 46
+     ╭─[tests/opcodes.s:241:14]
+ 238 │    bbc $31.3,$05 ;= 73 31 4F
+ 239 │    bbc $31.4,$05 ;= 93 31 4C
+ 240 │    bbc $31.5,$05 ;= B3 31 49
+ 241 │    bbc $31.6,$05 ;= D3 31 46
      ·              ─┬─
      ·               ╰── Difference of -442 to current address
- 241 │    bbc $31.7,$05 ;= F3 31 43
- 242 │ 
- 243 │    call $5060 ;= 3F 60 50
+ 242 │    bbc $31.7,$05 ;= F3 31 43
+ 243 │ 
+ 244 │    call $5060 ;= 3F 60 50
      ╰────
   help: The current address is `01BE` and therefore the difference is -442.
         This difference exceeds the range [-128, 127] and will wrap around,
@@ -1665,16 +1665,16 @@ spcasm::relative_offset_too_large
 
   ⚠ The relative offset to address `0005` is out of range, the result will
   │ be wrong.
-     ╭─[tests/opcodes.s:241:14]
- 238 │    bbc $31.4,$05 ;= 93 31 4C
- 239 │    bbc $31.5,$05 ;= B3 31 49
- 240 │    bbc $31.6,$05 ;= D3 31 46
- 241 │    bbc $31.7,$05 ;= F3 31 43
+     ╭─[tests/opcodes.s:242:14]
+ 239 │    bbc $31.4,$05 ;= 93 31 4C
+ 240 │    bbc $31.5,$05 ;= B3 31 49
+ 241 │    bbc $31.6,$05 ;= D3 31 46
+ 242 │    bbc $31.7,$05 ;= F3 31 43
      ·              ─┬─
      ·               ╰── Difference of -445 to current address
- 242 │ 
- 243 │    call $5060 ;= 3F 60 50
- 244 │    pcall $02  ;= 4F 02
+ 243 │ 
+ 244 │    call $5060 ;= 3F 60 50
+ 245 │    pcall $02  ;= 4F 02
      ╰────
   help: The current address is `01C1` and therefore the difference is -445.
         This difference exceeds the range [-128, 127] and will wrap around,

@@ -188,6 +188,7 @@ pub enum DirectiveSymbol {
 	PadWord,
 	PadLong,
 	PadDWord,
+	Startpos,
 	Namespace,
 }
 
@@ -226,6 +227,7 @@ impl Display for DirectiveSymbol {
 			Self::PadWord => "padword",
 			Self::PadLong => "padlong",
 			Self::PadDWord => "paddword",
+			Self::Startpos => "startpos",
 			Self::Namespace => "namespace",
 		})
 	}
@@ -294,6 +296,8 @@ pub enum DirectiveValue {
 		/// The block that is assembled if the condition is falsy.
 		false_block: Vec<ProgramElement>,
 	},
+	/// `startpos`
+	Startpos,
 	/// `namespace`
 	StartNamespace { name: SharedStr },
 	/// `namespace off`
@@ -339,6 +343,7 @@ impl DirectiveValue {
 			| Self::AssignReference { .. }
 			| Self::Placeholder
 			| Self::SetDirectiveParameters { .. }
+			| Self::Startpos
 			| Self::StartNamespace { .. }
 			| Self::EndNamespace
 			| Self::Org(..) => 0,
@@ -403,6 +408,7 @@ impl Display for DirectiveValue {
 			Self::End => "endasm".to_string(),
 			Self::PushSection => "push".to_string(),
 			Self::PopSection => "pop".to_string(),
+			Self::Startpos => "startpos".to_string(),
 			Self::EndNamespace => "namespace off".to_string(),
 			Self::StartNamespace { name } => format!("namespace {name}"),
 			Self::UserDefinedMacro { name, arguments, body } => format!(
@@ -485,6 +491,7 @@ impl ReferenceResolvable for DirectiveValue {
 			| Self::SetDirectiveParameters { .. }
 			| Self::Fill { .. }
 			| Self::PopSection
+			| Self::Startpos
 			| Self::StartNamespace { .. }
 			| Self::EndNamespace
 			| Self::Org(_) => Ok(()),
@@ -531,6 +538,7 @@ impl ReferenceResolvable for DirectiveValue {
 			| Self::SampleTable { .. }
 			| Self::SetDirectiveParameters { .. }
 			| Self::PopSection
+			| Self::Startpos
 			| Self::StartNamespace { .. }
 			| Self::EndNamespace
 			| Self::Org(_)
@@ -564,6 +572,7 @@ impl ReferenceResolvable for DirectiveValue {
 			| Self::SampleTable { .. }
 			| Self::SetDirectiveParameters { .. }
 			| Self::PopSection
+			| Self::Startpos
 			| Self::StartNamespace { .. }
 			| Self::EndNamespace
 			| Self::Org(_)
@@ -615,6 +624,7 @@ impl ReferenceResolvable for DirectiveValue {
 			| Self::End
 			| Self::PushSection
 			| Self::PopSection
+			| Self::Startpos
 			| Self::StartNamespace { .. }
 			| Self::EndNamespace
 			| Self::Org(_) => Ok(()),

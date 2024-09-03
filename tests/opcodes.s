@@ -1,5 +1,6 @@
 arch spc700-raw
 org 0
+startpos
 start:        ; @ 0
    MOV A,#$10    ;= E8 10
    MOV A,(X)     ;= E6

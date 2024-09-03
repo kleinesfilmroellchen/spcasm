@@ -72,9 +72,14 @@ pub fn main() -> miette::Result<()> {
 			};
 			match args.output_format {
 				// TODO: Don't do double work assembling here.
-				cli::OutputFormat::Elf =>
-					elf::write_to_elf(&mut outfile, run_assembler_into_segments(&code, options).unwrap().1)
-						.map_err(AssemblyError::from)?,
+				cli::OutputFormat::Elf => {
+					let (_, output, maybe_entry_point) = run_assembler_into_segments(&code, options).unwrap();
+					if let Some(entry_point) = maybe_entry_point {
+						elf::write_to_elf(&mut outfile, output, entry_point).map_err(AssemblyError::from)?;
+					} else {
+						Err(AssemblyError::MissingStartpos { src: code.clone() })?;
+					}
+				},
 				cli::OutputFormat::Plain => outfile.write_all(&assembled).map_err(AssemblyError::from)?,
 				cli::OutputFormat::HexDump => outfile
 					.write_fmt(format_args!("{}", crate::pretty_hex(&assembled, None)))

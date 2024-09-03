@@ -50,21 +50,34 @@ pub enum AssemblyError {
 		location: SourceSpan,
 	},
 
-	#[error("startpos directive ignored")]
+	#[error("Duplicate startpos directive")]
 	#[diagnostic(
-		code(spcasm::startpos_ignored),
-		severity(Advice),
+		code(spcasm::directive::duplicate_startpos),
+		severity(Error),
 		help(
-			"spcasm supports `startpos` directives for compatibility with the `spc700-inline` mode of the Asar \
-			 multi-architecture assembler. This directive instructs Asar to insert special loader commands on the \
-			 SNES side, but since spcasm does not concern itself with those, they are ignored."
+			"the `startpos` directive defines the execution entry point of the ROM after it was loaded. There can \
+			 only be one entry point."
 		)
 	)]
-	StartposDirectiveIgnored {
+	DuplicateStartpos {
 		#[source_code]
 		src:      Arc<AssemblyCode>,
 		#[label("`startpos` directive")]
 		location: SourceSpan,
+	},
+
+	#[error("Missing startpos directive")]
+	#[diagnostic(
+		code(spcasm::directive::missing_startpos),
+		severity(Error),
+		help(
+			"the `startpos` directive defines the execution entry point of the ROM after it was loaded. This is \
+			 required for ELF binary output."
+		)
+	)]
+	MissingStartpos {
+		#[source_code]
+		src: Arc<AssemblyCode>,
 	},
 
 	#[error("Unknown architecture `{arch}` specified")]

@@ -277,7 +277,8 @@ pub fn lex(source_code: Arc<AssemblyCode>, options: &dyn Frontend) -> Result<Vec
 }
 
 fn next_identifier(chars: &mut Peekable<std::str::Chars>, start: char) -> SharedStr {
-	let mut identifier = String::new();
+	// Make an assumption of the string size based on what people usually write.
+	let mut identifier = String::with_capacity(32);
 	identifier.push(start);
 	while let Some(chr) = chars.peek()
 		&& (chr.is_alphanumeric() || chr.is_ascii_digit() || ['_', '-', '@'].contains(chr))

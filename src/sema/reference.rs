@@ -218,22 +218,19 @@ impl ReferenceResolvable for Reference {
 	fn resolve_pseudo_labels(&mut self, global_labels: &[Arc<RwLock<Label>>]) {
 		match self {
 			Self::Label(this_label) => {
-				if !this_label.try_read().is_some_and(|label| label.has_definition()) {
+				if this_label.try_read().is_some_and(|label| !label.has_definition()) {
+					let this_name = this_label.read().name.clone();
 					// Keep a list of possibly matching labels, as a pair of (pseudo_name, label).
 					// Repeatedly extend that list with the children of candidates where the pseudo_name matches a
 					// prefix of our name.
-					let global_candidates = global_labels.iter().cloned().filter_map(|label| {
+					let global_candidates = global_labels.iter().filter_map(|label| {
 						// Recursive labels; will error later but we do not want to deadlock.
 						if label.is_locked() {
 							None
 						} else {
-							// Hack to force a drop of the read lock before label is moved later.
-							let name = {
-								let name = label.read().name.clone();
-								name
-							};
-							if this_label.read().name.starts_with(name.as_str()) {
-								Some((name, label))
+							let label_locked = &label.read().name;
+							if this_name.starts_with(label_locked.as_str()) {
+								Some((label_locked.clone(), label))
 							} else {
 								None
 							}
@@ -244,14 +241,17 @@ impl ReferenceResolvable for Reference {
 					macro_rules! run_check_on_labels {
 						($labels:expr) => {
 							for (label_name, candidate) in $labels {
-								if this_label.read().name == label_name && candidate.read().has_definition() {
-									*this_label = candidate;
+								let candidate_locked = candidate.read();
+								if this_label.read().name == label_name && candidate_locked.has_definition() {
+									drop(candidate_locked);
+									*this_label = candidate.clone();
 									return;
 								}
+								let this_label_locked = this_label.read();
 
-								for (child_name, child_label) in &candidate.read().children {
+								for (child_name, child_label) in &candidate_locked.children {
 									let combined_name = format!("{}_{}", label_name, child_name);
-									if this_label.read().name.starts_with(&combined_name) {
+									if this_label_locked.name.starts_with(&combined_name) {
 										candidates.push((combined_name.into(), child_label.clone()));
 									}
 								}

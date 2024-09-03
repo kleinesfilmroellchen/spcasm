@@ -298,18 +298,18 @@ fn parse_identifier_like(
 	*index += identifier.len();
 	let identifier_span = (start_index, identifier.len()).into();
 
-	Token::parse_special_identifier(&identifier.to_lowercase(), identifier_span, source_code.clone())
+	Token::parse_special_identifier(&identifier.to_ascii_lowercase(), identifier_span, source_code.clone())
 		.map(|value| Token::SpecialIdentifier(value, identifier_span))
 		.or_else(|_| {
-			Register::parse(&identifier.to_lowercase(), identifier_span, source_code.clone())
+			Register::parse(&identifier.to_ascii_lowercase(), identifier_span, source_code.clone())
 				.map(|value| Token::Register(value, identifier_span))
 		})
 		.or_else(|_| {
-			DirectiveSymbol::parse(&identifier.to_lowercase(), identifier_span, source_code.clone())
+			DirectiveSymbol::parse(&identifier.to_ascii_lowercase(), identifier_span, source_code.clone())
 				.map(|value| Token::Directive(value, identifier_span))
 		})
 		.or_else(|_| {
-			Mnemonic::parse(&identifier.to_lowercase(), identifier_span, source_code.clone())
+			Mnemonic::parse(&identifier.to_ascii_lowercase(), identifier_span, source_code.clone())
 				.map(|mnemonic| Token::Mnemonic(mnemonic, identifier_span))
 		})
 		.or_else::<AssemblyError, _>(|_| Ok(Token::Identifier(identifier, identifier_span)))

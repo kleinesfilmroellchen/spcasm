@@ -3,6 +3,10 @@
   "description": "VSCode extension for sals, the SPC700 language server",
   "license": "BSD-2-Clause",
   "version": "0.0.1",
+  "author": {
+    "name": "kleines Filmröllchen"
+  },
+  "publisher": "kleinesfilmroellchen",
   "repository": {
     "url": "https://github.com/kleinesfilmroellchen/spcasm"
   },

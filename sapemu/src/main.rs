@@ -8,7 +8,7 @@ use std::path::PathBuf;
 use std::time::Instant;
 
 use clap::Parser;
-use log::{info, warn, LevelFilter};
+use log::{debug, info, warn, LevelFilter};
 use time::macros::format_description;
 
 use crate::memory::Memory;
@@ -61,14 +61,20 @@ fn main() {
 
 	let start_time = Instant::now();
 	let mut ticks = 0;
-	// FIXME: Don't run the uploader all the time.
-	while arguments.cycles.map_or(true, |cycles| ticks < cycles) {
+	while !smp.is_halted() && arguments.cycles.map_or(true, |cycles| ticks < cycles) {
 		uploader.perform_step(&mut smp.ports);
 		smp.tick(&mut memory);
 		ticks += 1;
-		if smp.is_halted() {
+		if uploader.is_finished() {
 			break;
 		}
+	}
+
+	debug!("Memory state after upload:\n{}", spcasm::pretty_hex(&memory.ram, None));
+
+	while !smp.is_halted() && arguments.cycles.map_or(true, |cycles| ticks < cycles) {
+		smp.tick(&mut memory);
+		ticks += 1;
 	}
 
 	let end_time = Instant::now();

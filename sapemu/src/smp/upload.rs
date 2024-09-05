@@ -17,7 +17,6 @@ pub struct DataBlock {
 	/// Data in the block.
 	data:        [u8; 256],
 	/// Amount of data in the block.
-	#[allow(unused)]
 	length:      u16,
 }
 
@@ -53,8 +52,7 @@ pub struct Uploader {
 }
 
 /// Current state of the uploader.
-#[derive(Clone, Copy, Debug, Default)]
-#[allow(unused)]
+#[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
 enum UploaderState {
 	/// Uploader is waiting for signal value 0xAA in port 0.
 	#[default]
@@ -65,6 +63,9 @@ enum UploaderState {
 	WaitingForCC,
 	/// Uploader is waiting for a data byte to be acknowledged.
 	WaitingForByteAck,
+	/// Uploader is waiting for the start of a new block to be acknowledged. This stores the pseudo index that was sent
+	/// to the SMP earlier and that will be echoed back.
+	WaitingForBlockStartAck { pseudo_index: u8 },
 	/// Uploader is done with uploading, all data has been sent.
 	Finished,
 }
@@ -208,29 +209,54 @@ impl Uploader {
 					&& i == u16::from(ports.read_from_smp::<0>())
 				{
 					let status = self.next_byte();
-					debug!("Got ACKed index {}, sending next byte ({:?})", i, status);
+					debug!(
+						"Got ACK for {}, sending [{:?}] = {:?} ({:?})",
+						i,
+						self.current_index(),
+						self.current_byte(),
+						status
+					);
+					let pseudo_index = if i + 3 > 0xff { 3 } else { (i + 3) as u8 };
 					match status {
 						NextByteStatus::Normal => {
 							ports.write_to_smp::<0>(self.current_index().unwrap() as u8);
 							ports.write_to_smp::<1>(self.current_byte().unwrap());
 						},
 						NextByteStatus::NewBlock => {
+							debug!("Going to new block, using too large index {}", pseudo_index);
 							self.write_address(ports);
-							ports.write_to_smp::<0>(self.current_index().unwrap() as u8);
-							ports.write_to_smp::<1>(self.current_byte().unwrap());
+							ports.write_to_smp::<0>(pseudo_index);
+							ports.write_to_smp::<1>(1);
+							self.state = UploaderState::WaitingForBlockStartAck { pseudo_index };
 						},
 						NextByteStatus::NoMoreBlocks => {
 							self.current_address = self.entry_point;
 							self.write_address(ports);
-							ports.write_to_smp::<0>(0);
+							ports.write_to_smp::<0>(pseudo_index);
 							ports.write_to_smp::<1>(0);
+							info!(
+								"Finished uploading data blocks, SMP will jump to entry point {:04x}",
+								self.entry_point
+							);
 							self.state = UploaderState::Finished;
 						},
 					}
 				}
 			},
+			UploaderState::WaitingForBlockStartAck { pseudo_index } =>
+				if ports.read_from_smp::<0>() == pseudo_index {
+					debug!("Got ACKed start of new block, sending first byte");
+					ports.write_to_smp::<0>(self.current_index().unwrap() as u8);
+					ports.write_to_smp::<1>(self.current_byte().unwrap() as u8);
+					self.state = UploaderState::WaitingForByteAck;
+				},
 			UploaderState::Finished => {},
 		}
+	}
+
+	/// Returns whether the uploader is done uploading data.
+	pub fn is_finished(&self) -> bool {
+		self.state == UploaderState::Finished
 	}
 
 	/// Write the current address to the corresponding IO ports (2 and 3)

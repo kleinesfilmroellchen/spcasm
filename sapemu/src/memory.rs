@@ -7,7 +7,7 @@ pub const MEMORY_SIZE: usize = 0x10000;
 
 /// Shared SMP-DSP memory.
 pub struct Memory {
-	ram: [u8; MEMORY_SIZE],
+	pub(crate) ram: [u8; MEMORY_SIZE],
 }
 
 #[allow(unused)]

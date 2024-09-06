@@ -2,6 +2,7 @@
 #![deny(missing_docs, unused, clippy::all, clippy::pedantic, clippy::nursery, rustdoc::all)]
 #![allow(incomplete_features)]
 #![feature(slice_as_chunks, generic_const_exprs, adt_const_params, let_chains)]
+#![cfg_attr(test, feature(try_blocks))]
 
 use std::fs;
 use std::path::PathBuf;
@@ -18,6 +19,8 @@ use crate::smp::{Smp, CPU_RATE};
 pub mod dsp;
 pub mod memory;
 pub mod smp;
+
+#[cfg(test)] mod test;
 
 #[derive(Clone, Debug, Parser)]
 #[command(version = spcasm::buildinfo::PKG_VERSION, about, long_about = None)]

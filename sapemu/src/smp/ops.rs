@@ -18,7 +18,7 @@ use spcasm::sema::Register;
 
 use super::Smp;
 use crate::memory::Memory;
-use crate::smp::ProgramStatusWord;
+use crate::smp::{ProgramStatusWord, RunState};
 
 /// Action taken after an instruction cycle was executed.
 #[derive(Clone, Copy)]
@@ -358,7 +358,12 @@ macro_rules! debug_instruction {
 }
 
 fn nop(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInternalState) -> MicroArchAction {
-	todo!()
+	debug_instruction!("nop", cycle, cpu);
+
+	match cycle {
+		0 => MicroArchAction::Next,
+		_ => unreachable!(),
+	}
 }
 fn tcall_0(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInternalState) -> MicroArchAction {
 	todo!()
@@ -490,7 +495,7 @@ fn jmp_indexed(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: Instruct
 		3 => {
 			// We don’t know whether the CPU can already read the first address byte in this cycle,
 			// but doing the offset calculation in a separate cycle seems more plausible.
-			let address_of_jump = state.address + cpu.x as u16;
+			let address_of_jump = state.address + u16::from(cpu.x);
 			MicroArchAction::Continue(state.with_address(address_of_jump))
 		},
 		4 => {
@@ -499,7 +504,7 @@ fn jmp_indexed(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: Instruct
 		},
 		5 => {
 			let pc_high = cpu.read(state.address.wrapping_add(1), memory);
-			let new_pc = (pc_high as u16) << 8 | state.operand as u16;
+			let new_pc = u16::from(pc_high) << 8 | u16::from(state.operand);
 			trace!("jump to {:04x} (had X offset {:02x})", new_pc, cpu.x);
 			cpu.pc = new_pc;
 			MicroArchAction::Next
@@ -1605,12 +1610,21 @@ fn dbnz_y(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionIn
 	todo!()
 }
 fn stop(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInternalState) -> MicroArchAction {
-	todo!()
+	debug_instruction!("stop", cycle, cpu);
+
+	match cycle {
+		0 => {
+			cpu.run_state = RunState::Halted;
+			MicroArchAction::Next
+		},
+		_ => unreachable!(),
+	}
 }
 
 /// Common implementation for all conditional branches. The flag to branch on and its state when to branch are constant
 /// parameters since they are determined at compile time, hopefully improving optimizations around flag checks.
 #[inline]
+#[allow(clippy::needless_pass_by_ref_mut)]
 fn branch_on<const FLAG: ProgramStatusWord, const IS_SET: bool>(
 	cpu: &mut Smp,
 	memory: &mut Memory,
@@ -1668,6 +1682,7 @@ fn move_to_dp<const REGISTER: Register>(
 }
 
 #[inline]
+#[allow(clippy::needless_pass_by_ref_mut)]
 fn move_from_dp<const REGISTER: Register>(
 	cpu: &mut Smp,
 	memory: &mut Memory,
@@ -1691,6 +1706,7 @@ fn move_from_dp<const REGISTER: Register>(
 }
 
 #[inline]
+#[allow(clippy::needless_pass_by_ref_mut)]
 fn move_from_imm<const REGISTER: Register>(
 	cpu: &mut Smp,
 	memory: &mut Memory,
@@ -1710,6 +1726,7 @@ fn move_from_imm<const REGISTER: Register>(
 }
 
 #[inline]
+#[allow(clippy::needless_pass_by_ref_mut)]
 fn cmp_register_dp<const REGISTER: Register>(
 	cpu: &mut Smp,
 	memory: &mut Memory,

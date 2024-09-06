@@ -47,7 +47,8 @@ impl Memory {
 	/// Performs a read from memory at the given address.
 	#[inline]
 	#[allow(clippy::needless_pass_by_ref_mut)]
-	pub fn read(&mut self, address: u16, enable_boot_rom: bool) -> u8 {
+	#[must_use]
+	pub fn read(&self, address: u16, enable_boot_rom: bool) -> u8 {
 		// TODO: Doesn't handle external hardware registers.
 		let result = match address {
 			BOOT_ROM_START ..= 0xFFFF if enable_boot_rom => BOOT_ROM[(address - BOOT_ROM_START) as usize],

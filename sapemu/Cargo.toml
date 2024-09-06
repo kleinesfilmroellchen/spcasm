@@ -28,3 +28,10 @@ features = ["binaries"]
 [dependencies.clap]
 version = "4.4"
 features = ["derive", "wrap_help", "string"]
+
+[dev-dependencies]
+reqwest = { version = "0.12", features = ["blocking"] }
+serde = "1"
+serde_json = "1.0.128"
+rstest = "0.22.0"
+simd-json = { version = "0.13", features = ["known-key"] }

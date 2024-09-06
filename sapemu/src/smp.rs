@@ -16,44 +16,45 @@ use crate::memory::Memory;
 use crate::smp::ops::OPCODE_TABLE;
 
 /// State of the microprocessor.
+#[derive(Clone, Debug, Default)]
 pub struct Smp {
 	/// TEST register.
-	pub test:      TestRegister,
+	pub test:                 TestRegister,
 	/// CONTROL register.
-	pub control:   ControlRegister,
+	pub control:              ControlRegister,
 	/// Accumulator.
-	pub a:         u8,
+	pub a:                    u8,
 	/// X index register.
-	pub x:         u8,
+	pub x:                    u8,
 	/// Y index register.
-	pub y:         u8,
+	pub y:                    u8,
 	/// Program Counter.
-	pub pc:        u16,
+	pub pc:                   u16,
 	/// Stack Pointer.
-	pub sp:        u8,
+	pub sp:                   u8,
 	/// Program Status Word (flags register).
-	pub psw:       ProgramStatusWord,
+	pub psw:                  ProgramStatusWord,
 	/// Main CPU I/O ports.
-	pub ports:     CpuIOPorts,
+	pub ports:                CpuIOPorts,
 	/// CPU-internal timers.
-	pub timers:    Timers,
+	pub timers:               Timers,
 	/// Cycle counter for debugging purposes.
-	cycle_counter: u128,
+	pub(crate) cycle_counter: u128,
 
 	/// Cycle within an instruction.
-	instruction_cycle:      usize,
+	pub(crate) instruction_cycle:      usize,
 	/// Opcode of the instruction being executed.
-	current_opcode:         u8,
+	pub(crate) current_opcode:         u8,
 	/// Last instruction state returned by the instruction.
-	last_instruction_state: InstructionInternalState,
+	pub(crate) last_instruction_state: InstructionInternalState,
 
 	/// CPU execution state.
-	run_state: RunState,
+	pub(crate) run_state: RunState,
 }
 
 /// CPU execution state.
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
-enum RunState {
+pub(crate) enum RunState {
 	#[default]
 	Running,
 	Crashed,
@@ -73,7 +74,7 @@ impl RunState {
 }
 
 /// Main CPU I/O ports.
-#[derive(Default)]
+#[derive(Clone, Default, Debug)]
 pub struct CpuIOPorts {
 	/// S-SMP write ports (to main CPU)
 	pub write_ports: [u8; 4],
@@ -153,6 +154,7 @@ impl CpuIOPorts {
 pub const CPU_RATE: usize = 2_048_000;
 
 /// Internal CPU timers.
+#[derive(Clone, Copy, Debug)]
 pub struct Timers {
 	/// Current timer output value (`TnOUT`).
 	pub timer_out:        [u8; 3],
@@ -229,17 +231,32 @@ impl Timers {
 }
 
 /// Internal TEST register.
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug)]
 #[repr(transparent)]
 pub struct TestRegister(u8);
+
+impl Default for TestRegister {
+	fn default() -> Self {
+		Self(0xA0)
+	}
+}
+
 /// Internal CONTROL register.
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug)]
 #[repr(transparent)]
 pub struct ControlRegister(u8);
+
+impl Default for ControlRegister {
+	fn default() -> Self {
+		Self(0xB0)
+	}
+}
+
 /// Program Status Word (flags register).
-#[derive(Clone, Copy, PartialEq, Eq, ConstParamTy)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, ConstParamTy)]
 #[repr(transparent)]
-pub struct ProgramStatusWord(u8);
+#[derive(Default)]
+pub struct ProgramStatusWord(pub(crate) u8);
 
 bitflags! {
 	impl TestRegister: u8 {
@@ -321,9 +338,8 @@ const CPUIO3: u16 = 0x00F7;
 impl Smp {
 	/// Create a new reset CPU.
 	pub fn new(memory: &mut Memory) -> Self {
-		let control = ControlRegister(0xB0);
+		let control = ControlRegister::default();
 		Self {
-			test: TestRegister(0xA0),
 			control,
 			// Reset values of A, X, Y, SP seem to be unknown.
 			a: 0,
@@ -331,14 +347,8 @@ impl Smp {
 			y: 0,
 			sp: 0,
 			pc: memory.read_word(0xFFFE, control.contains(ControlRegister::BootRomEnable)),
-			psw: ProgramStatusWord(0),
-			ports: CpuIOPorts::default(),
 			timers: Timers::new(),
-			cycle_counter: 0,
-			instruction_cycle: 0,
-			current_opcode: 0,
-			last_instruction_state: InstructionInternalState::default(),
-			run_state: RunState::default(),
+			..Default::default()
 		}
 	}
 
@@ -426,7 +436,7 @@ impl Smp {
 	}
 
 	#[track_caller]
-	fn read(&mut self, address: u16, memory: &mut Memory) -> u8 {
+	fn read(&mut self, address: u16, memory: &Memory) -> u8 {
 		match address {
 			TEST => self.test.0,
 			CONTROL => self.control.0,
@@ -436,7 +446,7 @@ impl Smp {
 	}
 
 	/// Reads memory at the current program counter and advances it afterwards.
-	fn read_next_pc(&mut self, memory: &mut Memory) -> u8 {
+	fn read_next_pc(&mut self, memory: &Memory) -> u8 {
 		let data = self.read(self.pc, memory);
 		self.pc += 1;
 		data

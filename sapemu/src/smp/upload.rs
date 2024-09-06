@@ -247,7 +247,7 @@ impl Uploader {
 				if ports.read_from_smp::<0>() == pseudo_index {
 					debug!("Got ACKed start of new block, sending first byte");
 					ports.write_to_smp::<0>(self.current_index().unwrap() as u8);
-					ports.write_to_smp::<1>(self.current_byte().unwrap() as u8);
+					ports.write_to_smp::<1>(self.current_byte().unwrap());
 					self.state = UploaderState::WaitingForByteAck;
 				},
 			UploaderState::Finished => {},
@@ -255,6 +255,7 @@ impl Uploader {
 	}
 
 	/// Returns whether the uploader is done uploading data.
+	#[must_use]
 	pub fn is_finished(&self) -> bool {
 		self.state == UploaderState::Finished
 	}

@@ -125,8 +125,8 @@ impl CpuIOPorts {
 	/// Panics if the port number is invalid.
 	#[inline]
 	#[track_caller]
-	#[allow(clippy::needless_pass_by_ref_mut)]
-	pub fn read_from_smp<const PORT_NUMBER: u8>(&mut self) -> u8
+	#[must_use]
+	pub fn read_from_smp<const PORT_NUMBER: u8>(&self) -> u8
 	where
 		// FIXME: currently accepted hack to create arbitrary expression bounds.
 		//        This expression is designed so it will overflow for values >= 4.
@@ -328,12 +328,18 @@ impl std::fmt::Display for ProgramStatusWord {
 	}
 }
 
-const TEST: u16 = 0x00F0;
-const CONTROL: u16 = 0x00F1;
-const CPUIO0: u16 = 0x00F4;
-const CPUIO1: u16 = 0x00F5;
-const CPUIO2: u16 = 0x00F6;
-const CPUIO3: u16 = 0x00F7;
+/// TEST register.
+pub const TEST: u16 = 0x00F0;
+/// CONTROL register.
+pub const CONTROL: u16 = 0x00F1;
+/// CPUIO0 register.
+pub const CPUIO0: u16 = 0x00F4;
+/// CPUIO1 register.
+pub const CPUIO1: u16 = 0x00F5;
+/// CPUIO2 register.
+pub const CPUIO2: u16 = 0x00F6;
+/// CPUIO3 register.
+pub const CPUIO3: u16 = 0x00F7;
 
 impl Smp {
 	/// Create a new reset CPU.

@@ -2,6 +2,8 @@
 
 use log::trace;
 
+#[allow(unused)] use crate::smp::Smp;
+
 /// Size of ARAM and memory space.
 pub const MEMORY_SIZE: usize = 0x10000;
 
@@ -62,5 +64,21 @@ impl Memory {
 	#[inline]
 	pub fn read_word(&mut self, address: u16, enable_boot_rom: bool) -> u16 {
 		u16::from(self.read(address, enable_boot_rom)) | (u16::from(self.read(address + 1, enable_boot_rom)) << 8)
+	}
+
+	/// Copies the state of the various memory mapped registers to the hidden memory behind it. This function is used
+	/// for testing purposes when tests want to verify RAM state.
+	#[cfg(test)]
+	pub(crate) fn copy_mapped_registers_from_smp(&mut self, smp: &Smp) {
+		#[allow(clippy::wildcard_imports)]
+		use crate::smp::*;
+
+		self.write(TEST, smp.test.bits());
+		self.write(CONTROL, smp.control.bits());
+
+		self.write(CPUIO0, smp.ports.read_from_smp::<0>());
+		self.write(CPUIO1, smp.ports.read_from_smp::<1>());
+		self.write(CPUIO2, smp.ports.read_from_smp::<2>());
+		self.write(CPUIO3, smp.ports.read_from_smp::<3>());
 	}
 }

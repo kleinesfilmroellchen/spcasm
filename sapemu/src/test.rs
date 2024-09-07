@@ -14,11 +14,15 @@
 
 #![allow(unused)]
 
+use log::info;
 use rstest::rstest;
 use serde::Deserialize;
+use time::macros::format_description;
 
 use crate::memory::Memory;
-use crate::smp::{ProgramStatusWord, Smp};
+use crate::smp::{
+	ControlRegister, CpuIOPorts, ProgramStatusWord, Smp, TestRegister, CONTROL, CPUIO0, CPUIO1, CPUIO2, CPUIO3, TEST,
+};
 
 #[derive(Deserialize, Debug, Clone)]
 struct Test {
@@ -49,6 +53,10 @@ impl From<&ProcessorState> for Smp {
 			y: val.y,
 			pc: val.pc,
 			sp: val.sp,
+			test: val.ram.test_register().unwrap_or_default(),
+			// Tests assume that boot ROM is disabled if the control register is not explicitly set via RAM inputs.
+			control: val.ram.control_register().unwrap_or(ControlRegister::empty()),
+			ports: val.ram.cpuio_ports(),
 			psw: ProgramStatusWord(val.psw),
 			..Default::default()
 		}
@@ -76,6 +84,56 @@ impl PartialEq<Memory> for RamState {
 }
 
 impl RamState {
+	pub fn test_register(&self) -> Option<TestRegister> {
+		self.0.iter().find_map(
+			|MemoryCellState { address, value }| {
+				if *address == TEST {
+					Some(TestRegister::from_bits_retain(*value))
+				} else {
+					None
+				}
+			},
+		)
+	}
+
+	pub fn control_register(&self) -> Option<ControlRegister> {
+		self.0.iter().find_map(
+			|MemoryCellState { address, value }| {
+				if *address == CONTROL {
+					Some(ControlRegister::from_bits_retain(*value))
+				} else {
+					None
+				}
+			},
+		)
+	}
+
+	pub fn cpuio_ports(&self) -> CpuIOPorts {
+		let mut ports = CpuIOPorts::default();
+		for MemoryCellState { address, value } in &self.0 {
+			match *address {
+				CPUIO0 => {
+					ports.write(0, *value);
+					ports.write_to_smp::<0>(*value);
+				},
+				CPUIO1 => {
+					ports.write(1, *value);
+					ports.write_to_smp::<1>(*value);
+				},
+				CPUIO2 => {
+					ports.write(2, *value);
+					ports.write_to_smp::<2>(*value);
+				},
+				CPUIO3 => {
+					ports.write(3, *value);
+					ports.write_to_smp::<3>(*value);
+				},
+				_ => {},
+			}
+		}
+		ports
+	}
+
 	pub fn mismatch_info(&self, memory: &Memory) -> String {
 		self.0
 			.iter()
@@ -151,12 +209,20 @@ fn single_instruction(
 	)]
 	instruction: u8,
 ) {
+	let _ = simple_logger::SimpleLogger::new()
+		.with_level(log::LevelFilter::Trace)
+		.with_local_timestamps()
+		.with_colors(true)
+		.with_timestamp_format(format_description!(version = 2, "[second].[subsecond digits:6]"))
+		.init();
+
 	let file_name = format!("https://raw.githubusercontent.com/SingleStepTests/spc700/main/v1/{instruction:02x}.json");
 	let maybe_test_file: Result<_, reqwest::Error> = try { reqwest::blocking::get(file_name)?.bytes()? };
 	match maybe_test_file {
 		Ok(file_bytes) => {
 			let test_file: Vec<Test> = serde_json::from_slice(&file_bytes).expect("couldn't parse test set");
 			for test in test_file {
+				info!("#######################################\nperforming test {}...", test.name);
 				let mut smp: Smp = (&test.initial_state).into();
 				let mut memory: Memory = (&test.initial_state.ram).into();
 				// TODO: Check cycle behavior.
@@ -164,6 +230,7 @@ fn single_instruction(
 				for _ in 0 .. cycles_taken {
 					smp.tick(&mut memory);
 				}
+				memory.copy_mapped_registers_from_smp(&smp);
 				assert!(
 					test.final_state.ram == memory,
 					"result mismatch at test {}: {}",

@@ -13,7 +13,7 @@
 
 #![allow(unused)]
 // On purpose in this file, to allow easier reading of cycle-by-cycle behavior of instructions.
-#![allow(clippy::match_same_arms)]
+#![allow(clippy::match_same_arms, clippy::cast_lossless)]
 
 use log::trace;
 use spcasm::sema::Register;
@@ -372,10 +372,12 @@ fn tcall_0(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionI
 	tcall::<0>(cpu, memory, cycle, state)
 }
 fn set1_0(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInternalState) -> MicroArchAction {
-	todo!()
+	debug_instruction!("set1 0", cycle, cpu);
+	set_clear_dp::<0, true>(cpu, memory, cycle, state)
 }
 fn bbs_0(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInternalState) -> MicroArchAction {
-	todo!()
+	debug_instruction!("bbs 0", cycle, cpu);
+	branch_on_bit::<0, true>(cpu, memory, cycle, state)
 }
 fn or_a_dp(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInternalState) -> MicroArchAction {
 	todo!()
@@ -433,7 +435,8 @@ fn tcall_1(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionI
 	tcall::<1>(cpu, memory, cycle, state)
 }
 fn clr1_0(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInternalState) -> MicroArchAction {
-	todo!()
+	debug_instruction!("clr1 0", cycle, cpu);
+	set_clear_dp::<0, false>(cpu, memory, cycle, state)
 }
 fn bbc_0(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInternalState) -> MicroArchAction {
 	todo!()
@@ -525,7 +528,8 @@ fn tcall_2(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionI
 	tcall::<2>(cpu, memory, cycle, state)
 }
 fn set1_1(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInternalState) -> MicroArchAction {
-	todo!()
+	debug_instruction!("set1 1", cycle, cpu);
+	set_clear_dp::<1, true>(cpu, memory, cycle, state)
 }
 fn bbs_1(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInternalState) -> MicroArchAction {
 	todo!()
@@ -605,7 +609,8 @@ fn tcall_3(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionI
 	tcall::<3>(cpu, memory, cycle, state)
 }
 fn clr1_1(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInternalState) -> MicroArchAction {
-	todo!()
+	debug_instruction!("clr1 1", cycle, cpu);
+	set_clear_dp::<1, false>(cpu, memory, cycle, state)
 }
 fn bbc_1(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInternalState) -> MicroArchAction {
 	todo!()
@@ -665,7 +670,8 @@ fn tcall_4(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionI
 	tcall::<4>(cpu, memory, cycle, state)
 }
 fn set1_2(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInternalState) -> MicroArchAction {
-	todo!()
+	debug_instruction!("set1 2", cycle, cpu);
+	set_clear_dp::<2, true>(cpu, memory, cycle, state)
 }
 fn bbs_2(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInternalState) -> MicroArchAction {
 	todo!()
@@ -726,7 +732,8 @@ fn tcall_5(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionI
 	tcall::<5>(cpu, memory, cycle, state)
 }
 fn clr1_2(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInternalState) -> MicroArchAction {
-	todo!()
+	debug_instruction!("clr1 2", cycle, cpu);
+	set_clear_dp::<2, false>(cpu, memory, cycle, state)
 }
 fn bbc_2(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInternalState) -> MicroArchAction {
 	todo!()
@@ -796,7 +803,8 @@ fn tcall_6(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionI
 	tcall::<6>(cpu, memory, cycle, state)
 }
 fn set1_3(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInternalState) -> MicroArchAction {
-	todo!()
+	debug_instruction!("set1 3", cycle, cpu);
+	set_clear_dp::<3, true>(cpu, memory, cycle, state)
 }
 fn bbs_3(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInternalState) -> MicroArchAction {
 	todo!()
@@ -857,7 +865,8 @@ fn tcall_7(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionI
 	tcall::<7>(cpu, memory, cycle, state)
 }
 fn clr1_3(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInternalState) -> MicroArchAction {
-	todo!()
+	debug_instruction!("clr1 3", cycle, cpu);
+	set_clear_dp::<3, false>(cpu, memory, cycle, state)
 }
 fn bbc_3(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInternalState) -> MicroArchAction {
 	todo!()
@@ -943,7 +952,8 @@ fn tcall_8(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionI
 	tcall::<8>(cpu, memory, cycle, state)
 }
 fn set1_4(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInternalState) -> MicroArchAction {
-	todo!()
+	debug_instruction!("set1 4", cycle, cpu);
+	set_clear_dp::<4, true>(cpu, memory, cycle, state)
 }
 fn bbs_4(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInternalState) -> MicroArchAction {
 	todo!()
@@ -1026,7 +1036,8 @@ fn tcall_9(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionI
 	tcall::<9>(cpu, memory, cycle, state)
 }
 fn clr1_4(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInternalState) -> MicroArchAction {
-	todo!()
+	debug_instruction!("clr1 4", cycle, cpu);
+	set_clear_dp::<4, false>(cpu, memory, cycle, state)
 }
 fn bbc_4(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInternalState) -> MicroArchAction {
 	todo!()
@@ -1088,7 +1099,8 @@ fn tcall_10(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: Instruction
 	tcall::<10>(cpu, memory, cycle, state)
 }
 fn set1_5(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInternalState) -> MicroArchAction {
-	todo!()
+	debug_instruction!("set1 5", cycle, cpu);
+	set_clear_dp::<5, true>(cpu, memory, cycle, state)
 }
 fn bbs_5(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInternalState) -> MicroArchAction {
 	todo!()
@@ -1187,7 +1199,8 @@ fn tcall_11(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: Instruction
 	tcall::<11>(cpu, memory, cycle, state)
 }
 fn clr1_5(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInternalState) -> MicroArchAction {
-	todo!()
+	debug_instruction!("clr1 5", cycle, cpu);
+	set_clear_dp::<5, false>(cpu, memory, cycle, state)
 }
 fn bbc_5(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInternalState) -> MicroArchAction {
 	todo!()
@@ -1291,7 +1304,8 @@ fn tcall_12(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: Instruction
 	tcall::<12>(cpu, memory, cycle, state)
 }
 fn set1_6(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInternalState) -> MicroArchAction {
-	todo!()
+	debug_instruction!("set1 6", cycle, cpu);
+	set_clear_dp::<6, true>(cpu, memory, cycle, state)
 }
 fn bbs_6(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInternalState) -> MicroArchAction {
 	todo!()
@@ -1375,7 +1389,8 @@ fn tcall_13(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: Instruction
 	tcall::<13>(cpu, memory, cycle, state)
 }
 fn clr1_6(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInternalState) -> MicroArchAction {
-	todo!()
+	debug_instruction!("clr1 6", cycle, cpu);
+	set_clear_dp::<6, false>(cpu, memory, cycle, state)
 }
 fn bbc_6(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInternalState) -> MicroArchAction {
 	todo!()
@@ -1515,7 +1530,8 @@ fn tcall_14(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: Instruction
 	tcall::<14>(cpu, memory, cycle, state)
 }
 fn set1_7(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInternalState) -> MicroArchAction {
-	todo!()
+	debug_instruction!("set1 7", cycle, cpu);
+	set_clear_dp::<7, true>(cpu, memory, cycle, state)
 }
 fn bbs_7(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInternalState) -> MicroArchAction {
 	todo!()
@@ -1581,7 +1597,8 @@ fn tcall_15(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: Instruction
 	tcall::<15>(cpu, memory, cycle, state)
 }
 fn clr1_7(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInternalState) -> MicroArchAction {
-	todo!()
+	debug_instruction!("clr1 7", cycle, cpu);
+	set_clear_dp::<7, false>(cpu, memory, cycle, state)
 }
 fn bbc_7(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInternalState) -> MicroArchAction {
 	todo!()
@@ -1834,6 +1851,86 @@ where
 		},
 		7 => {
 			cpu.pc = state.address;
+			MicroArchAction::Next
+		},
+		_ => unreachable!(),
+	}
+}
+
+#[inline]
+fn set_clear_dp<const BIT_INDEX: u8, const SHOULD_SET: bool>(
+	cpu: &mut Smp,
+	memory: &mut Memory,
+	cycle: usize,
+	state: InstructionInternalState,
+) -> MicroArchAction
+where
+	[(); (BIT_INDEX + (0xff - 7)) as usize]:, // Only indices between 0 and 7 inclusive are allowed
+{
+	let bit_value: u8 = u8::from(SHOULD_SET);
+	let bitmask = !(1 << BIT_INDEX);
+
+	match cycle {
+		0 => MicroArchAction::Continue(InstructionInternalState::default()),
+		1 => {
+			let address = cpu.read_next_pc(memory) as u16 + cpu.direct_page_offset();
+			MicroArchAction::Continue(state.with_address(address))
+		},
+		2 => {
+			let value = cpu.read(state.address, memory);
+			let modified = value & bitmask | (bit_value << BIT_INDEX);
+			MicroArchAction::Continue(state.with_operand(modified))
+		},
+		3 => {
+			cpu.write(state.address, state.operand, memory);
+			MicroArchAction::Next
+		},
+		_ => unreachable!(),
+	}
+}
+
+#[inline]
+fn branch_on_bit<const BIT_INDEX: u8, const BRANCH_IF_SET: bool>(
+	cpu: &mut Smp,
+	memory: &Memory,
+	cycle: usize,
+	state: InstructionInternalState,
+) -> MicroArchAction
+where
+	[(); (BIT_INDEX + (0xff - 7)) as usize]:, // Only indices between 0 and 7 inclusive are allowed
+{
+	let bit_value: u8 = u8::from(BRANCH_IF_SET);
+
+	match cycle {
+		0 => MicroArchAction::Continue(InstructionInternalState::default()),
+		1 => {
+			let address = cpu.read_next_pc(memory) as u16 + cpu.direct_page_offset();
+			MicroArchAction::Continue(state.with_address(address))
+		},
+		2 => {
+			let value = cpu.read(state.address, memory);
+			MicroArchAction::Continue(state.with_operand(value))
+		},
+		3 => {
+			let relative_offset = cpu.read_next_pc(memory) as i8;
+			MicroArchAction::Continue(state.with_relative(relative_offset))
+		},
+		4 =>
+			if (state.operand >> BIT_INDEX) == bit_value {
+				trace!(
+					"bit {BIT_INDEX} {} in {} ({:08b}), taking branch",
+					if BRANCH_IF_SET { "set" } else { "clear" },
+					state.operand,
+					state.operand
+				);
+				MicroArchAction::Next
+			} else {
+				MicroArchAction::Continue(state)
+			},
+		// CPU calculates branch target in this step.
+		5 => MicroArchAction::Continue(state),
+		6 => {
+			cpu.pc = (cpu.pc as isize + state.relative as isize) as u16;
 			MicroArchAction::Next
 		},
 		_ => unreachable!(),

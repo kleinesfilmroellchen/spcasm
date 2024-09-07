@@ -452,6 +452,19 @@ impl Smp {
 		data
 	}
 
+	/// Pushes a value onto the stack. Note that this actually takes two cycles in hardware, which users must account
+	/// for.
+	fn push(&mut self, value: u8, memory: &mut Memory) {
+		memory.write(self.stack_top(), value);
+		self.sp = self.sp.wrapping_sub(1);
+	}
+
+	/// Returns the address of the hardware stack top, i.e. the lowest stack address that is free.
+	#[inline]
+	pub fn stack_top(&self) -> u16 {
+		self.sp as u16 + 0x100
+	}
+
 	#[allow(clippy::needless_pass_by_ref_mut)]
 	#[track_caller]
 	fn memory_write(&mut self, address: u16, value: u8, memory: &mut Memory) {

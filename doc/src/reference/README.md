@@ -94,6 +94,8 @@ In practice, spcasm will automatically compute the correct offset necessary to p
 
 The SPC700 is a little endian architecture, meaning that the least-significant byte comes first in memory. This is not only relevant for instruction encoding of memory addresses which the user does not need to worry about, but also the behavior of the 16-bit instructions. Some of these instructions contain the suffix "W" for "wide", but plenty of control flow instructions also need to consider whole words of memory. Whenever they operate on the direct page, the specified memory address forms the lower byte, and the memory address after this forms the higher byte. Note: It is not known what happens if the second memory address would be outside the direct page. The pseudo-register YA is also used by these instructions, and here the A register forms the lower byte.
 
+The little endianness is also preserved for stack operations, most importantly all call instructions, which push the 16-bit program counter. This means they first push the higher 8 bits of the program counter to the stack, and then the lower 8 bits, and since the stack grows downwards, this yields a little-endian address. That simplifies any operations which manually retrieve the return address.
+
 ### Bit indexing
 
 Some instructions provide bit indexing, where a single bit of a memory address is inspected or operated on. There are two different classes of bit indexing used by different instructions:

@@ -366,7 +366,8 @@ fn nop(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInter
 	}
 }
 fn tcall_0(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInternalState) -> MicroArchAction {
-	todo!()
+	debug_instruction!("tcall0", cycle, cpu);
+	tcall::<0>(cpu, memory, cycle, state)
 }
 fn set1_0(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInternalState) -> MicroArchAction {
 	todo!()
@@ -426,7 +427,8 @@ fn bpl(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInter
 	branch_on::<{ ProgramStatusWord::Sign }, false>(cpu, memory, cycle, state)
 }
 fn tcall_1(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInternalState) -> MicroArchAction {
-	todo!()
+	debug_instruction!("tcall1", cycle, cpu);
+	tcall::<1>(cpu, memory, cycle, state)
 }
 fn clr1_0(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInternalState) -> MicroArchAction {
 	todo!()
@@ -517,7 +519,8 @@ fn clrp(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInte
 	todo!()
 }
 fn tcall_2(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInternalState) -> MicroArchAction {
-	todo!()
+	debug_instruction!("tcall2", cycle, cpu);
+	tcall::<2>(cpu, memory, cycle, state)
 }
 fn set1_1(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInternalState) -> MicroArchAction {
 	todo!()
@@ -596,7 +599,8 @@ fn bmi(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInter
 	branch_on::<{ ProgramStatusWord::Sign }, true>(cpu, memory, cycle, state)
 }
 fn tcall_3(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInternalState) -> MicroArchAction {
-	todo!()
+	debug_instruction!("tcall3", cycle, cpu);
+	tcall::<3>(cpu, memory, cycle, state)
 }
 fn clr1_1(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInternalState) -> MicroArchAction {
 	todo!()
@@ -655,7 +659,8 @@ fn setp(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInte
 	todo!()
 }
 fn tcall_4(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInternalState) -> MicroArchAction {
-	todo!()
+	debug_instruction!("tcall4", cycle, cpu);
+	tcall::<4>(cpu, memory, cycle, state)
 }
 fn set1_2(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInternalState) -> MicroArchAction {
 	todo!()
@@ -715,7 +720,8 @@ fn bvc(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInter
 	branch_on::<{ ProgramStatusWord::Overflow }, false>(cpu, memory, cycle, state)
 }
 fn tcall_5(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInternalState) -> MicroArchAction {
-	todo!()
+	debug_instruction!("tcall5", cycle, cpu);
+	tcall::<5>(cpu, memory, cycle, state)
 }
 fn clr1_2(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInternalState) -> MicroArchAction {
 	todo!()
@@ -784,7 +790,8 @@ fn clrc(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInte
 	todo!()
 }
 fn tcall_6(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInternalState) -> MicroArchAction {
-	todo!()
+	debug_instruction!("tcall6", cycle, cpu);
+	tcall::<6>(cpu, memory, cycle, state)
 }
 fn set1_3(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInternalState) -> MicroArchAction {
 	todo!()
@@ -844,7 +851,8 @@ fn bvs(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInter
 	branch_on::<{ ProgramStatusWord::Overflow }, true>(cpu, memory, cycle, state)
 }
 fn tcall_7(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInternalState) -> MicroArchAction {
-	todo!()
+	debug_instruction!("tcall7", cycle, cpu);
+	tcall::<7>(cpu, memory, cycle, state)
 }
 fn clr1_3(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInternalState) -> MicroArchAction {
 	todo!()
@@ -929,7 +937,8 @@ fn setc(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInte
 	todo!()
 }
 fn tcall_8(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInternalState) -> MicroArchAction {
-	todo!()
+	debug_instruction!("tcall8", cycle, cpu);
+	tcall::<8>(cpu, memory, cycle, state)
 }
 fn set1_4(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInternalState) -> MicroArchAction {
 	todo!()
@@ -1011,7 +1020,8 @@ fn bbc(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInter
 	todo!()
 }
 fn tcall_9(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInternalState) -> MicroArchAction {
-	todo!()
+	debug_instruction!("tcall9", cycle, cpu);
+	tcall::<9>(cpu, memory, cycle, state)
 }
 fn clr1_4(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInternalState) -> MicroArchAction {
 	todo!()
@@ -1072,7 +1082,8 @@ fn ei(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionIntern
 	todo!()
 }
 fn tcall_10(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInternalState) -> MicroArchAction {
-	todo!()
+	debug_instruction!("tcall10", cycle, cpu);
+	tcall::<10>(cpu, memory, cycle, state)
 }
 fn set1_5(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInternalState) -> MicroArchAction {
 	todo!()
@@ -1170,7 +1181,8 @@ fn bcs(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInter
 	branch_on::<{ ProgramStatusWord::Carry }, true>(cpu, memory, cycle, state)
 }
 fn tcall_11(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInternalState) -> MicroArchAction {
-	todo!()
+	debug_instruction!("tcall11", cycle, cpu);
+	tcall::<11>(cpu, memory, cycle, state)
 }
 fn clr1_5(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInternalState) -> MicroArchAction {
 	todo!()
@@ -1273,7 +1285,8 @@ fn di(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionIntern
 	todo!()
 }
 fn tcall_12(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInternalState) -> MicroArchAction {
-	todo!()
+	debug_instruction!("tcall12", cycle, cpu);
+	tcall::<12>(cpu, memory, cycle, state)
 }
 fn set1_6(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInternalState) -> MicroArchAction {
 	todo!()
@@ -1356,7 +1369,8 @@ fn bne(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInter
 	branch_on::<{ ProgramStatusWord::Zero }, false>(cpu, memory, cycle, state)
 }
 fn tcall_13(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInternalState) -> MicroArchAction {
-	todo!()
+	debug_instruction!("tcall13", cycle, cpu);
+	tcall::<13>(cpu, memory, cycle, state)
 }
 fn clr1_6(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInternalState) -> MicroArchAction {
 	todo!()
@@ -1495,7 +1509,8 @@ fn clrv(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInte
 	todo!()
 }
 fn tcall_14(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInternalState) -> MicroArchAction {
-	todo!()
+	debug_instruction!("tcall14", cycle, cpu);
+	tcall::<14>(cpu, memory, cycle, state)
 }
 fn set1_7(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInternalState) -> MicroArchAction {
 	todo!()
@@ -1560,7 +1575,8 @@ fn beq(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInter
 	branch_on::<{ ProgramStatusWord::Zero }, true>(cpu, memory, cycle, state)
 }
 fn tcall_15(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInternalState) -> MicroArchAction {
-	todo!()
+	debug_instruction!("tcall15", cycle, cpu);
+	tcall::<15>(cpu, memory, cycle, state)
 }
 fn clr1_7(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInternalState) -> MicroArchAction {
 	todo!()
@@ -1772,6 +1788,50 @@ fn inc_register<const REGISTER: Register>(cpu: &mut Smp, cycle: usize) -> MicroA
 		1 => {
 			cpu.register_write::<REGISTER>(cpu.register_read::<REGISTER>().wrapping_add(1));
 			cpu.set_negative_zero(cpu.register_read::<REGISTER>());
+			MicroArchAction::Next
+		},
+		_ => unreachable!(),
+	}
+}
+
+#[inline]
+fn tcall<const INDEX: u8>(
+	cpu: &mut Smp,
+	memory: &mut Memory,
+	cycle: usize,
+	state: InstructionInternalState,
+) -> MicroArchAction
+where
+	[(); (INDEX + (0xff - 15)) as usize]:, // Only indices between 0 and 15 inclusive are allowed
+{
+	let call_address = 0xFFDE - INDEX as u16 * 2;
+	match cycle {
+		0 => MicroArchAction::Continue(InstructionInternalState::default()),
+		1 => {
+			// return address ends up in little endian order, but since stack grows downwards, we first push the upper 8
+			// bits.
+			cpu.push(((cpu.pc >> 8) & 0xff) as u8, memory);
+			MicroArchAction::Continue(state)
+		},
+		// wait for the stack pointer decrement that hardware has to do
+		2 => MicroArchAction::Continue(state),
+		3 => {
+			cpu.push((cpu.pc & 0xff) as u8, memory);
+			MicroArchAction::Continue(state)
+		},
+		4 => MicroArchAction::Continue(state),
+		5 => {
+			let lower_target_address = cpu.read(call_address, memory);
+			MicroArchAction::Continue(state.with_address(lower_target_address as u16))
+		},
+		6 => {
+			let upper_target_address = cpu.read(call_address + 1, memory) as u16;
+			let target_address = state.address | upper_target_address << 8;
+			trace!("tcall {INDEX} got call target {target_address:04x} (from {call_address:04x})");
+			MicroArchAction::Continue(state.with_address(target_address))
+		},
+		7 => {
+			cpu.pc = state.address;
 			MicroArchAction::Next
 		},
 		_ => unreachable!(),

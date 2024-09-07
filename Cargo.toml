@@ -137,3 +137,20 @@ incremental = false
 pre-build = [
 	"apt-get update && apt-get install -y openssl clang",
 ] # openssl seems to be outdated otherwise
+
+[workspace.lints.rust]
+missing_docs = { level = "deny", priority = -10 }
+unused = { level = "deny", priority = -10 }
+non_upper_case_globals = "allow"
+incomplete_features = "allow"
+
+[workspace.lints.clippy]
+all = "deny"
+pedantic = "deny"
+nursery = "deny"
+
+[workspace.lints.rustdoc]
+all = "deny"
+
+[lints]
+workspace = true

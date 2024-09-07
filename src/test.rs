@@ -4,7 +4,6 @@ use std::sync::Arc;
 
 #[allow(unused)]
 use flexstr::{shared_str, IntoSharedStr, SharedStr, ToSharedStr};
-use reqwest;
 use test::Bencher;
 
 use crate::cli::default_backend_options;

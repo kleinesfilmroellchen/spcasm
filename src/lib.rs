@@ -20,7 +20,6 @@
 	maybe_uninit_array_assume_init,
 	adt_const_params
 )]
-#![allow(non_upper_case_globals, incomplete_features)]
 
 #[allow(unused)]
 use flexstr::{shared_str, IntoSharedStr, SharedStr, ToSharedStr};
@@ -33,38 +32,32 @@ pub use common::*;
 pub use segments::Segments;
 pub use source::AssemblyCode;
 
-/// Just like -Werror on C(++) compilers, make ALL THE WARNINGS INTO ERRORS!
-#[macro_export]
-macro_rules! w_error {
-	($vis:vis mod $modname:ident) => {
-		#[deny(missing_docs, unused, clippy::all, clippy::pedantic, clippy::nursery, rustdoc::all)]
-		$vis mod $modname;
-	};
+pub mod assembler;
+pub mod brr;
+mod change;
+pub mod cli;
+mod common;
+mod default_hacks;
+mod directive;
+#[cfg(feature = "binaries")]
+pub mod elf;
+mod error;
+pub mod parser;
+mod segments;
+pub mod sema;
+mod source;
+
+// can't use the shadow_rs macro for this purpose since it doesn't include documentation on all its elements and we
+// therefore have to allow missing docs.
+#[cfg(feature = "binaries")]
+#[allow(missing_docs, clippy::all, clippy::nursery, clippy::pedantic)]
+pub mod buildinfo {
+	include!(concat!(env!("OUT_DIR"), "/shadow.rs"));
 }
 
-w_error!(pub mod assembler);
-w_error!(pub mod brr);
-w_error!(pub mod cli);
-w_error!(mod common);
-w_error!(mod default_hacks);
-w_error!(mod directive);
-#[cfg(feature = "binaries")]
-w_error!(pub mod elf);
-w_error!(mod error);
-w_error!(pub mod sema);
-w_error!(pub mod parser);
-w_error!(mod segments);
-w_error!(mod source);
-w_error!(mod change);
+#[cfg(test)] mod test;
 
-#[cfg(feature = "binaries")]
-shadow_rs::shadow!(buildinfo);
-
-#[cfg(test)]
-w_error!(mod test);
-
-#[cfg(feature = "binaries")]
-w_error!(mod spcasm);
+#[cfg(feature = "binaries")] mod spcasm;
 
 #[cfg(feature = "binaries")]
 #[allow(unused)]

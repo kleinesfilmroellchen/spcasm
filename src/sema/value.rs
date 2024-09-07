@@ -131,7 +131,9 @@ impl AssemblyTimeValue {
 	#[must_use]
 	pub fn try_resolve_impl(self, resolution_attempts: Vec<&Reference>) -> Self {
 		match self {
-			Self::Reference(ref reference @ Reference::Label(ref global), ..) if let Some(memory_location) = global.clone().read().location.clone() => {
+			Self::Reference(ref reference @ Reference::Label(ref global), ..)
+				if let Some(memory_location) = global.clone().read().location.clone() =>
+			{
 				// Recursive reference definition, we need to abort.
 				if resolution_attempts.contains(&reference) {
 					self
@@ -141,34 +143,36 @@ impl AssemblyTimeValue {
 					memory_location.try_resolve_impl(attempts_with_this)
 				}
 			},
-			Self::Reference(ref reference @
-					(Reference::MacroArgument { value: Some(ref memory_location) , .. }
-					| Reference::Relative { value: Some(ref memory_location) , .. }),
-				..) => {
+			Self::Reference(
+				ref reference @ (Reference::MacroArgument { value: Some(ref memory_location), .. }
+				| Reference::Relative { value: Some(ref memory_location), .. }),
+				..,
+			) =>
 				if resolution_attempts.contains(&reference) {
 					self
 				} else {
 					let mut attempts_with_this = resolution_attempts;
 					attempts_with_this.push(reference);
 					memory_location.clone().try_resolve_impl(attempts_with_this)
-				}
-			},
-			Self::UnaryOperation{inner_value, operator, span} => match inner_value.try_resolve_impl(resolution_attempts) {
-				Self::Literal(value, span) => Self::Literal(operator.execute(value), span),
-				resolved => Self::UnaryOperation{inner_value:Box::new(resolved), operator, span},
-			},
-			Self::BinaryOperation{lhs, rhs, operator, span} => match (lhs.try_resolve(), rhs.try_resolve()) {
-				(Self::Literal(lhs_value, ..), Self::Literal(rhs_value, ..)) => Self::Literal(operator.execute(lhs_value, rhs_value), span),
-				(lhs, rhs) => Self::BinaryOperation {lhs: Box::new(lhs), rhs: Box::new(rhs), operator, span},
+				},
+			Self::UnaryOperation { inner_value, operator, span } =>
+				match inner_value.try_resolve_impl(resolution_attempts) {
+					Self::Literal(value, span) => Self::Literal(operator.execute(value), span),
+					resolved => Self::UnaryOperation { inner_value: Box::new(resolved), operator, span },
+				},
+			Self::BinaryOperation { lhs, rhs, operator, span } => match (lhs.try_resolve(), rhs.try_resolve()) {
+				(Self::Literal(lhs_value, ..), Self::Literal(rhs_value, ..)) =>
+					Self::Literal(operator.execute(lhs_value, rhs_value), span),
+				(lhs, rhs) => Self::BinaryOperation { lhs: Box::new(lhs), rhs: Box::new(rhs), operator, span },
 			},
 			Self::Literal(..)
 			| Self::Reference(
-				| Reference::Label(..)
+				Reference::Label(..)
 				| Reference::MacroArgument { value: None, .. }
 				| Reference::Relative { value: None, .. }
 				| Reference::MacroGlobal { .. }
 				| Reference::UnresolvedLabel { .. },
-				..
+				..,
 			) => self,
 		}
 	}
@@ -204,17 +208,21 @@ impl AssemblyTimeValue {
 		match self {
 			Self::Literal(value, ..) => Some(*value),
 			Self::Reference(ref reference, ..) => match reference {
-				Reference::Label(label) if let Some(ref value) = label.read().location => value.value_using_resolver(resolver),
+				Reference::Label(label) if let Some(ref value) = label.read().location =>
+					value.value_using_resolver(resolver),
 				Reference::MacroArgument { value: Some(value), .. }
 				| Reference::Relative { value: Some(value), .. } => value.value_using_resolver(resolver),
-				| Reference::Label(_)
+				Reference::Label(_)
 				| Reference::MacroGlobal { .. }
 				| Reference::Relative { value: None, .. }
 				| Reference::UnresolvedLabel { .. }
 				| Reference::MacroArgument { value: None, .. } => resolver(reference.clone()),
 			},
-			Self::UnaryOperation{inner_value:number, operator, ..} => number.value_using_resolver(resolver).map(|value| operator.execute(value)),
-			Self::BinaryOperation{lhs, rhs, operator, ..} => lhs.value_using_resolver(resolver).and_then(|lhs|rhs.value_using_resolver(resolver).map(|rhs| operator.execute(lhs, rhs))),
+			Self::UnaryOperation { inner_value: number, operator, .. } =>
+				number.value_using_resolver(resolver).map(|value| operator.execute(value)),
+			Self::BinaryOperation { lhs, rhs, operator, .. } => lhs
+				.value_using_resolver(resolver)
+				.and_then(|lhs| rhs.value_using_resolver(resolver).map(|rhs| operator.execute(lhs, rhs))),
 		}
 	}
 
@@ -260,7 +268,9 @@ impl ReferenceResolvable for AssemblyTimeValue {
 					Reference::Relative { id, direction, .. } => (*id, *direction),
 					_ => unreachable!(),
 				};
-				if let Some(new_reference) = relative_labels.get(&id).cloned() && own_direction == direction {
+				if let Some(new_reference) = relative_labels.get(&id).cloned()
+					&& own_direction == direction
+				{
 					*reference = Reference::Label(new_reference);
 				}
 			},

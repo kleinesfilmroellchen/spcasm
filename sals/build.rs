@@ -1,3 +1,5 @@
+//! sals build script, adding `shadow_rs` variables.
+
 fn main() {
 	use std::collections::BTreeSet;
 	let mut denied = BTreeSet::new();

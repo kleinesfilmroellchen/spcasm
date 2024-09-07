@@ -1,6 +1,5 @@
 //! Interactive in-browser playground for ``spcasm``, powered by `WebAssembly`.
-#![deny(clippy::all, clippy::pedantic, clippy::nursery, unused_imports)]
-#![allow(non_upper_case_globals, clippy::default_trait_access)]
+#![allow(clippy::default_trait_access)]
 
 use std::sync::{Arc, LazyLock};
 
@@ -16,6 +15,7 @@ use web_sys::HtmlElement;
 
 mod options;
 
+/// Log to web console.
 #[allow(unused)]
 #[macro_export]
 macro_rules! log {

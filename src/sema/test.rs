@@ -13,7 +13,9 @@ fn file_token_reference_lookup() {
 	let mut offset_of_zero_definition = None;
 	for i in 0 .. source.text.chars().count() {
 		let token = file.read().token_at(i);
-		if let Some(Token::Identifier(text, _)) = token && text == "zero" {
+		if let Some(Token::Identifier(text, _)) = token
+			&& text == "zero"
+		{
 			offset_of_zero_definition = Some(i);
 			break;
 		}

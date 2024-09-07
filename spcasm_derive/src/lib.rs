@@ -1,15 +1,18 @@
-#![deny(clippy::all, clippy::pedantic, clippy::nursery)]
-#![allow(missing_docs, clippy::missing_panics_doc)]
+//! Derive proc macros for spcasm.
 
 #[allow(unused)]
 use flexstr::{shared_str, FlexStr, IntoSharedStr, ToSharedStr};
 
+#[allow(unused_extern_crates)]
 extern crate proc_macro;
 
 use proc_macro::TokenStream;
 use quote::{quote, ToTokens};
 use syn::{parse_macro_input, Data, DeriveInput, Fields};
 
+/// # Panics
+///
+/// The derive macro can only be used for enums, and only for enums containing unit variants.
 #[proc_macro_derive(Parse)]
 pub fn parse_macro_derive(input: TokenStream) -> TokenStream {
 	let type_ = syn::parse::<syn::DeriveInput>(input).unwrap();
@@ -61,6 +64,9 @@ pub fn parse_macro_derive(input: TokenStream) -> TokenStream {
 	}
 }
 
+/// # Panics
+///
+/// The derive macro can only be implemented for enums, and does not support unnamed fields.
 #[proc_macro_derive(ErrorCodes)]
 pub fn error_codes_derive(input: TokenStream) -> TokenStream {
 	let type_ = syn::parse::<syn::DeriveInput>(input).unwrap();
@@ -106,6 +112,9 @@ pub fn error_codes_derive(input: TokenStream) -> TokenStream {
 	}
 }
 
+/// # Panics
+///
+/// This derive macro can only be used on enums.
 #[proc_macro_derive(VariantName)]
 pub fn enum_name_derive(input: TokenStream) -> TokenStream {
 	let input = parse_macro_input!(input as DeriveInput);

@@ -48,3 +48,6 @@ js-sys = "0.3.69"
 # fancy-no-syscall so that it works on wasm targets
 miette = { version = "7", features = ["fancy-no-syscall"] }
 talc = { version = "4.4.1", features = ["lock_api"] }
+
+[lints]
+workspace = true

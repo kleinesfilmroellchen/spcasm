@@ -16,7 +16,7 @@ spcasm consists of:
 
 [This project is just for fun](https://justforfunnoreally.dev/). Still, there's many reasons to use spcasm:
 
-- **spcasm is fast. Best-in-class fast.** The assembler is between 1.3 (Windows) and 3.2 (Linux) times as fast as Asar. The BRR encoder runs at 1.6 MB/s on best compression, which is two times as fast as BRRTools.
+- **spcasm is fast. Best-in-class fast.** The assembler is between 1.3 (Windows) and 3.2 (Linux) times as fast as Asar. The BRR encoder runs at 1.6 MB/s on best compression, which is two times as fast as `BRRTools`.
 - **spcasm runs in your browser.** (No, really, no server.) This is achieved with the power of WebAssembly, allowing spcasm to run so fast that a compile button would be overkill. See <https://spcasm.filmroellchen.eu> for a live demo based on the main branch.
 - **BRR support:** spcasm has first-class support for BRR samples via the `brr` assembler directive. It also provides dedicated BRR tooling for use with other assemblers and more complex setups.
 

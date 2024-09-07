@@ -1,3 +1,7 @@
+//! spcasm build script. This script's responsibility is to run the LALRPOP parser generator, and generate `shadow_rs`
+//! based build information for binaries.
+
+#[allow(unused_extern_crates)]
 extern crate lalrpop;
 
 fn main() {

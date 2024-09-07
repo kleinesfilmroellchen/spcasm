@@ -117,7 +117,9 @@ pub fn encode_to_brr(
 		let flags =
 			if i == chunk_count - 1 { LoopEndFlags::new(true, loop_point.is_some()) } else { LoopEndFlags::Nothing };
 
-		let block_data = if let Some(point) = loop_point && ((point & !0b1111) == i * 16) {
+		let block_data = if let Some(point) = loop_point
+			&& ((point & !0b1111) == i * 16)
+		{
 			Block::encode_with_filter_0_good_shift(warm_up, chunk, flags)
 		} else {
 			main_block_encoder(warm_up, chunk, flags)

@@ -12,6 +12,8 @@
 //!   where only the top of the stack is accessed at any point.
 
 #![allow(unused)]
+// On purpose in this file, to allow easier reading of cycle-by-cycle behavior of instructions.
+#![allow(clippy::match_same_arms)]
 
 use log::trace;
 use spcasm::sema::Register;
@@ -1804,7 +1806,7 @@ fn tcall<const INDEX: u8>(
 where
 	[(); (INDEX + (0xff - 15)) as usize]:, // Only indices between 0 and 15 inclusive are allowed
 {
-	let call_address = 0xFFDE - INDEX as u16 * 2;
+	let call_address = 0xFFDE - u16::from(INDEX) * 2;
 	match cycle {
 		0 => MicroArchAction::Continue(InstructionInternalState::default()),
 		1 => {
@@ -1822,10 +1824,10 @@ where
 		4 => MicroArchAction::Continue(state),
 		5 => {
 			let lower_target_address = cpu.read(call_address, memory);
-			MicroArchAction::Continue(state.with_address(lower_target_address as u16))
+			MicroArchAction::Continue(state.with_address(u16::from(lower_target_address)))
 		},
 		6 => {
-			let upper_target_address = cpu.read(call_address + 1, memory) as u16;
+			let upper_target_address = u16::from(cpu.read(call_address + 1, memory));
 			let target_address = state.address | upper_target_address << 8;
 			trace!("tcall {INDEX} got call target {target_address:04x} (from {call_address:04x})");
 			MicroArchAction::Continue(state.with_address(target_address))

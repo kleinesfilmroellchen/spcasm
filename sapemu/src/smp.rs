@@ -461,7 +461,8 @@ impl Smp {
 
 	/// Returns the address of the hardware stack top, i.e. the lowest stack address that is free.
 	#[inline]
-	pub fn stack_top(&self) -> u16 {
+	#[must_use]
+	pub const fn stack_top(&self) -> u16 {
 		self.sp as u16 + 0x100
 	}
 

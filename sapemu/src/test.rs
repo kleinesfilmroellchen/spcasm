@@ -186,6 +186,10 @@ impl TryFrom<(Option<u16>, Option<u8>, String)> for Cycle {
 	}
 }
 
+/// Tests that are not run due to issues with SingleStepTest's disregard of hardware properties.
+/// See <https://github.com/SingleStepTests/spc700/issues/1>.
+const IGNORED_TESTS: [&str; 1] = ["09 01A8"];
+
 /// rstest limitation: we have to generate all values in advance, unfortunately.
 /// python: `for i in range(0xff+1): print(hex(i), end=', ')`
 #[rstest]
@@ -222,6 +226,10 @@ fn single_instruction(
 		Ok(file_bytes) => {
 			let test_file: Vec<Test> = serde_json::from_slice(&file_bytes).expect("couldn't parse test set");
 			for test in test_file {
+				if IGNORED_TESTS.contains(&test.name.as_ref()) {
+					info!("skipping ignored test {}", test.name);
+					continue;
+				}
 				info!("#######################################\nperforming test {}...", test.name);
 				let mut smp: Smp = (&test.initial_state).into();
 				let mut memory: Memory = (&test.initial_state.ram).into();
@@ -237,6 +245,7 @@ fn single_instruction(
 					test.name,
 					test.final_state.ram.mismatch_info(&memory)
 				);
+				// TODO: check CPU state.
 			}
 		},
 		Err(why) => {

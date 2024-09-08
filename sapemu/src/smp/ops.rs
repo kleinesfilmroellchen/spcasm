@@ -39,6 +39,7 @@ pub struct InstructionInternalState {
 	relative: i8,
 	/// A 16-bit address immediate.
 	address:  u16,
+	address2: u16,
 	/// An 8-bit operand, usually the value stored to memory or loaded from memory.
 	operand:  u8,
 	operand2: u8,
@@ -62,6 +63,11 @@ impl InstructionInternalState {
 
 	const fn with_address(mut self, address: u16) -> Self {
 		self.address = address;
+		self
+	}
+
+	const fn with_address2(mut self, address2: u16) -> Self {
+		self.address2 = address2;
 		self
 	}
 }
@@ -406,10 +412,12 @@ fn or_a_dp_x_indirect(
 	logic_op_a_dp_x_indirect(cpu, memory, cycle, state, |a, b| a | b)
 }
 fn or_a_imm(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInternalState) -> MicroArchAction {
-	todo!()
+	debug_instruction!("or a, #imm", cycle, cpu);
+	logic_op_a_imm(cpu, memory, cycle, state, |a, b| a | b)
 }
 fn or_dp_dp(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInternalState) -> MicroArchAction {
-	todo!()
+	debug_instruction!("or (dp), (dp)", cycle, cpu);
+	logic_op_dp_dp(cpu, memory, cycle, state, |a, b| a | b)
 }
 fn or1(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInternalState) -> MicroArchAction {
 	todo!()
@@ -565,10 +573,12 @@ fn and_a_dp_x_indirect(
 	logic_op_a_dp_x_indirect(cpu, memory, cycle, state, |a, b| a & b)
 }
 fn and_a_imm(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInternalState) -> MicroArchAction {
-	todo!()
+	debug_instruction!("and a, #imm", cycle, cpu);
+	logic_op_a_imm(cpu, memory, cycle, state, |a, b| a & b)
 }
 fn and_dp_dp(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInternalState) -> MicroArchAction {
-	todo!()
+	debug_instruction!("and (dp), (dp)", cycle, cpu);
+	logic_op_dp_dp(cpu, memory, cycle, state, |a, b| a & b)
 }
 fn or1_inverted(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInternalState) -> MicroArchAction {
 	todo!()
@@ -711,10 +721,12 @@ fn eor_a_dp_x_indirect(
 	logic_op_a_dp_x_indirect(cpu, memory, cycle, state, |a, b| a ^ b)
 }
 fn eor_a_imm(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInternalState) -> MicroArchAction {
-	todo!()
+	debug_instruction!("eor a, #imm", cycle, cpu);
+	logic_op_a_imm(cpu, memory, cycle, state, |a, b| a ^ b)
 }
 fn eor_dp_dp(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInternalState) -> MicroArchAction {
-	todo!()
+	debug_instruction!("or (dp), (dp)", cycle, cpu);
+	logic_op_dp_dp(cpu, memory, cycle, state, |a, b| a ^ b)
 }
 fn and1(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInternalState) -> MicroArchAction {
 	todo!()
@@ -2049,6 +2061,63 @@ fn logic_op_a_dp_x_indirect(
 			let value = cpu.read(state.address, memory);
 			let result = op(cpu.a, value);
 			cpu.a = result;
+			cpu.set_negative_zero(result);
+			MicroArchAction::Next
+		},
+		_ => unreachable!(),
+	}
+}
+
+#[inline]
+fn logic_op_a_imm(
+	cpu: &mut Smp,
+	memory: &Memory,
+	cycle: usize,
+	state: InstructionInternalState,
+	op: impl Fn(u8, u8) -> u8,
+) -> MicroArchAction {
+	match cycle {
+		0 => MicroArchAction::Continue(InstructionInternalState::default()),
+		1 => {
+			let value = cpu.read_next_pc(memory);
+			let result = op(cpu.a, value);
+			cpu.a = result;
+			cpu.set_negative_zero(result);
+			MicroArchAction::Next
+		},
+		_ => unreachable!(),
+	}
+}
+
+#[inline]
+fn logic_op_dp_dp(
+	cpu: &mut Smp,
+	memory: &mut Memory,
+	cycle: usize,
+	state: InstructionInternalState,
+	op: impl Fn(u8, u8) -> u8,
+) -> MicroArchAction {
+	match cycle {
+		0 => MicroArchAction::Continue(InstructionInternalState::default()),
+		1 => {
+			let address2 = cpu.read_next_pc(memory) as u16 + cpu.direct_page_offset();
+			MicroArchAction::Continue(state.with_address2(address2))
+		},
+		2 => {
+			let address = cpu.read_next_pc(memory) as u16 + cpu.direct_page_offset();
+			MicroArchAction::Continue(state.with_address(address))
+		},
+		4 => {
+			let value2 = cpu.read(state.address2, memory);
+			MicroArchAction::Continue(state.with_operand2(value2))
+		},
+		3 => {
+			let value = cpu.read(state.address, memory);
+			MicroArchAction::Continue(state.with_operand(value))
+		},
+		5 => {
+			let result = op(state.operand, state.operand2);
+			cpu.write(state.address, result, memory);
 			cpu.set_negative_zero(result);
 			MicroArchAction::Next
 		},

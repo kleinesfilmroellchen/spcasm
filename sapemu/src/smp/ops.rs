@@ -1940,18 +1940,21 @@ where
 			let relative_offset = cpu.read_next_pc(memory) as i8;
 			MicroArchAction::Continue(state.with_relative(relative_offset))
 		},
-		4 =>
-			if (state.operand >> BIT_INDEX) == bit_value {
-				trace!(
-					"bit {BIT_INDEX} {} in {} ({:08b}), taking branch",
-					if BRANCH_IF_SET { "set" } else { "clear" },
-					state.operand,
-					state.operand
-				);
-				MicroArchAction::Next
-			} else {
+		4 => {
+			let value = (state.operand >> BIT_INDEX) & 1 == bit_value;
+			trace!(
+				"bit {BIT_INDEX} {} in {} ({:08b}), {}taking branch",
+				if (state.operand >> BIT_INDEX) > 0 { "set" } else { "clear" },
+				state.operand,
+				state.operand,
+				if value { "" } else { "not " }
+			);
+			if value {
 				MicroArchAction::Continue(state)
-			},
+			} else {
+				MicroArchAction::Next
+			}
+		},
 		// CPU calculates branch target in this step.
 		5 => MicroArchAction::Continue(state),
 		6 => {

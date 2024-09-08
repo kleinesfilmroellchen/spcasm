@@ -259,7 +259,7 @@ fn single_instruction(
 				);
 				assert!(
 					test.final_state == smp,
-					"cpu mismatch at test {}:\nexpected {:?}\ngot {:?}",
+					"cpu mismatch at test {}:\nexpected {:#?}\ngot {:#?}",
 					test.name,
 					test.final_state,
 					smp,

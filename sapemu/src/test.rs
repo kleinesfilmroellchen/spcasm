@@ -14,6 +14,7 @@
 
 #![allow(unused)]
 
+use bitflags::Flags;
 use log::info;
 use rstest::rstest;
 use serde::Deserialize;
@@ -60,6 +61,17 @@ impl From<&ProcessorState> for Smp {
 			psw: ProgramStatusWord(val.psw),
 			..Default::default()
 		}
+	}
+}
+
+impl PartialEq<Smp> for ProcessorState {
+	fn eq(&self, other: &Smp) -> bool {
+		self.pc == other.pc
+			&& self.a == other.a
+			&& self.x == other.x
+			&& self.y == other.y
+			&& self.sp == other.sp
+			&& self.psw == other.psw.bits()
 	}
 }
 
@@ -241,11 +253,17 @@ fn single_instruction(
 				memory.copy_mapped_registers_from_smp(&smp);
 				assert!(
 					test.final_state.ram == memory,
-					"result mismatch at test {}: {}",
+					"memory mismatch at test {}: {}",
 					test.name,
 					test.final_state.ram.mismatch_info(&memory)
 				);
-				// TODO: check CPU state.
+				assert!(
+					test.final_state == smp,
+					"cpu mismatch at test {}:\nexpected {:?}\ngot {:?}",
+					test.name,
+					test.final_state,
+					smp,
+				);
 			}
 		},
 		Err(why) => {

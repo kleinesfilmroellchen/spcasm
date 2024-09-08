@@ -369,7 +369,8 @@ fn nop(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInter
 	debug_instruction!("nop", cycle, cpu);
 
 	match cycle {
-		0 => MicroArchAction::Next,
+		0 => MicroArchAction::Continue(state),
+		1 => MicroArchAction::Next,
 		_ => unreachable!(),
 	}
 }

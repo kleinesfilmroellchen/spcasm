@@ -421,7 +421,8 @@ fn or_dp_dp(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: Instruction
 	logic_op_dp_dp(cpu, memory, cycle, state, |a, b| a | b)
 }
 fn or1(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInternalState) -> MicroArchAction {
-	todo!()
+	debug_instruction!("or1 c, addr.bit", cycle, cpu);
+	bit_logic_addr::<false>(cpu, memory, cycle, state, |carry, bit| carry || bit)
 }
 fn asl_dp(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInternalState) -> MicroArchAction {
 	todo!()
@@ -582,7 +583,8 @@ fn and_dp_dp(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: Instructio
 	logic_op_dp_dp(cpu, memory, cycle, state, |a, b| a & b)
 }
 fn or1_inverted(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInternalState) -> MicroArchAction {
-	todo!()
+	debug_instruction!("or1 c, !addr.bit", cycle, cpu);
+	bit_logic_addr::<false>(cpu, memory, cycle, state, |carry, bit| carry || !bit)
 }
 fn rol_dp(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInternalState) -> MicroArchAction {
 	todo!()
@@ -730,7 +732,8 @@ fn eor_dp_dp(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: Instructio
 	logic_op_dp_dp(cpu, memory, cycle, state, |a, b| a ^ b)
 }
 fn and1(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInternalState) -> MicroArchAction {
-	todo!()
+	debug_instruction!("and1 c, addr.bit", cycle, cpu);
+	bit_logic_addr::<true>(cpu, memory, cycle, state, |carry, bit| carry && bit)
 }
 fn lsr_dp(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInternalState) -> MicroArchAction {
 	todo!()
@@ -863,7 +866,8 @@ fn cmp_dp_dp(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: Instructio
 	todo!()
 }
 fn and1_inverted(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInternalState) -> MicroArchAction {
-	todo!()
+	debug_instruction!("and1 c, !addr.bit", cycle, cpu);
+	bit_logic_addr::<true>(cpu, memory, cycle, state, |carry, bit| carry && !bit)
 }
 fn ror_dp(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInternalState) -> MicroArchAction {
 	todo!()
@@ -1012,7 +1016,8 @@ fn adc_dp_dp(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: Instructio
 	todo!()
 }
 fn eor1(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInternalState) -> MicroArchAction {
-	todo!()
+	debug_instruction!("eor1 c, addr.bit", cycle, cpu);
+	bit_logic_addr::<false>(cpu, memory, cycle, state, |carry, bit| carry ^ bit)
 }
 fn dec_dp(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInternalState) -> MicroArchAction {
 	todo!()
@@ -1159,7 +1164,8 @@ fn sbc_dp_dp(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: Instructio
 	todo!()
 }
 fn mov1_c_addr(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInternalState) -> MicroArchAction {
-	todo!()
+	debug_instruction!("mov1 c, addr.bit", cycle, cpu);
+	bit_logic_addr::<true>(cpu, memory, cycle, state, |carry, bit| bit)
 }
 fn inc_dp(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInternalState) -> MicroArchAction {
 	debug_instruction!("inc dp", cycle, cpu);
@@ -2159,11 +2165,11 @@ fn logic_op_dp_dp(
 			let address = cpu.read_next_pc(memory) as u16 + cpu.direct_page_offset();
 			MicroArchAction::Continue(state.with_address(address))
 		},
-		4 => {
+		3 => {
 			let value2 = cpu.read(state.address2, memory);
 			MicroArchAction::Continue(state.with_operand2(value2))
 		},
-		3 => {
+		4 => {
 			let value = cpu.read(state.address, memory);
 			MicroArchAction::Continue(state.with_operand(value))
 		},
@@ -2173,6 +2179,45 @@ fn logic_op_dp_dp(
 			cpu.set_negative_zero(result);
 			MicroArchAction::Next
 		},
+		_ => unreachable!(),
+	}
+}
+
+#[inline]
+fn bit_logic_addr<const TAKES_FOUR_CYCLES: bool>(
+	cpu: &mut Smp,
+	memory: &mut Memory,
+	cycle: usize,
+	state: InstructionInternalState,
+	op: impl Fn(bool, bool) -> bool,
+) -> MicroArchAction {
+	match cycle {
+		0 => MicroArchAction::Continue(InstructionInternalState::default()),
+		1 => {
+			let address_low = cpu.read_next_pc(memory) as u16;
+			MicroArchAction::Continue(state.with_address(address_low))
+		},
+		2 => {
+			let address_high = cpu.read_next_pc(memory) as u16;
+			let address = address_high << 8 | state.address;
+			MicroArchAction::Continue(state.with_address(address))
+		},
+		3 => {
+			let address = state.address & 0x1fff;
+			let bit_index = (state.address >> 13) as u8;
+			let value = cpu.read(address, memory);
+			// operand2 = bit index, operand = memory value
+			let memory_bit = (value >> bit_index) & 1 > 0;
+			trace!("read bit {} of address {:04x} ({:02x}) = {}", bit_index, address, value, memory_bit);
+			let result = op(cpu.carry(), memory_bit);
+			cpu.set_carry(result);
+			if TAKES_FOUR_CYCLES {
+				MicroArchAction::Next
+			} else {
+				MicroArchAction::Continue(state)
+			}
+		},
+		4 => MicroArchAction::Next,
 		_ => unreachable!(),
 	}
 }

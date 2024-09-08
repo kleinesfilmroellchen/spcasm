@@ -417,6 +417,19 @@ impl Smp {
 		self.set_negative(value);
 	}
 
+	/// Set the carry flag based on some other calculation; the carry flag effectively operates as a single-bit register
+	/// in many instructions.
+	#[inline]
+	fn set_carry(&mut self, carry: bool) {
+		self.psw.set(ProgramStatusWord::Carry, carry);
+	}
+
+	/// Returns the state of the carry flag.
+	#[inline]
+	fn carry(&self) -> bool {
+		self.psw.contains(ProgramStatusWord::Carry)
+	}
+
 	/// Set the carry flag if the subtraction overflows.
 	#[inline]
 	fn set_subtract_carry(&mut self, op1: i8, op2: i8) {

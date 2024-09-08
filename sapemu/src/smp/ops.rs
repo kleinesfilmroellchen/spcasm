@@ -1280,7 +1280,7 @@ fn movw_ya_dp(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: Instructi
 		},
 		3 => {
 			// wraparound at direct page boundary
-			let y_address = (state.address + 1) % 0xff;
+			let y_address = increment_wrap_within_page(state.address);
 			MicroArchAction::Continue(state.with_address(y_address))
 		},
 		4 => {
@@ -1509,7 +1509,7 @@ fn movw_dp_ya(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: Instructi
 		},
 		3 => {
 			// wraparound at direct page boundary
-			let y_address = (state.address + 1) % 0xff;
+			let y_address = increment_wrap_within_page(state.address);
 			MicroArchAction::Continue(state.with_address(y_address))
 		},
 		4 => {
@@ -1679,6 +1679,13 @@ fn stop(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInte
 		},
 		_ => unreachable!(),
 	}
+}
+
+/// Wrap an address increment within a 256-byte page.
+#[inline]
+fn increment_wrap_within_page(address: u16) -> u16 {
+	let low_byte_increment = (address & 0xff).wrapping_add(1) & 0xff;
+	address & 0xff00 | low_byte_increment
 }
 
 /// Common implementation for all conditional branches. The flag to branch on and its state when to branch are constant
@@ -1869,7 +1876,7 @@ where
 			MicroArchAction::Continue(state.with_address(u16::from(lower_target_address)))
 		},
 		6 => {
-			let upper_target_address = u16::from(cpu.read(call_address + 1, memory));
+			let upper_target_address = u16::from(cpu.read(increment_wrap_within_page(call_address), memory));
 			let target_address = state.address | upper_target_address << 8;
 			trace!("tcall {INDEX} got call target {target_address:04x} (from {call_address:04x})");
 			MicroArchAction::Continue(state.with_address(target_address))
@@ -2031,9 +2038,12 @@ fn logic_op_a_x_indirect(
 	match cycle {
 		0 => MicroArchAction::Continue(InstructionInternalState::default()),
 		// TODO: not sure what the CPU does in this cycle.
-		1 => MicroArchAction::Continue(state),
+		1 => {
+			let address = cpu.x as u16 + cpu.direct_page_offset();
+			MicroArchAction::Continue(state.with_address(address))
+		},
 		2 => {
-			let value = cpu.read(cpu.x as u16, memory);
+			let value = cpu.read(state.address, memory);
 			let result = op(cpu.a, value);
 			cpu.a = result;
 			cpu.set_negative_zero(result);
@@ -2045,6 +2055,44 @@ fn logic_op_a_x_indirect(
 
 #[inline]
 fn logic_op_a_dp_x_indirect(
+	cpu: &mut Smp,
+	memory: &Memory,
+	cycle: usize,
+	state: InstructionInternalState,
+	op: impl Fn(u8, u8) -> u8,
+) -> MicroArchAction {
+	match cycle {
+		0 => MicroArchAction::Continue(InstructionInternalState::default()),
+		1 => {
+			let address = cpu.read_next_pc(memory) as u16;
+			MicroArchAction::Continue(state.with_address(address))
+		},
+		2 => {
+			let pointer_address = ((state.address + cpu.x as u16) & 0xff) + cpu.direct_page_offset();
+			MicroArchAction::Continue(state.with_address(pointer_address))
+		},
+		3 => {
+			let address_low = cpu.read(state.address, memory);
+			MicroArchAction::Continue(state.with_address2(address_low as u16))
+		},
+		4 => {
+			let address_high = cpu.read(increment_wrap_within_page(state.address), memory) as u16;
+			let address = address_high << 8 | state.address2;
+			MicroArchAction::Continue(state.with_address2(address as u16))
+		},
+		5 => {
+			let value = cpu.read(state.address2, memory);
+			let result = op(cpu.a, value);
+			cpu.a = result;
+			cpu.set_negative_zero(result);
+			MicroArchAction::Next
+		},
+		_ => unreachable!(),
+	}
+}
+
+#[inline]
+fn logic_op_a_dp_x(
 	cpu: &mut Smp,
 	memory: &Memory,
 	cycle: usize,

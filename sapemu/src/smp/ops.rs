@@ -425,7 +425,8 @@ fn or1(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInter
 	bit_logic_addr::<false>(cpu, memory, cycle, state, |carry, bit| carry || bit)
 }
 fn asl_dp(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInternalState) -> MicroArchAction {
-	todo!()
+	debug_instruction!("asl (dp)", cycle, cpu);
+	shift_dp(cpu, memory, cycle, state, |value, _| (value << 1, value & 0b1000_0000 > 0))
 }
 fn asl_addr(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInternalState) -> MicroArchAction {
 	todo!()
@@ -587,7 +588,8 @@ fn or1_inverted(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: Instruc
 	bit_logic_addr::<false>(cpu, memory, cycle, state, |carry, bit| carry || !bit)
 }
 fn rol_dp(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInternalState) -> MicroArchAction {
-	todo!()
+	debug_instruction!("rol (dp)", cycle, cpu);
+	shift_dp(cpu, memory, cycle, state, |value, carry| (value << 1 & (carry as u8), value & 0b1000_0000 > 0))
 }
 fn rol_addr(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInternalState) -> MicroArchAction {
 	todo!()
@@ -736,7 +738,8 @@ fn and1(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInte
 	bit_logic_addr::<true>(cpu, memory, cycle, state, |carry, bit| carry && bit)
 }
 fn lsr_dp(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInternalState) -> MicroArchAction {
-	todo!()
+	debug_instruction!("lsr (dp)", cycle, cpu);
+	shift_dp(cpu, memory, cycle, state, |value, _| (value >> 1, value & 1 > 0))
 }
 fn lsr_addr(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInternalState) -> MicroArchAction {
 	todo!()
@@ -870,7 +873,8 @@ fn and1_inverted(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: Instru
 	bit_logic_addr::<true>(cpu, memory, cycle, state, |carry, bit| carry && !bit)
 }
 fn ror_dp(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInternalState) -> MicroArchAction {
-	todo!()
+	debug_instruction!("ror (dp)", cycle, cpu);
+	shift_dp(cpu, memory, cycle, state, |value, carry| (value >> 1 & (carry as u8) << 7, value & 1 > 0))
 }
 fn ror_addr(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInternalState) -> MicroArchAction {
 	todo!()
@@ -2218,6 +2222,36 @@ fn bit_logic_addr<const TAKES_FOUR_CYCLES: bool>(
 			}
 		},
 		4 => MicroArchAction::Next,
+		_ => unreachable!(),
+	}
+}
+
+/// op is a function receiving and returning the 8-bit value as well as the carry value.
+#[inline]
+fn shift_dp(
+	cpu: &mut Smp,
+	memory: &mut Memory,
+	cycle: usize,
+	state: InstructionInternalState,
+	op: impl Fn(u8, bool) -> (u8, bool),
+) -> MicroArchAction {
+	match cycle {
+		0 => MicroArchAction::Continue(InstructionInternalState::default()),
+		1 => {
+			let address = cpu.read_next_pc(memory) as u16 + cpu.direct_page_offset();
+			MicroArchAction::Continue(state.with_address(address))
+		},
+		2 => {
+			let value = cpu.read(state.address, memory);
+			let (result, carry) = op(value, cpu.carry());
+			cpu.set_negative_zero(result);
+			cpu.set_carry(carry);
+			MicroArchAction::Continue(state.with_operand(result))
+		},
+		3 => {
+			cpu.write(state.address, state.operand, memory);
+			MicroArchAction::Next
+		},
 		_ => unreachable!(),
 	}
 }

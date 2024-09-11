@@ -198,7 +198,7 @@ impl TryFrom<(Option<u16>, Option<u8>, String)> for Cycle {
 	}
 }
 
-/// Tests that are not run due to issues with SingleStepTest's disregard of hardware properties.
+/// Tests that are not run due to issues with `SingleStepTests`' disregard of hardware properties.
 /// See <https://github.com/SingleStepTests/spc700/issues/1>.
 const IGNORED_TESTS: [&str; 1] = ["09 01A8"];
 

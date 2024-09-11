@@ -426,7 +426,7 @@ impl Smp {
 
 	/// Returns the state of the carry flag.
 	#[inline]
-	fn carry(&self) -> bool {
+	const fn carry(&self) -> bool {
 		self.psw.contains(ProgramStatusWord::Carry)
 	}
 

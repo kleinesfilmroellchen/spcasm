@@ -1700,7 +1700,7 @@ fn stop(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInte
 
 /// Wrap an address increment within a 256-byte page.
 #[inline]
-fn increment_wrap_within_page(address: u16) -> u16 {
+const fn increment_wrap_within_page(address: u16) -> u16 {
 	let low_byte_increment = (address & 0xff).wrapping_add(1) & 0xff;
 	address & 0xff00 | low_byte_increment
 }
@@ -2095,7 +2095,7 @@ fn logic_op_a_dp_x_indirect(
 		4 => {
 			let address_high = cpu.read(increment_wrap_within_page(state.address), memory) as u16;
 			let address = address_high << 8 | state.address2;
-			MicroArchAction::Continue(state.with_address2(address as u16))
+			MicroArchAction::Continue(state.with_address2(address))
 		},
 		5 => {
 			let value = cpu.read(state.address2, memory);
@@ -2197,7 +2197,7 @@ fn logic_op_dp_dp(
 #[inline]
 fn bit_logic_addr<const TAKES_FOUR_CYCLES: bool>(
 	cpu: &mut Smp,
-	memory: &mut Memory,
+	memory: &Memory,
 	cycle: usize,
 	state: InstructionInternalState,
 	op: impl Fn(bool, bool) -> bool,

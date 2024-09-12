@@ -1779,7 +1779,6 @@ dependencies = [
  "reqwest",
  "rstest",
  "serde",
- "serde_json",
  "simd-json",
  "simple_logger",
  "spcasm",

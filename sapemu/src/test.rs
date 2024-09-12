@@ -236,7 +236,8 @@ fn single_instruction(
 	let maybe_test_file: Result<_, reqwest::Error> = try { reqwest::blocking::get(file_name)?.bytes()? };
 	match maybe_test_file {
 		Ok(file_bytes) => {
-			let test_file: Vec<Test> = serde_json::from_slice(&file_bytes).expect("couldn't parse test set");
+			let mut copy = file_bytes.to_vec();
+			let test_file: Vec<Test> = simd_json::serde::from_slice(&mut copy).expect("couldn't parse test set");
 			for test in test_file {
 				if IGNORED_TESTS.contains(&test.name.as_ref()) {
 					info!("skipping ignored test {}", test.name);

@@ -17,6 +17,7 @@ Over time, spcasm has evolved from "just an SPC700 assembler" to a whole toolcha
 - The `spcasm-web` crate contains WebAssembly APIs and a browser frontend allowing the assembler to run in the browser.
 - The `sals` crate contains the **s**pc**a**sm **l**anguage **s**erver, an experimental language server for SPC-700 assembly.
 - The `sapemu` crate contains the (WIP) cycle-accurate S-APU emulator.
+- The `spcfile` crate contains a (WIP) generic .spc file format parser and writer. This is a common library of `spcasm` (for .spc writing) and `sapemu` (for .spc playback).
 - The `doc` folder contains [mdbook](https://rust-lang.github.io/mdBook/)-based documentation. You can read this documentation directly on GitHub, or build a statically servable website from it with mdbook.
 
 spcasm itself contains by far the most code, and [its entire documentation is available online](../api/spcasm/index.html).
@@ -81,6 +82,14 @@ Currently, coverage data is not collected on CI.
 > `$ just web`
 
 Working with the WebAssembly bindings and webpage is quite straightforward, but you need to have `trunk` installed (`cargo install trunk`). Then, run `trunk build` in the `spcasm-web` folder. For a development server with auto-reload, use `trunk serve`; a browser window will open automatically.
+
+### `sapemu`
+
+_Important note: sapemu is *very* work-in-progress. The current executable serves the sole purpose of verifying emulator behavior and is not at all practical or useful to end users. The plan is to eventually add a GUI frontend to sapemu. Only concern yourself with sapemu at the present stage if you want to help with completing it._
+
+sapemu contains a work-in-progress cycle-accurate emulator of the entire SNES sound system, technically referred to as the S-APU (therefore the portmanteau name). The emulator binary has a WIP command-line interface (changes may happen at any time, and it is likely that a major revamp will happen before sapemu's first inclusion in releases) that provides help output with `--help`, so `cd sapemu && cargo run -- --help`. The binary can print a lot of logging information to the console if you use high verbosity levels, so beware.
+
+sapemu's functionality is currently mostly verified through tests. We use the test files provided by [SingleStepTests](https://github.com/SingleStepTests/spc700/tree/main/v1), which contain before and after CPU+RAM state as well as per-cycle bus activity that can be checked against. Simply running the crate tests will do everything necessary to perform the near-exhaustive tests (you need an internet connection, since it downloads the tests before every run). The command line `cargo nextest run --no-fail-fast --failure-output never` is very useful for getting an overview over total test state, and `cargo nextest run -E 'test(/.*?xAB$/)'` can be used to run a single opcode's test (replace `AB` with the hex digit of your opcode, e.g. `f`).
 
 ## Run HUDPAGS Analysis
 

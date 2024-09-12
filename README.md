@@ -4,7 +4,9 @@
 
 > Modern SNES SPC700 toolchain
 
-spcasm is a modern toolchain for the SPC700 processor architecture, famously used in the S-SMP as the sound co-processor of the SNES. spcasm is designed to be user-friendly, fast and feature-rich. Different from other assemblers for the SNES architecture family, spcasm is not intended for ROM hacking and patching in general, but regular from-scratch software development.
+spcasm is a modern toolchain for the SPC700 processor architecture, famously used in the S-SMP as the sound co-processor of the SNES. spcasm is designed to be user-friendly, fast and feature-rich.
+
+The spcasm project has expanded into emulation, and a cycle-accurate emulator called `sapemu` is being worked on.
 
 spcasm consists of:
 
@@ -13,6 +15,7 @@ spcasm consists of:
 - The assembly language server backend `sals` (LSP-compatible) and a Visual Studio Code frontend
 - The [in-browser live assembler `spcasm-web`](https://spcasm.filmroellchen.eu)
 - The (WIP) cycle-accurate emulator `sapemu`
+- The (WIP) general-purpose .spc loading library `spcfile`
 
 [This project is just for fun](https://justforfunnoreally.dev/). Still, there's many reasons to use spcasm:
 
@@ -22,6 +25,12 @@ spcasm consists of:
 
 - Nice errors, helpful warnings and information about possible pitfalls. spcasm reports errors in a nice format, if your terminal supports it:
   ![](https://raw.githubusercontent.com/kleinesfilmroellchen/spcasm/main/doc/error-examples.gif)
+
+However, there are reasons why not to use spcasm:
+
+- spcasm is not fully [Asar](https://github.com/RPGHacker/asar)-compatible. Asar is the standard SNES-specific toolchain that is widely used (though ca65, WLA-DX and others are also an option). In particular, Asar provides many features for ROM hacking and patching. While spcasm has some Asar compatibility (in particular, whenever possible directives use compatible syntax), this is not spcasm's focus. There are many features in Asar that don't make sense for an SPC-700-only assembler, and there are other features that are intentionally not supported (such as namespaces). That being said, it is possible to write code with both Asar and spcasm compatibility, but the tradeoffs may not be worth it for all users.
+- spcasm currently has no support for the common .spc file format, though that will change in the near future.
+- `brr` is not quite as accurate as `BRRTools` in some scenarios. The latter seems to be the most accurate decoder when it comes to details.
 
 ## Installation
 

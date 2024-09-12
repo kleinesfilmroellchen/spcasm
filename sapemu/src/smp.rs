@@ -341,6 +341,11 @@ pub const CPUIO2: u16 = 0x00F6;
 /// CPUIO3 register.
 pub const CPUIO3: u16 = 0x00F7;
 
+/// Vector for software interrupts.
+pub const BREAK_VECTOR: u16 = 0xFFDE;
+/// Vector for resets.
+pub const RESET_VECTOR: u16 = 0xFFFE;
+
 impl Smp {
 	/// Create a new reset CPU.
 	pub fn new(memory: &mut Memory) -> Self {
@@ -352,7 +357,7 @@ impl Smp {
 			x: 0,
 			y: 0,
 			sp: 0,
-			pc: memory.read_word(0xFFFE, control.contains(ControlRegister::BootRomEnable)),
+			pc: memory.read_word(RESET_VECTOR, control.contains(ControlRegister::BootRomEnable)),
 			timers: Timers::new(),
 			..Default::default()
 		}
@@ -441,6 +446,18 @@ impl Smp {
 	#[allow(unused)]
 	fn set_add_carry(&mut self, op1: i8, op2: i8) {
 		self.psw.set(ProgramStatusWord::Carry, op1.checked_add(op2).is_none());
+	}
+
+	/// Set the interrupt flag.
+	#[inline]
+	fn set_interrupt(&mut self, interrupt: bool) {
+		self.psw.set(ProgramStatusWord::Interrupt, interrupt);
+	}
+
+	/// Set the break flag.
+	#[inline]
+	fn set_break(&mut self, break_: bool) {
+		self.psw.set(ProgramStatusWord::Break, break_);
 	}
 
 	#[allow(unused)]

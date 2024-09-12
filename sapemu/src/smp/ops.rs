@@ -20,7 +20,7 @@ use spcasm::sema::Register;
 
 use super::Smp;
 use crate::memory::Memory;
-use crate::smp::{ProgramStatusWord, RunState};
+use crate::smp::{ProgramStatusWord, RunState, BREAK_VECTOR};
 
 /// Action taken after an instruction cycle was executed.
 #[derive(Clone, Copy)]
@@ -437,10 +437,42 @@ fn push_psw(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: Instruction
 	push::<{ Register::PSW }>(cpu, memory, cycle, state)
 }
 fn tset1_addr(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInternalState) -> MicroArchAction {
-	todo!()
+	debug_instruction!("tset1 addr", cycle, cpu);
+	test1(cpu, memory, cycle, state, |value, a| value | a)
 }
 fn brk(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInternalState) -> MicroArchAction {
-	todo!()
+	debug_instruction!("brk", cycle, cpu);
+	match cycle {
+		0 => MicroArchAction::Continue(InstructionInternalState::default()),
+		1 => {
+			cpu.push(((cpu.pc >> 8) & 0xff) as u8, memory);
+			MicroArchAction::Continue(state)
+		},
+		2 => {
+			cpu.push((cpu.pc & 0xff) as u8, memory);
+			MicroArchAction::Continue(state)
+		},
+		3 => {
+			cpu.push(cpu.psw.bits(), memory);
+			cpu.set_interrupt(false);
+			cpu.set_break(true);
+			MicroArchAction::Continue(state)
+		},
+		4 => MicroArchAction::Continue(state),
+		5 => {
+			let low_address = cpu.read(BREAK_VECTOR, memory);
+			MicroArchAction::Continue(state.with_address(low_address as u16))
+		},
+		6 => {
+			let address = (cpu.read(BREAK_VECTOR + 1, memory) as u16) << 8 | state.address;
+			MicroArchAction::Continue(state.with_address(address))
+		},
+		7 => {
+			cpu.pc = state.address;
+			MicroArchAction::Next
+		},
+		_ => unreachable!(),
+	}
 }
 
 fn bpl(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInternalState) -> MicroArchAction {
@@ -2314,6 +2346,42 @@ fn push<const REGISTER: Register>(
 		},
 		3 => {
 			cpu.sp = cpu.sp.wrapping_sub(1);
+			MicroArchAction::Next
+		},
+		_ => unreachable!(),
+	}
+}
+
+#[inline]
+fn test1(
+	cpu: &mut Smp,
+	memory: &mut Memory,
+	cycle: usize,
+	state: InstructionInternalState,
+	op: impl Fn(u8, u8) -> u8,
+) -> MicroArchAction {
+	match cycle {
+		0 => MicroArchAction::Continue(InstructionInternalState::default()),
+		1 => {
+			let address_low = cpu.read_next_pc(memory) as u16;
+			MicroArchAction::Continue(state.with_address(address_low))
+		},
+		2 => {
+			let address_high = cpu.read_next_pc(memory) as u16;
+			let address = address_high << 8 | state.address;
+			MicroArchAction::Continue(state.with_address(address))
+		},
+		3 => {
+			let value = cpu.read(state.address, memory);
+			cpu.set_negative_zero(cpu.a.wrapping_sub(value));
+			MicroArchAction::Continue(state.with_operand(value))
+		},
+		4 => {
+			let result = op(state.operand, cpu.a);
+			MicroArchAction::Continue(state.with_operand(result))
+		},
+		5 => {
+			cpu.write(state.address, state.operand, memory);
 			MicroArchAction::Next
 		},
 		_ => unreachable!(),

@@ -63,7 +63,7 @@ pub struct SpcHeader {
 	pub duration:         Duration,
 	/// Duration the track should fade out for (after the end).
 	pub fade_duration:    Duration,
-	/// From SNESAmp's manual: "Voices checked will automatically be muted at the beginning of the song."
+	/// From `SNESAmp`'s manual: "Voices checked will automatically be muted at the beginning of the song."
 	pub channel_disables: bool,
 	/// Emulator used to create the dump.
 	pub emulator:         Emulator,

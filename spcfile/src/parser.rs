@@ -2,7 +2,7 @@
 //!
 //! See [the parent module](`crate`) for definitions of the Rust structures that represent the SPC file data.
 
-#![allow(unused)]
+#![allow(unused, clippy::trivially_copy_pass_by_ref)]
 
 use std::ffi::CString;
 use std::str::FromStr;
@@ -10,13 +10,13 @@ use std::time::Duration;
 
 use chrono::{NaiveDate, NaiveDateTime};
 use nom::branch::alt;
-use nom::bytes::complete::*;
+use nom::bytes::complete::{tag, take};
 use nom::character::complete::digit0;
 use nom::combinator::{map_res, rest, verify};
 use nom::error::{make_error, Error, ErrorKind, ParseError};
 use nom::multi::count;
-use nom::number::complete::*;
-use nom::sequence::*;
+use nom::number::complete::{le_u16, le_u8};
+use nom::sequence::{tuple, Tuple};
 use nom::streaming::bool;
 use nom::{Err, Finish, IResult, Parser};
 
@@ -30,8 +30,8 @@ const MAGIC_LENGTH: usize = MAGIC.len();
 /// # Errors
 ///
 /// Any parser errors are passed on to the caller.
-pub fn parse_from_bytes<'a>(bytes: &'a [u8]) -> Result<SpcFile, Err<Error<&'a [u8]>>> {
-	let (title, (_, header, memory, rest)) = tuple((tag(MAGIC.as_ref()), header, memory, rest))(bytes)?;
+pub fn parse_from_bytes(bytes: &[u8]) -> Result<SpcFile, Err<Error<&[u8]>>> {
+	let (title, (_, header, memory, rest)) = tuple((tag(MAGIC), header, memory, rest))(bytes)?;
 	Ok(SpcFile { header, memory })
 }
 
@@ -68,17 +68,17 @@ struct HeaderRest {
 
 // Initial date verification functions to quickly failover to the text header format.
 // Complete verification is done by chrono's datetime parser.
-fn is_day(day: &u8) -> bool {
+const fn is_day(day: &u8) -> bool {
 	*day >= 1 && *day <= 31
 }
-fn is_month(month: &u8) -> bool {
+const fn is_month(month: &u8) -> bool {
 	*month >= 1 && *month <= 12
 }
-fn is_year(year: &u16) -> bool {
+const fn is_year(year: &u16) -> bool {
 	*year >= 1 && *year <= 9999
 }
 
-fn binary_date<'a>(input: &'a [u8]) -> IResult<&'a [u8], Option<NaiveDate>> {
+fn binary_date(input: &[u8]) -> IResult<&[u8], Option<NaiveDate>> {
 	let (rest, (day, month, year)) = alt((
 		tuple((verify(le_u8, is_day), verify(le_u8, is_month), verify(le_u16, is_year))),
 		tag([0; 4].as_ref()).map(|x| (0, 0u8, 0u16)),
@@ -86,12 +86,12 @@ fn binary_date<'a>(input: &'a [u8]) -> IResult<&'a [u8], Option<NaiveDate>> {
 	if day == 0 && month == 0 && year == 0 {
 		Ok((rest, None))
 	} else {
-		NaiveDate::from_ymd_opt(year as i32, month as u32, day as u32)
+		NaiveDate::from_ymd_opt(i32::from(year), u32::from(month), u32::from(day))
 			.map_or_else(|| Err(Err::Error(make_error(input, ErrorKind::Digit))), |v| Ok((rest, Some(v))))
 	}
 }
 
-fn text_date<'a>(input: &'a [u8]) -> IResult<&'a [u8], Option<NaiveDate>> {
+fn text_date(input: &[u8]) -> IResult<&[u8], Option<NaiveDate>> {
 	let (rest, (month, day, year)) = alt((
 		tuple((
 			take(2usize).and_then(parse_number::<u8>),
@@ -107,7 +107,7 @@ fn text_date<'a>(input: &'a [u8]) -> IResult<&'a [u8], Option<NaiveDate>> {
 	if day == 0 && month == 0 && year == 0 {
 		Ok((rest, None))
 	} else {
-		NaiveDate::from_ymd_opt(year as i32, month as u32, day as u32)
+		NaiveDate::from_ymd_opt(i32::from(year), u32::from(month), u32::from(day))
 			.map_or_else(|| Err(Err::Error(make_error(input, ErrorKind::Digit))), |v| Ok((rest, Some(v))))
 	}
 }
@@ -135,7 +135,7 @@ fn to_bool(input: u8) -> IResult<u8, bool> {
 	}
 }
 
-fn parse_number<'a, T: FromStr>(input: &'a [u8]) -> IResult<&'a [u8], T>
+fn parse_number<T: FromStr>(input: &[u8]) -> IResult<&[u8], T>
 where
 	<T as FromStr>::Err: std::fmt::Debug,
 {
@@ -144,7 +144,7 @@ where
 		.map_or_else(|x| Err(Err::Error(make_error(input, ErrorKind::Digit))), |v| Ok((input, v)))
 }
 
-fn rest_of_binary_header<'a>(input: &'a [u8]) -> IResult<&'a [u8], HeaderRest> {
+fn rest_of_binary_header(input: &[u8]) -> IResult<&[u8], HeaderRest> {
 	let (rest, (dump_date, _, duration, fade_duration, artist, (_, channel_disables), (_, emulator), _)) = tuple((
 		binary_date,
 		take(7usize),
@@ -162,7 +162,7 @@ fn rest_of_binary_header<'a>(input: &'a [u8]) -> IResult<&'a [u8], HeaderRest> {
 	Ok((rest, HeaderRest { dump_date, duration, fade_duration, channel_disables, emulator, artist }))
 }
 
-fn rest_of_text_header<'a>(input: &'a [u8]) -> IResult<&'a [u8], HeaderRest> {
+fn rest_of_text_header(input: &[u8]) -> IResult<&[u8], HeaderRest> {
 	let (rest, (dump_date, duration, fade_duration, artist, (_, channel_disables), (_, emulator), _)) = tuple((
 		text_date,
 		// track length
@@ -179,7 +179,7 @@ fn rest_of_text_header<'a>(input: &'a [u8]) -> IResult<&'a [u8], HeaderRest> {
 	Ok((rest, HeaderRest { dump_date, duration, fade_duration, channel_disables, emulator, artist }))
 }
 
-fn header<'a>(bytes: &'a [u8]) -> IResult<&'a [u8], SpcHeader> {
+fn header(bytes: &[u8]) -> IResult<&[u8], SpcHeader> {
 	// TODO: actually respect the has_id666 indicator.
 	let (rest, (_, (_, _has_id666), version, pc, a, x, y, psw, sp, _, title, game, dump_author, comments, header_rest)) =
 		tuple((
@@ -236,7 +236,8 @@ fn header<'a>(bytes: &'a [u8]) -> IResult<&'a [u8], SpcHeader> {
 	Ok((rest, header))
 }
 
-fn memory<'a>(bytes: &'a [u8]) -> IResult<&'a [u8], SpcMemory> {
+#[allow(clippy::similar_names)]
+fn memory(bytes: &[u8]) -> IResult<&[u8], SpcMemory> {
 	let (rest, (ram, dsp_registers, _, rom)) =
 		tuple((take(65536usize), take(128usize), take(64usize), take(64usize)))(bytes)?;
 	// length is ensured by the parser above, so these conversions are infallible

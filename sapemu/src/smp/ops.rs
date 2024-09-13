@@ -534,7 +534,8 @@ fn asl_dp_x(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: Instruction
 	shift_dp_x(cpu, memory, cycle, state, |value, _| (value << 1, value & 0b1000_0000 > 0))
 }
 fn asl_a(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInternalState) -> MicroArchAction {
-	todo!()
+	debug_instruction!("asl a", cycle, cpu);
+	shift_register::<{ Register::A }>(cpu, memory, cycle, state, |value, _| (value << 1, value & 0b1000_0000 > 0))
 }
 fn dec_x(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInternalState) -> MicroArchAction {
 	debug_instruction!("dec x", cycle, cpu);
@@ -578,7 +579,16 @@ fn jmp_indexed(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: Instruct
 }
 
 fn clrp(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInternalState) -> MicroArchAction {
-	todo!()
+	debug_instruction!("clrp", cycle, cpu);
+
+	match cycle {
+		0 => MicroArchAction::Continue(state),
+		1 => {
+			cpu.psw.remove(ProgramStatusWord::DirectPage);
+			MicroArchAction::Next
+		},
+		_ => unreachable!(),
+	}
 }
 fn tcall_2(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInternalState) -> MicroArchAction {
 	debug_instruction!("tcall2", cycle, cpu);
@@ -727,7 +737,10 @@ fn rol_dp_x(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: Instruction
 	shift_dp_x(cpu, memory, cycle, state, |value, carry| (value << 1 & (carry as u8), value & 0b1000_0000 > 0))
 }
 fn rol_a(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInternalState) -> MicroArchAction {
-	todo!()
+	debug_instruction!("rol a", cycle, cpu);
+	shift_register::<{ Register::A }>(cpu, memory, cycle, state, |value, carry| {
+		(value << 1 & (carry as u8), value & 0b1000_0000 > 0)
+	})
 }
 fn inc_x(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInternalState) -> MicroArchAction {
 	debug_instruction!("inc x", cycle, cpu);
@@ -741,7 +754,16 @@ fn call(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInte
 }
 
 fn setp(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInternalState) -> MicroArchAction {
-	todo!()
+	debug_instruction!("setp", cycle, cpu);
+
+	match cycle {
+		0 => MicroArchAction::Continue(state),
+		1 => {
+			cpu.psw.insert(ProgramStatusWord::DirectPage);
+			MicroArchAction::Next
+		},
+		_ => unreachable!(),
+	}
 }
 fn tcall_4(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInternalState) -> MicroArchAction {
 	debug_instruction!("tcall4", cycle, cpu);
@@ -871,7 +893,8 @@ fn lsr_dp_x(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: Instruction
 	shift_dp_x(cpu, memory, cycle, state, |value, _| (value >> 1, value & 1 > 0))
 }
 fn lsr_a(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInternalState) -> MicroArchAction {
-	todo!()
+	debug_instruction!("lsr a", cycle, cpu);
+	shift_register::<{ Register::A }>(cpu, memory, cycle, state, |value, _| (value >> 1, value & 1 > 0))
 }
 fn mov_x_a(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInternalState) -> MicroArchAction {
 	debug_instruction!("mov x, a", cycle, cpu);
@@ -894,7 +917,16 @@ fn jmp_addr(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: Instruction
 }
 
 fn clrc(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInternalState) -> MicroArchAction {
-	todo!()
+	debug_instruction!("clrc", cycle, cpu);
+
+	match cycle {
+		0 => MicroArchAction::Continue(state),
+		1 => {
+			cpu.psw.remove(ProgramStatusWord::Carry);
+			MicroArchAction::Next
+		},
+		_ => unreachable!(),
+	}
 }
 fn tcall_6(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInternalState) -> MicroArchAction {
 	debug_instruction!("tcall6", cycle, cpu);
@@ -1035,7 +1067,10 @@ fn ror_dp_x(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: Instruction
 	shift_dp_x(cpu, memory, cycle, state, |value, carry| (value >> 1 & (carry as u8) << 7, value & 1 > 0))
 }
 fn ror_a(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInternalState) -> MicroArchAction {
-	todo!()
+	debug_instruction!("ror a", cycle, cpu);
+	shift_register::<{ Register::A }>(cpu, memory, cycle, state, |value, carry| {
+		(value >> 1 & (carry as u8) << 7, value & 1 > 0)
+	})
 }
 fn mov_a_x(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInternalState) -> MicroArchAction {
 	todo!()
@@ -1050,7 +1085,16 @@ fn reti(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInte
 }
 
 fn setc(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInternalState) -> MicroArchAction {
-	todo!()
+	debug_instruction!("setc", cycle, cpu);
+
+	match cycle {
+		0 => MicroArchAction::Continue(state),
+		1 => {
+			cpu.psw.insert(ProgramStatusWord::Carry);
+			MicroArchAction::Next
+		},
+		_ => unreachable!(),
+	}
 }
 fn tcall_8(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInternalState) -> MicroArchAction {
 	debug_instruction!("tcall8", cycle, cpu);
@@ -1199,7 +1243,16 @@ fn xcn(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInter
 }
 
 fn ei(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInternalState) -> MicroArchAction {
-	todo!()
+	debug_instruction!("ei", cycle, cpu);
+
+	match cycle {
+		0 => MicroArchAction::Continue(state),
+		1 => {
+			cpu.psw.insert(ProgramStatusWord::Interrupt);
+			MicroArchAction::Next
+		},
+		_ => unreachable!(),
+	}
 }
 fn tcall_10(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInternalState) -> MicroArchAction {
 	debug_instruction!("tcall10", cycle, cpu);
@@ -1407,7 +1460,16 @@ fn mov_a_inc_x(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: Instruct
 }
 
 fn di(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInternalState) -> MicroArchAction {
-	todo!()
+	debug_instruction!("di", cycle, cpu);
+
+	match cycle {
+		0 => MicroArchAction::Continue(state),
+		1 => {
+			cpu.psw.remove(ProgramStatusWord::Interrupt);
+			MicroArchAction::Next
+		},
+		_ => unreachable!(),
+	}
 }
 fn tcall_12(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInternalState) -> MicroArchAction {
 	debug_instruction!("tcall12", cycle, cpu);
@@ -1633,7 +1695,16 @@ fn daa(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInter
 }
 
 fn clrv(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInternalState) -> MicroArchAction {
-	todo!()
+	debug_instruction!("clrv", cycle, cpu);
+
+	match cycle {
+		0 => MicroArchAction::Continue(state),
+		1 => {
+			cpu.psw.remove(ProgramStatusWord::Overflow);
+			MicroArchAction::Next
+		},
+		_ => unreachable!(),
+	}
 }
 fn tcall_14(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInternalState) -> MicroArchAction {
 	debug_instruction!("tcall14", cycle, cpu);
@@ -1690,13 +1761,31 @@ fn mov_y_addr(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: Instructi
 	todo!()
 }
 fn notc(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInternalState) -> MicroArchAction {
-	todo!()
+	debug_instruction!("notc", cycle, cpu);
+
+	match cycle {
+		0 => MicroArchAction::Continue(state),
+		1 => MicroArchAction::Continue(state),
+		2 => {
+			cpu.psw.toggle(ProgramStatusWord::Carry);
+			MicroArchAction::Next
+		},
+		_ => unreachable!(),
+	}
 }
 fn pop_y(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInternalState) -> MicroArchAction {
 	todo!()
 }
 fn sleep(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInternalState) -> MicroArchAction {
-	todo!()
+	debug_instruction!("sleep", cycle, cpu);
+
+	match cycle {
+		0 => {
+			cpu.run_state = RunState::WaitingForInterrupt;
+			MicroArchAction::Next
+		},
+		_ => unreachable!(),
+	}
 }
 
 fn beq(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInternalState) -> MicroArchAction {
@@ -2440,6 +2529,28 @@ fn bit_logic_addr<const TAKES_FOUR_CYCLES: bool>(
 			}
 		},
 		4 => MicroArchAction::Next,
+		_ => unreachable!(),
+	}
+}
+
+/// op is a function receiving and returning the 8-bit value as well as the carry value.
+#[inline]
+fn shift_register<const REGISTER: Register>(
+	cpu: &mut Smp,
+	memory: &Memory,
+	cycle: usize,
+	state: InstructionInternalState,
+	op: impl Fn(u8, bool) -> (u8, bool),
+) -> MicroArchAction {
+	match cycle {
+		0 => MicroArchAction::Continue(InstructionInternalState::default()),
+		1 => {
+			let (result, carry) = op(cpu.register_read::<REGISTER>(), cpu.carry());
+			cpu.set_negative_zero(result);
+			cpu.set_carry(carry);
+			cpu.register_write::<REGISTER>(result);
+			MicroArchAction::Next
+		},
 		_ => unreachable!(),
 	}
 }

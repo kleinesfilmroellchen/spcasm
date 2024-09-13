@@ -492,13 +492,16 @@ fn bbc_0(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInt
 	branch_on_bit::<0, false>(cpu, memory, cycle, state)
 }
 fn or_a_dp_x(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInternalState) -> MicroArchAction {
-	todo!()
+	debug_instruction!("or a, dp+x", cycle, cpu);
+	logic_op_a_dp_x(cpu, memory, cycle, state, |a, b| a | b)
 }
 fn or_a_addr_x(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInternalState) -> MicroArchAction {
-	todo!()
+	debug_instruction!("or a, addr+x", cycle, cpu);
+	logic_op_a_addr_register::<{ Register::X }>(cpu, memory, cycle, state, |a, b| a | b)
 }
 fn or_a_addr_y(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInternalState) -> MicroArchAction {
-	todo!()
+	debug_instruction!("or a, addr+y", cycle, cpu);
+	logic_op_a_addr_register::<{ Register::Y }>(cpu, memory, cycle, state, |a, b| a | b)
 }
 fn or_a_dp_y_indirect(
 	cpu: &mut Smp,
@@ -677,13 +680,16 @@ fn bbc_1(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInt
 	branch_on_bit::<1, false>(cpu, memory, cycle, state)
 }
 fn and_a_dp_x(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInternalState) -> MicroArchAction {
-	todo!()
+	debug_instruction!("and a, dp+x", cycle, cpu);
+	logic_op_a_dp_x(cpu, memory, cycle, state, |a, b| a & b)
 }
 fn and_a_addr_x(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInternalState) -> MicroArchAction {
-	todo!()
+	debug_instruction!("and a, addr+x", cycle, cpu);
+	logic_op_a_addr_register::<{ Register::X }>(cpu, memory, cycle, state, |a, b| a & b)
 }
 fn and_a_addr_y(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInternalState) -> MicroArchAction {
-	todo!()
+	debug_instruction!("and a, addr+y", cycle, cpu);
+	logic_op_a_addr_register::<{ Register::Y }>(cpu, memory, cycle, state, |a, b| a & b)
 }
 fn and_a_dp_y_indirect(
 	cpu: &mut Smp,
@@ -814,13 +820,16 @@ fn bbc_2(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInt
 	branch_on_bit::<2, false>(cpu, memory, cycle, state)
 }
 fn eor_a_dp_x(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInternalState) -> MicroArchAction {
-	todo!()
+	debug_instruction!("eor a, dp+x", cycle, cpu);
+	logic_op_a_dp_x(cpu, memory, cycle, state, |a, b| a ^ b)
 }
 fn eor_a_addr_x(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInternalState) -> MicroArchAction {
-	todo!()
+	debug_instruction!("eor a, addr+x", cycle, cpu);
+	logic_op_a_addr_register::<{ Register::X }>(cpu, memory, cycle, state, |a, b| a ^ b)
 }
 fn eor_a_addr_y(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInternalState) -> MicroArchAction {
-	todo!()
+	debug_instruction!("eor a, addr+y", cycle, cpu);
+	logic_op_a_addr_register::<{ Register::Y }>(cpu, memory, cycle, state, |a, b| a ^ b)
 }
 fn eor_a_dp_y_indirect(
 	cpu: &mut Smp,
@@ -1747,7 +1756,13 @@ fn stop(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInte
 /// Wrap an address increment within a 256-byte page.
 #[inline]
 const fn increment_wrap_within_page(address: u16) -> u16 {
-	let low_byte_increment = (address & 0xff).wrapping_add(1) & 0xff;
+	add_wrap_within_page(address, 1)
+}
+
+/// Wrap an address addition within a 256-byte page.
+#[inline]
+const fn add_wrap_within_page(address: u16, addition: u8) -> u16 {
+	let low_byte_increment = (address & 0xff).wrapping_add(addition as u16) & 0xff;
 	address & 0xff00 | low_byte_increment
 }
 
@@ -2173,6 +2188,40 @@ fn logic_op_a_dp_x(
 			MicroArchAction::Continue(state.with_address(offset_address))
 		},
 		3 => {
+			let value = cpu.read(state.address, memory);
+			let result = op(cpu.a, value);
+			cpu.a = result;
+			cpu.set_negative_zero(result);
+			MicroArchAction::Next
+		},
+		_ => unreachable!(),
+	}
+}
+
+#[inline]
+fn logic_op_a_addr_register<const REGISTER: Register>(
+	cpu: &mut Smp,
+	memory: &Memory,
+	cycle: usize,
+	state: InstructionInternalState,
+	op: impl Fn(u8, u8) -> u8,
+) -> MicroArchAction {
+	match cycle {
+		0 => MicroArchAction::Continue(InstructionInternalState::default()),
+		1 => {
+			let address_low = cpu.read_next_pc(memory) as u16;
+			MicroArchAction::Continue(state.with_address(address_low))
+		},
+		2 => {
+			let address_high = cpu.read_next_pc(memory) as u16;
+			let address = address_high << 8 | state.address;
+			MicroArchAction::Continue(state.with_address(address))
+		},
+		3 => {
+			let offset_address = state.address.wrapping_add(cpu.register_read::<REGISTER>() as u16);
+			MicroArchAction::Continue(state.with_address(offset_address))
+		},
+		4 => {
 			let value = cpu.read(state.address, memory);
 			let result = op(cpu.a, value);
 			cpu.a = result;

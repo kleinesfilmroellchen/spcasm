@@ -447,17 +447,19 @@ impl Smp {
 		self.psw.contains(ProgramStatusWord::Carry)
 	}
 
-	/// Set the carry flag if the subtraction overflows.
+	/// Set the carry flag if the subtraction produces a carry bit.
 	#[inline]
-	fn set_subtract_carry(&mut self, op1: i8, op2: i8) {
-		self.psw.set(ProgramStatusWord::Carry, op1.checked_sub(op2).is_none());
+	fn set_subtract_carry(&mut self, op1: u8, op2: u8) {
+		// FIXME: is there a better way to find the carry bit other than to emulate the hardware full-adder?
+		let expanded_result = u16::from(op1).wrapping_add(u16::from(!op2)) + 1;
+		self.psw.set(ProgramStatusWord::Carry, expanded_result & 0x100 > 0);
 	}
 
-	/// Set the carry flag if the addition overflows.
+	/// Set the carry flag if the addition overflows (produces a carry bit).
 	#[inline]
 	#[allow(unused)]
-	fn set_add_carry(&mut self, op1: i8, op2: i8) {
-		self.psw.set(ProgramStatusWord::Carry, op1.checked_add(op2).is_none());
+	fn set_add_carry(&mut self, op1: u8, op2: u8) {
+		self.psw.set(ProgramStatusWord::Carry, op1.overflowing_add(op2).1);
 	}
 
 	/// Set the interrupt flag.
@@ -577,6 +579,10 @@ impl Smp {
 			Register::YA => unreachable!("16-bit YA not allowed for 8-bit register read"),
 			Register::C => u8::from(self.psw.contains(ProgramStatusWord::Carry)),
 		}
+	}
+
+	fn ya(&self) -> u16 {
+		(u16::from(self.y) << 8) | u16::from(self.a)
 	}
 
 	/// Returns whether the CPU is halted or not. A halted CPU must be reset to continue execution.

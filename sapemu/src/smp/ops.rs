@@ -522,7 +522,8 @@ fn or_x_y_indirect(
 	cycle: usize,
 	state: InstructionInternalState,
 ) -> MicroArchAction {
-	todo!()
+	debug_instruction!("or (x), (y)", cycle, cpu);
+	logic_op_x_y_indirect(cpu, memory, cycle, state, |a, b| a | b)
 }
 fn decw(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInternalState) -> MicroArchAction {
 	todo!()
@@ -712,7 +713,8 @@ fn and_x_y_indirect(
 	cycle: usize,
 	state: InstructionInternalState,
 ) -> MicroArchAction {
-	todo!()
+	debug_instruction!("and (x), (y)", cycle, cpu);
+	logic_op_x_y_indirect(cpu, memory, cycle, state, |a, b| a & b)
 }
 fn incw(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInternalState) -> MicroArchAction {
 	todo!()
@@ -854,7 +856,8 @@ fn eor_x_y_indirect(
 	cycle: usize,
 	state: InstructionInternalState,
 ) -> MicroArchAction {
-	todo!()
+	debug_instruction!("eor (x), (y)", cycle, cpu);
+	logic_op_x_y_indirect(cpu, memory, cycle, state, |a, b| a ^ b)
 }
 fn cmpw_ya_dp(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInternalState) -> MicroArchAction {
 	todo!()
@@ -2327,6 +2330,37 @@ fn logic_op_dp_dp(
 			let result = op(state.operand, state.operand2);
 			cpu.write(state.address, result, memory);
 			cpu.set_negative_zero(result);
+			MicroArchAction::Next
+		},
+		_ => unreachable!(),
+	}
+}
+
+#[inline]
+fn logic_op_x_y_indirect(
+	cpu: &mut Smp,
+	memory: &mut Memory,
+	cycle: usize,
+	state: InstructionInternalState,
+	op: impl Fn(u8, u8) -> u8,
+) -> MicroArchAction {
+	match cycle {
+		0 => MicroArchAction::Continue(InstructionInternalState::default()),
+		1 => {
+			let operand = cpu.read(cpu.x as u16 + cpu.direct_page_offset(), memory);
+			MicroArchAction::Continue(state.with_operand(operand))
+		},
+		2 => {
+			let operand2 = cpu.read(cpu.y as u16 + cpu.direct_page_offset(), memory);
+			MicroArchAction::Continue(state.with_operand2(operand2))
+		},
+		3 => {
+			let result = op(state.operand, state.operand2);
+			cpu.set_negative_zero(result);
+			MicroArchAction::Continue(state.with_operand(result))
+		},
+		4 => {
+			cpu.write(cpu.x as u16 + cpu.direct_page_offset(), state.operand, memory);
 			MicroArchAction::Next
 		},
 		_ => unreachable!(),

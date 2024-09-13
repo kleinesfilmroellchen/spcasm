@@ -377,7 +377,12 @@ impl Smp {
 		// Fetch next instruction
 		if self.instruction_cycle == 0 {
 			self.current_opcode = self.read_next_pc(memory);
-			trace!("(@{}) fetch instruction [{:04x}] = {:02x}", self.cycle_counter, self.pc - 1, self.current_opcode);
+			trace!(
+				"(@{}) fetch instruction [{:04x}] = {:02x}",
+				self.cycle_counter,
+				self.pc.wrapping_sub(1),
+				self.current_opcode
+			);
 		}
 
 		// Execute tick
@@ -484,7 +489,7 @@ impl Smp {
 	/// Reads memory at the current program counter and advances it afterwards.
 	fn read_next_pc(&mut self, memory: &Memory) -> u8 {
 		let data = self.read(self.pc, memory);
-		self.pc += 1;
+		self.pc = self.pc.wrapping_add(1);
 		data
 	}
 

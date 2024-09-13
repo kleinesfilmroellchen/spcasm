@@ -360,7 +360,7 @@ pub const OPCODE_TABLE: [InstructionImpl; 256] = [
 macro_rules! debug_instruction {
 	($assembly:expr, $cycle:expr, $cpu:expr) => {
 		if $cycle == 0 {
-			log::debug!(concat!("[{:04x}] ", $assembly), $cpu.pc - 1);
+			log::debug!(concat!("[{:04x}] ", $assembly), $cpu.pc.wrapping_sub(1));
 		}
 	};
 }
@@ -488,7 +488,8 @@ fn clr1_0(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionIn
 	set_clear_dp::<0, false>(cpu, memory, cycle, state)
 }
 fn bbc_0(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInternalState) -> MicroArchAction {
-	todo!()
+	debug_instruction!("bbc 0", cycle, cpu);
+	branch_on_bit::<0, false>(cpu, memory, cycle, state)
 }
 fn or_a_dp_x(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInternalState) -> MicroArchAction {
 	todo!()
@@ -580,7 +581,8 @@ fn set1_1(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionIn
 	set_clear_dp::<1, true>(cpu, memory, cycle, state)
 }
 fn bbs_1(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInternalState) -> MicroArchAction {
-	todo!()
+	debug_instruction!("bbs 1", cycle, cpu);
+	branch_on_bit::<1, true>(cpu, memory, cycle, state)
 }
 fn and_a_dp(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInternalState) -> MicroArchAction {
 	debug_instruction!("and a, (dp)", cycle, cpu);
@@ -671,7 +673,8 @@ fn clr1_1(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionIn
 	set_clear_dp::<1, false>(cpu, memory, cycle, state)
 }
 fn bbc_1(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInternalState) -> MicroArchAction {
-	todo!()
+	debug_instruction!("bbc 1", cycle, cpu);
+	branch_on_bit::<1, false>(cpu, memory, cycle, state)
 }
 fn and_a_dp_x(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInternalState) -> MicroArchAction {
 	todo!()
@@ -711,6 +714,7 @@ fn rol_a(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInt
 	todo!()
 }
 fn inc_x(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInternalState) -> MicroArchAction {
+	debug_instruction!("inc x", cycle, cpu);
 	inc_register::<{ Register::X }>(cpu, cycle)
 }
 fn cmp_x_dp(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInternalState) -> MicroArchAction {
@@ -732,7 +736,8 @@ fn set1_2(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionIn
 	set_clear_dp::<2, true>(cpu, memory, cycle, state)
 }
 fn bbs_2(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInternalState) -> MicroArchAction {
-	todo!()
+	debug_instruction!("bbs 2", cycle, cpu);
+	branch_on_bit::<2, true>(cpu, memory, cycle, state)
 }
 fn eor_a_dp(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInternalState) -> MicroArchAction {
 	debug_instruction!("eor a, (dp)", cycle, cpu);
@@ -785,7 +790,8 @@ fn push_x(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionIn
 	push::<{ Register::X }>(cpu, memory, cycle, state)
 }
 fn tclr1(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInternalState) -> MicroArchAction {
-	todo!()
+	debug_instruction!("tclr1 addr", cycle, cpu);
+	test1(cpu, memory, cycle, state, |value, a| value & !a)
 }
 fn pcall(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInternalState) -> MicroArchAction {
 	todo!()
@@ -804,7 +810,8 @@ fn clr1_2(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionIn
 	set_clear_dp::<2, false>(cpu, memory, cycle, state)
 }
 fn bbc_2(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInternalState) -> MicroArchAction {
-	todo!()
+	debug_instruction!("bbc 2", cycle, cpu);
+	branch_on_bit::<2, false>(cpu, memory, cycle, state)
 }
 fn eor_a_dp_x(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInternalState) -> MicroArchAction {
 	todo!()
@@ -875,7 +882,8 @@ fn set1_3(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionIn
 	set_clear_dp::<3, true>(cpu, memory, cycle, state)
 }
 fn bbs_3(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInternalState) -> MicroArchAction {
-	todo!()
+	debug_instruction!("bbs 3", cycle, cpu);
+	branch_on_bit::<3, true>(cpu, memory, cycle, state)
 }
 fn cmp_a_dp(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInternalState) -> MicroArchAction {
 	todo!()
@@ -941,7 +949,8 @@ fn clr1_3(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionIn
 	set_clear_dp::<3, false>(cpu, memory, cycle, state)
 }
 fn bbc_3(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInternalState) -> MicroArchAction {
-	todo!()
+	debug_instruction!("bbc 3", cycle, cpu);
+	branch_on_bit::<3, false>(cpu, memory, cycle, state)
 }
 fn cmp_a_dp_x(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInternalState) -> MicroArchAction {
 	todo!()
@@ -1028,7 +1037,8 @@ fn set1_4(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionIn
 	set_clear_dp::<4, true>(cpu, memory, cycle, state)
 }
 fn bbs_4(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInternalState) -> MicroArchAction {
-	todo!()
+	debug_instruction!("bbs 4", cycle, cpu);
+	branch_on_bit::<4, true>(cpu, memory, cycle, state)
 }
 fn adc_a_dp(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInternalState) -> MicroArchAction {
 	todo!()
@@ -1113,7 +1123,8 @@ fn clr1_4(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionIn
 	set_clear_dp::<4, false>(cpu, memory, cycle, state)
 }
 fn bbc_4(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInternalState) -> MicroArchAction {
-	todo!()
+	debug_instruction!("bbc 4", cycle, cpu);
+	branch_on_bit::<4, false>(cpu, memory, cycle, state)
 }
 fn adc_a_dp_x(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInternalState) -> MicroArchAction {
 	todo!()
@@ -1151,7 +1162,6 @@ fn dec_dp_x(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: Instruction
 }
 fn dec_a(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInternalState) -> MicroArchAction {
 	debug_instruction!("dec a", cycle, cpu);
-
 	dec_register::<{ Register::A }>(cpu, cycle)
 }
 fn mov_x_sp(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInternalState) -> MicroArchAction {
@@ -1176,7 +1186,8 @@ fn set1_5(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionIn
 	set_clear_dp::<5, true>(cpu, memory, cycle, state)
 }
 fn bbs_5(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInternalState) -> MicroArchAction {
-	todo!()
+	debug_instruction!("bbs 5", cycle, cpu);
+	branch_on_bit::<5, true>(cpu, memory, cycle, state)
 }
 fn sbc_a_dp(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInternalState) -> MicroArchAction {
 	todo!()
@@ -1277,7 +1288,8 @@ fn clr1_5(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionIn
 	set_clear_dp::<5, false>(cpu, memory, cycle, state)
 }
 fn bbc_5(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInternalState) -> MicroArchAction {
-	todo!()
+	debug_instruction!("bbc 5", cycle, cpu);
+	branch_on_bit::<5, false>(cpu, memory, cycle, state)
 }
 fn sbc_a_dp_x(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInternalState) -> MicroArchAction {
 	todo!()
@@ -1382,7 +1394,8 @@ fn set1_6(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionIn
 	set_clear_dp::<6, true>(cpu, memory, cycle, state)
 }
 fn bbs_6(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInternalState) -> MicroArchAction {
-	todo!()
+	debug_instruction!("bbs 6", cycle, cpu);
+	branch_on_bit::<6, true>(cpu, memory, cycle, state)
 }
 fn mov_dp_a(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInternalState) -> MicroArchAction {
 	debug_instruction!("mov dp, a", cycle, cpu);
@@ -1467,7 +1480,8 @@ fn clr1_6(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionIn
 	set_clear_dp::<6, false>(cpu, memory, cycle, state)
 }
 fn bbc_6(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInternalState) -> MicroArchAction {
-	todo!()
+	debug_instruction!("bbc 6", cycle, cpu);
+	branch_on_bit::<6, false>(cpu, memory, cycle, state)
 }
 fn mov_dp_x_a(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInternalState) -> MicroArchAction {
 	debug_instruction!("mov dp+x, a", cycle, cpu);
@@ -1531,7 +1545,6 @@ fn mov_dp_indirect_y_a(
 }
 fn mov_dp_x(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInternalState) -> MicroArchAction {
 	debug_instruction!("mov dp, x", cycle, cpu);
-
 	move_to_dp::<{ Register::X }>(cpu, memory, cycle, state)
 }
 fn mov_dp_y_x(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInternalState) -> MicroArchAction {
@@ -1573,7 +1586,6 @@ fn mov_dp_x_y(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: Instructi
 }
 fn dec_y(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInternalState) -> MicroArchAction {
 	debug_instruction!("dec y", cycle, cpu);
-
 	dec_register::<{ Register::Y }>(cpu, cycle)
 }
 fn mov_a_y(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInternalState) -> MicroArchAction {
@@ -1608,7 +1620,8 @@ fn set1_7(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionIn
 	set_clear_dp::<7, true>(cpu, memory, cycle, state)
 }
 fn bbs_7(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInternalState) -> MicroArchAction {
-	todo!()
+	debug_instruction!("bbs 7", cycle, cpu);
+	branch_on_bit::<7, true>(cpu, memory, cycle, state)
 }
 fn mov_a_dp(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInternalState) -> MicroArchAction {
 	debug_instruction!("mov a, dp", cycle, cpu);
@@ -1675,7 +1688,8 @@ fn clr1_7(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionIn
 	set_clear_dp::<7, false>(cpu, memory, cycle, state)
 }
 fn bbc_7(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInternalState) -> MicroArchAction {
-	todo!()
+	debug_instruction!("bbc 7", cycle, cpu);
+	branch_on_bit::<7, false>(cpu, memory, cycle, state)
 }
 fn mov_a_dp_x(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInternalState) -> MicroArchAction {
 	todo!()

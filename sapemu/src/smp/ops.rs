@@ -509,10 +509,12 @@ fn or_a_dp_y_indirect(
 	cycle: usize,
 	state: InstructionInternalState,
 ) -> MicroArchAction {
-	todo!()
+	debug_instruction!("or a, (dp)+y", cycle, cpu);
+	logic_op_a_dp_y_indirect(cpu, memory, cycle, state, |a, b| a | b)
 }
 fn or_dp_imm(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInternalState) -> MicroArchAction {
-	todo!()
+	debug_instruction!("or dp, #imm", cycle, cpu);
+	logic_op_dp_imm(cpu, memory, cycle, state, |a, b| a | b)
 }
 fn or_x_y_indirect(
 	cpu: &mut Smp,
@@ -697,10 +699,12 @@ fn and_a_dp_y_indirect(
 	cycle: usize,
 	state: InstructionInternalState,
 ) -> MicroArchAction {
-	todo!()
+	debug_instruction!("and a, (dp)+y", cycle, cpu);
+	logic_op_a_dp_y_indirect(cpu, memory, cycle, state, |a, b| a & b)
 }
 fn and_dp_imm(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInternalState) -> MicroArchAction {
-	todo!()
+	debug_instruction!("and dp, #imm", cycle, cpu);
+	logic_op_dp_imm(cpu, memory, cycle, state, |a, b| a & b)
 }
 fn and_x_y_indirect(
 	cpu: &mut Smp,
@@ -837,10 +841,12 @@ fn eor_a_dp_y_indirect(
 	cycle: usize,
 	state: InstructionInternalState,
 ) -> MicroArchAction {
-	todo!()
+	debug_instruction!("eor a, (dp)+y", cycle, cpu);
+	logic_op_a_dp_y_indirect(cpu, memory, cycle, state, |a, b| a ^ b)
 }
 fn eor_dp_imm(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInternalState) -> MicroArchAction {
-	todo!()
+	debug_instruction!("eor dp, #imm", cycle, cpu);
+	logic_op_dp_imm(cpu, memory, cycle, state, |a, b| a ^ b)
 }
 fn eor_x_y_indirect(
 	cpu: &mut Smp,
@@ -2170,6 +2176,44 @@ fn logic_op_a_dp_x_indirect(
 }
 
 #[inline]
+fn logic_op_a_dp_y_indirect(
+	cpu: &mut Smp,
+	memory: &Memory,
+	cycle: usize,
+	state: InstructionInternalState,
+	op: impl Fn(u8, u8) -> u8,
+) -> MicroArchAction {
+	match cycle {
+		0 => MicroArchAction::Continue(InstructionInternalState::default()),
+		1 => {
+			let address = cpu.read_next_pc(memory) as u16;
+			MicroArchAction::Continue(state.with_address(address))
+		},
+		2 => {
+			let pointer_address = state.address + cpu.direct_page_offset();
+			MicroArchAction::Continue(state.with_address(pointer_address))
+		},
+		3 => {
+			let address_low = cpu.read(state.address, memory);
+			MicroArchAction::Continue(state.with_address2(address_low as u16))
+		},
+		4 => {
+			let address_high = cpu.read(increment_wrap_within_page(state.address), memory) as u16;
+			let address = address_high << 8 | state.address2;
+			MicroArchAction::Continue(state.with_address2(address))
+		},
+		5 => {
+			let value = cpu.read(state.address2.wrapping_add(cpu.y as u16), memory);
+			let result = op(cpu.a, value);
+			cpu.a = result;
+			cpu.set_negative_zero(result);
+			MicroArchAction::Next
+		},
+		_ => unreachable!(),
+	}
+}
+
+#[inline]
 fn logic_op_a_dp_x(
 	cpu: &mut Smp,
 	memory: &Memory,
@@ -2280,6 +2324,38 @@ fn logic_op_dp_dp(
 			MicroArchAction::Continue(state.with_operand(value))
 		},
 		5 => {
+			let result = op(state.operand, state.operand2);
+			cpu.write(state.address, result, memory);
+			cpu.set_negative_zero(result);
+			MicroArchAction::Next
+		},
+		_ => unreachable!(),
+	}
+}
+
+#[inline]
+fn logic_op_dp_imm(
+	cpu: &mut Smp,
+	memory: &mut Memory,
+	cycle: usize,
+	state: InstructionInternalState,
+	op: impl Fn(u8, u8) -> u8,
+) -> MicroArchAction {
+	match cycle {
+		0 => MicroArchAction::Continue(InstructionInternalState::default()),
+		1 => {
+			let immediate = cpu.read_next_pc(memory);
+			MicroArchAction::Continue(state.with_operand(immediate))
+		},
+		2 => {
+			let address = cpu.read_next_pc(memory) as u16 + cpu.direct_page_offset();
+			MicroArchAction::Continue(state.with_address(address))
+		},
+		3 => {
+			let value = cpu.read(state.address, memory);
+			MicroArchAction::Continue(state.with_operand2(value))
+		},
+		4 => {
 			let result = op(state.operand, state.operand2);
 			cpu.write(state.address, result, memory);
 			cpu.set_negative_zero(result);

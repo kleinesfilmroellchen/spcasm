@@ -427,6 +427,13 @@ impl Smp {
 		self.set_negative(value);
 	}
 
+	/// Set the negative and zero flags depending on the input value.
+	#[inline]
+	fn set_negative_zero_word(&mut self, value: u16) {
+		self.psw.set(ProgramStatusWord::Zero, value == 0);
+		self.psw.set(ProgramStatusWord::Sign, (value as i16) < 0);
+	}
+
 	/// Set the carry flag based on some other calculation; the carry flag effectively operates as a single-bit register
 	/// in many instructions.
 	#[inline]

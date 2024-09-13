@@ -22,8 +22,10 @@ use crate::sema::value::{Size, SizedAssemblyTimeValue};
 use crate::sema::{self, AssemblyTimeValue, ProgramElement};
 use crate::{byte_vec_to_string, span_to_string, AssemblyCode, AssemblyError, Segments};
 
-/// An assembly directive, often confusingly referred to as a "macro". spcasm uses the term "macro" to specifically mean
-/// user-defined macros, and "directive" to mean builtin commands (i.e. directives) to the assembler.
+/// An assembly directive, often confusingly referred to as a "macro".
+///
+/// spcasm uses the term "macro" to specifically mean user-defined macros, and "directive" to mean builtin commands
+/// (i.e. directives) to the assembler.
 #[derive(Clone, Debug)]
 pub struct Directive {
 	/// Actual data of the directive.

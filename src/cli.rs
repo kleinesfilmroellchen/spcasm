@@ -14,10 +14,12 @@ use parking_lot::RwLock;
 
 use crate::error::{AssemblyError, ErrorCodes};
 
-/// Interface between the assembler backend and any kind of frontend. There currently are three main frontends: the
-/// spcasm compiler command line program, the spcasm-web website in Wasm, and the sals language server. Each frontend
-/// has different requirements for how the backend should react in various situations, especially error conditions. The
-/// backend passes a reference to the frontend around and calls into it during assembly.
+/// Interface between the assembler backend and any kind of frontend.
+///
+/// There currently are three main frontends: the spcasm compiler command line program, the spcasm-web website in Wasm,
+/// and the sals language server. Each frontend has different requirements for how the backend should react in various
+/// situations, especially error conditions. The backend passes a reference to the frontend around and calls into it
+/// during assembly.
 ///
 /// [`Frontend`] need to additionally implement Send and Sync (since it's used in multi-threaded contexts), and
 /// provide debug output.

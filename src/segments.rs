@@ -11,10 +11,12 @@ use crate::assembler::sample_table::SampleTable;
 use crate::directive::DirectiveParameterTable;
 use crate::sema::instruction::MemoryAddress;
 
-/// Handles binary segments and assembler state. The type of data contained within each segment is the generic
-/// parameter; the assembler uses memory values and other analysis passes use other kinds of information per assembled
-/// element. Segments provide the datastructure representation of the segment state that the user can manipulate via
-/// various segment-related directives. Segments also contain other global state which is modified via directives.
+/// Handles binary segments and assembler state.
+///
+/// The type of data contained within each segment is the generic parameter; the assembler uses memory values and other
+/// analysis passes use other kinds of information per assembled element. Segments provide the datastructure
+/// representation of the segment state that the user can manipulate via various segment-related directives. Segments
+/// also contain other global state which is modified via directives.
 #[derive(Debug, Clone)]
 pub struct Segments<Contained> {
 	/// The data segments. These are checked later when being combined into one.

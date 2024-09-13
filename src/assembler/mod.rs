@@ -48,9 +48,10 @@ pub(crate) fn assemble_from_segments(
 	assemble_to_data(segments, source_code, options)?.combine_segments()
 }
 
-/// Runs the assembler, but does not combine data from different segments afterwards. Therefore, the assembler
-/// effectively only runs inside segments. This function might modify the given segments during optimization, and it
-/// returns the assembled segments.
+/// Runs the assembler, but does not combine data from different segments afterwards.
+///
+/// Therefore, the assembler effectively only runs inside segments. This function might modify the given segments during
+/// optimization, and it returns the assembled segments.
 ///
 /// # Errors
 /// Unencodeable instructions will cause errors.

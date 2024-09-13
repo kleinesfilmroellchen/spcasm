@@ -98,6 +98,7 @@ pub enum TwoOperandEntry {
 type Table = HashMap<Mnemonic, EntryOrFirstOperandTable>;
 
 /// The [`ASSEMBLY_TABLE`] static data structure contains mappings from mnemonics and operands to the assembled data.
+///
 /// This data is given in the form of functions executed on a [`crate::segments::Segments`] instance.
 pub static ASSEMBLY_TABLE: LazyLock<Table> = LazyLock::new(|| {
 	let mut table = HashMap::new();

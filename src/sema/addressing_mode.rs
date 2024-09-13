@@ -346,9 +346,11 @@ impl Display for AddressingMode {
 	}
 }
 
-/// The categories of addressing modes. This enum is mainly used for the main assembler lookup table to discern which
-/// opcode to use. It is mostly just a list of the variants of the [`AddressingMode`] sum type, but it also factors out
-/// all register addressing modes separately, as that is very important for opcode generation.
+/// The categories of addressing modes.
+///
+/// This enum is mainly used for the main assembler lookup table to discern which opcode to use. It is mostly just a
+/// list of the variants of the [`AddressingMode`] sum type, but it also factors out all register addressing modes
+/// separately, as that is very important for opcode generation.
 #[derive(Clone, Copy, Debug, Eq, PartialEq, Hash)]
 #[allow(clippy::module_name_repetitions)]
 pub enum AddressingModeCategory {

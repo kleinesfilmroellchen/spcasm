@@ -65,10 +65,12 @@ pub fn apply_precise_treble_boost_filter(samples: &[DecodedSample]) -> Vec<Decod
 	apply_fir_filter(filter, samples)
 }
 
-/// Apply an FIR (finite impulse response) filter of arbitrary lookback to the input samples. The input filter only
-/// provides one half of the filter coefficients; it is mirrored and used for lookahead the same as for lookback. For
-/// example, the third coefficient is both used for `x[i-3]` as well as `x[i+3]` when processing sample number `i`. The
-/// zeroth filter coefficient is applied to the sample `x[i]` itself and not involved in mirroring.
+/// Apply an FIR (finite impulse response) filter of arbitrary lookback to the input samples.
+///
+/// The input filter only provides one half of the filter coefficients; it is mirrored and used for lookahead the same
+/// as for lookback. For example, the third coefficient is both used for `x[i-3]` as well as `x[i+3]` when processing
+/// sample number `i`. The zeroth filter coefficient is applied to the sample `x[i]` itself and not involved in
+/// mirroring.
 #[must_use]
 #[allow(clippy::missing_panics_doc, clippy::range_minus_one)]
 pub fn apply_fir_filter<const lookback: usize>(

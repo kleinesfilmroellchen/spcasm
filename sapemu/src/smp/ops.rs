@@ -241,7 +241,7 @@ pub const OPCODE_TABLE: [InstructionImpl; 256] = [
 	pop_psw,
 	mov_dp_imm,
 	// 0x90
-	bbc,
+	bcc,
 	tcall_9,
 	clr1_4,
 	bbc_4,
@@ -543,7 +543,7 @@ fn asl_a(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInt
 }
 fn dec_x(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInternalState) -> MicroArchAction {
 	debug_instruction!("dec x", cycle, cpu);
-	dec_register::<{ Register::X }>(cpu, cycle)
+	inc_dec_register::<{ Register::X }>(cpu, cycle, |value| value.wrapping_sub(1))
 }
 fn cmp_x_addr(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInternalState) -> MicroArchAction {
 	debug_instruction!("cmp x, addr", cycle, cpu);
@@ -782,7 +782,7 @@ fn rol_a(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInt
 }
 fn inc_x(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInternalState) -> MicroArchAction {
 	debug_instruction!("inc x", cycle, cpu);
-	inc_register::<{ Register::X }>(cpu, cycle)
+	inc_dec_register::<{ Register::X }>(cpu, cycle, |value| value.wrapping_add(1))
 }
 fn cmp_x_dp(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInternalState) -> MicroArchAction {
 	debug_instruction!("cmp x, dp", cycle, cpu);
@@ -1552,7 +1552,23 @@ fn adc_a_x_indirect(
 	cycle: usize,
 	state: InstructionInternalState,
 ) -> MicroArchAction {
-	todo!()
+	debug_instruction!("adc a, (x)", cycle, cpu);
+	match cycle {
+		0 => MicroArchAction::Continue(InstructionInternalState::default()),
+		1 => {
+			let address = cpu.x as u16 + cpu.direct_page_offset();
+			MicroArchAction::Continue(state.with_address(address))
+		},
+		2 => {
+			let value = cpu.read(state.address, memory);
+			trace!("{} + {} + {}", cpu.a, value, cpu.carry());
+			let result = cpu.a.wrapping_add(value).wrapping_add(cpu.carry() as u8);
+			cpu.set_add_carry_flags(cpu.a, value);
+			cpu.a = result;
+			MicroArchAction::Next
+		},
+		_ => unreachable!(),
+	}
 }
 fn adc_a_dp_x_indirect(
 	cpu: &mut Smp,
@@ -1560,30 +1576,101 @@ fn adc_a_dp_x_indirect(
 	cycle: usize,
 	state: InstructionInternalState,
 ) -> MicroArchAction {
-	todo!()
+	debug_instruction!("adc a, (dp+x)", cycle, cpu);
+	match cycle {
+		0 => MicroArchAction::Continue(InstructionInternalState::default()),
+		1 => {
+			let address = cpu.read_next_pc(memory) as u16;
+			MicroArchAction::Continue(state.with_address(address))
+		},
+		2 => {
+			let pointer_address = ((state.address + cpu.x as u16) & 0xff) + cpu.direct_page_offset();
+			MicroArchAction::Continue(state.with_address(pointer_address))
+		},
+		3 => {
+			let address_low = cpu.read(state.address, memory);
+			MicroArchAction::Continue(state.with_address2(address_low as u16))
+		},
+		4 => {
+			let address_high = cpu.read(increment_wrap_within_page(state.address), memory) as u16;
+			let address = address_high << 8 | state.address2;
+			MicroArchAction::Continue(state.with_address2(address))
+		},
+		5 => {
+			let value = cpu.read(state.address2, memory);
+			trace!("{} + {} + {}", cpu.a, value, cpu.carry());
+			let result = cpu.a.wrapping_add(value).wrapping_add(cpu.carry() as u8);
+			cpu.set_add_carry_flags(cpu.a, value);
+			cpu.a = result;
+			MicroArchAction::Next
+		},
+		_ => unreachable!(),
+	}
 }
 fn adc_a_imm(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInternalState) -> MicroArchAction {
-	todo!()
+	debug_instruction!("adc a, #imm", cycle, cpu);
+	match cycle {
+		0 => MicroArchAction::Continue(InstructionInternalState::default()),
+		1 => {
+			let value = cpu.read_next_pc(memory);
+			trace!("{} + {} + {}", cpu.a, value, cpu.carry());
+			let result = cpu.a.wrapping_add(value).wrapping_add(cpu.carry() as u8);
+			cpu.set_add_carry_flags(cpu.a, value);
+			cpu.a = result;
+			MicroArchAction::Next
+		},
+		_ => unreachable!(),
+	}
 }
 fn adc_dp_dp(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInternalState) -> MicroArchAction {
-	todo!()
+	debug_instruction!("adc (dp), (dp)", cycle, cpu);
+	match cycle {
+		0 => MicroArchAction::Continue(InstructionInternalState::default()),
+		1 => {
+			let address2 = cpu.read_next_pc(memory) as u16 + cpu.direct_page_offset();
+			MicroArchAction::Continue(state.with_address2(address2))
+		},
+		2 => {
+			let address = cpu.read_next_pc(memory) as u16 + cpu.direct_page_offset();
+			MicroArchAction::Continue(state.with_address(address))
+		},
+		3 => {
+			let value2 = cpu.read(state.address2, memory);
+			MicroArchAction::Continue(state.with_operand2(value2))
+		},
+		4 => {
+			let value = cpu.read(state.address, memory);
+			MicroArchAction::Continue(state.with_operand(value))
+		},
+		5 => {
+			trace!("{} + {} + {}", state.operand, state.operand2, cpu.carry());
+			let result = state.operand.wrapping_add(state.operand2).wrapping_add(cpu.carry() as u8);
+			cpu.set_add_carry_flags(state.operand, state.operand2);
+			cpu.write(state.address, result, memory);
+			MicroArchAction::Next
+		},
+		_ => unreachable!(),
+	}
 }
 fn eor1(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInternalState) -> MicroArchAction {
 	debug_instruction!("eor1 c, addr.bit", cycle, cpu);
 	bit_logic_addr::<false>(cpu, memory, cycle, state, |carry, bit| carry ^ bit)
 }
 fn dec_dp(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInternalState) -> MicroArchAction {
-	todo!()
+	debug_instruction!("dec dp", cycle, cpu);
+	inc_dec_dp(cpu, memory, cycle, state, |value| value.wrapping_sub(1))
 }
 fn dec_addr(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInternalState) -> MicroArchAction {
-	todo!()
+	debug_instruction!("dec addr", cycle, cpu);
+	inc_dec_addr(cpu, memory, cycle, state, |value| value.wrapping_sub(1))
 }
 fn mov_y_imm(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInternalState) -> MicroArchAction {
 	debug_instruction!("mov y, #imm", cycle, cpu);
 	move_from_imm::<{ Register::Y }>(cpu, memory, cycle, state)
 }
 fn pop_psw(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInternalState) -> MicroArchAction {
-	todo!()
+	debug_instruction!("pop psw", cycle, cpu);
+	pop::<{ Register::PSW }>(cpu, memory, cycle, state)
 }
 fn mov_dp_imm(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInternalState) -> MicroArchAction {
 	debug_instruction!("mov dp, #imm", cycle, cpu);
@@ -1611,8 +1698,9 @@ fn mov_dp_imm(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: Instructi
 	}
 }
 
-fn bbc(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInternalState) -> MicroArchAction {
-	todo!()
+fn bcc(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInternalState) -> MicroArchAction {
+	debug_instruction!("bcc", cycle, cpu);
+	branch_on::<{ ProgramStatusWord::Carry }, false>(cpu, memory, cycle, state)
 }
 fn tcall_9(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInternalState) -> MicroArchAction {
 	debug_instruction!("tcall9", cycle, cpu);
@@ -1627,13 +1715,85 @@ fn bbc_4(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInt
 	branch_on_bit::<4, false>(cpu, memory, cycle, state)
 }
 fn adc_a_dp_x(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInternalState) -> MicroArchAction {
-	todo!()
+	debug_instruction!("adc a, dp+x", cycle, cpu);
+	match cycle {
+		0 => MicroArchAction::Continue(InstructionInternalState::default()),
+		1 => {
+			let address = cpu.read_next_pc(memory) as u16;
+			MicroArchAction::Continue(state.with_address(address))
+		},
+		2 => {
+			let offset_address = ((state.address + cpu.x as u16) & 0xff) + cpu.direct_page_offset();
+			MicroArchAction::Continue(state.with_address(offset_address))
+		},
+		3 => {
+			let value = cpu.read(state.address, memory);
+			trace!("{} + {} + {}", cpu.a, value, cpu.carry());
+			let result = cpu.a.wrapping_add(value).wrapping_add(cpu.carry() as u8);
+			cpu.set_add_carry_flags(cpu.a, value);
+			cpu.a = result;
+			MicroArchAction::Next
+		},
+		_ => unreachable!(),
+	}
 }
 fn adc_a_addr_x(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInternalState) -> MicroArchAction {
-	todo!()
+	debug_instruction!("adc a, addr+x", cycle, cpu);
+
+	match cycle {
+		0 => MicroArchAction::Continue(InstructionInternalState::default()),
+		1 => {
+			let address_low = cpu.read_next_pc(memory) as u16;
+			MicroArchAction::Continue(state.with_address(address_low))
+		},
+		2 => {
+			let address_high = cpu.read_next_pc(memory) as u16;
+			let address = address_high << 8 | state.address;
+			MicroArchAction::Continue(state.with_address(address))
+		},
+		3 => {
+			let offset_address = state.address.wrapping_add(cpu.x as u16);
+			MicroArchAction::Continue(state.with_address(offset_address))
+		},
+		4 => {
+			let value = cpu.read(state.address, memory);
+			trace!("{} + {} + {}", cpu.a, value, cpu.carry());
+			let result = cpu.a.wrapping_add(value).wrapping_add(cpu.carry() as u8);
+			cpu.set_add_carry_flags(cpu.a, value);
+			cpu.a = result;
+			MicroArchAction::Next
+		},
+		_ => unreachable!(),
+	}
 }
 fn adc_a_addr_y(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInternalState) -> MicroArchAction {
-	todo!()
+	debug_instruction!("adc a, addr+y", cycle, cpu);
+
+	match cycle {
+		0 => MicroArchAction::Continue(InstructionInternalState::default()),
+		1 => {
+			let address_low = cpu.read_next_pc(memory) as u16;
+			MicroArchAction::Continue(state.with_address(address_low))
+		},
+		2 => {
+			let address_high = cpu.read_next_pc(memory) as u16;
+			let address = address_high << 8 | state.address;
+			MicroArchAction::Continue(state.with_address(address))
+		},
+		3 => {
+			let offset_address = state.address.wrapping_add(cpu.y as u16);
+			MicroArchAction::Continue(state.with_address(offset_address))
+		},
+		4 => {
+			let value = cpu.read(state.address, memory);
+			trace!("{} + {} + {}", cpu.a, value, cpu.carry());
+			let result = cpu.a.wrapping_add(value).wrapping_add(cpu.carry() as u8);
+			cpu.set_add_carry_flags(cpu.a, value);
+			cpu.a = result;
+			MicroArchAction::Next
+		},
+		_ => unreachable!(),
+	}
 }
 fn adc_a_dp_y_indirect(
 	cpu: &mut Smp,
@@ -1641,10 +1801,62 @@ fn adc_a_dp_y_indirect(
 	cycle: usize,
 	state: InstructionInternalState,
 ) -> MicroArchAction {
-	todo!()
+	debug_instruction!("adc a, (dp)+y", cycle, cpu);
+	match cycle {
+		0 => MicroArchAction::Continue(InstructionInternalState::default()),
+		1 => {
+			let address = cpu.read_next_pc(memory) as u16;
+			MicroArchAction::Continue(state.with_address(address))
+		},
+		2 => {
+			let pointer_address = state.address + cpu.direct_page_offset();
+			MicroArchAction::Continue(state.with_address(pointer_address))
+		},
+		3 => {
+			let address_low = cpu.read(state.address, memory);
+			MicroArchAction::Continue(state.with_address2(address_low as u16))
+		},
+		4 => {
+			let address_high = cpu.read(increment_wrap_within_page(state.address), memory) as u16;
+			let address = address_high << 8 | state.address2;
+			MicroArchAction::Continue(state.with_address2(address))
+		},
+		5 => {
+			let value = cpu.read(state.address2.wrapping_add(cpu.y as u16), memory);
+			trace!("{} + {} + {}", cpu.a, value, cpu.carry());
+			let result = cpu.a.wrapping_add(value).wrapping_add(cpu.carry() as u8);
+			cpu.set_add_carry_flags(cpu.a, value);
+			cpu.a = result;
+			MicroArchAction::Next
+		},
+		_ => unreachable!(),
+	}
 }
 fn adc_dp_imm(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInternalState) -> MicroArchAction {
-	todo!()
+	debug_instruction!("adc (dp), #imm", cycle, cpu);
+	match cycle {
+		0 => MicroArchAction::Continue(InstructionInternalState::default()),
+		1 => {
+			let immediate = cpu.read_next_pc(memory);
+			MicroArchAction::Continue(state.with_operand(immediate))
+		},
+		2 => {
+			let address = cpu.read_next_pc(memory) as u16 + cpu.direct_page_offset();
+			MicroArchAction::Continue(state.with_address(address))
+		},
+		3 => {
+			let value = cpu.read(state.address, memory);
+			MicroArchAction::Continue(state.with_operand2(value))
+		},
+		4 => {
+			trace!("{} + {} + {}", state.operand2, state.operand, cpu.carry());
+			let result = state.operand2.wrapping_add(state.operand).wrapping_add(cpu.carry() as u8);
+			cpu.set_add_carry_flags(state.operand2, state.operand);
+			cpu.write(state.address, result, memory);
+			MicroArchAction::Next
+		},
+		_ => unreachable!(),
+	}
 }
 fn adc_x_y_indirect(
 	cpu: &mut Smp,
@@ -1652,17 +1864,72 @@ fn adc_x_y_indirect(
 	cycle: usize,
 	state: InstructionInternalState,
 ) -> MicroArchAction {
-	todo!()
+	match cycle {
+		0 => MicroArchAction::Continue(InstructionInternalState::default()),
+		1 => {
+			let operand = cpu.read(cpu.x as u16 + cpu.direct_page_offset(), memory);
+			MicroArchAction::Continue(state.with_operand(operand))
+		},
+		2 => {
+			let operand2 = cpu.read(cpu.y as u16 + cpu.direct_page_offset(), memory);
+			MicroArchAction::Continue(state.with_operand2(operand2))
+		},
+		3 => {
+			trace!("{} + {} + {}", state.operand, state.operand2, cpu.carry());
+			let result = state.operand.wrapping_add(state.operand2).wrapping_add(cpu.carry() as u8);
+			cpu.set_add_carry_flags(state.operand, state.operand2);
+			MicroArchAction::Continue(state.with_operand(result))
+		},
+		4 => {
+			cpu.write(cpu.x as u16 + cpu.direct_page_offset(), state.operand, memory);
+			MicroArchAction::Next
+		},
+		_ => unreachable!(),
+	}
 }
 fn subw_ya_dp(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInternalState) -> MicroArchAction {
-	todo!()
+	debug_instruction!("subw ya, dp", cycle, cpu);
+
+	match cycle {
+		0 => MicroArchAction::Continue(InstructionInternalState::default()),
+		1 => {
+			let address = u16::from(cpu.read_next_pc(memory)) + cpu.direct_page_offset();
+			MicroArchAction::Continue(state.with_address(address))
+		},
+		2 => {
+			let low_byte = cpu.read(state.address, memory);
+			MicroArchAction::Continue(state.with_address2(low_byte as u16))
+		},
+		3 => {
+			let high_byte = cpu.read(increment_wrap_within_page(state.address), memory);
+			let memory_value = (high_byte as u16) << 8 | state.address2;
+
+			let ya = cpu.ya();
+			let expanded_result = (ya as u32).wrapping_add((!memory_value) as u32) + 1;
+			let result = (expanded_result & 0xffff) as u16;
+			cpu.psw.set(ProgramStatusWord::Sign, (result as i16) < 0);
+			cpu.psw.set(ProgramStatusWord::Zero, result == 0);
+			cpu.psw.set(ProgramStatusWord::Carry, expanded_result >= 0x1_0000);
+			cpu.psw.set(ProgramStatusWord::Overflow, (ya as i16).overflowing_sub(memory_value as i16).1);
+
+			let half_carry_result = (ya & 0x0fff) + ((!memory_value + 1) & 0x0fff) >= 0x1000;
+			cpu.psw.set(ProgramStatusWord::HalfCarry, half_carry_result);
+
+			cpu.y = ((result >> 8) & 0xff) as u8;
+			cpu.a = (result & 0xff) as u8;
+			MicroArchAction::Continue(state)
+		},
+		4 => MicroArchAction::Next,
+		_ => unreachable!(),
+	}
 }
 fn dec_dp_x(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInternalState) -> MicroArchAction {
-	todo!()
+	debug_instruction!("dec dp+x", cycle, cpu);
+	inc_dec_dp_x(cpu, memory, cycle, state, |value| value.wrapping_sub(1))
 }
 fn dec_a(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInternalState) -> MicroArchAction {
 	debug_instruction!("dec a", cycle, cpu);
-	dec_register::<{ Register::A }>(cpu, cycle)
+	inc_dec_register::<{ Register::A }>(cpu, cycle, |value| value.wrapping_sub(1))
 }
 fn mov_x_sp(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInternalState) -> MicroArchAction {
 	debug_instruction!("mov x, sp", cycle, cpu);
@@ -1733,54 +2000,19 @@ fn mov1_c_addr(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: Instruct
 }
 fn inc_dp(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInternalState) -> MicroArchAction {
 	debug_instruction!("inc dp", cycle, cpu);
-	match cycle {
-		0 => MicroArchAction::Continue(InstructionInternalState::default()),
-		1 => {
-			let address = u16::from(cpu.read_next_pc(memory)) + cpu.direct_page_offset();
-			MicroArchAction::Continue(state.with_address(address))
-		},
-		2 => {
-			let value = cpu.read(state.address, memory).wrapping_add(1);
-			cpu.set_negative_zero(value);
-			MicroArchAction::Continue(state.with_operand(value))
-		},
-		3 => {
-			cpu.write(state.address, state.operand, memory);
-			MicroArchAction::Next
-		},
-		_ => unreachable!(),
-	}
+	inc_dec_dp(cpu, memory, cycle, state, |value| value.wrapping_add(1))
 }
 fn inc_addr(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInternalState) -> MicroArchAction {
 	debug_instruction!("inc addr", cycle, cpu);
-	match cycle {
-		0 => MicroArchAction::Continue(InstructionInternalState::default()),
-		1 => {
-			let address_low = u16::from(cpu.read_next_pc(memory));
-			MicroArchAction::Continue(state.with_address(address_low))
-		},
-		2 => {
-			let address = u16::from(cpu.read_next_pc(memory)) << 8 | state.address;
-			MicroArchAction::Continue(state.with_address(address))
-		},
-		3 => {
-			let value = cpu.read(state.address, memory).wrapping_add(1);
-			cpu.set_negative_zero(value);
-			MicroArchAction::Continue(state.with_operand(value))
-		},
-		4 => {
-			cpu.write(state.address, state.operand, memory);
-			MicroArchAction::Next
-		},
-		_ => unreachable!(),
-	}
+	inc_dec_addr(cpu, memory, cycle, state, |value| value.wrapping_add(1))
 }
 fn cmp_y_imm(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInternalState) -> MicroArchAction {
 	debug_instruction!("cmp y, #imm", cycle, cpu);
 	cmp_register_imm::<{ Register::Y }>(cpu, memory, cycle, state)
 }
 fn pop_a(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInternalState) -> MicroArchAction {
-	todo!()
+	debug_instruction!("pop a", cycle, cpu);
+	pop::<{ Register::A }>(cpu, memory, cycle, state)
 }
 fn mov_x_inc_a(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInternalState) -> MicroArchAction {
 	todo!()
@@ -1872,7 +2104,7 @@ fn inc_dp_x(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: Instruction
 	todo!()
 }
 fn inc_a(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInternalState) -> MicroArchAction {
-	inc_register::<{ Register::A }>(cpu, cycle)
+	inc_dec_register::<{ Register::A }>(cpu, cycle, |value| value.wrapping_add(1))
 }
 fn mov_sp_x(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInternalState) -> MicroArchAction {
 	debug_instruction!("mov sp, x", cycle, cpu);
@@ -1982,7 +2214,8 @@ fn mov_x_imm(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: Instructio
 	move_from_imm::<{ Register::X }>(cpu, memory, cycle, state)
 }
 fn pop_x(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInternalState) -> MicroArchAction {
-	todo!()
+	debug_instruction!("pop x", cycle, cpu);
+	pop::<{ Register::X }>(cpu, memory, cycle, state)
 }
 fn mul(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInternalState) -> MicroArchAction {
 	todo!()
@@ -2107,7 +2340,7 @@ fn mov_dp_x_y(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: Instructi
 }
 fn dec_y(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInternalState) -> MicroArchAction {
 	debug_instruction!("dec y", cycle, cpu);
-	dec_register::<{ Register::Y }>(cpu, cycle)
+	inc_dec_register::<{ Register::Y }>(cpu, cycle, |value| value.wrapping_sub(1))
 }
 fn mov_a_y(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInternalState) -> MicroArchAction {
 	debug_instruction!("mov a, y", cycle, cpu);
@@ -2200,7 +2433,8 @@ fn notc(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInte
 	}
 }
 fn pop_y(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInternalState) -> MicroArchAction {
-	todo!()
+	debug_instruction!("pop y", cycle, cpu);
+	pop::<{ Register::Y }>(cpu, memory, cycle, state)
 }
 fn sleep(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInternalState) -> MicroArchAction {
 	debug_instruction!("sleep", cycle, cpu);
@@ -2263,7 +2497,7 @@ fn mov_y_dp_x(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: Instructi
 }
 fn inc_y(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInternalState) -> MicroArchAction {
 	debug_instruction!("inc y", cycle, cpu);
-	inc_register::<{ Register::Y }>(cpu, cycle)
+	inc_dec_register::<{ Register::Y }>(cpu, cycle, |value| value.wrapping_add(1))
 }
 fn mov_y_a(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInternalState) -> MicroArchAction {
 	debug_instruction!("mov y, a", cycle, cpu);
@@ -2481,11 +2715,11 @@ fn cmp_register_addr<const REGISTER: Register>(
 }
 
 #[inline]
-fn dec_register<const REGISTER: Register>(cpu: &mut Smp, cycle: usize) -> MicroArchAction {
+fn inc_dec_register<const REGISTER: Register>(cpu: &mut Smp, cycle: usize, op: impl Fn(u8) -> u8) -> MicroArchAction {
 	match cycle {
 		0 => MicroArchAction::Continue(InstructionInternalState::default()),
 		1 => {
-			cpu.register_write::<REGISTER>(cpu.register_read::<REGISTER>().wrapping_sub(1));
+			cpu.register_write::<REGISTER>(op(cpu.register_read::<REGISTER>()));
 			cpu.set_negative_zero(cpu.register_read::<REGISTER>());
 			MicroArchAction::Next
 		},
@@ -2494,12 +2728,31 @@ fn dec_register<const REGISTER: Register>(cpu: &mut Smp, cycle: usize) -> MicroA
 }
 
 #[inline]
-fn inc_register<const REGISTER: Register>(cpu: &mut Smp, cycle: usize) -> MicroArchAction {
+fn inc_dec_dp_x(
+	cpu: &mut Smp,
+	memory: &mut Memory,
+	cycle: usize,
+	state: InstructionInternalState,
+	op: impl Fn(u8) -> u8,
+) -> MicroArchAction {
 	match cycle {
 		0 => MicroArchAction::Continue(InstructionInternalState::default()),
 		1 => {
-			cpu.register_write::<REGISTER>(cpu.register_read::<REGISTER>().wrapping_add(1));
-			cpu.set_negative_zero(cpu.register_read::<REGISTER>());
+			let address = cpu.read_next_pc(memory) as u16;
+			MicroArchAction::Continue(state.with_address(address))
+		},
+		2 => {
+			let offset_address = ((state.address + cpu.x as u16) & 0xff) + cpu.direct_page_offset();
+			MicroArchAction::Continue(state.with_address(offset_address))
+		},
+		3 => {
+			let value = cpu.read(state.address, memory);
+			MicroArchAction::Continue(state.with_operand(value))
+		},
+		4 => {
+			let value = op(state.operand);
+			cpu.set_negative_zero(value);
+			cpu.write(state.address, value, memory);
 			MicroArchAction::Next
 		},
 		_ => unreachable!(),
@@ -2652,6 +2905,64 @@ fn logic_op_a_dp(
 			let result = op(cpu.a, value);
 			cpu.a = result;
 			cpu.set_negative_zero(result);
+			MicroArchAction::Next
+		},
+		_ => unreachable!(),
+	}
+}
+
+#[inline]
+fn inc_dec_dp(
+	cpu: &mut Smp,
+	memory: &mut Memory,
+	cycle: usize,
+	state: InstructionInternalState,
+	op: impl Fn(u8) -> u8,
+) -> MicroArchAction {
+	match cycle {
+		0 => MicroArchAction::Continue(InstructionInternalState::default()),
+		1 => {
+			let address = u16::from(cpu.read_next_pc(memory)) + cpu.direct_page_offset();
+			MicroArchAction::Continue(state.with_address(address))
+		},
+		2 => {
+			let value = op(cpu.read(state.address, memory));
+			cpu.set_negative_zero(value);
+			MicroArchAction::Continue(state.with_operand(value))
+		},
+		3 => {
+			cpu.write(state.address, state.operand, memory);
+			MicroArchAction::Next
+		},
+		_ => unreachable!(),
+	}
+}
+
+#[inline]
+fn inc_dec_addr(
+	cpu: &mut Smp,
+	memory: &mut Memory,
+	cycle: usize,
+	state: InstructionInternalState,
+	op: impl Fn(u8) -> u8,
+) -> MicroArchAction {
+	match cycle {
+		0 => MicroArchAction::Continue(InstructionInternalState::default()),
+		1 => {
+			let address_low = u16::from(cpu.read_next_pc(memory));
+			MicroArchAction::Continue(state.with_address(address_low))
+		},
+		2 => {
+			let address = u16::from(cpu.read_next_pc(memory)) << 8 | state.address;
+			MicroArchAction::Continue(state.with_address(address))
+		},
+		3 => {
+			let value = op(cpu.read(state.address, memory));
+			cpu.set_negative_zero(value);
+			MicroArchAction::Continue(state.with_operand(value))
+		},
+		4 => {
+			cpu.write(state.address, state.operand, memory);
 			MicroArchAction::Next
 		},
 		_ => unreachable!(),
@@ -3173,14 +3484,29 @@ fn push<const REGISTER: Register>(
 ) -> MicroArchAction {
 	match cycle {
 		0 => MicroArchAction::Continue(InstructionInternalState::default()),
-		1 => MicroArchAction::Continue(state.with_address(cpu.stack_top())),
+		1 => MicroArchAction::Continue(state),
 		2 => {
-			let value = cpu.register_read::<REGISTER>();
-			cpu.write(state.address, value, memory);
+			cpu.push(cpu.register_read::<REGISTER>(), memory);
 			MicroArchAction::Continue(state)
 		},
+		3 => MicroArchAction::Next,
+		_ => unreachable!(),
+	}
+}
+
+#[inline]
+fn pop<const REGISTER: Register>(
+	cpu: &mut Smp,
+	memory: &Memory,
+	cycle: usize,
+	state: InstructionInternalState,
+) -> MicroArchAction {
+	match cycle {
+		0 => MicroArchAction::Continue(InstructionInternalState::default()),
+		1 => MicroArchAction::Continue(state.with_operand(cpu.pop(memory))),
+		2 => MicroArchAction::Continue(state),
 		3 => {
-			cpu.sp = cpu.sp.wrapping_sub(1);
+			cpu.register_write::<REGISTER>(state.operand);
 			MicroArchAction::Next
 		},
 		_ => unreachable!(),

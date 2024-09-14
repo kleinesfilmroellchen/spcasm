@@ -455,11 +455,17 @@ impl Smp {
 		self.psw.set(ProgramStatusWord::Carry, expanded_result & 0x100 > 0);
 	}
 
-	/// Set the carry flag if the addition overflows (produces a carry bit).
+	/// Sets all relevant flags of an 8-bit addition with carry in.
 	#[inline]
-	#[allow(unused)]
-	fn set_add_carry(&mut self, op1: u8, op2: u8) {
-		self.psw.set(ProgramStatusWord::Carry, op1.overflowing_add(op2).1);
+	fn set_add_carry_flags(&mut self, op1: u8, op2: u8) {
+		let (result, has_carry) = op1.carrying_add(op2, self.carry());
+		let half_carry_result = (op1 & 0x0f) + (op2 & 0x0f) + self.carry() as u8 >= 0x10;
+
+		self.psw.set(ProgramStatusWord::Overflow, (op1 as i8).carrying_add(op2 as i8, self.carry()).1);
+		self.psw.set(ProgramStatusWord::Sign, (result as i8) < 0);
+		self.psw.set(ProgramStatusWord::Zero, result == 0);
+		self.psw.set(ProgramStatusWord::Carry, has_carry);
+		self.psw.set(ProgramStatusWord::HalfCarry, half_carry_result);
 	}
 
 	/// Set the interrupt flag.
@@ -505,8 +511,15 @@ impl Smp {
 	/// Pushes a value onto the stack. Note that this actually takes two cycles in hardware, which users must account
 	/// for.
 	fn push(&mut self, value: u8, memory: &mut Memory) {
-		memory.write(self.stack_top(), value);
+		self.memory_write(self.stack_top(), value, memory);
 		self.sp = self.sp.wrapping_sub(1);
+	}
+
+	/// Pops a value from the stack. Note that this actually takes two cycles in hardware, which users must account
+	/// for.
+	fn pop(&mut self, memory: &Memory) -> u8 {
+		self.sp = self.sp.wrapping_add(1);
+		memory.read(self.stack_top(), self.control.contains(ControlRegister::BootRomEnable))
 	}
 
 	/// Returns the address of the hardware stack top, i.e. the lowest stack address that is free.

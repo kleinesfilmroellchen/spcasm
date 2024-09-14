@@ -257,7 +257,7 @@ to carry out tests with conditional branching commands.
 Half Carry Flag (H)
 
 After operation execution, this flag is set when there has been
-a carry from form bit 3 of the ALU to bit 4, or when there has
+a carry from from bit 3 of the ALU to bit 4, or when there has
 not been any borrow. There is no command to set, however, it is
 reset by reset by means of the CLRV command. At his time, the
 overflow flag is also set.

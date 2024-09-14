@@ -1936,18 +1936,61 @@ fn mov_x_sp(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: Instruction
 	mov_register_register::<{ Register::X }, { Register::SP }>(cpu, memory, cycle, state)
 }
 fn div(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInternalState) -> MicroArchAction {
-	todo!()
+	debug_instruction!("div", cycle, cpu);
+	match cycle {
+		// hardware is slow.
+		0 ..= 10 => MicroArchAction::Continue(state),
+		11 => {
+			// what the fuck is this code.
+			let mut ya = cpu.ya() as u32;
+			let subtractor = (cpu.x as u32) << 9;
+			for _ in 0 .. 9 {
+				ya = if (ya & 0x10000) > 0 { ((ya << 1) | 1) & 0x1FFFF } else { (ya << 1) & 0x1FFFF };
+
+				if ya >= subtractor {
+					ya ^= 1;
+				}
+
+				if (ya & 1) == 1 {
+					ya = ya.wrapping_sub(subtractor) & 0x1FFFF;
+				}
+			}
+			let div = (ya & 0xff) as u8;
+			let modulus = ((ya >> 9) & 0xff) as u8;
+
+			trace!("{} / {} = {div} mod {modulus}", cpu.ya(), cpu.x);
+
+			cpu.psw.set(ProgramStatusWord::Overflow, ya & 0x100 > 0);
+			cpu.psw.set(ProgramStatusWord::Zero, div == 0);
+			cpu.psw.set(ProgramStatusWord::Sign, ((div & 0xff) as i8) < 0);
+			cpu.psw.set(ProgramStatusWord::HalfCarry, cpu.y & 0xf >= cpu.x & 0xf);
+
+			cpu.a = (div & 0xff) as u8;
+			cpu.y = (modulus & 0xff) as u8;
+			MicroArchAction::Next
+		},
+		_ => unreachable!(),
+	}
 }
 fn xcn(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInternalState) -> MicroArchAction {
-	todo!()
+	debug_instruction!("xcn", cycle, cpu);
+	match cycle {
+		0 ..= 3 => MicroArchAction::Continue(state),
+		4 => {
+			cpu.a = (cpu.a & 0xf) << 4 | (cpu.a & 0xf0) >> 4;
+			cpu.set_negative_zero(cpu.a);
+			MicroArchAction::Next
+		},
+		_ => unreachable!(),
+	}
 }
 
 fn ei(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInternalState) -> MicroArchAction {
 	debug_instruction!("ei", cycle, cpu);
 
 	match cycle {
-		0 => MicroArchAction::Continue(state),
-		1 => {
+		0 ..= 1 => MicroArchAction::Continue(state),
+		2 => {
 			cpu.psw.insert(ProgramStatusWord::Interrupt);
 			MicroArchAction::Next
 		},

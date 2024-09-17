@@ -2010,7 +2010,35 @@ fn bbs_5(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInt
 	branch_on_bit::<5, true>(cpu, memory, cycle, state)
 }
 fn sbc_a_dp(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInternalState) -> MicroArchAction {
-	todo!()
+	debug_instruction!("sbc a, dp", cycle, cpu);
+
+	match cycle {
+		0 => MicroArchAction::Continue(InstructionInternalState::default()),
+		1 => {
+			let address = u16::from(cpu.read_next_pc(memory)) + cpu.direct_page_offset();
+			MicroArchAction::Continue(state.with_address(address))
+		},
+		2 => {
+			let value = cpu.read(state.address, memory);
+
+			let expanded_result = (cpu.a as u16).wrapping_add((!value) as u16) + (!cpu.carry()) as u16;
+			let result = (expanded_result & 0xff) as u8;
+			cpu.psw.set(ProgramStatusWord::Sign, (result as i16) < 0);
+			cpu.psw.set(ProgramStatusWord::Zero, result == 0);
+			cpu.psw.set(ProgramStatusWord::Carry, expanded_result >= 0x1_0000);
+			cpu.psw.set(
+				ProgramStatusWord::Overflow,
+				(cpu.a as i16).overflowing_sub((value as i16).wrapping_add((!cpu.carry()) as i16)).1,
+			);
+
+			let half_carry_result = (cpu.a & 0x0f) + ((!value) & 0x0f) + ((!cpu.carry()) as u8) >= 0x10;
+			cpu.psw.set(ProgramStatusWord::HalfCarry, half_carry_result);
+
+			cpu.a = result;
+			MicroArchAction::Next
+		},
+		_ => unreachable!(),
+	}
 }
 fn sbc_a_addr(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInternalState) -> MicroArchAction {
 	todo!()

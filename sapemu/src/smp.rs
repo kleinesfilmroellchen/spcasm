@@ -582,6 +582,7 @@ impl Smp {
 
 	/// Reads from a register determined at compile-time.
 	#[track_caller]
+	#[inline]
 	fn register_read<const REGISTER: Register>(&self) -> u8 {
 		match REGISTER {
 			Register::A => self.a,

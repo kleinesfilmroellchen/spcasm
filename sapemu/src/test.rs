@@ -227,7 +227,7 @@ fn single_instruction(
 ) {
 	let _ = simple_logger::SimpleLogger::new()
 		.with_level(log::LevelFilter::Trace)
-		.with_local_timestamps()
+		.with_utc_timestamps()
 		.with_colors(true)
 		.with_timestamp_format(format_description!(version = 2, "[second].[subsecond digits:6]"))
 		.init();

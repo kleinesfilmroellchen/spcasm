@@ -75,6 +75,31 @@ impl PartialEq<Smp> for ProcessorState {
 	}
 }
 
+impl ProcessorState {
+	pub fn mismatch_info(&self, smp: &Smp) -> String {
+		let mut info = String::new();
+		if smp.a != self.a {
+			info.push_str(&format!("expected a = {:02x} but got {:02x}\n", self.a, smp.a));
+		}
+		if smp.x != self.x {
+			info.push_str(&format!("expected a = {:02x} but got {:02x}\n", self.x, smp.x));
+		}
+		if smp.y != self.y {
+			info.push_str(&format!("expected a = {:02x} but got {:02x}\n", self.y, smp.y));
+		}
+		if smp.psw.bits() != self.psw {
+			info.push_str(&format!("expected a = {} but got {}\n", ProgramStatusWord(self.psw), smp.psw));
+		}
+		if smp.sp != self.sp {
+			info.push_str(&format!("expected a = 01{:02x} but got 01{:02x}\n", self.sp, smp.sp));
+		}
+		if smp.pc != self.pc {
+			info.push_str(&format!("expected a = {:04x} but got {:04x}\n", self.pc, smp.pc));
+		}
+		info
+	}
+}
+
 #[derive(Deserialize, Debug, Clone)]
 #[repr(transparent)]
 struct RamState(Vec<MemoryCellState>);
@@ -260,10 +285,9 @@ fn single_instruction(
 				);
 				assert!(
 					test.final_state == smp,
-					"cpu mismatch at test {}:\nexpected {:#?}\ngot {:#?}",
+					"cpu mismatch at test {}: {}",
 					test.name,
-					test.final_state,
-					smp,
+					test.final_state.mismatch_info(&smp)
 				);
 			}
 		},

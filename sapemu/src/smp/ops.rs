@@ -2020,19 +2020,7 @@ fn sbc_a_dp(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: Instruction
 		},
 		2 => {
 			let value = cpu.read(state.address, memory);
-
-			let expanded_result = (cpu.a as u16).wrapping_add((!value) as u16) + cpu.carry() as u16;
-			trace!("{} + {} + {} = {}", cpu.a, !value, cpu.carry(), expanded_result);
-			let result = (expanded_result & 0xff) as u8;
-			cpu.psw.set(ProgramStatusWord::Sign, (result as i8) < 0);
-			cpu.psw.set(ProgramStatusWord::Zero, result == 0);
-			cpu.psw.set(ProgramStatusWord::Overflow, (cpu.a as i8).borrowing_sub(value as i8, !cpu.carry()).1);
-			let half_carry_result = (cpu.a & 0x0f) + ((!value) & 0x0f) + cpu.carry() as u8 >= 0x10;
-			cpu.psw.set(ProgramStatusWord::HalfCarry, half_carry_result);
-
-			cpu.psw.set(ProgramStatusWord::Carry, expanded_result >= 0x100);
-
-			cpu.a = result;
+			cpu.a = cpu.perform_sub_carry(cpu.a, value);
 			MicroArchAction::Next
 		},
 		_ => unreachable!(),

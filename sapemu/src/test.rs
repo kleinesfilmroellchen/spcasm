@@ -225,7 +225,8 @@ impl TryFrom<(Option<u16>, Option<u8>, String)> for Cycle {
 
 /// Tests that are not run due to issues with `SingleStepTests`' disregard of hardware properties.
 /// See <https://github.com/SingleStepTests/spc700/issues/1>.
-const IGNORED_TESTS: &[&str] = &["09 01A8", "39 0295", "59 0146", "3A 0355", "47 02DD", "6E 0344", "99 02BD"];
+const IGNORED_TESTS: &[&str] =
+	&["09 01A8", "39 0295", "59 0146", "3A 0355", "47 02DD", "6E 0344", "99 02BD", "A9 01BF"];
 
 /// rstest limitation: we have to generate all values in advance, unfortunately.
 /// python: `for i in range(0xff+1): print(hex(i), end=', ')`

@@ -2027,7 +2027,26 @@ fn sbc_a_dp(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: Instruction
 	}
 }
 fn sbc_a_addr(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInternalState) -> MicroArchAction {
-	todo!()
+	debug_instruction!("sbc a, addr", cycle, cpu);
+
+	match cycle {
+		0 => MicroArchAction::Continue(InstructionInternalState::default()),
+		1 => {
+			let address_low = cpu.read_next_pc(memory) as u16;
+			MicroArchAction::Continue(state.with_address(address_low))
+		},
+		2 => {
+			let address_high = cpu.read_next_pc(memory) as u16;
+			let address = address_high << 8 | state.address;
+			MicroArchAction::Continue(state.with_address(address))
+		},
+		3 => {
+			let value = cpu.read(state.address, memory);
+			cpu.a = cpu.perform_sub_carry(cpu.a, value);
+			MicroArchAction::Next
+		},
+		_ => unreachable!(),
+	}
 }
 fn sbc_a_x_indirect(
 	cpu: &mut Smp,
@@ -2035,7 +2054,21 @@ fn sbc_a_x_indirect(
 	cycle: usize,
 	state: InstructionInternalState,
 ) -> MicroArchAction {
-	todo!()
+	debug_instruction!("sbc a, (x)", cycle, cpu);
+
+	match cycle {
+		0 => MicroArchAction::Continue(InstructionInternalState::default()),
+		1 => {
+			let address = cpu.x as u16 + cpu.direct_page_offset();
+			MicroArchAction::Continue(state.with_address(address))
+		},
+		2 => {
+			let value = cpu.read(state.address, memory);
+			cpu.a = cpu.perform_sub_carry(cpu.a, value);
+			MicroArchAction::Next
+		},
+		_ => unreachable!(),
+	}
 }
 fn sbc_a_dp_x_indirect(
 	cpu: &mut Smp,
@@ -2043,13 +2076,76 @@ fn sbc_a_dp_x_indirect(
 	cycle: usize,
 	state: InstructionInternalState,
 ) -> MicroArchAction {
-	todo!()
+	debug_instruction!("sbc a, (dp+x)", cycle, cpu);
+
+	match cycle {
+		0 => MicroArchAction::Continue(InstructionInternalState::default()),
+		1 => {
+			let address = cpu.read_next_pc(memory) as u16;
+			MicroArchAction::Continue(state.with_address(address))
+		},
+		2 => {
+			let pointer_address = ((state.address + cpu.x as u16) & 0xff) + cpu.direct_page_offset();
+			MicroArchAction::Continue(state.with_address(pointer_address))
+		},
+		3 => {
+			let address_low = cpu.read(state.address, memory);
+			MicroArchAction::Continue(state.with_address2(address_low as u16))
+		},
+		4 => {
+			let address_high = cpu.read(increment_wrap_within_page(state.address), memory) as u16;
+			let address = address_high << 8 | state.address2;
+			MicroArchAction::Continue(state.with_address2(address))
+		},
+		5 => {
+			let value = cpu.read(state.address2, memory);
+			cpu.a = cpu.perform_sub_carry(cpu.a, value);
+			MicroArchAction::Next
+		},
+		_ => unreachable!(),
+	}
 }
 fn sbc_a_imm(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInternalState) -> MicroArchAction {
-	todo!()
+	debug_instruction!("sbc a, #imm", cycle, cpu);
+
+	match cycle {
+		0 => MicroArchAction::Continue(InstructionInternalState::default()),
+		1 => {
+			let value = cpu.read_next_pc(memory);
+			cpu.a = cpu.perform_sub_carry(cpu.a, value);
+			MicroArchAction::Next
+		},
+		_ => unreachable!(),
+	}
 }
 fn sbc_dp_dp(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInternalState) -> MicroArchAction {
-	todo!()
+	debug_instruction!("sbc dp, dp", cycle, cpu);
+
+	match cycle {
+		0 => MicroArchAction::Continue(InstructionInternalState::default()),
+		1 => {
+			let address2 = cpu.read_next_pc(memory) as u16 + cpu.direct_page_offset();
+			MicroArchAction::Continue(state.with_address2(address2))
+		},
+		2 => {
+			let address = cpu.read_next_pc(memory) as u16 + cpu.direct_page_offset();
+			MicroArchAction::Continue(state.with_address(address))
+		},
+		3 => {
+			let value2 = cpu.read(state.address2, memory);
+			MicroArchAction::Continue(state.with_operand2(value2))
+		},
+		4 => {
+			let value = cpu.read(state.address, memory);
+			MicroArchAction::Continue(state.with_operand(value))
+		},
+		5 => {
+			let result = cpu.perform_sub_carry(state.operand, state.operand2);
+			cpu.write(state.address, result, memory);
+			MicroArchAction::Next
+		},
+		_ => unreachable!(),
+	}
 }
 fn mov1_c_addr(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInternalState) -> MicroArchAction {
 	debug_instruction!("mov1 c, addr.bit", cycle, cpu);
@@ -2072,7 +2168,23 @@ fn pop_a(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInt
 	pop::<{ Register::A }>(cpu, memory, cycle, state)
 }
 fn mov_x_inc_a(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInternalState) -> MicroArchAction {
-	todo!()
+	debug_instruction!("mov (x+), a", cycle, cpu);
+
+	match cycle {
+		0 => MicroArchAction::Continue(InstructionInternalState::default()),
+		1 => {
+			// Does indeed perform a dummy read according to fullsnes.
+			let _ = cpu.read(u16::from(cpu.x) + cpu.direct_page_offset(), memory);
+			MicroArchAction::Continue(InstructionInternalState::default())
+		},
+		2 => MicroArchAction::Continue(InstructionInternalState::default()),
+		3 => {
+			cpu.write(u16::from(cpu.x) + cpu.direct_page_offset(), cpu.a, memory);
+			cpu.x = cpu.x.wrapping_add(1);
+			MicroArchAction::Next
+		},
+		_ => unreachable!(),
+	}
 }
 
 fn bcs(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInternalState) -> MicroArchAction {
@@ -2092,13 +2204,33 @@ fn bbc_5(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInt
 	branch_on_bit::<5, false>(cpu, memory, cycle, state)
 }
 fn sbc_a_dp_x(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInternalState) -> MicroArchAction {
-	todo!()
+	debug_instruction!("sbc a, dp+x", cycle, cpu);
+
+	match cycle {
+		0 => MicroArchAction::Continue(InstructionInternalState::default()),
+		1 => {
+			let address = cpu.read_next_pc(memory) as u16;
+			MicroArchAction::Continue(state.with_address(address))
+		},
+		2 => {
+			let offset_address = ((state.address + cpu.x as u16) & 0xff) + cpu.direct_page_offset();
+			MicroArchAction::Continue(state.with_address(offset_address))
+		},
+		3 => {
+			let value = cpu.read(state.address, memory);
+			cpu.a = cpu.perform_sub_carry(cpu.a, value);
+			MicroArchAction::Next
+		},
+		_ => unreachable!(),
+	}
 }
 fn sbc_a_addr_x(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInternalState) -> MicroArchAction {
-	todo!()
+	debug_instruction!("sbc a, addr+x", cycle, cpu);
+	sbc_a_addr_register::<{ Register::X }>(cpu, memory, cycle, state)
 }
 fn sbc_a_addr_y(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInternalState) -> MicroArchAction {
-	todo!()
+	debug_instruction!("sbc a, addr+y", cycle, cpu);
+	sbc_a_addr_register::<{ Register::Y }>(cpu, memory, cycle, state)
 }
 fn sbc_a_dp_y_indirect(
 	cpu: &mut Smp,
@@ -2117,7 +2249,28 @@ fn sbc_x_y_indirect(
 	cycle: usize,
 	state: InstructionInternalState,
 ) -> MicroArchAction {
-	todo!()
+	debug_instruction!("sbc (x), (y)", cycle, cpu);
+
+	match cycle {
+		1 => {
+			let address = cpu.x as u16 + cpu.direct_page_offset();
+			let operand = cpu.read(address, memory);
+			MicroArchAction::Continue(state.with_operand(operand).with_address(address))
+		},
+		2 => {
+			let operand2 = cpu.read(cpu.y as u16 + cpu.direct_page_offset(), memory);
+			MicroArchAction::Continue(state.with_operand2(operand2))
+		},
+		3 => {
+			let result = cpu.perform_sub_carry(state.operand, state.operand2);
+			MicroArchAction::Continue(state.with_operand(result))
+		},
+		4 => {
+			cpu.write(state.address, state.operand, memory);
+			MicroArchAction::Next
+		},
+		_ => unreachable!(),
+	}
 }
 #[allow(clippy::cast_lossless)]
 fn movw_ya_dp(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInternalState) -> MicroArchAction {
@@ -3250,6 +3403,37 @@ fn cmp_a_addr_register<const REGISTER: Register>(
 			trace!("cmp {:02x} - {:02x} = {:+}", cpu.a, operand, result);
 			cpu.set_negative_zero(result as u8);
 			cpu.set_subtract_carry(cpu.a, operand);
+			MicroArchAction::Next
+		},
+		_ => unreachable!(),
+	}
+}
+
+#[inline]
+fn sbc_a_addr_register<const REGISTER: Register>(
+	cpu: &mut Smp,
+	memory: &Memory,
+	cycle: usize,
+	state: InstructionInternalState,
+) -> MicroArchAction {
+	match cycle {
+		0 => MicroArchAction::Continue(InstructionInternalState::default()),
+		1 => {
+			let address_low = cpu.read_next_pc(memory) as u16;
+			MicroArchAction::Continue(state.with_address(address_low))
+		},
+		2 => {
+			let address_high = cpu.read_next_pc(memory) as u16;
+			let address = address_high << 8 | state.address;
+			MicroArchAction::Continue(state.with_address(address))
+		},
+		3 => {
+			let offset_address = state.address.wrapping_add(cpu.register_read::<REGISTER>() as u16);
+			MicroArchAction::Continue(state.with_address(offset_address))
+		},
+		4 => {
+			let operand = cpu.read(state.address, memory);
+			cpu.a = cpu.perform_sub_carry(cpu.a, operand);
 			MicroArchAction::Next
 		},
 		_ => unreachable!(),

@@ -2301,6 +2301,7 @@ fn sbc_x_y_indirect(
 	debug_instruction!("sbc (x), (y)", cycle, cpu);
 
 	match cycle {
+		0 => MicroArchAction::Continue(InstructionInternalState::default()),
 		1 => {
 			let address = cpu.x as u16 + cpu.direct_page_offset();
 			let operand = cpu.read(address, memory);
@@ -2360,9 +2361,11 @@ fn movw_ya_dp(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: Instructi
 	}
 }
 fn inc_dp_x(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInternalState) -> MicroArchAction {
-	todo!()
+	debug_instruction!("inc dp+x", cycle, cpu);
+	inc_dec_dp_x(cpu, memory, cycle, state, |value| value.wrapping_add(1))
 }
 fn inc_a(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInternalState) -> MicroArchAction {
+	debug_instruction!("inc a", cycle, cpu);
 	inc_dec_register::<{ Register::A }>(cpu, cycle, |value| value.wrapping_add(1))
 }
 fn mov_sp_x(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInternalState) -> MicroArchAction {
@@ -2378,7 +2381,24 @@ fn mov_sp_x(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: Instruction
 	}
 }
 fn das(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInternalState) -> MicroArchAction {
-	todo!()
+	debug_instruction!("das", cycle, cpu);
+
+	match cycle {
+		0 | 1 => MicroArchAction::Continue(InstructionInternalState::default()),
+		2 => {
+			if !cpu.psw.contains(ProgramStatusWord::Carry) || cpu.a > 0x99 {
+				cpu.a = cpu.a.wrapping_sub(0x60);
+				cpu.set_carry(false);
+			}
+			if !cpu.psw.contains(ProgramStatusWord::HalfCarry) || cpu.a & 0xf > 0x9 {
+				cpu.a = cpu.a.wrapping_sub(6);
+			}
+			trace!("decimal adjust => {}", cpu.a);
+			cpu.set_negative_zero(cpu.a);
+			MicroArchAction::Next
+		},
+		_ => unreachable!(),
+	}
 }
 fn mov_a_inc_x(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInternalState) -> MicroArchAction {
 	todo!()

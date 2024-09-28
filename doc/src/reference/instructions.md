@@ -329,7 +329,9 @@ The `DIV` instruction divides the YA register by the X register with unsigned in
 
 ## `DAA`
 
-The `DAA` instruction provides binary coded decimal (BCD) support together with the `DAS` instruction. If the half-carry flag H is set, decimal adjust for addition will add 6 to convert the result back to decimal. Note that the H flag is the only required flag to be set correctly for this instruction to work, as opposed to e.g. the Z80 which also requires the normal carry flag.
+The `DAA` instruction provides binary coded decimal (BCD) support together with the `DAS` instruction. If the half-carry flag H is set, decimal adjust for addition will add 6 to convert the result back to decimal. This also happens if the lower nibble is greater than 9. If the carry flag C is set, decimal adjust for addition will additionally add $60 for adjustment of the upper nibble. This also happens if the upper nibble is greater than 9.
+
+It is not known whether this instruction sets the carry flag in accordance with addition (and whether `DAS` sets the borrow flag in accordance with subtraction). `SingleStepTests` says no, Mesen also says no, Nocash says yes, general logic would imply yes.
 
 | Operand | Opcode | Total bytes | Cycles | Flags set |
 | ------- | ------ | ----------- | ------ | --------- |
@@ -337,11 +339,11 @@ The `DAA` instruction provides binary coded decimal (BCD) support together with 
 
 ## `DAS`
 
-The `DAS` instruction provides binary coded decimal (BCD) support together with the `DAA` instruction. If the half-carry flag H is set, decimal adjust for subtraction will subtract 6 to convert the result back to decimal. Note that the H flag is the only required flag to be set correctly for this instruction to work, as opposed to e.g. the Z80 which also requires the normal carry flag.
+The `DAS` instruction provides binary coded decimal (BCD) support together with the `DAA` instruction. If the half-carry flag H is not set (i.e. the half-borrow flag is set), decimal adjust for subtraction will subtract 6 to convert the result back to decimal. This also happens if the lower nibble is greater than 9. If the carry flag C is not set (i.e. the borrow flat is set), decimal adjust for subtraction will additionally subtract by $60 for adjustment of the upper nibble. This also happens if the upper nibble is greater than 9.
 
 | Operand | Opcode | Total bytes | Cycles | Flags set |
 | ------- | ------ | ----------- | ------ | --------- |
-| A       | BE     | 1           | 3      | NZC       |
+| A       | BE     | 1           | 3      | NZ        |
 
 ## `BRA`, `BEQ`, `BNE`, `BCS`, `BCC`, `BVS`, `BVC`, `BMI`, `BPL`
 

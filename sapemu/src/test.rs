@@ -82,19 +82,19 @@ impl ProcessorState {
 			info.push_str(&format!("expected a = {:02x} but got {:02x}\n", self.a, smp.a));
 		}
 		if smp.x != self.x {
-			info.push_str(&format!("expected a = {:02x} but got {:02x}\n", self.x, smp.x));
+			info.push_str(&format!("expected x = {:02x} but got {:02x}\n", self.x, smp.x));
 		}
 		if smp.y != self.y {
-			info.push_str(&format!("expected a = {:02x} but got {:02x}\n", self.y, smp.y));
+			info.push_str(&format!("expected y = {:02x} but got {:02x}\n", self.y, smp.y));
 		}
 		if smp.psw.bits() != self.psw {
-			info.push_str(&format!("expected a = {} but got {}\n", ProgramStatusWord(self.psw), smp.psw));
+			info.push_str(&format!("expected psw = {} but got {}\n", ProgramStatusWord(self.psw), smp.psw));
 		}
 		if smp.sp != self.sp {
-			info.push_str(&format!("expected a = 01{:02x} but got 01{:02x}\n", self.sp, smp.sp));
+			info.push_str(&format!("expected sp = 01{:02x} but got 01{:02x}\n", self.sp, smp.sp));
 		}
 		if smp.pc != self.pc {
-			info.push_str(&format!("expected a = {:04x} but got {:04x}\n", self.pc, smp.pc));
+			info.push_str(&format!("expected pc = {:04x} but got {:04x}\n", self.pc, smp.pc));
 		}
 		info
 	}

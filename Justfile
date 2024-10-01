@@ -55,35 +55,39 @@ website url="/":
 	cp -rT doc/book/html site/doc
 	cp -rT target/doc site/doc/api
 
-# Create a new spcasm release from a Windows machine
+# Create a new spcasm release for the specified target.
+release version target: release-build-common target && (release-finalize version target)
+
+# Common build steps for all targets.
+release-build-common target:
+	cargo nextest run --target {{target}}
+	cargo build --workspace -q --profile=spcasm-release --target {{target}}
+
+# Specific finalization steps for Windows
 [windows]
-release version: release-build-common && (release-finalize-common version)
-	wsl just release-build-common
-
-# Create a new spcasm release from a Unix machine
-[unix]
-release version: release-build-common && (release-finalize-common version)
-
-release-build-common: test check
-	cargo build -q --profile=spcasm-release
-
-release-finalize-common version:
+release-finalize version target:
 	mkdir 'spcasm-{{version}}'
-	cp target/spcasm-release/spcasm.exe 'spcasm-{{version}}'
+	Copy-Item target/spcasm-release/spcasm.exe 'spcasm-{{version}}'
+	Copy-Item target/spcasm-release/brr.exe 'spcasm-{{version}}'
+	@echo '======================================================================='
+	@echo 'spcasm and brr version(s)'
+	./spcasm-{{version}}/spcasm.exe --version
+	./spcasm-{{version}}/brr.exe --version
+	Copy-Item -Recurse include 'spcasm-{{version}}'
+	cd spcasm-{{version}} && zip spcasm-{{version}}-{{target}}.zip '*' 'include/*'
+
+# Specific finalization steps for Unix
+[unix]
+release-finalize version target:
 	cp target/spcasm-release/spcasm 'spcasm-{{version}}'
-	cp target/spcasm-release/brr.exe 'spcasm-{{version}}'
 	cp target/spcasm-release/brr 'spcasm-{{version}}'
 	@echo '======================================================================='
 	@echo 'spcasm and brr version(s)'
-	wsl './spcasm-{{version}}/spcasm' --version
-	./spcasm-{{version}}/spcasm.exe --version
-	wsl './spcasm-{{version}}/brr' --version
-	./spcasm-{{version}}/brr.exe --version
-	cd doc && mdbook build
-	wsl -e cp -rT include 'spcasm-{{version}}/include'
-	cd spcasm-{{version}} && zip spcasm-{{version}}.zip '*' 'include/*' -x spcasm brr
-	wsl -e tar -caz --exclude '*.exe' --exclude '*.zip' -f spcasm-{{version}}.tar.xz -C spcasm-{{version}} .
-	mv spcasm-{{version}}.tar.xz spcasm-{{version}}
+	'./spcasm-{{version}}/spcasm' --version
+	'./spcasm-{{version}}/brr' --version
+	cp -rT include 'spcasm-{{version}}/include'
+	tar caz -f spcasm-{{version}}-{{target}}.tar.xz -C spcasm-{{version}} .
+
 
 clean:
 	cargo clean -r

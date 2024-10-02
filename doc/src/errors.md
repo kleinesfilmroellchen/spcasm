@@ -623,7 +623,7 @@ $ spcasm -w all tests/errors/audio-processing.spcasmtest
 ? 1
 spcasm::io::audio_processing_error
 
-  × failed to fill whole buffer
+  × Ill-formed WAVE file: no RIFF tag found
    ╭─[tests/errors/audio-processing.spcasmtest:3:1]
  1 │ org 0
  2 │ 

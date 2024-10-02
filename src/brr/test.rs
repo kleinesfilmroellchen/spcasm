@@ -160,20 +160,20 @@ fn microbench_decode_block_filter_3(bencher: &mut Bencher) {
 // This test takes many minutes to run under Miri without providing extra insight.
 #[cfg_attr(miri, ignore)]
 fn short_sample_encode(bencher: &mut Bencher) {
-	use ::wav::read as wav_read;
+	use hound::WavReader;
 
-	let (_, data) = wav_read(&mut std::fs::File::open("tests/yoshi.wav").unwrap()).unwrap();
-	let mut data = data.try_into_sixteen().expect("must be signed 16-bit WAV");
+	let reader = WavReader::new(std::fs::File::open("tests/yoshi.wav").unwrap()).unwrap();
+	let mut data = reader.into_samples::<i16>().try_collect().expect("must be signed 16-bit WAV");
 	bencher.iter(|| encode_to_brr(&mut data, None, CompressionLevel::Max));
 }
 
 #[test]
 #[cfg_attr(miri, ignore)]
 fn different_compression_levels() {
-	use ::wav::read as wav_read;
+	use hound::WavReader;
 
-	let (_, data) = wav_read(&mut std::fs::File::open("tests/yoshi.wav").unwrap()).unwrap();
-	let mut data = data.try_into_sixteen().expect("must be signed 16-bit WAV");
+	let reader = WavReader::new(std::fs::File::open("tests/yoshi.wav").unwrap()).unwrap();
+	let mut data = reader.into_samples::<i16>().try_collect().expect("must be signed 16-bit WAV");
 	let estimated = encode_to_brr(&mut data, None, CompressionLevel::EstimateShift);
 	let _ = decode_from_brr(&estimated);
 	let bad = encode_to_brr(&mut data, None, CompressionLevel::OnlyFilterZero);

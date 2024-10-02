@@ -5,10 +5,10 @@ use std::fs::File;
 use std::io::{Read, Write};
 use std::path::PathBuf;
 
-use ::wav::WAV_FORMAT_PCM;
 use clap::{Parser, Subcommand, ValueEnum};
 #[allow(unused)]
 use flexstr::{shared_str, IntoSharedStr, SharedStr, ToSharedStr};
+use hound::WavWriter;
 use num_traits::cast::FromPrimitive;
 #[allow(clippy::wildcard_imports)]
 use spcasm::brr::*;
@@ -301,7 +301,12 @@ fn main() {
 				dsp::apply_hardware_gauss_filter(&mut samples);
 			}
 
-			let header = ::wav::Header::new(WAV_FORMAT_PCM, 1, 32_000, 16);
+			let header = hound::WavSpec {
+				channels:        1,
+				sample_rate:     32_000,
+				bits_per_sample: 16,
+				sample_format:   hound::SampleFormat::Int,
+			};
 
 			let mut output_file = std::io::BufWriter::new(
 				File::options().write(true).truncate(true).create(true).append(false).open(output).unwrap_or_else(
@@ -312,10 +317,18 @@ fn main() {
 				),
 			);
 
-			::wav::write(header, &samples.into(), &mut output_file).unwrap_or_else(|error| {
-				eprintln!("error writing output: {error}");
-				std::process::exit(1);
-			});
+			WavWriter::new(&mut output_file, header)
+				.and_then(|mut writer| {
+					let mut writer = writer.get_i16_writer(samples.len() as u32);
+					for s in samples {
+						writer.write_sample(s);
+					}
+					writer.flush()
+				})
+				.unwrap_or_else(|error| {
+					eprintln!("error writing output: {error}");
+					std::process::exit(1);
+				});
 		},
 	}
 }

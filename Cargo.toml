@@ -65,13 +65,13 @@ object = { version = "0.36", features = [
 parking_lot = "0.12"
 thiserror = "1"
 lalrpop-util = "0.22"
-wav = "1"
 num-traits = "0.2"
 num-derive = "0.4"
 arrcat = "0.1"
 proc-macro2 = "^1.0.86"
 human-panic = { version = "2", optional = true }
 flexstr = { version = "0.9.2", features = ["int_convert", "serde"] }
+hound = "3.5.1"
 
 [dependencies.miette]
 # TODO: figure out how to use fancy-no-backtrace without breaking the wasm build

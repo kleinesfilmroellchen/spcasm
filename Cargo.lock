@@ -830,6 +830,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "hound"
+version = "3.5.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "62adaabb884c94955b19907d60019f4e145d091c75345379e70d1ee696f7854f"
+
+[[package]]
 name = "html-escape"
 version = "0.2.13"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1642,12 +1648,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "riff"
-version = "1.0.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b9b1a3d5f46d53f4a3478e2be4a5a5ce5108ea58b100dcd139830eae7f79a3a1"
-
-[[package]]
 name = "ring"
 version = "0.17.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2092,6 +2092,7 @@ dependencies = [
  "arrcat",
  "clap",
  "flexstr",
+ "hound",
  "human-panic",
  "lalrpop",
  "lalrpop-util",
@@ -2106,7 +2107,6 @@ dependencies = [
  "spcasm_derive",
  "thiserror",
  "trycmd",
- "wav",
 ]
 
 [[package]]
@@ -2796,15 +2796,6 @@ name = "wasm-bindgen-shared"
 version = "0.2.93"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c62a0a307cb4a311d3a07867860911ca130c3494e8c2719593806c08bc5d0484"
-
-[[package]]
-name = "wav"
-version = "1.0.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "99d97402f69875b579ec37f2aa52d1f455a1d6224251edba32e8c18a5da2698d"
-dependencies = [
- "riff",
-]
 
 [[package]]
 name = "web-sys"

@@ -1,11 +1,11 @@
 //! WAV file handling and conversion.
 
 use std::fs::File;
-use std::io::BufReader;
+use std::io::{BufReader, Read};
 
 #[allow(unused)]
 use flexstr::{shared_str, IntoSharedStr, SharedStr, ToSharedStr};
-use wav::{read as wav_read, BitDepth};
+use hound::{SampleFormat, WavReader};
 
 use super::DecodedSample;
 
@@ -17,13 +17,14 @@ const i24max: f64 = (0xff_ffff - 1) as f64;
 /// # Errors
 /// Any errors from the WAV support library are passed on, as well as some custom errors.
 pub fn read_wav_for_brr(file: File) -> Result<Vec<DecodedSample>, SharedStr> {
-	let (header, data) = wav_read(&mut BufReader::new(file)).map_err(|err| SharedStr::from(err.to_string()))?;
-	convert_sample_format(data, header.channel_count)
+	let reader = WavReader::new(BufReader::new(file)).map_err(|err| SharedStr::from(err.to_string()))?;
+	convert_sample_format(reader)
 }
 
 /// Convert the sample format to signed 16 bit mono.
-fn convert_sample_format(source_data: BitDepth, channels: u16) -> Result<Vec<DecodedSample>, SharedStr> {
-	let s16bit_data = convert_bit_depth_to_16_bits(source_data)?;
+fn convert_sample_format<R: Read>(reader: WavReader<R>) -> Result<Vec<DecodedSample>, SharedStr> {
+	let channels = reader.spec().channels;
+	let s16bit_data = convert_bit_depth_to_16_bits(reader)?;
 	if channels > 1 {
 		average_channels(&s16bit_data, channels)
 	} else {
@@ -32,22 +33,24 @@ fn convert_sample_format(source_data: BitDepth, channels: u16) -> Result<Vec<Dec
 }
 
 /// Convert all samples to 16 bits.
-fn convert_bit_depth_to_16_bits(source_data: BitDepth) -> Result<Vec<i16>, SharedStr> {
-	match source_data {
-		BitDepth::Sixteen(data) => Ok(data),
-		BitDepth::Eight(u8bit) => Ok(u8bit
-			.into_iter()
+fn convert_bit_depth_to_16_bits<R: Read>(mut reader: WavReader<R>) -> Result<Vec<i16>, SharedStr> {
+	match reader.spec().bits_per_sample {
+		16 => reader.samples::<i16>().try_collect(),
+		8 => reader.samples::<i8>()
 			// The order of operations is very important! If we don't bracket the scaling constant at the end, we will overflow the first value into oblivion.
-			.map(|sample| (i16::from(sample) - i16::from(u8::MAX / 2)) * (i16::MAX / i16::from(u8::MAX)))
-			.collect()),
+			.map(|sample| Ok((i16::from(sample?) - i16::from(u8::MAX / 2)) * (i16::MAX / i16::from(u8::MAX))))
+			.try_collect(),
 		// It appears that we can only downsample effectively with an intermediary floating-point step.
 		// The problem is that the i16max / i24max is less than 1, so cannot be calculated in integer math.
-		BitDepth::TwentyFour(s24bit) =>
-			Ok(s24bit.into_iter().map(|sample| (f64::from(sample) / i24max * f64::from(i16::MAX)) as i16).collect()),
-		BitDepth::ThirtyTwoFloat(f32bit) =>
-			Ok(f32bit.into_iter().map(|sample| (sample * f32::from(i16::MAX)) as i16).collect()),
-		BitDepth::Empty => Err("Empty audio file".to_owned().into()),
+		24 => reader
+			.samples::<i32>()
+			.map(|sample| Ok((f64::from(sample?) / i24max * f64::from(i16::MAX)) as i16))
+			.try_collect(),
+		32 if reader.spec().sample_format == SampleFormat::Float =>
+			reader.samples::<f32>().map(|sample| Ok((sample? * f32::from(i16::MAX)) as i16)).try_collect(),
+		_ => Err(hound::Error::FormatError("Unsupported bit depth")),
 	}
+	.map_err(|e| e.to_string().into())
 }
 
 /// Convert any number of channels to mono by averaging all channels together.

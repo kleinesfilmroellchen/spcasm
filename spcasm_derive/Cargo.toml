@@ -1,6 +1,7 @@
 [package]
 name = "spcasm_derive"
 version.workspace = true
+description = "Derive macros for spcasm"
 edition.workspace = true
 rust-version.workspace = true
 authors.workspace = true

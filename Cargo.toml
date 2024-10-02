@@ -24,7 +24,7 @@ build = "build.rs"
 default-run = "spcasm"
 
 [workspace.package]
-version = "1.1.1"
+version = "1.2.0"
 edition = "2021"
 rust-version = "1.80"
 authors = ["kleines Filmröllchen <filmroellchen@serenityos.org>"]

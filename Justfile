@@ -56,7 +56,7 @@ website url="/":
 	cp -rT target/doc site/doc/api
 
 # Create a new spcasm release for the specified target.
-release version target: release-build-common target && (release-finalize version target)
+release version target: (release-build-common target) && (release-finalize version target)
 
 # Common build steps for all targets.
 release-build-common target:
@@ -66,21 +66,22 @@ release-build-common target:
 # Specific finalization steps for Windows
 [windows]
 release-finalize version target:
-	mkdir 'spcasm-{{version}}'
-	Copy-Item target/spcasm-release/spcasm.exe 'spcasm-{{version}}'
-	Copy-Item target/spcasm-release/brr.exe 'spcasm-{{version}}'
+	New-Item -Force -ItemType directory 'spcasm-{{version}}'
+	Copy-Item target/{{target}}/spcasm-release/spcasm.exe -Destination 'spcasm-{{version}}'
+	Copy-Item target/{{target}}/spcasm-release/brr.exe -Destination 'spcasm-{{version}}'
 	@echo '======================================================================='
 	@echo 'spcasm and brr version(s)'
 	./spcasm-{{version}}/spcasm.exe --version
 	./spcasm-{{version}}/brr.exe --version
-	Copy-Item -Recurse include 'spcasm-{{version}}'
-	cd spcasm-{{version}} && zip spcasm-{{version}}-{{target}}.zip '*' 'include/*'
+	Copy-Item -Recurse include -Destination 'spcasm-{{version}}'
+	cd spcasm-{{version}} && zip ../spcasm-{{version}}-{{target}}.zip '*.exe' 'include/*'
 
 # Specific finalization steps for Unix
 [unix]
 release-finalize version target:
-	cp target/spcasm-release/spcasm 'spcasm-{{version}}'
-	cp target/spcasm-release/brr 'spcasm-{{version}}'
+	mkdir 'spcasm-{{version}}'
+	cp target/{{target}}/spcasm-release/spcasm 'spcasm-{{version}}'
+	cp target/{{target}}/spcasm-release/brr 'spcasm-{{version}}'
 	@echo '======================================================================='
 	@echo 'spcasm and brr version(s)'
 	'./spcasm-{{version}}/spcasm' --version

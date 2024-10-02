@@ -459,7 +459,7 @@ impl Smp {
 	#[inline]
 	fn set_add_carry_flags(&mut self, op1: u8, op2: u8) {
 		let (result, has_carry) = op1.carrying_add(op2, self.carry());
-		let half_carry_result = (op1 & 0x0f) + (op2 & 0x0f) + self.carry() as u8 >= 0x10;
+		let half_carry_result = (op1 & 0x0f) + (op2 & 0x0f) + u8::from(self.carry()) >= 0x10;
 
 		self.psw.set(ProgramStatusWord::Overflow, (op1 as i8).carrying_add(op2 as i8, self.carry()).1);
 		self.psw.set(ProgramStatusWord::Sign, (result as i8) < 0);
@@ -471,13 +471,13 @@ impl Smp {
 	/// Sets all relevant flags of an 8-bit subtraction with carry (or borrow) in, and returns the result.
 	#[inline]
 	fn perform_sub_carry(&mut self, op1: u8, op2: u8) -> u8 {
-		let expanded_result = (op1 as u16).wrapping_add((!op2) as u16) + self.carry() as u16;
+		let expanded_result = u16::from(op1).wrapping_add(u16::from(!op2)) + u16::from(self.carry());
 		trace!("{} + {} + {} = {}", op1, !op2, self.carry(), expanded_result);
 		let result = (expanded_result & 0xff) as u8;
 		self.psw.set(ProgramStatusWord::Sign, (result as i8) < 0);
 		self.psw.set(ProgramStatusWord::Zero, result == 0);
 		self.psw.set(ProgramStatusWord::Overflow, (op1 as i8).borrowing_sub(op2 as i8, !self.carry()).1);
-		let half_carry_result = (op1 & 0x0f) + ((!op2) & 0x0f) + self.carry() as u8 >= 0x10;
+		let half_carry_result = (op1 & 0x0f) + ((!op2) & 0x0f) + u8::from(self.carry()) >= 0x10;
 		self.psw.set(ProgramStatusWord::HalfCarry, half_carry_result);
 
 		self.psw.set(ProgramStatusWord::Carry, expanded_result >= 0x100);

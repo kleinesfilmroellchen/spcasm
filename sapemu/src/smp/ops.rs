@@ -1962,11 +1962,11 @@ fn div(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInter
 
 			cpu.psw.set(ProgramStatusWord::Overflow, ya & 0x100 > 0);
 			cpu.psw.set(ProgramStatusWord::Zero, div == 0);
-			cpu.psw.set(ProgramStatusWord::Sign, ((div & 0xff) as i8) < 0);
+			cpu.psw.set(ProgramStatusWord::Sign, (div as i8) < 0);
 			cpu.psw.set(ProgramStatusWord::HalfCarry, cpu.y & 0xf >= cpu.x & 0xf);
 
-			cpu.a = (div & 0xff) as u8;
-			cpu.y = (modulus & 0xff) as u8;
+			cpu.a = div;
+			cpu.y = modulus;
 			MicroArchAction::Next
 		},
 		_ => unreachable!(),

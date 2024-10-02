@@ -19,7 +19,7 @@ jobs:
       - name: Install Rust
         uses: dtolnay/rust-toolchain@v1
         with:
-          toolchain: nightly
+          toolchain: nightly-2024-09-12
           components: rust-src, miri
       - name: Setup Miri
         run: |

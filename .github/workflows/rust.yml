@@ -17,7 +17,7 @@ jobs:
       - name: Install Rust
         uses: dtolnay/rust-toolchain@v1
         with:
-          toolchain: nightly
+          toolchain: nightly-2024-09-12
       - name: Output Rust version to file
         run: cargo --version > rust-version
       - uses: actions/cache@v4
@@ -52,7 +52,7 @@ jobs:
       - name: Install Rust
         uses: dtolnay/rust-toolchain@v1
         with:
-          toolchain: nightly
+          toolchain: nightly-2024-09-12
           components: clippy
       - name: Check style
         uses: actions-rs/clippy-check@v1.0.7
@@ -66,7 +66,7 @@ jobs:
       - name: Install Rust
         uses: dtolnay/rust-toolchain@v1
         with:
-          toolchain: nightly
+          toolchain: nightly-2024-09-12
           components: rustfmt
       - name: Check code format
         run: cargo fmt --all --check --verbose

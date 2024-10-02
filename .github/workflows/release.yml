@@ -29,7 +29,7 @@ jobs:
         uses: actions/checkout@v4
       - name: Install OpenSSL (Linux)
         if: ${{ matrix.runner == 'ubuntu-latest' }}
-        run: apt update && apt-get install -y openssl clang
+        run: sudo apt update && sudo apt-get install -y openssl clang
       - name: Install latest nightly
         uses: actions-rs/toolchain@v1
         with:

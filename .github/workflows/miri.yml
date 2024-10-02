@@ -1,4 +1,4 @@
-name: Check and test spcasm
+name: Test spcasm with miri
 
 on:
   schedule:

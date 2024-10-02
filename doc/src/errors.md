@@ -928,12 +928,12 @@ $ spcasm -w all tests/errors/parser-missing-token.spcasmtest
 ? 1
 spcasm::syntax::missing_token
 
-  × Expected any of "/n", "%", "+", "+++", "-", "---", "-range-", ".",
-  │ "<", "arch", "ascii", "asciiz", "brr", "byte", "db", "dd", "dl", "dw",
-  │ "endasm", "fill", "fillbyte", "filldword", "filllong", "fillword",
-  │ "identifier", "if", "incbin", "include", "incsrc", "macro", "math",
-  │ "mnemonic", "namespace", "org", "pad", "padbyte", "paddword", "padlong",
-  │ "padword", "pullpc", "pushpc", "sampletable", "startpos", "word"
+  × Expected any of "identifier", "mnemonic", "org", "db", "byte", "dw",
+  │ "word", "dl", "dd", "ascii", "asciiz", "incbin", "include", "incsrc",
+  │ "endasm", "brr", "sampletable", "pushpc", "pullpc", "arch", "startpos",
+  │ "fill", "fillbyte", "fillword", "filllong", "filldword", "pad", "padbyte",
+  │ "padword", "padlong", "paddword", "macro", "if", "math", "namespace", "+",
+  │ "+++", "---", "-", "-range-", "<", "%", ".", "/n"
    ╭─[tests/errors/parser-missing-token.spcasmtest:3:1]
  1 │ org 0
  2 │ label:

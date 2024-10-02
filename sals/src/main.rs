@@ -421,12 +421,12 @@ impl Backend {
 		let path = &uri.to_file_path().map_err(|()| tower_lsp::jsonrpc::Error {
 			code:    tower_lsp::jsonrpc::ErrorCode::InvalidParams,
 			data:    None,
-			message: format!("invalid document URI {uri}"),
+			message: format!("invalid document URI {uri}").into(),
 		})?;
 		self.environment.read().files.get::<Path>(path).cloned().ok_or_else(|| tower_lsp::jsonrpc::Error {
 			code:    tower_lsp::jsonrpc::ErrorCode::InvalidParams,
 			data:    None,
-			message: format!("no parsed document found for {uri}"),
+			message: format!("no parsed document found for {uri}").into(),
 		})
 	}
 }

@@ -30,11 +30,10 @@ jobs:
       - name: Install OpenSSL (Linux)
         if: ${{ matrix.runner == 'ubuntu-latest' }}
         run: sudo apt update && sudo apt-get install -y openssl clang
-      - name: Install latest nightly
-        uses: actions-rs/toolchain@v1
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@v1
         with:
           toolchain: nightly
-          profile: minimal
       - name: Install target toolchain
         run: rustup target add ${{ matrix.target }}
       - name: Install just

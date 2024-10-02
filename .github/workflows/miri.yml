@@ -16,16 +16,13 @@ jobs:
       - name: Get number of CPU cores
         uses: SimenB/github-actions-cpu-cores@v2
         id: cpu-cores
-      - name: Install latest nightly
-        uses: actions-rs/toolchain@v1
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@v1
         with:
           toolchain: nightly
-          profile: minimal
-          components: rust-src
-      - name: Install Miri
+          components: rust-src, miri
+      - name: Setup Miri
         run: |
-          rustup toolchain install nightly --component miri
-          rustup override set nightly
           cargo miri setup
       - name: Install nextest
         run: curl -LsSf https://get.nexte.st/latest/linux | tar zxf - -C ${CARGO_HOME:-~/.cargo}/bin

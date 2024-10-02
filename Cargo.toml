@@ -19,6 +19,8 @@ categories = [
 	"multimedia::audio",
 ]
 
+exclude = ["tests", "doc", ".github", ".vscode", "include"]
+
 build = "build.rs"
 
 default-run = "spcasm"

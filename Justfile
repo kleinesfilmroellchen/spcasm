@@ -74,7 +74,7 @@ release-finalize version target:
 	./spcasm-{{version}}/spcasm.exe --version
 	./spcasm-{{version}}/brr.exe --version
 	Copy-Item -Recurse include -Destination 'spcasm-{{version}}'
-	cd spcasm-{{version}} && zip ../spcasm-{{version}}-{{target}}.zip '*.exe' 'include/*'
+	cd spcasm-{{version}} && 7z a -tzip ../spcasm-{{version}}-{{target}}.zip '*.exe' 'include/*'
 
 # Specific finalization steps for Unix
 [unix]
@@ -86,7 +86,7 @@ release-finalize version target:
 	@echo 'spcasm and brr version(s)'
 	'./spcasm-{{version}}/spcasm' --version
 	'./spcasm-{{version}}/brr' --version
-	cp -rT include 'spcasm-{{version}}/include'
+	cp -r include 'spcasm-{{version}}'
 	tar caz -f spcasm-{{version}}-{{target}}.tar.xz -C spcasm-{{version}} .
 
 

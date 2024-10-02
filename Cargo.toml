@@ -86,6 +86,7 @@ features = ["derive", "wrap_help", "string"]
 
 [dependencies.spcasm_derive]
 path = "spcasm_derive"
+version = "1.2.0"
 
 [dependencies.shadow-rs]
 version = "0.35"

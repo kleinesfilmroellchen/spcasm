@@ -227,6 +227,11 @@ impl Token {
 			.into()),
 		}
 	}
+
+	/// Returns whether this token counts as a newline.
+	pub fn is_newline(&self) -> bool {
+		matches!(self, Token::TestComment(..) | Token::Newline(_))
+	}
 }
 
 impl Display for Token {

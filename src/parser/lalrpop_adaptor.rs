@@ -135,7 +135,7 @@ pub fn preprocess_token_stream(tokens: Vec<Token>) -> Vec<Token> {
 						if further_token == next_token {
 							// It can still be a relative + / - token...
 							collected_tokens.push(further_token);
-						} else if matches!(further_token, Token::TestComment(..) | Token::Newline(_)) {
+						} else if further_token.is_newline() {
 							// We really did find a relative + / - token.
 							final_token = Some(further_token);
 							in_mnemonic_line = false;

@@ -1068,8 +1068,7 @@ dependencies = [
 [[package]]
 name = "lalrpop"
 version = "0.22.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "06093b57658c723a21da679530e061a8c25340fa5a6f98e313b542268c7e2a1f"
+source = "git+https://github.com/lalrpop/lalrpop?rev=b8b82e9ecde5ca531efd13ce1beb9c1c5fa488a1#b8b82e9ecde5ca531efd13ce1beb9c1c5fa488a1"
 dependencies = [
  "ascii-canvas",
  "bit-set",
@@ -1089,8 +1088,7 @@ dependencies = [
 [[package]]
 name = "lalrpop-util"
 version = "0.22.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "feee752d43abd0f4807a921958ab4131f692a44d4d599733d4419c5d586176ce"
+source = "git+https://github.com/lalrpop/lalrpop?rev=b8b82e9ecde5ca531efd13ce1beb9c1c5fa488a1#b8b82e9ecde5ca531efd13ce1beb9c1c5fa488a1"
 dependencies = [
  "regex-automata",
  "rustversion",

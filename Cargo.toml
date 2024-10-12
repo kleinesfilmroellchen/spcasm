@@ -66,7 +66,7 @@ object = { version = "0.36", features = [
 ], optional = true, default-features = false }
 parking_lot = "0.12"
 thiserror = "1"
-lalrpop-util = "0.22"
+lalrpop-util = { git = "https://github.com/lalrpop/lalrpop", rev = "b8b82e9ecde5ca531efd13ce1beb9c1c5fa488a1" }
 num-traits = "0.2"
 num-derive = "0.4"
 arrcat = "0.1"
@@ -103,7 +103,8 @@ trycmd = { version = "0.15", default-features = false, features = [
 reqwest = { version = "0.12", features = ["blocking"] }
 
 [build-dependencies]
-lalrpop = { version = "0.22", default-features = false }
+lalrpop = { git = "https://github.com/lalrpop/lalrpop", rev = "b8b82e9ecde5ca531efd13ce1beb9c1c5fa488a1", default-features = false }
+# lalrpop = { version = "0.22", default-features = false }
 
 [build-dependencies.shadow-rs]
 version = "0.35"

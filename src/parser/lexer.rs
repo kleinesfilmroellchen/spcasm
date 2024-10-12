@@ -230,35 +230,35 @@ pub fn lex(source_code: Arc<AssemblyCode>, options: &dyn Frontend) -> Result<Vec
 					&& let Some(chr) = chars.peek()
 					&& chr == &'='
 				{
-					chars.next();
-					#[allow(unused)]
-					let start_index = index;
-					index += 2;
 					#[cfg(test)]
-					let mut comment_contents = String::new();
-					// Either stop at a newline or another regular comment.
-					while let Some(chr) = chars.peek()
-						&& chr != &'\n' && chr != &';'
 					{
-						#[cfg(test)]
-						comment_contents.push(chars.next().unwrap());
-						index += 1;
+						chars.next();
+						#[allow(unused)]
+						let start_index = index;
+						index += 2;
+						let mut comment_contents = String::new();
+						// Either stop at a newline or another regular comment.
+						while let Some(chr) = chars.peek()
+							&& chr != &'\n' && chr != &';'
+						{
+							comment_contents.push(chars.next().unwrap());
+							index += 1;
+						}
+						// This cfg() is technically unnecessary, but the above check doesn't happen at compile time so
+						// Rust wouldn't find the conditionally-compiled token type.
+						tokens.push(Token::TestComment(
+							comment_contents
+								.split_whitespace()
+								.map(|byte_string| u8::from_str_radix(byte_string, 16))
+								.try_collect::<Vec<u8>>()
+								.map_err(|parse_error| AssemblyError::InvalidTestComment {
+									basis:    parse_error,
+									src:      source_code.clone(),
+									location: (start_index, comment_contents.len()).into(),
+								})?,
+							(start_index, comment_contents.len()).into(),
+						));
 					}
-					// This cfg() is technically unnecessary, but the above check doesn't happen at compile time so
-					// Rust wouldn't find the conditionally-compiled token type.
-					#[cfg(test)]
-					tokens.push(Token::TestComment(
-						comment_contents
-							.split_whitespace()
-							.map(|byte_string| u8::from_str_radix(byte_string, 16))
-							.try_collect::<Vec<u8>>()
-							.map_err(|parse_error| AssemblyError::InvalidTestComment {
-								basis:    parse_error,
-								src:      source_code.clone(),
-								location: (start_index, comment_contents.len()).into(),
-							})?,
-						(start_index, comment_contents.len()).into(),
-					));
 				} else {
 					index += 1;
 					while let Some(chr) = chars.peek()

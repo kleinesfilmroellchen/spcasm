@@ -70,7 +70,7 @@ lalrpop-util = { git = "https://github.com/lalrpop/lalrpop", rev = "b8b82e9ecde5
 num-traits = "0.2"
 num-derive = "0.4"
 arrcat = "0.1"
-proc-macro2 = "^1.0.86"
+proc-macro2 = "^1.0.87"
 human-panic = { version = "2", optional = true }
 flexstr = { version = "0.9.2", features = ["int_convert", "serde"] }
 hound = "3.5.1"

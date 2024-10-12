@@ -229,8 +229,9 @@ impl Token {
 	}
 
 	/// Returns whether this token counts as a newline.
+	#[must_use]
 	pub fn is_newline(&self) -> bool {
-		matches!(self, Token::TestComment(..) | Token::Newline(_))
+		matches!(self, Self::TestComment(..) | Self::Newline(_))
 	}
 }
 

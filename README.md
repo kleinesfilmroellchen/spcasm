@@ -34,6 +34,14 @@ However, there are reasons why not to use spcasm:
 
 ## Installation
 
+### Latest release
+
+If you already have Rust, you can use `cargo install --locked spcasm`, which will install both the `spcasm` and `brr` binaries.
+
+Alternatively, you can download the latest release asset for your system from the [GitHub release tab](https://github.com/kleinesfilmroellchen/spcasm/releases) and extract the binaries into a directory of your choice (on Unixes, usually either `$HOME/.local/bin` or `/usr/local/bin`).
+
+### From the repository
+
 This is a normal Rust project without special dependencies. Use `cargo` or [`just`](https://just.systems/) for building, running, testing etc. The sub-projects of spcasm require extra dependencies and tools, for details see the [development documentation](https://kleinesfilmroellchen.github.io/spcasm/doc/dev/index.html).
 
 ## Usage

@@ -1,8 +1,7 @@
 //! Shared memory (ARAM, external hardware registers)
 
-use log::trace;
-
 #[allow(unused)] use crate::smp::Smp;
+use crate::trace;
 
 /// Size of ARAM and memory space.
 pub const MEMORY_SIZE: usize = 0x10000;

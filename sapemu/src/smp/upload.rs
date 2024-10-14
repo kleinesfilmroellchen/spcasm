@@ -2,13 +2,13 @@
 //!
 //! This package implements the main CPU side of the SPC700 data upload routine as defined in the boot ROM.
 
-use std::error::Error;
-
+use anyhow::Result;
 use log::{debug, info};
 use object::read::elf::ElfFile32;
 use object::{Object, ObjectSegment};
 
 use super::CpuIOPorts;
+use crate::trace;
 
 /// A single data block to be uploaded.
 pub struct DataBlock {
@@ -102,7 +102,7 @@ impl Uploader {
 	///
 	/// # Panics
 	/// All panics are programming bugs.
-	pub fn from_elf(file: &ElfFile32) -> Result<Self, Box<dyn Error>> {
+	pub fn from_elf(file: &ElfFile32) -> Result<Self> {
 		let entry_point = file.elf_header().e_entry.get(file.endian()) as u16;
 		let mut this = Self::new().with_entry_point(entry_point);
 
@@ -209,7 +209,7 @@ impl Uploader {
 					&& i == u16::from(ports.read_from_smp::<0>())
 				{
 					let status = self.next_byte();
-					debug!(
+					trace!(
 						"Got ACK for {}, sending [{:?}] = {:?} ({:?})",
 						i,
 						self.current_index(),

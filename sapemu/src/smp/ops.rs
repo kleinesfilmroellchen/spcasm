@@ -15,12 +15,12 @@
 // On purpose in this file, to allow easier reading of cycle-by-cycle behavior of instructions.
 #![allow(clippy::match_same_arms, clippy::cast_lossless)]
 
-use log::trace;
 use spcasm::sema::Register;
 
 use super::Smp;
 use crate::memory::Memory;
 use crate::smp::{ProgramStatusWord, RunState, BREAK_VECTOR};
+use crate::trace;
 
 /// Action taken after an instruction cycle was executed.
 #[derive(Clone, Copy)]
@@ -363,6 +363,7 @@ pub const OPCODE_TABLE: [InstructionImpl; 256] = [
 
 macro_rules! debug_instruction {
 	($assembly:expr, $cycle:expr, $cpu:expr) => {
+		#[cfg(debug_assertions)]
 		if $cycle == 0 {
 			log::debug!(concat!("[{:04x}] ", $assembly), $cpu.pc.wrapping_sub(1));
 		}

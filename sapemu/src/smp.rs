@@ -8,12 +8,13 @@ pub mod upload;
 use std::marker::ConstParamTy;
 
 use bitflags::bitflags;
-use log::{debug, error, trace};
+use log::{debug, error};
 use spcasm::sema::Register;
 
 use self::ops::InstructionInternalState;
 use crate::memory::Memory;
 use crate::smp::ops::OPCODE_TABLE;
+use crate::trace;
 
 /// State of the microprocessor.
 #[derive(Clone, Debug, Default)]

@@ -132,6 +132,12 @@ lto = "thin"
 opt-level = 3
 incremental = true
 
+# development profile for performance testing, similar to "bench"
+[profile.perfcheck]
+inherits = "spcasm-fastrelease"
+debug = 2
+debug-assertions = true
+
 [profile.spcasm-release]
 inherits = "spcasm-fastrelease"
 lto = "fat"

@@ -9,6 +9,7 @@ use std::marker::ConstParamTy;
 
 use bitflags::bitflags;
 use log::{debug, error};
+use ops::InstructionImpl;
 use spcasm::sema::Register;
 
 use self::ops::InstructionInternalState;
@@ -17,7 +18,7 @@ use crate::smp::ops::OPCODE_TABLE;
 use crate::trace;
 
 /// State of the microprocessor.
-#[derive(Clone, Debug, Default)]
+#[derive(Clone, Debug)]
 pub struct Smp {
 	/// TEST register.
 	pub test:                 TestRegister,
@@ -51,6 +52,32 @@ pub struct Smp {
 
 	/// CPU execution state.
 	pub(crate) run_state: RunState,
+
+	/// Cached function that executes the current instruction.
+	pub(crate) instruction_function: InstructionImpl,
+}
+
+impl Default for Smp {
+	fn default() -> Self {
+		Self {
+			test:                   TestRegister::default(),
+			control:                ControlRegister::default(),
+			a:                      Default::default(),
+			x:                      Default::default(),
+			y:                      Default::default(),
+			pc:                     Default::default(),
+			sp:                     Default::default(),
+			psw:                    ProgramStatusWord::default(),
+			ports:                  CpuIOPorts::default(),
+			timers:                 Timers::default(),
+			cycle_counter:          Default::default(),
+			instruction_cycle:      Default::default(),
+			current_opcode:         Default::default(),
+			last_instruction_state: InstructionInternalState::default(),
+			run_state:              RunState::default(),
+			instruction_function:   ops::nop,
+		}
+	}
 }
 
 /// CPU execution state.
@@ -204,7 +231,6 @@ impl Timers {
 			}
 			self.timer_tick_remaining[finalized_timer] = Self::TIMER_CLOCKS_PER_STEP[finalized_timer] * divisor;
 			self.timer_out[finalized_timer] = (self.timer_out[finalized_timer] + 1) % 0xf;
-			#[cfg(debug_assertions)]
 			trace!(
 				"Timer {} step to {} ({}Hz / {})",
 				finalized_timer,
@@ -370,7 +396,6 @@ impl Smp {
 		if self.run_state != RunState::Running {
 			return;
 		}
-		#[cfg(debug_assertions)]
 		trace!("SMP tick {}", self.cycle_counter);
 
 		self.timers.tick(self.control);
@@ -378,6 +403,7 @@ impl Smp {
 		// Fetch next instruction
 		if self.instruction_cycle == 0 {
 			self.current_opcode = self.read_next_pc(memory);
+			self.instruction_function = OPCODE_TABLE[self.current_opcode as usize];
 			trace!(
 				"(@{}) fetch instruction [{:04x}] = {:02x}",
 				self.cycle_counter,
@@ -387,12 +413,8 @@ impl Smp {
 		}
 
 		// Execute tick
-		let instruction_result = OPCODE_TABLE[self.current_opcode as usize](
-			self,
-			memory,
-			self.instruction_cycle,
-			self.last_instruction_state,
-		);
+		let instruction_result =
+			(self.instruction_function)(self, memory, self.instruction_cycle, self.last_instruction_state);
 		// Decide whether to advance to next instruction or not
 		match instruction_result {
 			ops::MicroArchAction::Continue(new_state) => {

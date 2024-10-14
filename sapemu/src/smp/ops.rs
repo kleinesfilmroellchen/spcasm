@@ -370,7 +370,12 @@ macro_rules! debug_instruction {
 	};
 }
 
-fn nop(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: InstructionInternalState) -> MicroArchAction {
+pub(super) fn nop(
+	cpu: &mut Smp,
+	memory: &mut Memory,
+	cycle: usize,
+	state: InstructionInternalState,
+) -> MicroArchAction {
 	debug_instruction!("nop", cycle, cpu);
 
 	match cycle {

@@ -32,18 +32,10 @@ jobs:
       - name: Install nextest
         run: curl -LsSf https://get.nexte.st/latest/linux | tar zxf - -C ${CARGO_HOME:-~/.cargo}/bin
 
-        # The binary build adds > 40 dependencies, so we would like to avoid it, but some integration tests depend on it.
-        # Therefore, we first run a faster build that will report almost all errors immediately and cancel the CI run.
       - name: Build
-        run: cargo build --verbose --no-default-features
-        # After that, we build the remaining crates and binaries...
-      - name: Build binaries
-        run: cargo build --verbose --no-default-features --features binaries
-        # ... and run the tests.
+        run: cargo build --workspace --verbose
       - name: Run tests
-        run: cargo nextest run --verbose --no-default-features --features binaries --config-file .github/nextest-ci.toml
-      - name: Build sals
-        run: cd sals && cargo build --verbose
+        run: cargo nextest run --workspace --verbose --config-file .github/nextest-ci.toml
 
   clippy:
     runs-on: ubuntu-latest

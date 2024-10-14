@@ -21,9 +21,8 @@ use serde::Deserialize;
 use time::macros::format_description;
 
 use crate::memory::Memory;
-use crate::smp::{
-	ControlRegister, CpuIOPorts, ProgramStatusWord, Smp, TestRegister, CONTROL, CPUIO0, CPUIO1, CPUIO2, CPUIO3, TEST,
-};
+use crate::smp::peripherals::{ControlRegister, CpuIOPorts, ProgramStatusWord, TestRegister};
+use crate::smp::{Smp, CONTROL, CPUIO0, CPUIO1, CPUIO2, CPUIO3, TEST};
 
 #[derive(Deserialize, Debug, Clone)]
 struct Test {

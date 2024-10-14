@@ -9,7 +9,7 @@ use std::time::Instant;
 use ::log::{debug, info, warn, LevelFilter};
 use anyhow::Result;
 use clap::{Parser, ValueEnum};
-use smp::{ProgramStatusWord, TestRegister};
+use smp::peripherals::{ProgramStatusWord, TestRegister};
 use spcfile::parser::parse_from_bytes;
 use time::macros::format_description;
 

@@ -9,6 +9,8 @@ use std::time::Instant;
 use ::log::{debug, info, warn, LevelFilter};
 use anyhow::Result;
 use clap::{Parser, ValueEnum};
+use smp::{ProgramStatusWord, TestRegister};
+use spcfile::parser::parse_from_bytes;
 use time::macros::format_description;
 
 use crate::memory::Memory;
@@ -83,13 +85,30 @@ fn upload_from_elf(
 }
 
 fn upload_from_spc(
-	_file_data: &[u8],
-	_smp: &mut Smp,
-	_memory: &mut Memory,
+	file_data: &[u8],
+	smp: &mut Smp,
+	memory: &mut Memory,
 	_arguments: &CliArguments,
 	_ticks: &mut usize,
 ) -> Result<()> {
-	todo!()
+	#[allow(clippy::redundant_closure_for_method_calls)]
+	let file = parse_from_bytes(file_data).map_err(|e| e.to_owned())?;
+	smp.a = file.header.a;
+	smp.x = file.header.x;
+	smp.y = file.header.y;
+	smp.pc = file.header.pc;
+	smp.sp = file.header.sp;
+	smp.psw = ProgramStatusWord(file.header.psw);
+
+	memory.ram = *file.memory.ram;
+
+	smp.copy_mapped_registers_from_memory(memory);
+	// SHENANIGANS! Many ROMs crash the SPC700 to be able to extract the ROM state easily.
+	// Clear the initial test register crash state so that doesn’t stop us.
+	smp.test = TestRegister::default();
+	trace!("{}", smp.is_halted());
+
+	Ok(())
 }
 
 #[allow(clippy::cast_precision_loss)]
@@ -127,6 +146,8 @@ fn main() -> Result<()> {
 	}?;
 
 	debug!("Memory state after upload:\n{}", spcasm::pretty_hex(&memory.ram, None));
+
+	trace!("{}", smp.is_halted());
 
 	while !smp.is_halted() && arguments.cycles.map_or(true, |cycles| ticks < cycles) {
 		smp.tick(&mut memory);

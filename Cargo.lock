@@ -1818,6 +1818,7 @@ dependencies = [
  "simd-json",
  "simple_logger",
  "spcasm",
+ "spcfile",
  "time",
 ]
 

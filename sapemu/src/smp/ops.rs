@@ -1913,7 +1913,7 @@ fn subw_ya_dp(cpu: &mut Smp, memory: &mut Memory, cycle: usize, state: Instructi
 			cpu.psw.set(ProgramStatusWord::Carry, expanded_result >= 0x1_0000);
 			cpu.psw.set(ProgramStatusWord::Overflow, (ya as i16).overflowing_sub(memory_value as i16).1);
 
-			let half_carry_result = (ya & 0x0fff) + ((!memory_value + 1) & 0x0fff) >= 0x1000;
+			let half_carry_result = (ya & 0x0fff) + (((!memory_value).wrapping_add(1)) & 0x0fff) >= 0x1000;
 			cpu.psw.set(ProgramStatusWord::HalfCarry, half_carry_result);
 
 			cpu.y = ((result >> 8) & 0xff) as u8;

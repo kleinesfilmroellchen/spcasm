@@ -621,4 +621,19 @@ impl Smp {
 	pub fn is_halted(&self) -> bool {
 		!self.run_state.is_running() || self.test.contains(TestRegister::Crash)
 	}
+
+	/// Copies the state of the various memory mapped registers from the hidden memory behind it.
+	pub(crate) fn copy_mapped_registers_from_memory(&mut self, memory: &Memory) {
+		self.test = TestRegister(memory.read(TEST, true));
+		self.control = ControlRegister(memory.read(CONTROL, true));
+
+		self.ports.write(0, memory.read(CPUIO0, true));
+		self.ports.write_to_smp::<0>(memory.read(CPUIO0, true));
+		self.ports.write(1, memory.read(CPUIO1, true));
+		self.ports.write_to_smp::<1>(memory.read(CPUIO1, true));
+		self.ports.write(2, memory.read(CPUIO2, true));
+		self.ports.write_to_smp::<2>(memory.read(CPUIO2, true));
+		self.ports.write(3, memory.read(CPUIO3, true));
+		self.ports.write_to_smp::<3>(memory.read(CPUIO3, true));
+	}
 }

@@ -21,6 +21,7 @@ object = { version = "0.36", features = [
 simple_logger = "5"
 bitflags = "2"
 anyhow = "1.0.89"
+spcfile = { path = "../spcfile" }
 
 [dependencies.spcasm]
 path = ".."

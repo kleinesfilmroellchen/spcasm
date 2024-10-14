@@ -82,7 +82,8 @@ impl Default for DspRegisters {
 
 impl DspRegisters {
 	/// Read from a DSP register.
-	pub fn read(&mut self, address: u8) -> u8 {
+	#[must_use]
+	pub fn read(&self, address: u8) -> u8 {
 		let lower_nibble = address & 0xf;
 		let upper_nibble = (address >> 4) & 0x7;
 		match (upper_nibble, lower_nibble) {
@@ -133,7 +134,7 @@ impl DspRegisters {
 			(0x4, 0xC) => self.key_on.0 = value,
 			(0x5, 0xC) => self.key_off.0 = value,
 			(0x6, 0xC) => self.flags.0 = value,
-			(0x7, 0xC) => self.voice_end.0 = value,
+			(0x7, 0xC) => self.voice_end = PerVoiceFlag::default(),
 			(0x0, 0xD) => self.echo_feedback_volume = value,
 			(0x2, 0xD) => self.pitch_mod_enable.0 = value,
 			(0x3, 0xD) => self.noise_enable.0 = value,

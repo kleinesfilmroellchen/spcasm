@@ -11,6 +11,7 @@ use spcasm::sema::Register;
 
 use self::ops::{InstructionImpl, InstructionInternalState, OPCODE_TABLE};
 use self::peripherals::{ControlRegister, CpuIOPorts, ProgramStatusWord, RunState, TestRegister, Timers};
+use crate::dsp::registers::DspRegisters;
 use crate::memory::Memory;
 use crate::trace;
 
@@ -92,6 +93,10 @@ pub const CPUIO1: u16 = 0x00F5;
 pub const CPUIO2: u16 = 0x00F6;
 /// CPUIO3 register.
 pub const CPUIO3: u16 = 0x00F7;
+/// DSP register read/write port.
+pub const DSPADDR: u16 = 0x00F2;
+/// DSP register address port.
+pub const DSPDATA: u16 = 0x00F3;
 
 /// Vector for software interrupts.
 pub const BREAK_VECTOR: u16 = 0xFFDE;
@@ -116,7 +121,7 @@ impl Smp {
 	}
 
 	/// Run a single CPU cycle.
-	pub fn tick(&mut self, memory: &mut Memory) {
+	pub fn tick(&mut self, memory: &mut Memory, dsp: &mut DspRegisters) {
 		self.cycle_counter += 1;
 		if self.run_state != RunState::Running {
 			return;
@@ -127,7 +132,7 @@ impl Smp {
 
 		// Fetch next instruction
 		if self.instruction_cycle == 0 {
-			self.current_opcode = self.read_next_pc(memory);
+			self.current_opcode = self.read_next_pc(memory, dsp);
 			self.instruction_function = OPCODE_TABLE[self.current_opcode as usize];
 			trace!(
 				"(@{}) fetch instruction [{:04x}] = {:02x}",
@@ -139,7 +144,7 @@ impl Smp {
 
 		// Execute tick
 		let instruction_result =
-			(self.instruction_function)(self, memory, self.instruction_cycle, self.last_instruction_state);
+			(self.instruction_function)(self, memory, dsp, self.instruction_cycle, self.last_instruction_state);
 		// Decide whether to advance to next instruction or not
 		match instruction_result {
 			ops::MicroArchAction::Continue(new_state) => {
@@ -244,30 +249,37 @@ impl Smp {
 		self.psw.set(ProgramStatusWord::Break, break_);
 	}
 
-	#[allow(unused)]
 	#[track_caller]
-	fn write(&mut self, address: u16, value: u8, memory: &mut Memory) {
+	fn write(&mut self, address: u16, value: u8, memory: &mut Memory, dsp: &mut DspRegisters) {
 		match address {
 			TEST => self.test_write(value),
 			CONTROL => self.control_write(value),
 			CPUIO0 | CPUIO1 | CPUIO2 | CPUIO3 => self.ports.write(address - CPUIO0, value),
+			DSPDATA => {
+				let dsp_address = memory.read(DSPADDR, self.control.contains(ControlRegister::BootRomEnable));
+				dsp.write(dsp_address, value);
+			},
 			_ => self.memory_write(address, value, memory),
 		}
 	}
 
 	#[track_caller]
-	fn read(&mut self, address: u16, memory: &Memory) -> u8 {
+	fn read(&mut self, address: u16, memory: &Memory, dsp: &DspRegisters) -> u8 {
 		match address {
 			TEST => self.test.0,
 			CONTROL => self.control.0,
 			CPUIO0 | CPUIO1 | CPUIO2 | CPUIO3 => self.ports.read(address - CPUIO0),
+			DSPDATA => {
+				let dsp_address = memory.read(DSPADDR, self.control.contains(ControlRegister::BootRomEnable));
+				dsp.read(dsp_address)
+			},
 			_ => memory.read(address, self.control.contains(ControlRegister::BootRomEnable)),
 		}
 	}
 
 	/// Reads memory at the current program counter and advances it afterwards.
-	fn read_next_pc(&mut self, memory: &Memory) -> u8 {
-		let data = self.read(self.pc, memory);
+	fn read_next_pc(&mut self, memory: &Memory, dsp: &DspRegisters) -> u8 {
+		let data = self.read(self.pc, memory, dsp);
 		self.pc = self.pc.wrapping_add(1);
 		data
 	}

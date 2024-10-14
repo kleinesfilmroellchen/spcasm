@@ -9,6 +9,7 @@ use std::time::Instant;
 use ::log::{debug, info, warn, LevelFilter};
 use anyhow::Result;
 use clap::{Parser, ValueEnum};
+use dsp::Dsp;
 use smp::peripherals::{ProgramStatusWord, TestRegister};
 use spcfile::parser::parse_from_bytes;
 use time::macros::format_description;
@@ -54,13 +55,14 @@ fn try_all_formats(
 	file_data: &[u8],
 	smp: &mut Smp,
 	memory: &mut Memory,
+	dsp: &mut Dsp,
 	arguments: &CliArguments,
 	ticks: &mut usize,
 ) -> Result<()> {
 	if object::read::elf::ElfFile32::<object::LittleEndian>::parse(file_data).is_ok() {
-		upload_from_elf(file_data, smp, memory, arguments, ticks)
+		upload_from_elf(file_data, smp, memory, dsp, arguments, ticks)
 	} else {
-		upload_from_spc(file_data, smp, memory, arguments, ticks)
+		upload_from_spc(file_data, smp, memory, dsp, arguments, ticks)
 	}
 }
 
@@ -68,6 +70,7 @@ fn upload_from_elf(
 	file_data: &[u8],
 	smp: &mut Smp,
 	memory: &mut Memory,
+	dsp: &mut Dsp,
 	arguments: &CliArguments,
 	ticks: &mut usize,
 ) -> Result<()> {
@@ -75,7 +78,7 @@ fn upload_from_elf(
 
 	while !smp.is_halted() && arguments.cycles.map_or(true, |cycles| *ticks < cycles) {
 		uploader.perform_step(&mut smp.ports);
-		smp.tick(memory);
+		smp.tick(memory, &mut dsp.registers);
 		*ticks += 1;
 		if uploader.is_finished() {
 			break;
@@ -88,6 +91,7 @@ fn upload_from_spc(
 	file_data: &[u8],
 	smp: &mut Smp,
 	memory: &mut Memory,
+	dsp: &mut Dsp,
 	_arguments: &CliArguments,
 	_ticks: &mut usize,
 ) -> Result<()> {
@@ -101,6 +105,7 @@ fn upload_from_spc(
 	smp.psw = ProgramStatusWord(file.header.psw);
 
 	memory.ram = *file.memory.ram;
+	dsp.load_register_bank(&file.memory.dsp_registers);
 
 	smp.copy_mapped_registers_from_memory(memory);
 	// SHENANIGANS! Many ROMs crash the SPC700 to be able to extract the ROM state easily.
@@ -133,6 +138,7 @@ fn main() -> Result<()> {
 
 	let mut memory = Box::new(Memory::new());
 	let mut smp = Smp::new(&mut memory);
+	let mut dsp = Dsp::new();
 
 	let file_data = fs::read(&arguments.input)?;
 
@@ -140,9 +146,9 @@ fn main() -> Result<()> {
 	let mut ticks = 0;
 
 	match arguments.format {
-		Some(InputFormat::Elf) => upload_from_elf(&file_data, &mut smp, &mut memory, &arguments, &mut ticks),
-		Some(InputFormat::Spc) => upload_from_spc(&file_data, &mut smp, &mut memory, &arguments, &mut ticks),
-		None => try_all_formats(&file_data, &mut smp, &mut memory, &arguments, &mut ticks),
+		Some(InputFormat::Elf) => upload_from_elf(&file_data, &mut smp, &mut memory, &mut dsp, &arguments, &mut ticks),
+		Some(InputFormat::Spc) => upload_from_spc(&file_data, &mut smp, &mut memory, &mut dsp, &arguments, &mut ticks),
+		None => try_all_formats(&file_data, &mut smp, &mut memory, &mut dsp, &arguments, &mut ticks),
 	}?;
 
 	debug!("Memory state after upload:\n{}", spcasm::pretty_hex(&memory.ram, None));
@@ -150,7 +156,7 @@ fn main() -> Result<()> {
 	trace!("{}", smp.is_halted());
 
 	while !smp.is_halted() && arguments.cycles.map_or(true, |cycles| ticks < cycles) {
-		smp.tick(&mut memory);
+		smp.tick(&mut memory, &mut dsp.registers);
 		ticks += 1;
 	}
 

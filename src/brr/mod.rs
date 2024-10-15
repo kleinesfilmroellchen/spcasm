@@ -523,7 +523,7 @@ fn merge_nybbles_into_bytes(nybbles: EncodedBlockSamples) -> [u8; 8] {
 /// * `l` is the loop bit, indicating whether playback should loop to the loop point (specified in the sample table)
 ///   after this block. Note that a `l` bit set without an `e` bit set has no effect.
 /// * `e` is the end bit, indicating that the sample has ended.
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+#[derive(Clone, Copy, Debug, Eq, PartialEq, Default)]
 pub struct Header {
 	/// The real amount of shift this header specifies for the samples in its block.
 	pub real_shift: i8,
@@ -563,10 +563,11 @@ impl From<Header> for u8 {
 /// | 1    | 15/16 ~ 1    | 0            | delta/differential coding           |
 /// | 2    | 61/32 ~ 2    | -15/16 ~ -1  | almost polynomial order 2 predictor |
 /// | 3    | 115/64 ~ 2   | -13/16 ~ -1  | ???                                 |
-#[derive(Clone, Copy, Debug, Eq, PartialEq, FromPrimitive)]
+#[derive(Clone, Copy, Debug, Default, Eq, PartialEq, FromPrimitive)]
 #[repr(u8)]
 pub enum LPCFilter {
 	/// Filter 0, verbatim samples.
+	#[default]
 	Zero = 0,
 	/// Filter 1, differential coding.
 	One = 1,
@@ -653,10 +654,11 @@ impl std::fmt::Display for LPCFilter {
 }
 
 /// Loop and end flags used in the BRR block header to determine sample end and looping.
-#[derive(Clone, Copy, Debug, Eq, FromPrimitive)]
+#[derive(Clone, Copy, Debug, Default, Eq, FromPrimitive)]
 #[repr(u8)]
 pub enum LoopEndFlags {
 	/// Nothing special happens, this is a normal sample.
+	#[default]
 	Nothing = 0,
 	/// End the sample playback without looping.
 	EndWithoutLooping = 1,

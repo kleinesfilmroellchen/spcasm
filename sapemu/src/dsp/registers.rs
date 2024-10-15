@@ -5,77 +5,79 @@ use std::ops::Deref;
 
 use bitflags::bitflags;
 
+use super::tables::RATE_TABLE;
+
 /// All DSP registers exposed to the SMP.
 #[derive(Copy, Clone, Debug)]
 pub struct DspRegisters {
 	/// x0-x9, per-voice registers `VxVOLL` - `VxOUTX`
-	voices:               [VoiceRegisters; 8],
+	pub(super) voices:                 [VoiceRegisters; 8],
 	/// 0C, MVOLL
-	main_volume_left:     u8,
+	pub(super) main_volume_left:       u8,
 	/// 1C, MVOLR
-	main_volume_right:    u8,
+	pub(super) main_volume_right:      u8,
 	/// 2C, EVOLL
-	echo_volume_left:     u8,
+	pub(super) echo_volume_left:       u8,
 	/// 3C, EVOLR
-	echo_volume_right:    u8,
+	pub(super) echo_volume_right:      u8,
 	/// 4C, KON
-	key_on:               PerVoiceFlag,
+	pub(super) key_on:                 PerVoiceFlag,
 	/// 5C, KOFF
-	key_off:              PerVoiceFlag,
+	pub(super) key_off:                PerVoiceFlag,
 	/// 6C, FLG
-	flags:                DspFlags,
+	pub(super) flags:                  DspFlags,
 	/// 7C, ENDX
-	voice_end:            PerVoiceFlag,
+	pub(super) voice_end:              PerVoiceFlag,
 	/// 0D, EFB
-	echo_feedback_volume: u8,
+	pub(super) echo_feedback_volume:   u8,
 	/// 2D, PMON
-	pitch_mod_enable:     PerVoiceFlag,
+	pub(super) pitch_mod_enable:       PerVoiceFlag,
 	/// 3D, NON
-	noise_enable:         PerVoiceFlag,
+	pub(super) noise_enable:           PerVoiceFlag,
 	/// 4D, EON
-	echo_enable:          PerVoiceFlag,
+	pub(super) echo_enable:            PerVoiceFlag,
 	/// 5D, DIR
-	sample_table_address: u8,
+	pub(super) sample_directory_index: u8,
 	/// 6D, ESA 🚀
-	echo_buffer_address:  u8,
+	pub(super) echo_source:            u8,
 	/// 7D, EDL
-	echo_delay:           u8,
+	pub(super) echo_delay:             u8,
 	/// xF, `FIRx`
-	fir_coefficients:     [u8; 8],
+	pub(super) fir_coefficients:       [u8; 8],
 	/// xA, unused
-	unused_a:             [u8; 8],
+	pub(super) unused_a:               [u8; 8],
 	/// xB, unused
-	unused_b:             [u8; 8],
+	pub(super) unused_b:               [u8; 8],
 	/// 1D, unused
-	unused_1d:            u8,
+	pub(super) unused_1d:              u8,
 	/// xE, unused
-	unused_e:             [u8; 8],
+	pub(super) unused_e:               [u8; 8],
 }
 
 impl Default for DspRegisters {
 	fn default() -> Self {
 		Self {
-			voices:               Default::default(),
-			main_volume_left:     Default::default(),
-			main_volume_right:    Default::default(),
-			echo_volume_left:     Default::default(),
-			echo_volume_right:    Default::default(),
-			key_on:               PerVoiceFlag::default(),
-			key_off:              PerVoiceFlag::default(),
-			flags:                DspFlags::default(),
-			voice_end:            PerVoiceFlag(0xff),
-			echo_feedback_volume: Default::default(),
-			pitch_mod_enable:     PerVoiceFlag::default(),
-			noise_enable:         PerVoiceFlag::default(),
-			echo_enable:          PerVoiceFlag::default(),
-			sample_table_address: Default::default(),
-			echo_buffer_address:  Default::default(),
-			echo_delay:           Default::default(),
-			fir_coefficients:     Default::default(),
-			unused_a:             Default::default(),
-			unused_b:             Default::default(),
-			unused_1d:            Default::default(),
-			unused_e:             Default::default(),
+			voices:                 Default::default(),
+			main_volume_left:       Default::default(),
+			main_volume_right:      Default::default(),
+			echo_volume_left:       Default::default(),
+			echo_volume_right:      Default::default(),
+			key_on:                 PerVoiceFlag::default(),
+			key_off:                PerVoiceFlag::default(),
+			flags:                  DspFlags::default(),
+			voice_end:              PerVoiceFlag(0xff),
+			echo_feedback_volume:   Default::default(),
+			pitch_mod_enable:       PerVoiceFlag::default(),
+			noise_enable:           PerVoiceFlag::default(),
+			echo_enable:            PerVoiceFlag::default(),
+			sample_directory_index: Default::default(),
+			echo_source:            Default::default(),
+			echo_delay:             Default::default(),
+			fir_coefficients:       Default::default(),
+			unused_a:               Default::default(),
+			unused_b:               Default::default(),
+			unused_1d:              Default::default(),
+			unused_e:               Default::default(),
 		}
 	}
 }
@@ -105,8 +107,8 @@ impl DspRegisters {
 			(0x2, 0xD) => self.pitch_mod_enable.0,
 			(0x3, 0xD) => self.noise_enable.0,
 			(0x4, 0xD) => self.echo_enable.0,
-			(0x5, 0xD) => self.sample_table_address,
-			(0x6, 0xD) => self.echo_buffer_address,
+			(0x5, 0xD) => self.sample_directory_index,
+			(0x6, 0xD) => self.echo_source,
 			(0x7, 0xD) => self.echo_delay,
 			(_, 0xF) => self.fir_coefficients[upper_nibble as usize],
 			_ => unreachable!(),
@@ -139,12 +141,36 @@ impl DspRegisters {
 			(0x2, 0xD) => self.pitch_mod_enable.0 = value,
 			(0x3, 0xD) => self.noise_enable.0 = value,
 			(0x4, 0xD) => self.echo_enable.0 = value,
-			(0x5, 0xD) => self.sample_table_address = value,
-			(0x6, 0xD) => self.echo_buffer_address = value,
+			(0x5, 0xD) => self.sample_directory_index = value,
+			(0x6, 0xD) => self.echo_source = value,
 			(0x7, 0xD) => self.echo_delay = value,
 			(_, 0xF) => self.fir_coefficients[upper_nibble as usize] = value,
 			_ => unreachable!(),
 		}
+	}
+
+	/// Returns the actual address of the sample directory.
+	#[must_use]
+	pub const fn sample_directory(&self) -> u16 {
+		self.sample_directory_index as u16 * 0x100
+	}
+
+	/// Returns the noise frequency divider from the flags register.
+	#[must_use]
+	pub fn noise_frequency(&self) -> u16 {
+		RATE_TABLE[(self.flags & DspFlags::NOISE_FREQUENCY).0 as usize]
+	}
+
+	/// Returns the number of samples that the echo buffer delays by.
+	#[must_use]
+	pub const fn echo_delay_samples(&self) -> u16 {
+		self.echo_delay as u16 * 2048
+	}
+
+	/// Returns the base address of the echo ring buffer in memory.
+	#[must_use]
+	pub const fn echo_base_address(&self) -> u16 {
+		self.echo_source as u16 * 256
 	}
 }
 
@@ -152,21 +178,25 @@ impl DspRegisters {
 #[derive(Clone, Copy, Debug, Default)]
 pub struct VoiceRegisters {
 	/// 0, VOLL
-	volume_left:    u8,
+	pub(super) volume_left:    u8,
 	/// 1, VOLR
-	volume_right:   u8,
-	/// 2, PITCHL and 3, PITCHH
-	pitch:          u16,
+	pub(super) volume_right:   u8,
+	/// 2, PITCHL
+	pub(super) pitch_low:      u8,
+	/// 3, PITCHH
+	pub(super) pitch_high:     u8,
 	/// 4, SRCN
-	sample_number:  u8,
-	/// 5, ADSR1 (low) and 6, ADSR2 (high)
-	adsr_settings:  AdsrSettings,
+	pub(super) sample_number:  u8,
+	/// 5, ADSR1 (low)
+	pub(super) adsr_low:       u8,
+	/// 6, ADSR2 (high)
+	pub(super) adsr_high:      u8,
 	/// 7, GAIN
-	gain_settings:  u8,
+	pub(super) gain_settings:  u8,
 	/// 8, ENVX
-	envelope_value: u8,
+	pub(super) envelope_value: u8,
 	/// 9, OUTX
-	output_value:   u8,
+	pub(super) output_value:   u8,
 }
 
 impl VoiceRegisters {
@@ -175,11 +205,11 @@ impl VoiceRegisters {
 		match address {
 			0 => self.volume_left,
 			1 => self.volume_right,
-			2 => self.pitch.to_le_bytes()[0],
-			3 => self.pitch.to_le_bytes()[1],
+			2 => self.pitch_low,
+			3 => self.pitch_high,
 			4 => self.sample_number,
-			5 => self.adsr_settings.to_be_bytes()[0],
-			6 => self.adsr_settings.to_be_bytes()[1],
+			5 => self.adsr_low,
+			6 => self.adsr_high,
 			7 => self.gain_settings,
 			8 => self.envelope_value,
 			9 => self.output_value,
@@ -192,11 +222,11 @@ impl VoiceRegisters {
 		match address {
 			0 => self.volume_left = value,
 			1 => self.volume_right = value,
-			2 => self.pitch = (self.pitch & 0xf0) | u16::from(value),
-			3 => self.pitch = (self.pitch & 0xf) | (u16::from(value) << 8),
+			2 => self.pitch_low = value,
+			3 => self.pitch_high = value,
 			4 => self.sample_number = value,
-			5 => self.adsr_settings.0 = (self.adsr_settings.0 & 0xf0) | u16::from(value),
-			6 => self.adsr_settings.0 = (self.adsr_settings.0 & 0xf) | (u16::from(value) << 8),
+			5 => self.adsr_low = value,
+			6 => self.adsr_high = value,
 			7 => self.gain_settings = value,
 			8 => self.envelope_value = value,
 			9 => self.output_value = value,
@@ -209,19 +239,6 @@ impl VoiceRegisters {
 #[derive(Clone, Copy, Debug, Default)]
 #[repr(transparent)]
 pub struct PerVoiceFlag(u8);
-
-/// ADSR settings per voice, a 16-bit field.
-#[derive(Clone, Copy, Debug, Default)]
-#[repr(transparent)]
-pub struct AdsrSettings(u16);
-
-impl Deref for AdsrSettings {
-	type Target = u16;
-
-	fn deref(&self) -> &Self::Target {
-		&self.0
-	}
-}
 
 /// Global DSP flags in the FLG register.
 #[derive(Clone, Copy, Debug)]

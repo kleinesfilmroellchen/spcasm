@@ -39,7 +39,7 @@ pub const GAUSS_TABLE: [u16; 512] = [
 ];
 
 /// Envelope rate table.
-pub const RATE_TABLE: [usize; 1 << 5] = [
+pub const RATE_TABLE: [u16; 1 << 5] = [
 	// Rate 0 is a sentinel value since it means no step is ever taken. This is handled elsewhere.
 	0, 2048, 1536, 1280, 1024, 768, 640, 512, 384, 320, 256, 192, 160, 128, 96, 80, 64, 48, 40, 32, 24, 20, 16, 12, 10,
 	8, 6, 5, 4, 3, 2, 1,

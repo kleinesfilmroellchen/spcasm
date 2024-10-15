@@ -62,7 +62,7 @@ impl Memory {
 	/// Performs a 16-bit little endian read from memory at the given address.
 	#[inline]
 	pub fn read_word(&mut self, address: u16, enable_boot_rom: bool) -> u16 {
-		u16::from(self.read(address, enable_boot_rom)) | (u16::from(self.read(address + 1, enable_boot_rom)) << 8)
+		u16::from_le_bytes([self.read(address, enable_boot_rom), self.read(address + 1, enable_boot_rom)])
 	}
 
 	/// Copies the state of the various memory mapped registers to the hidden memory behind it. This function is used

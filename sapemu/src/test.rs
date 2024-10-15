@@ -24,7 +24,9 @@ use crate::dsp::registers::DspRegisters;
 use crate::dsp::Dsp;
 use crate::memory::Memory;
 use crate::smp::peripherals::{ControlRegister, CpuIOPorts, ProgramStatusWord, TestRegister};
-use crate::smp::{Smp, CONTROL, CPUIO0, CPUIO1, CPUIO2, CPUIO3, DSPADDR, TEST};
+use crate::smp::{
+	Smp, CONTROL, CPUIO0, CPUIO1, CPUIO2, CPUIO3, DSPADDR, DSPDATA, T0DIV, T0OUT, T1DIV, T1OUT, T2DIV, T2OUT, TEST,
+};
 
 #[derive(Deserialize, Debug, Clone)]
 struct Test {
@@ -115,9 +117,15 @@ impl From<&RamState> for Memory {
 	}
 }
 
+/// Any test accessing these addresses will be wrong since it doesn't properly account for hardware behavior.
+/// See <https://github.com/SingleStepTests/spc700/issues/1>.
+const IGNORED_ADDRESSES: &[u16] = &[TEST, CONTROL, DSPADDR, DSPDATA, T0DIV, T0OUT, T1DIV, T1OUT, T2DIV, T2OUT];
+
 impl PartialEq<Memory> for RamState {
 	fn eq(&self, other: &Memory) -> bool {
-		self.0.iter().all(|MemoryCellState { address, value }| other.read(*address, false) == *value)
+		self.0.iter().all(|MemoryCellState { address, value }| {
+			IGNORED_ADDRESSES.contains(address) || other.read(*address, false) == *value
+		})
 	}
 }
 
@@ -224,45 +232,6 @@ impl TryFrom<(Option<u16>, Option<u8>, String)> for Cycle {
 	}
 }
 
-/// Tests that are not run due to issues with `SingleStepTests`' disregard of hardware properties.
-/// See <https://github.com/SingleStepTests/spc700/issues/1>.
-const IGNORED_TESTS: &[&str] = &[
-	"09 01A8", "39 0295", "59 0146", "3A 0355", "47 02DD", "6E 0344", "99 02BD", "A9 01BF", "C7 000C", "D7 00B9",
-	"D7 0110", "D7 0111", "DA 0082", // DSP-related
-	"03 001B", "02 0097", "07 0123", "06 01D9", "04 02A7", "09 026A", "0E 022E", "0B 03E4", "18 0078", "12 03A4",
-	"13 02F3", "1A 00D4", "1B 0034", "23 00FF", "22 018B", "24 0023", "27 0002", "29 00B4", "2B 00EA", "26 01ED",
-	"2E 0014", "32 0018", "33 0115", "34 0179", "3B 002F", "3A 0046", "3E 0082", "37 0328", "38 03D5", "42 00C4",
-	"43 002E", "44 007E", "46 008B", "49 00B0", "47 00A2", "4B 0379", "52 013E", "57 01C8", "54 0200", "53 0272",
-	"58 005F", "5B 01C0", "5A 02CE", "62 0089", "63 01A0", "64 0135", "67 0200", "66 0296", "69 0179", "6B 009B",
-	"6E 031A", "74 006C", "79 004C", "78 01B0", "77 0302", "7E 0042", "7B 01BE", "7A 021D", "82 0053", "83 0013",
-	"84 0176", "89 0212", "8B 0123", "93 001F", "92 023B", "94 01AE", "8F 03C6", "99 00F0", "9B 00CC", "98 031D",
-	"9A 0332", "A2 00AC", "A3 00AF", "A7 009A", "A6 028E", "A9 01A8", "AB 02F8", "B0 0028", "B4 002D", "AF 02B8",
-	"B3 022A", "B2 021C", "BA 0087", "B8 0115", "BB 01BF", "B7 0258", "B9 022B", "BF 00A4", "C4 016A", "C2 02F7",
-	"C6 00A3", "C7 0173", "CB 001F", "CD 013B", "CA 0227", "D2 0024", "CF 022E", "D3 0065", "D4 000A", "D8 00D3",
-	"D9 00B9", "DB 001D", "D7 025A", "DA 0115", "DE 01E6", "E2 013E", "E3 00FC", "E6 0036", "E4 013F", "E7 015C",
-	"EB 0158", "F2 0003", "F3 015C", "F9 005A", "F7 025E", "F4 03AA", "FB 0313", "03 01CC", "02 0290", "06 03CF",
-	"09 0317", "13 02F4", "18 01CF", "1A 0072", "1B 032C", "22 0221", "24 0149", "27 00A6", "23 0301", "26 02D0",
-	"29 014A", "2B 016B", "2E 018E", "32 01C0", "37 0049", "34 035B", "3B 0160", "3E 0138", "3A 03E1", "43 00BA",
-	"44 010C", "46 00F4", "47 0116", "49 0148", "4B 0384", "52 020A", "58 00B4", "57 01D0", "5A 0194", "5B 023F",
-	"62 017F", "64 0282", "63 03CA", "66 039A", "69 0228", "6B 018B", "6E 03AB", "79 0135", "74 03CC", "7A 02C6",
-	"7B 0339", "82 008B", "7E 02B7", "84 02CE", "8B 0159", "93 018D", "97 0119", "92 02D1", "94 02B7", "9B 032E",
-	"A2 0209", "A7 0166", "B4 010D", "BA 00DE", "B7 0360", "BB 02E7", "BF 02B9", "C4 0184", "C7 018D", "CB 0162",
-	"D4 003A", "D2 0261", "DA 01A1", "D7 0267", "D9 0314", "DE 01EA", "E2 021F", "E3 0173", "E7 0056", "E4 0264",
-	"E6 013A", "EB 03C6", "F7 007F", "F3 02EA", "F4 03C1", "F9 00A3", "FB 0375", "18 01F9", "1A 0179", "1B 03BF",
-	"27 0176", "24 0309", "23 039E", "29 01DC", "2B 02C4", "2E 0260", "37 0123", "3E 0185", "3B 0351", "43 0225",
-	"44 0260", "46 0284", "58 02C7", "5B 02E6", "5A 0302", "62 0203", "6B 01FC", "69 03A2", "79 017D", "7A 02D6",
-	"7E 0384", "82 039B", "8B 03B4", "93 0263", "92 034F", "94 03DC", "97 02BB", "9B 0334", "A2 025C", "A7 0173",
-	"B4 0137", "BA 00E3", "B7 03CF", "C7 021F", "C4 0393", "CB 01A7", "D4 0081", "D7 036D", "DA 031D", "DE 0347",
-	"E2 032B", "E3 025C", "E6 01F4", "E7 01A7", "E4 0322", "F3 0376", "F7 03E2", "1A 02CA", "1B 03CE", "27 01D7",
-	"29 0280", "37 0357", "3E 023A", "44 02DE", "5A 0373", "62 02A5", "79 0213", "8B 03C4", "93 035C", "A7 01C6",
-	"B4 0279", "BA 02B8", "C7 023A", "CB 026B", "D4 01C3", "D7 03BD", "E6 02E6", "E7 0331", "F3 03D5", "27 020F",
-	"44 033F", "A7 0295", "B4 02C7", "C7 0251", "D4 033B", "E6 0331", "27 024E", "A7 031E", "B4 034F", "C7 03A6",
-	"D4 0348", "27 0276", "A7 0339", "19 00CA", "29 02C2", "39 0094", "49 01DE", "59 00C5", "99 0162", "A9 0267",
-	"B9 02B2", "FA 008F", "19 0278", "29 02CA", "39 015F", "49 036C", "59 012E", "99 0290", "A9 0276", "FA 00D8",
-	"19 02DF", "29 038A", "59 01EB", "99 02E0", "A9 02D6", "FA 01CB", "19 02E8", "99 032E", "A9 032B", "FA 02A1",
-	"19 03CE", "A9 0334",
-];
-
 /// rstest limitation: we have to generate all values in advance, unfortunately.
 /// python: `for i in range(0xff+1): print(hex(i), end=', ')`
 #[rstest]
@@ -302,8 +271,15 @@ fn single_instruction(
 			let mut copy = file_bytes.to_vec();
 			let test_file: Vec<Test> = simd_json::serde::from_slice(&mut copy).expect("couldn't parse test set");
 			for test in test_file {
-				if IGNORED_TESTS.contains(&test.name.as_ref()) {
-					info!("skipping ignored test {}", test.name);
+				if test
+					.initial_state
+					.ram
+					.0
+					.iter()
+					.chain(test.final_state.ram.0.iter())
+					.any(|x| IGNORED_ADDRESSES.contains(&x.address))
+				{
+					info!("skipping test {} since it uses ignored addresses", test.name);
 					continue;
 				}
 				info!("#######################################\nperforming test {}...", test.name);

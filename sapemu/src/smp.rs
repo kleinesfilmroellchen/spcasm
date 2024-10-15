@@ -97,6 +97,18 @@ pub const CPUIO3: u16 = 0x00F7;
 pub const DSPADDR: u16 = 0x00F2;
 /// DSP register address port.
 pub const DSPDATA: u16 = 0x00F3;
+/// Timer 0 divider.
+pub const T0DIV: u16 = 0x00FA;
+/// Timer 1 divider.
+pub const T1DIV: u16 = 0x00FB;
+/// Timer 2 divider.
+pub const T2DIV: u16 = 0x00FC;
+/// Timer 0 output.
+pub const T0OUT: u16 = 0x00FD;
+/// Timer 1 output.
+pub const T1OUT: u16 = 0x00FE;
+/// Timer 2 output.
+pub const T2OUT: u16 = 0x00FF;
 
 /// Vector for software interrupts.
 pub const BREAK_VECTOR: u16 = 0xFFDE;
@@ -255,6 +267,10 @@ impl Smp {
 			TEST => self.test_write(value),
 			CONTROL => self.control_write(value),
 			CPUIO0 | CPUIO1 | CPUIO2 | CPUIO3 => self.ports.write(address - CPUIO0, value),
+			T0DIV => self.timers.timer_divisor[0] = value,
+			T1DIV => self.timers.timer_divisor[1] = value,
+			T2DIV => self.timers.timer_divisor[2] = value,
+			// Writes to the timer output registers pass through to memory.
 			DSPDATA => {
 				let dsp_address = memory.read(DSPADDR, self.control.contains(ControlRegister::BootRomEnable));
 				dsp.write(dsp_address, value);
@@ -273,6 +289,12 @@ impl Smp {
 				let dsp_address = memory.read(DSPADDR, self.control.contains(ControlRegister::BootRomEnable));
 				dsp.read(dsp_address)
 			},
+			T0DIV => self.timers.timer_divisor[0],
+			T1DIV => self.timers.timer_divisor[1],
+			T2DIV => self.timers.timer_divisor[2],
+			T0OUT => self.timers.timer_out[0],
+			T1OUT => self.timers.timer_out[1],
+			T2OUT => self.timers.timer_out[2],
 			_ => memory.read(address, self.control.contains(ControlRegister::BootRomEnable)),
 		}
 	}

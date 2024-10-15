@@ -129,13 +129,13 @@ impl Timers {
 	const T2_RATE: usize = 64000;
 	const TIMER_CLOCKS_PER_STEP: [usize; 3] =
 		[Self::T01_CLOCKS_PER_STEP, Self::T01_CLOCKS_PER_STEP, Self::T2_CLOCKS_PER_STEP];
-	#[allow(unused)]
 	const TIMER_RATES: [usize; 3] = [Self::T01_RATE, Self::T01_RATE, Self::T2_RATE];
 
 	/// Create new timers.
 	#[must_use]
 	pub fn new() -> Self {
-		let mut new = Self { timer_out: [0; 3], timer_divisor: [1; 3], timer_tick_remaining: [0; 3] };
+		let mut new =
+			Self { timer_out: [0; 3], timer_divisor: [0xFF; 3], timer_tick_remaining: [0; 3] };
 		new.reset_timers_if_necessary();
 		new
 	}

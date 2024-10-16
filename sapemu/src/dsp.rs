@@ -90,7 +90,7 @@ impl Dsp {
 
 		// Note that we can't run the processing just once per sample cycle due to when hardware registers are written
 		// back.
-		self.run_audio_processing(memory);
+		self.run_audio_processing();
 	}
 
 	/// Execute memory reads for this sample cycle.

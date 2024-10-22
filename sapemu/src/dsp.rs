@@ -2,6 +2,8 @@
 
 #![allow(unused)]
 
+use num_derive::FromPrimitive;
+use num_traits::FromPrimitive;
 use registers::{DspFlags, DspRegisters, PerVoiceFlag};
 use spcasm::brr;
 use tables::RATE_TABLE;
@@ -151,9 +153,7 @@ impl Dsp {
 				// V1ADSR1
 				self.voices_state[1].envelope_settings.set_adsr1(self.registers.voices[1].adsr_low);
 				// ENDX.0
-				self.registers
-					.voice_end
-					.set(PerVoiceFlag::ZERO, self.voices_state[0].brr_decoder_step.just_read_end_block());
+				self.registers.voice_end.set(PerVoiceFlag::ZERO, self.voices_state[0].just_read_end_block());
 			},
 			2 => {
 				// V0ENVX
@@ -184,9 +184,7 @@ impl Dsp {
 				// V2ADSR1
 				self.voices_state[2].envelope_settings.set_adsr1(self.registers.voices[2].adsr_low);
 				// ENDX.1
-				self.registers
-					.voice_end
-					.set(PerVoiceFlag::ONE, self.voices_state[1].brr_decoder_step.just_read_end_block());
+				self.registers.voice_end.set(PerVoiceFlag::ONE, self.voices_state[1].just_read_end_block());
 			},
 			5 => {
 				// V1ENVX
@@ -217,9 +215,7 @@ impl Dsp {
 				// V3ADSR1
 				self.voices_state[3].envelope_settings.set_adsr1(self.registers.voices[3].adsr_low);
 				// ENDX.2
-				self.registers
-					.voice_end
-					.set(PerVoiceFlag::TWO, self.voices_state[2].brr_decoder_step.just_read_end_block());
+				self.registers.voice_end.set(PerVoiceFlag::TWO, self.voices_state[2].just_read_end_block());
 			},
 			8 => {
 				// V2ENVX
@@ -250,9 +246,7 @@ impl Dsp {
 				// V4ADSR1
 				self.voices_state[4].envelope_settings.set_adsr1(self.registers.voices[4].adsr_low);
 				// ENDX.3
-				self.registers
-					.voice_end
-					.set(PerVoiceFlag::THREE, self.voices_state[3].brr_decoder_step.just_read_end_block());
+				self.registers.voice_end.set(PerVoiceFlag::THREE, self.voices_state[3].just_read_end_block());
 			},
 			11 => {
 				// V3ENVX
@@ -283,9 +277,7 @@ impl Dsp {
 				// V5ADSR1
 				self.voices_state[5].envelope_settings.set_adsr1(self.registers.voices[5].adsr_low);
 				// ENDX.4
-				self.registers
-					.voice_end
-					.set(PerVoiceFlag::FOUR, self.voices_state[4].brr_decoder_step.just_read_end_block());
+				self.registers.voice_end.set(PerVoiceFlag::FOUR, self.voices_state[4].just_read_end_block());
 			},
 			14 => {
 				// V4ENVX
@@ -316,9 +308,7 @@ impl Dsp {
 				// V6ADSR1
 				self.voices_state[6].envelope_settings.set_adsr1(self.registers.voices[6].adsr_low);
 				// ENDX.5
-				self.registers
-					.voice_end
-					.set(PerVoiceFlag::FIVE, self.voices_state[5].brr_decoder_step.just_read_end_block());
+				self.registers.voice_end.set(PerVoiceFlag::FIVE, self.voices_state[5].just_read_end_block());
 			},
 			17 => {
 				// V5ENVX
@@ -349,9 +339,7 @@ impl Dsp {
 				// V7ADSR1
 				self.voices_state[7].envelope_settings.set_adsr1(self.registers.voices[7].adsr_low);
 				// ENDX.6
-				self.registers
-					.voice_end
-					.set(PerVoiceFlag::SIX, self.voices_state[6].brr_decoder_step.just_read_end_block());
+				self.registers.voice_end.set(PerVoiceFlag::SIX, self.voices_state[6].just_read_end_block());
 			},
 			20 => {
 				// V6ENVX
@@ -382,9 +370,7 @@ impl Dsp {
 				// V0ADSR1
 				self.voices_state[0].envelope_settings.set_adsr1(self.registers.voices[0].adsr_low);
 				// ENDX.7
-				self.registers
-					.voice_end
-					.set(PerVoiceFlag::SEVEN, self.voices_state[7].brr_decoder_step.just_read_end_block());
+				self.registers.voice_end.set(PerVoiceFlag::SEVEN, self.voices_state[7].just_read_end_block());
 			},
 			23 => {
 				// V7ENVX
@@ -635,10 +621,12 @@ impl VoiceState {
 		if self.was_keyed_on {
 			// Read address of sample start
 			self.brr_address = memory.read_word(directory_address, false);
+			trace!("sample directory at {} -> brr starts at {}", directory_address, self.brr_address);
 		}
 		if self.will_loop() {
 			// Read address of loop point
 			self.brr_address = memory.read_word(directory_address.wrapping_add(2), false);
+			trace!("sample directory at {} -> brr loops at {}", directory_address.wrapping_add(2), self.brr_address);
 		}
 	}
 
@@ -675,6 +663,12 @@ impl VoiceState {
 		// Buffer index has fallen at least 4 samples behind the pitch index, so we can now write there.
 		let buffer_write_end = (self.brr_buffer_index + 4) % (BRR_DECODE_BUFFER_SIZE as u8);
 		self.pitch_counter.sample_index() >= buffer_write_end
+	}
+
+	/// Returns true if the BRR decoder just read the header of an end block.
+	#[must_use]
+	pub const fn just_read_end_block(&self) -> bool {
+		self.brr_decoder_step.just_read_header() && self.brr_header.flags.is_end()
 	}
 
 	/// ENVX register value for this voice, which are the upper 7 bits of the 11-bit envelope value.
@@ -788,24 +782,50 @@ impl EnvelopeSettings {
 	/// Set the ADSR2 register value, if applicable.
 	#[allow(clippy::needless_pass_by_ref_mut)]
 	pub fn set_adsr2(&mut self, adsr2: u8) {
-		todo!()
+		// Only do anything in ADSR mode.
+		if let Self::Adsr { attack_rate, decay_rate, .. } = self {
+			let sustain_rate = adsr2 & 0x1f;
+			let sustain_level = (((adsr2 >> 5) & 0x7) as u16 + 1) * 0x100;
+
+			*self = Self::Adsr {
+				attack_rate: *attack_rate,
+				decay_rate: *decay_rate,
+				sustain_level,
+				sustain_rate: RATE_TABLE[sustain_rate as usize],
+			};
+		}
 	}
 
 	/// Set the GAIN register value, if applicable.
 	#[allow(clippy::needless_pass_by_ref_mut)]
 	pub fn set_gain(&mut self, gain: u8) {
-		todo!()
+		match *self {
+			Self::Adsr { .. } => {
+				return;
+			},
+			Self::FixedGain { .. } | Self::CustomGain { .. } =>
+				if gain & 0x80 > 0 {
+					let rate = gain & 0x1f;
+					let mode = (gain >> 5) & 0x3;
+					*self =
+						Self::CustomGain { rate: RATE_TABLE[rate as usize], mode: GainMode::from_u8(mode).unwrap() };
+				} else {
+					let level = (gain & 0x7f) as u16 * 16;
+					*self = Self::FixedGain { level };
+				},
+		}
 	}
 }
 
 /// Custom gain modes.
-#[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
+#[derive(Clone, Copy, Debug, Default, Eq, PartialEq, FromPrimitive)]
+#[repr(u8)]
 enum GainMode {
 	#[default]
-	LinearDecrease,
-	ExponentialDecrease,
-	LinearIncrease,
-	BentIncrease,
+	LinearDecrease = 0,
+	ExponentialDecrease = 1,
+	LinearIncrease = 2,
+	BentIncrease = 3,
 }
 
 /// Internal BRR decoder state machine.
@@ -842,9 +862,11 @@ impl BrrDecoderStep {
 		self == Self::Done
 	}
 
-	/// Returns whether the decoder just read the header of an end block, which should trigger the flag write to the
-	/// ENDX register.
-	pub fn just_read_end_block(self) -> bool {
-		self == Self::ReadHeader
+	/// Returns whether the decoder just read the header of a block.
+	pub const fn just_read_header(self) -> bool {
+		match self {
+			Self::ReadHeader => true,
+			_ => false,
+		}
 	}
 }

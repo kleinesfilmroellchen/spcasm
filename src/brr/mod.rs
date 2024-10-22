@@ -33,7 +33,8 @@ pub type EncodedBlockSamples = [EncodedSample; 16];
 /// provide the hardware calculation simulating the multiplication. See [`LPCFilter`] for the implementations of the
 /// various shift functions.
 type FilterCoefficients = [fn(i16) -> i16; 2];
-type WarmUpSamples = [DecodedSample; 2];
+/// Warm-up samples for a BRR filter calculation.
+pub type WarmUpSamples = [DecodedSample; 2];
 
 /// The compression level the encoder should use.
 #[derive(Debug, Clone, Copy, FromPrimitive)]
@@ -352,7 +353,7 @@ impl Block {
 		let shift = shift_function(&unshifted_encoded_samples);
 		for (encoded, sample) in encoded.iter_mut().zip(unshifted_encoded_samples.iter()) {
 			// The shift needs to be inverted, as we're encoding here and the shift function is intended for decoding.
-			*encoded = Self::perform_shift_with(-shift, *sample) as u8;
+			*encoded = Header::perform_shift_with(-shift, *sample) as u8;
 		}
 
 		(shift, encoded)
@@ -397,32 +398,39 @@ impl Block {
 		self.header.flags.will_loop_afterwards()
 	}
 
-	/// Executes the shift in this header on the given sample, taking care to shift right by 1 if the shift amount is
-	/// -1.
-	#[inline]
-	#[must_use]
-	pub fn perform_shift(&self, sample: DecodedSample) -> DecodedSample {
-		Self::perform_shift_with(self.header.real_shift, sample)
-	}
-
-	/// Executes the given shift on the given sample, taking care to shift right by 1 if the shift amount is -1.
-	#[inline]
-	#[must_use]
-	pub fn perform_shift_with(shift: i8, sample: DecodedSample) -> DecodedSample {
-		match shift {
-			0 => Some(sample),
-			1.. => sample.checked_shl(u32::from(shift.unsigned_abs())),
-			_ => sample.checked_shr(u32::from(shift.unsigned_abs())),
-		}
-		// FIXME: unwrap_or suddenly became non-const in 1.71 nightly, make function const again once that is fixed.
-		.unwrap_or(if sample > 0 { DecodedSample::MAX } else { DecodedSample::MIN })
-	}
-
 	/// Decodes this block and returns the decoded samples as well as the last two internal fixed-point samples used for
 	/// filters. These two should be fed into the next decode call as the warm-up samples.
 	#[must_use]
 	pub fn decode(&self, warm_up_samples: WarmUpSamples) -> (DecodedBlockSamples, WarmUpSamples) {
 		self.internal_decode_lpc(warm_up_samples, self.header.filter.coefficient())
+	}
+
+	/// Decode a third of a block, which is what the hardware BRR decoder does at maximum every sample step.
+	#[must_use]
+	pub fn decode_block_third(
+		header: Header,
+		encoded_samples: [u8; 4],
+		mut warm_up_samples: WarmUpSamples,
+	) -> [DecodedSample; 4] {
+		let mut decoded_samples = [0; 4];
+		let filter_coefficients = header.filter.coefficient();
+
+		let shifted_encoded =
+			encoded_samples.map(|encoded| header.perform_shift(i16::from(((encoded as i8) << 4) >> 4)));
+		for (decoded, encoded) in decoded_samples.iter_mut().zip(shifted_encoded) {
+			let decimal_decoded = encoded
+				.wrapping_add(filter_coefficients[0](warm_up_samples[0]))
+				.wrapping_add(filter_coefficients[1](warm_up_samples[1]));
+			*decoded = simulate_hardware_glitches(decimal_decoded);
+			// Shift last samples through the buffer
+			warm_up_samples[1] = warm_up_samples[0];
+			warm_up_samples[0] = *decoded;
+
+			// After doing its special kind of restricting to 15 bits (hardware stuff), we need to extend the sample
+			// back to 16 bits.
+			*decoded = decoded.wrapping_mul(2);
+		}
+		decoded_samples
 	}
 
 	fn internal_decode_lpc(
@@ -433,7 +441,7 @@ impl Block {
 		let mut decoded_samples: DecodedBlockSamples = [0; 16];
 
 		let shifted_encoded =
-			self.encoded_samples.map(|encoded| self.perform_shift(i16::from(((encoded as i8) << 4) >> 4)));
+			self.encoded_samples.map(|encoded| self.header.perform_shift(i16::from(((encoded as i8) << 4) >> 4)));
 		for (decoded, encoded) in decoded_samples.iter_mut().zip(shifted_encoded) {
 			let decimal_decoded = encoded
 				.wrapping_add(filter_coefficients[0](warm_up_samples[0]))
@@ -472,7 +480,7 @@ impl From<[u8; 9]> for Block {
 	fn from(data: [u8; 9]) -> Self {
 		Self {
 			header:          data[0].into(),
-			encoded_samples: split_bytes_into_nybbles(data[1 .. 9].try_into().unwrap()),
+			encoded_samples: split_bytes_into_nybbles_fixed(data[1 .. 9].try_into().unwrap()),
 		}
 	}
 }
@@ -483,7 +491,7 @@ impl From<Block> for [u8; 9] {
 	}
 }
 
-fn split_bytes_into_nybbles(bytes: [u8; 8]) -> EncodedBlockSamples {
+fn split_bytes_into_nybbles_fixed(bytes: [u8; 8]) -> EncodedBlockSamples {
 	let mut nybbles: EncodedBlockSamples = [0; 16];
 	for (index, byte) in bytes.into_iter().enumerate() {
 		let index = index * 2;
@@ -492,6 +500,17 @@ fn split_bytes_into_nybbles(bytes: [u8; 8]) -> EncodedBlockSamples {
 		nybbles[index + 1] = byte & 0x0f;
 	}
 	nybbles
+}
+
+/// Split some bytes into their sample nybbles.
+pub fn split_bytes_into_nybbles(bytes: &[u8], nybbles: &mut [u8]) {
+	debug_assert!(bytes.len() * 2 == nybbles.len());
+	for (index, byte) in bytes.into_iter().enumerate() {
+		let index = index * 2;
+		// most significant nybble order (is that even a word?)
+		nybbles[index] = (byte & 0xf0) >> 4;
+		nybbles[index + 1] = byte & 0x0f;
+	}
 }
 
 fn merge_nybbles_into_bytes(nybbles: EncodedBlockSamples) -> [u8; 8] {
@@ -548,6 +567,29 @@ impl From<Header> for u8 {
 		((((header.real_shift + 1) as u8) << 4) & 0xf0)
 			| (((header.filter as u8) << 2) & 0b1100)
 			| ((header.flags as u8) & 0b11)
+	}
+}
+
+impl Header {
+	/// Executes the shift in this header on the given sample, taking care to shift right by 1 if the shift amount is
+	/// -1.
+	#[inline]
+	#[must_use]
+	pub fn perform_shift(&self, sample: DecodedSample) -> DecodedSample {
+		Self::perform_shift_with(self.real_shift, sample)
+	}
+
+	/// Executes the given shift on the given sample, taking care to shift right by 1 if the shift amount is -1.
+	#[inline]
+	#[must_use]
+	pub fn perform_shift_with(shift: i8, sample: DecodedSample) -> DecodedSample {
+		match shift {
+			0 => Some(sample),
+			1.. => sample.checked_shl(u32::from(shift.unsigned_abs())),
+			_ => sample.checked_shr(u32::from(shift.unsigned_abs())),
+		}
+		// FIXME: unwrap_or suddenly became non-const in 1.71 nightly, make function const again once that is fixed.
+		.unwrap_or(if sample > 0 { DecodedSample::MAX } else { DecodedSample::MIN })
 	}
 }
 

@@ -1820,6 +1820,8 @@ dependencies = [
  "clap",
  "human-panic",
  "log",
+ "num-derive",
+ "num-traits",
  "object",
  "reqwest",
  "rstest",

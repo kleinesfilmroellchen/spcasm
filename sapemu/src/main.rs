@@ -79,6 +79,7 @@ fn upload_from_elf(
 	while !smp.is_halted() && arguments.cycles.map_or(true, |cycles| *ticks < cycles) {
 		uploader.perform_step(&mut smp.ports);
 		smp.tick(memory, &mut dsp.registers);
+		dsp.tick(memory);
 		*ticks += 1;
 		if uploader.is_finished() {
 			break;
@@ -157,6 +158,7 @@ fn main() -> Result<()> {
 
 	while !smp.is_halted() && arguments.cycles.map_or(true, |cycles| ticks < cycles) {
 		smp.tick(&mut memory, &mut dsp.registers);
+		dsp.tick(&mut memory);
 		ticks += 1;
 	}
 

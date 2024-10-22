@@ -20,8 +20,10 @@ object = { version = "0.36", features = [
 ], default-features = false }
 simple_logger = "5"
 bitflags = "2"
-anyhow = "1.0.89"
+anyhow = "1"
 spcfile = { path = "../spcfile" }
+num-traits = "0.2"
+num-derive = "0.4"
 
 [dependencies.spcasm]
 path = ".."
@@ -34,7 +36,7 @@ features = ["derive", "wrap_help", "string"]
 [dev-dependencies]
 reqwest = { version = "0.12", features = ["blocking"] }
 serde = "1"
-rstest = "0.23.0"
+rstest = "0.23"
 simd-json = { version = "0.14", features = ["known-key"] }
 
 [lints]

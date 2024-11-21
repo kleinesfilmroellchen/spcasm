@@ -315,7 +315,7 @@ impl ReferenceResolvable for AddressingMode {
 	/// Set this global label as the parent for all the unresolved local labels.
 	fn set_current_label(
 		&mut self,
-		current_label: &Option<Arc<RwLock<Label>>>,
+		current_label: Option<&Arc<RwLock<Label>>>,
 		source_code: &Arc<AssemblyCode>,
 	) -> Result<(), Box<AssemblyError>> {
 		self.number_mut().map_or_else(|| Ok(()), |number| number.set_current_label(current_label, source_code))

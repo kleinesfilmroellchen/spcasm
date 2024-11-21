@@ -30,6 +30,8 @@ impl Memory {
 	/// Creates a new memory instance that reflects the hardware reset state.
 	#[must_use]
 	pub fn new() -> Self {
+		// TODO: directly heap-allocate this (and create a heap-allocated Memory while we're at it?)
+		#[allow(clippy::large_stack_arrays)]
 		let mut ram = [0; MEMORY_SIZE];
 		ram.chunks_exact_mut(32).enumerate().for_each(|(block, values)| {
 			values.fill(if block & 1 == 0 { 0x00 } else { 0xff });

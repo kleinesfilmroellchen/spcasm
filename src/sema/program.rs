@@ -133,7 +133,7 @@ impl ReferenceResolvable for ProgramElement {
 
 	fn set_current_label(
 		&mut self,
-		current_label: &Option<Arc<RwLock<super::reference::Label>>>,
+		current_label: Option<&Arc<RwLock<super::reference::Label>>>,
 		source_code: &Arc<AssemblyCode>,
 	) -> Result<(), Box<AssemblyError>> {
 		match self {

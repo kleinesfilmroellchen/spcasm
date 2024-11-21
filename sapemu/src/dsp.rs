@@ -785,7 +785,7 @@ impl EnvelopeSettings {
 		// Only do anything in ADSR mode.
 		if let Self::Adsr { attack_rate, decay_rate, .. } = self {
 			let sustain_rate = adsr2 & 0x1f;
-			let sustain_level = (((adsr2 >> 5) & 0x7) as u16 + 1) * 0x100;
+			let sustain_level = (u16::from((adsr2 >> 5) & 0x7) + 1) * 0x100;
 
 			*self = Self::Adsr {
 				attack_rate: *attack_rate,
@@ -800,9 +800,7 @@ impl EnvelopeSettings {
 	#[allow(clippy::needless_pass_by_ref_mut)]
 	pub fn set_gain(&mut self, gain: u8) {
 		match *self {
-			Self::Adsr { .. } => {
-				return;
-			},
+			Self::Adsr { .. } => {},
 			Self::FixedGain { .. } | Self::CustomGain { .. } =>
 				if gain & 0x80 > 0 {
 					let rate = gain & 0x1f;
@@ -810,7 +808,7 @@ impl EnvelopeSettings {
 					*self =
 						Self::CustomGain { rate: RATE_TABLE[rate as usize], mode: GainMode::from_u8(mode).unwrap() };
 				} else {
-					let level = (gain & 0x7f) as u16 * 16;
+					let level = u16::from(gain & 0x7f) * 16;
 					*self = Self::FixedGain { level };
 				},
 		}
@@ -864,9 +862,6 @@ impl BrrDecoderStep {
 
 	/// Returns whether the decoder just read the header of a block.
 	pub const fn just_read_header(self) -> bool {
-		match self {
-			Self::ReadHeader => true,
-			_ => false,
-		}
+		matches!(self, Self::ReadHeader)
 	}
 }

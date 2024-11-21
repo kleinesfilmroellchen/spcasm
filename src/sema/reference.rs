@@ -134,7 +134,7 @@ impl Reference {
 	/// If there is no global label, but we try to create a local label, a "missing global label" error is returned.
 	pub fn set_current_label_with_kind(
 		&mut self,
-		current_label: &Option<Arc<RwLock<Label>>>,
+		current_label: Option<&Arc<RwLock<Label>>>,
 		kind: LabelUsageKind,
 		source_code: &Arc<AssemblyCode>,
 	) -> Result<(), Box<AssemblyError>> {
@@ -147,7 +147,7 @@ impl Reference {
 						*span,
 						value.clone(),
 						kind,
-						current_label.clone(),
+						current_label.cloned(),
 						source_code,
 					)?)
 				},
@@ -282,7 +282,7 @@ impl ReferenceResolvable for Reference {
 
 	fn set_current_label(
 		&mut self,
-		current_label: &Option<Arc<RwLock<Label>>>,
+		current_label: Option<&Arc<RwLock<Label>>>,
 		source_code: &Arc<AssemblyCode>,
 	) -> Result<(), Box<AssemblyError>> {
 		// Any callers that are aware of us being a definition will not call the trait function, but the with_kind
@@ -503,7 +503,7 @@ impl ReferenceResolvable for Label {
 
 	fn set_current_label(
 		&mut self,
-		_current_label: &Option<Arc<RwLock<Label>>>,
+		_current_label: Option<&Arc<RwLock<Label>>>,
 		_source_code: &Arc<AssemblyCode>,
 	) -> Result<(), Box<AssemblyError>> {
 		Ok(())
@@ -657,7 +657,7 @@ pub trait ReferenceResolvable {
 	/// Resolve all pseudo-local labels into real labels by using the current label to figure out their parents.
 	fn set_current_label(
 		&mut self,
-		current_label: &Option<Arc<RwLock<Label>>>,
+		current_label: Option<&Arc<RwLock<Label>>>,
 		source_code: &Arc<AssemblyCode>,
 	) -> Result<(), Box<AssemblyError>>;
 }

@@ -30,7 +30,7 @@ impl AssembledData {
 	pub(super) fn assemble_directive(
 		&mut self,
 		directive: &mut Directive,
-		current_labels: &Vec<Reference>,
+		current_labels: &[Reference],
 	) -> Result<ClearLabels, Box<AssemblyError>> {
 		match directive.value {
 			// Symbolic directives should not be around anymore.

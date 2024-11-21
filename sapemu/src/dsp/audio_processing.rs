@@ -148,7 +148,7 @@ impl VoiceState {
 	}
 
 	/// Returns the current warm up samples corresponding to the BRR decoder sample index.
-	fn warm_up_samples(&mut self) -> WarmUpSamples {
+	const fn warm_up_samples(&self) -> WarmUpSamples {
 		[
 			self.decoded_sample_buffer
 				[(self.brr_buffer_index as usize + BRR_DECODE_BUFFER_SIZE - 1) % BRR_DECODE_BUFFER_SIZE],

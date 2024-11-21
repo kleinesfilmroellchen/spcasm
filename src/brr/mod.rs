@@ -505,7 +505,7 @@ fn split_bytes_into_nybbles_fixed(bytes: [u8; 8]) -> EncodedBlockSamples {
 /// Split some bytes into their sample nybbles.
 pub fn split_bytes_into_nybbles(bytes: &[u8], nybbles: &mut [u8]) {
 	debug_assert!(bytes.len() * 2 == nybbles.len());
-	for (index, byte) in bytes.into_iter().enumerate() {
+	for (index, byte) in bytes.iter().enumerate() {
 		let index = index * 2;
 		// most significant nybble order (is that even a word?)
 		nybbles[index] = (byte & 0xf0) >> 4;

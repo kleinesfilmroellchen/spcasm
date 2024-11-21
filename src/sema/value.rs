@@ -302,7 +302,7 @@ impl ReferenceResolvable for AssemblyTimeValue {
 	/// All panics are programming errors.
 	fn set_current_label(
 		&mut self,
-		label: &Option<Arc<RwLock<Label>>>,
+		label: Option<&Arc<RwLock<Label>>>,
 		source_code: &Arc<AssemblyCode>,
 	) -> Result<(), Box<AssemblyError>> {
 		match self {
@@ -440,7 +440,7 @@ impl ReferenceResolvable for SizedAssemblyTimeValue {
 
 	fn set_current_label(
 		&mut self,
-		current_label: &Option<Arc<RwLock<Label>>>,
+		current_label: Option<&Arc<RwLock<Label>>>,
 		source_code: &Arc<AssemblyCode>,
 	) -> Result<(), Box<AssemblyError>> {
 		self.value.set_current_label(current_label, source_code)

@@ -82,7 +82,7 @@ impl ReferenceResolvable for Instruction {
 
 	fn set_current_label(
 		&mut self,
-		current_label: &Option<Arc<RwLock<Label>>>,
+		current_label: Option<&Arc<RwLock<Label>>>,
 		source_code: &Arc<AssemblyCode>,
 	) -> Result<(), Box<AssemblyError>> {
 		self.opcode.set_current_label(current_label, source_code)
@@ -244,8 +244,8 @@ impl Opcode {
 
 	/// Returns whether this opcode contains a two-byte "long" address.
 	pub fn has_long_address(&self) -> bool {
-		self.first_operand.clone().map_or(false, AddressingMode::has_long_address)
-			|| self.second_operand.clone().map_or(false, AddressingMode::has_long_address)
+		self.first_operand.clone().is_some_and(AddressingMode::has_long_address)
+			|| self.second_operand.clone().is_some_and(AddressingMode::has_long_address)
 	}
 
 	/// Returns whether this opcode can use a direct page addressing mode. Many opcodes can, but some, like JMP,
@@ -356,7 +356,7 @@ impl ReferenceResolvable for Opcode {
 
 	fn set_current_label(
 		&mut self,
-		current_label: &Option<Arc<RwLock<Label>>>,
+		current_label: Option<&Arc<RwLock<Label>>>,
 		source_code: &Arc<AssemblyCode>,
 	) -> Result<(), Box<AssemblyError>> {
 		for operand in self.first_operand.iter_mut().chain(self.second_operand.iter_mut()) {

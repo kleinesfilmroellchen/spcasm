@@ -164,7 +164,7 @@ impl AssemblyFile {
 				| ProgramElement::Directive(_)
 				| ProgramElement::Instruction(_) => (),
 			}
-			element.set_current_label(&current_label, &self.source_code)?;
+			element.set_current_label(current_label.as_ref(), &self.source_code)?;
 			// Set any non-synthetic label as the current label.
 			if let ProgramElement::Label(Reference::Label(ref label)) = element
 				&& !label.read().synthetic

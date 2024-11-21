@@ -139,7 +139,7 @@ impl ReferenceResolvable for Directive {
 
 	fn set_current_label(
 		&mut self,
-		current_label: &Option<Arc<RwLock<Label>>>,
+		current_label: Option<&Arc<RwLock<Label>>>,
 		source_code: &Arc<AssemblyCode>,
 	) -> Result<(), Box<AssemblyError>> {
 		self.value.set_current_label(current_label, source_code)
@@ -326,7 +326,7 @@ pub(crate) use symbolic_directives;
 
 impl DirectiveValue {
 	/// A large assembled size constant which effectively disables all optimizations.
-	const large_assembled_size: usize = u16::MAX as usize;
+	const LARGE_ASSEMBLED_SIZE: usize = u16::MAX as usize;
 
 	/// Returns the final size of this directive once assembled. Note that:
 	/// - some directives are purely symbolic and will not (directly) impact the size of the assembly, at least not
@@ -354,7 +354,7 @@ impl DirectiveValue {
 			Self::String { text, has_null_terminator } => text.len() + (usize::from(*has_null_terminator)),
 			Self::Fill { operation: FillOperation::Amount, parameter, .. } => parameter
 				.value_using_resolver(&|_| None)
-				.unwrap_or_else(|| (Self::large_assembled_size).try_into().unwrap())
+				.unwrap_or_else(|| (Self::LARGE_ASSEMBLED_SIZE).try_into().unwrap())
 				as usize,
 			Self::Conditional { condition, true_block, false_block } =>
 				if condition.is_truthy() {
@@ -371,7 +371,7 @@ impl DirectiveValue {
 			// Use a large assembled size as a signal that we don't know at this point. This will force any later
 			// reference out of the direct page, which will always yield correct behavior.
 			Self::Include { .. } | Self::Brr { .. } | Self::SampleTable { .. } | Self::Fill { .. } =>
-				Self::large_assembled_size,
+				Self::LARGE_ASSEMBLED_SIZE,
 		}
 	}
 
@@ -585,7 +585,7 @@ impl ReferenceResolvable for DirectiveValue {
 
 	fn set_current_label(
 		&mut self,
-		current_label: &Option<Arc<RwLock<Label>>>,
+		current_label: Option<&Arc<RwLock<Label>>>,
 		source_code: &Arc<AssemblyCode>,
 	) -> Result<(), Box<AssemblyError>> {
 		match self {

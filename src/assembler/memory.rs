@@ -150,9 +150,16 @@ impl MemoryValue {
 				},
 				resolved => Self::NumberRelative(resolved),
 			},
-			Self::NumberHighByteWithContainedBitIndex(number, bit_index) => match number.try_resolve() {
+			Self::NumberHighByteWithContainedBitIndex(ref number, bit_index) => match number.clone().try_resolve() {
 				AssemblyTimeValue::Literal(reference_memory_address, ..) => {
-					// TODO: perform byte size check
+					if reference_memory_address > 0x1FFF {
+						frontend.report_diagnostic(AssemblyError::ValueTooLarge {
+							value:    reference_memory_address,
+							size:     13,
+							location: number.source_span(),
+							src:      source_code.clone(),
+						});
+					}
 					let resolved_data = ((reference_memory_address & 0x1F00) >> 8) as u8 | (bit_index << 5);
 					Self::Resolved(resolved_data)
 				},

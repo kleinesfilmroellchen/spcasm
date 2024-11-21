@@ -6,7 +6,6 @@
 	if_let_guard,
 	get_mut_unchecked,
 	iter_intersperse,
-	const_option_ext,
 	const_for,
 	let_chains,
 	slice_as_chunks,
@@ -16,7 +15,6 @@
 	extract_if,
 	extend_one,
 	try_blocks,
-	option_get_or_insert_default,
 	maybe_uninit_array_assume_init,
 	adt_const_params
 )]

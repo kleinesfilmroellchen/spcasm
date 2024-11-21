@@ -154,6 +154,10 @@ missing_docs = { level = "deny", priority = -10 }
 unused = { level = "deny", priority = -10 }
 non_upper_case_globals = "allow"
 incomplete_features = "allow"
+# wasm_bindgen messed up
+unexpected_cfgs = { level = "allow", check-cfg = [
+	'cfg(wasm_bindgen_unstable_test_coverage)',
+] }
 
 [workspace.lints.clippy]
 all = "deny"

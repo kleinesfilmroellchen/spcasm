@@ -3,7 +3,6 @@
 
 use std::cell::Cell;
 use std::io::Write;
-use std::pin::Pin;
 
 #[allow(unused)]
 use flexstr::{shared_str, IntoSharedStr, SharedStr, ToSharedStr};
@@ -55,13 +54,12 @@ pub fn write_to_elf(
 	// 	- shstrtab section (section header string table)
 	// - Section headers (yes, weird position, but I don't want to mess with something that readelf accepts)
 
-	// TODO: Check if Pin is necessary here.
-	let mut segments: Vec<Pin<Box<SegmentMetadata>>> = Vec::new();
+	let mut segments: Vec<Box<SegmentMetadata>> = Vec::new();
 
 	// Step 1: Create metadata.
 	// Since segments is a BTreeMap, it will always be sorted by address, simplifying later write steps.
 	for (segment_start, segment_contents) in data.segments {
-		let metadata = Box::pin(SegmentMetadata {
+		let metadata = Box::new(SegmentMetadata {
 			name:            format!(".text_{segment_start:04X}"),
 			name_id:         Cell::new(None),
 			section_index:   Cell::new(None),

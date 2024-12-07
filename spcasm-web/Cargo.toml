@@ -16,7 +16,7 @@ crate-type = ["bin"]
 default = ["console_error_panic_hook"]
 
 [dependencies]
-wasm-bindgen = "0.2.92"
+wasm-bindgen = "0.2.97"
 web-sys = { version = "0.3.69", features = [
 	"Window",
 	"Document",

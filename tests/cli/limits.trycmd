@@ -93,11 +93,11 @@ spcasm::reference::unresolved
  27 │    MOV A,data+X    ;= F4 13
  28 │    MOV A,data+Y    ;= F6 13 00
     ╰────
-  help: Any symbolic reference must be defined somewhere. Did you misspell
-        the reference's name?
-        This error is sometimes caused by too few reference resolution
-        passes. Use `--reference-pass-limit` to increase the limit on the
-        number of passes.
+  help: Any symbolic reference must be defined somewhere. Did you misspell the
+        reference's name?
+        This error is sometimes caused by too few reference resolution passes.
+        Use `--reference-pass-limit` to increase the limit on the number of
+        passes.
 
 
 ```

@@ -12,13 +12,13 @@ spcasm::arch::valid
  4 │ start:        ; @ 0
    ╰────
   help: spcasm supports `arch` directives for compatibility with the Asar
-        multi-architecture assembler. This arch directive points to the
-        spc700 architecture and is therefore safely ignored.
+        multi-architecture assembler. This arch directive points to the spc700
+        architecture and is therefore safely ignored.
 
 spcasm::relative_offset_too_large
 
-  ⚠ The relative offset to address `002C` is out of range, the result will
-  │ be wrong.
+  ⚠ The relative offset to address `002C` is out of range, the result will be
+  │ wrong.
      ╭─[tests/opcodes.s:207:13]
  204 │    bvc reltarget+8  ;= 50 F8
  205 │    bmi reltarget+10 ;= 30 F8
@@ -32,13 +32,13 @@ spcasm::relative_offset_too_large
      ╰────
   help: The current address is `0174` and therefore the difference is -329.
         This difference exceeds the range [-128, 127] and will wrap around,
-        probably leading to incorrect code. If you are using a relative
-        jump, consider using a trampoline to cover larger jump distances.
+        probably leading to incorrect code. If you are using a relative jump,
+        consider using a trampoline to cover larger jump distances.
 
 spcasm::relative_offset_too_large
 
-  ⚠ The relative offset to address `002E` is out of range, the result will
-  │ be wrong.
+  ⚠ The relative offset to address `002E` is out of range, the result will be
+  │ wrong.
      ╭─[tests/opcodes.s:208:15]
  205 │    bmi reltarget+10 ;= 30 F8
  206 │    bpl reltarget+12 ;= 10 F8
@@ -52,13 +52,13 @@ spcasm::relative_offset_too_large
      ╰────
   help: The current address is `0177` and therefore the difference is -330.
         This difference exceeds the range [-128, 127] and will wrap around,
-        probably leading to incorrect code. If you are using a relative
-        jump, consider using a trampoline to cover larger jump distances.
+        probably leading to incorrect code. If you are using a relative jump,
+        consider using a trampoline to cover larger jump distances.
 
 spcasm::relative_offset_too_large
 
-  ⚠ The relative offset to address `0030` is out of range, the result will
-  │ be wrong.
+  ⚠ The relative offset to address `0030` is out of range, the result will be
+  │ wrong.
      ╭─[tests/opcodes.s:209:13]
  206 │    bpl reltarget+12 ;= 10 F8
  207 │    cbne $2B,$2C  ;= 2E 2B B7
@@ -72,13 +72,13 @@ spcasm::relative_offset_too_large
      ╰────
   help: The current address is `017A` and therefore the difference is -331.
         This difference exceeds the range [-128, 127] and will wrap around,
-        probably leading to incorrect code. If you are using a relative
-        jump, consider using a trampoline to cover larger jump distances.
+        probably leading to incorrect code. If you are using a relative jump,
+        consider using a trampoline to cover larger jump distances.
 
 spcasm::relative_offset_too_large
 
-  ⚠ The relative offset to address `0031` is out of range, the result will
-  │ be wrong.
+  ⚠ The relative offset to address `0031` is out of range, the result will be
+  │ wrong.
      ╭─[tests/opcodes.s:210:11]
  207 │    cbne $2B,$2C  ;= 2E 2B B7
  208 │    cbne $2D+X,$2E;= DE 2D B6
@@ -92,13 +92,13 @@ spcasm::relative_offset_too_large
      ╰────
   help: The current address is `017C` and therefore the difference is -332.
         This difference exceeds the range [-128, 127] and will wrap around,
-        probably leading to incorrect code. If you are using a relative
-        jump, consider using a trampoline to cover larger jump distances.
+        probably leading to incorrect code. If you are using a relative jump,
+        consider using a trampoline to cover larger jump distances.
 
 spcasm::relative_offset_too_large
 
-  ⚠ The relative offset to address `00F9` is out of range, the result will
-  │ be wrong.
+  ⚠ The relative offset to address `00F9` is out of range, the result will be
+  │ wrong.
      ╭─[tests/opcodes.s:227:15]
  224 │ global_selftarget:
  225 │    bne global_selftarget ;= D0 FE
@@ -112,13 +112,13 @@ spcasm::relative_offset_too_large
      ╰────
   help: The current address is `0194` and therefore the difference is -156.
         This difference exceeds the range [-128, 127] and will wrap around,
-        probably leading to incorrect code. If you are using a relative
-        jump, consider using a trampoline to cover larger jump distances.
+        probably leading to incorrect code. If you are using a relative jump,
+        consider using a trampoline to cover larger jump distances.
 
 spcasm::relative_offset_too_large
 
-  ⚠ The relative offset to address `00F9` is out of range, the result will
-  │ be wrong.
+  ⚠ The relative offset to address `00F9` is out of range, the result will be
+  │ wrong.
      ╭─[tests/opcodes.s:228:14]
  225 │    bne global_selftarget ;= D0 FE
  226 │ 
@@ -132,13 +132,13 @@ spcasm::relative_offset_too_large
      ╰────
   help: The current address is `0197` and therefore the difference is -159.
         This difference exceeds the range [-128, 127] and will wrap around,
-        probably leading to incorrect code. If you are using a relative
-        jump, consider using a trampoline to cover larger jump distances.
+        probably leading to incorrect code. If you are using a relative jump,
+        consider using a trampoline to cover larger jump distances.
 
 spcasm::relative_offset_too_large
 
-  ⚠ The relative offset to address `00F9` is out of range, the result will
-  │ be wrong.
+  ⚠ The relative offset to address `00F9` is out of range, the result will be
+  │ wrong.
      ╭─[tests/opcodes.s:229:14]
  226 │ 
  227 │    bbs data.0,$F9 ;= 03 13 64
@@ -152,13 +152,13 @@ spcasm::relative_offset_too_large
      ╰────
   help: The current address is `019A` and therefore the difference is -162.
         This difference exceeds the range [-128, 127] and will wrap around,
-        probably leading to incorrect code. If you are using a relative
-        jump, consider using a trampoline to cover larger jump distances.
+        probably leading to incorrect code. If you are using a relative jump,
+        consider using a trampoline to cover larger jump distances.
 
 spcasm::relative_offset_too_large
 
-  ⚠ The relative offset to address `00F9` is out of range, the result will
-  │ be wrong.
+  ⚠ The relative offset to address `00F9` is out of range, the result will be
+  │ wrong.
      ╭─[tests/opcodes.s:230:14]
  227 │    bbs data.0,$F9 ;= 03 13 64
  228 │    bbs $30.1,$F9 ;= 23 30 61
@@ -172,13 +172,13 @@ spcasm::relative_offset_too_large
      ╰────
   help: The current address is `019D` and therefore the difference is -165.
         This difference exceeds the range [-128, 127] and will wrap around,
-        probably leading to incorrect code. If you are using a relative
-        jump, consider using a trampoline to cover larger jump distances.
+        probably leading to incorrect code. If you are using a relative jump,
+        consider using a trampoline to cover larger jump distances.
 
 spcasm::relative_offset_too_large
 
-  ⚠ The relative offset to address `00F9` is out of range, the result will
-  │ be wrong.
+  ⚠ The relative offset to address `00F9` is out of range, the result will be
+  │ wrong.
      ╭─[tests/opcodes.s:231:14]
  228 │    bbs $30.1,$F9 ;= 23 30 61
  229 │    bbs $30.2,$F9 ;= 43 30 5E
@@ -192,13 +192,13 @@ spcasm::relative_offset_too_large
      ╰────
   help: The current address is `01A0` and therefore the difference is -168.
         This difference exceeds the range [-128, 127] and will wrap around,
-        probably leading to incorrect code. If you are using a relative
-        jump, consider using a trampoline to cover larger jump distances.
+        probably leading to incorrect code. If you are using a relative jump,
+        consider using a trampoline to cover larger jump distances.
 
 spcasm::relative_offset_too_large
 
-  ⚠ The relative offset to address `00F9` is out of range, the result will
-  │ be wrong.
+  ⚠ The relative offset to address `00F9` is out of range, the result will be
+  │ wrong.
      ╭─[tests/opcodes.s:232:14]
  229 │    bbs $30.2,$F9 ;= 43 30 5E
  230 │    bbs $30.3,$F9 ;= 63 30 5B
@@ -212,13 +212,13 @@ spcasm::relative_offset_too_large
      ╰────
   help: The current address is `01A3` and therefore the difference is -171.
         This difference exceeds the range [-128, 127] and will wrap around,
-        probably leading to incorrect code. If you are using a relative
-        jump, consider using a trampoline to cover larger jump distances.
+        probably leading to incorrect code. If you are using a relative jump,
+        consider using a trampoline to cover larger jump distances.
 
 spcasm::relative_offset_too_large
 
-  ⚠ The relative offset to address `00F9` is out of range, the result will
-  │ be wrong.
+  ⚠ The relative offset to address `00F9` is out of range, the result will be
+  │ wrong.
      ╭─[tests/opcodes.s:233:14]
  230 │    bbs $30.3,$F9 ;= 63 30 5B
  231 │    bbs $30.4,$F9 ;= 83 30 58
@@ -232,13 +232,13 @@ spcasm::relative_offset_too_large
      ╰────
   help: The current address is `01A6` and therefore the difference is -174.
         This difference exceeds the range [-128, 127] and will wrap around,
-        probably leading to incorrect code. If you are using a relative
-        jump, consider using a trampoline to cover larger jump distances.
+        probably leading to incorrect code. If you are using a relative jump,
+        consider using a trampoline to cover larger jump distances.
 
 spcasm::relative_offset_too_large
 
-  ⚠ The relative offset to address `00F9` is out of range, the result will
-  │ be wrong.
+  ⚠ The relative offset to address `00F9` is out of range, the result will be
+  │ wrong.
      ╭─[tests/opcodes.s:234:14]
  231 │    bbs $30.4,$F9 ;= 83 30 58
  232 │    bbs $30.5,$F9 ;= A3 30 55
@@ -252,13 +252,13 @@ spcasm::relative_offset_too_large
      ╰────
   help: The current address is `01A9` and therefore the difference is -177.
         This difference exceeds the range [-128, 127] and will wrap around,
-        probably leading to incorrect code. If you are using a relative
-        jump, consider using a trampoline to cover larger jump distances.
+        probably leading to incorrect code. If you are using a relative jump,
+        consider using a trampoline to cover larger jump distances.
 
 spcasm::relative_offset_too_large
 
-  ⚠ The relative offset to address `0005` is out of range, the result will
-  │ be wrong.
+  ⚠ The relative offset to address `0005` is out of range, the result will be
+  │ wrong.
      ╭─[tests/opcodes.s:235:16]
  232 │    bbs $30.5,$F9 ;= A3 30 55
  233 │    bbs $30.6,$F9 ;= C3 30 52
@@ -272,13 +272,13 @@ spcasm::relative_offset_too_large
      ╰────
   help: The current address is `01AC` and therefore the difference is -424.
         This difference exceeds the range [-128, 127] and will wrap around,
-        probably leading to incorrect code. If you are using a relative
-        jump, consider using a trampoline to cover larger jump distances.
+        probably leading to incorrect code. If you are using a relative jump,
+        consider using a trampoline to cover larger jump distances.
 
 spcasm::relative_offset_too_large
 
-  ⚠ The relative offset to address `0005` is out of range, the result will
-  │ be wrong.
+  ⚠ The relative offset to address `0005` is out of range, the result will be
+  │ wrong.
      ╭─[tests/opcodes.s:236:14]
  233 │    bbs $30.6,$F9 ;= C3 30 52
  234 │    bbs $30.7,$F9 ;= E3 30 4F
@@ -292,13 +292,13 @@ spcasm::relative_offset_too_large
      ╰────
   help: The current address is `01AF` and therefore the difference is -427.
         This difference exceeds the range [-128, 127] and will wrap around,
-        probably leading to incorrect code. If you are using a relative
-        jump, consider using a trampoline to cover larger jump distances.
+        probably leading to incorrect code. If you are using a relative jump,
+        consider using a trampoline to cover larger jump distances.
 
 spcasm::relative_offset_too_large
 
-  ⚠ The relative offset to address `0005` is out of range, the result will
-  │ be wrong.
+  ⚠ The relative offset to address `0005` is out of range, the result will be
+  │ wrong.
      ╭─[tests/opcodes.s:237:14]
  234 │    bbs $30.7,$F9 ;= E3 30 4F
  235 │    bbc start.0,$05 ;= 13 00 58
@@ -312,13 +312,13 @@ spcasm::relative_offset_too_large
      ╰────
   help: The current address is `01B2` and therefore the difference is -430.
         This difference exceeds the range [-128, 127] and will wrap around,
-        probably leading to incorrect code. If you are using a relative
-        jump, consider using a trampoline to cover larger jump distances.
+        probably leading to incorrect code. If you are using a relative jump,
+        consider using a trampoline to cover larger jump distances.
 
 spcasm::relative_offset_too_large
 
-  ⚠ The relative offset to address `0005` is out of range, the result will
-  │ be wrong.
+  ⚠ The relative offset to address `0005` is out of range, the result will be
+  │ wrong.
      ╭─[tests/opcodes.s:238:14]
  235 │    bbc start.0,$05 ;= 13 00 58
  236 │    bbc $31.1,$05 ;= 33 31 55
@@ -332,13 +332,13 @@ spcasm::relative_offset_too_large
      ╰────
   help: The current address is `01B5` and therefore the difference is -433.
         This difference exceeds the range [-128, 127] and will wrap around,
-        probably leading to incorrect code. If you are using a relative
-        jump, consider using a trampoline to cover larger jump distances.
+        probably leading to incorrect code. If you are using a relative jump,
+        consider using a trampoline to cover larger jump distances.
 
 spcasm::relative_offset_too_large
 
-  ⚠ The relative offset to address `0005` is out of range, the result will
-  │ be wrong.
+  ⚠ The relative offset to address `0005` is out of range, the result will be
+  │ wrong.
      ╭─[tests/opcodes.s:239:14]
  236 │    bbc $31.1,$05 ;= 33 31 55
  237 │    bbc $31.2,$05 ;= 53 31 52
@@ -352,13 +352,13 @@ spcasm::relative_offset_too_large
      ╰────
   help: The current address is `01B8` and therefore the difference is -436.
         This difference exceeds the range [-128, 127] and will wrap around,
-        probably leading to incorrect code. If you are using a relative
-        jump, consider using a trampoline to cover larger jump distances.
+        probably leading to incorrect code. If you are using a relative jump,
+        consider using a trampoline to cover larger jump distances.
 
 spcasm::relative_offset_too_large
 
-  ⚠ The relative offset to address `0005` is out of range, the result will
-  │ be wrong.
+  ⚠ The relative offset to address `0005` is out of range, the result will be
+  │ wrong.
      ╭─[tests/opcodes.s:240:14]
  237 │    bbc $31.2,$05 ;= 53 31 52
  238 │    bbc $31.3,$05 ;= 73 31 4F
@@ -372,13 +372,13 @@ spcasm::relative_offset_too_large
      ╰────
   help: The current address is `01BB` and therefore the difference is -439.
         This difference exceeds the range [-128, 127] and will wrap around,
-        probably leading to incorrect code. If you are using a relative
-        jump, consider using a trampoline to cover larger jump distances.
+        probably leading to incorrect code. If you are using a relative jump,
+        consider using a trampoline to cover larger jump distances.
 
 spcasm::relative_offset_too_large
 
-  ⚠ The relative offset to address `0005` is out of range, the result will
-  │ be wrong.
+  ⚠ The relative offset to address `0005` is out of range, the result will be
+  │ wrong.
      ╭─[tests/opcodes.s:241:14]
  238 │    bbc $31.3,$05 ;= 73 31 4F
  239 │    bbc $31.4,$05 ;= 93 31 4C
@@ -392,13 +392,13 @@ spcasm::relative_offset_too_large
      ╰────
   help: The current address is `01BE` and therefore the difference is -442.
         This difference exceeds the range [-128, 127] and will wrap around,
-        probably leading to incorrect code. If you are using a relative
-        jump, consider using a trampoline to cover larger jump distances.
+        probably leading to incorrect code. If you are using a relative jump,
+        consider using a trampoline to cover larger jump distances.
 
 spcasm::relative_offset_too_large
 
-  ⚠ The relative offset to address `0005` is out of range, the result will
-  │ be wrong.
+  ⚠ The relative offset to address `0005` is out of range, the result will be
+  │ wrong.
      ╭─[tests/opcodes.s:242:14]
  239 │    bbc $31.4,$05 ;= 93 31 4C
  240 │    bbc $31.5,$05 ;= B3 31 49
@@ -412,8 +412,8 @@ spcasm::relative_offset_too_large
      ╰────
   help: The current address is `01C1` and therefore the difference is -445.
         This difference exceeds the range [-128, 127] and will wrap around,
-        probably leading to incorrect code. If you are using a relative
-        jump, consider using a trampoline to cover larger jump distances.
+        probably leading to incorrect code. If you are using a relative jump,
+        consider using a trampoline to cover larger jump distances.
 
 
 ```
@@ -438,13 +438,13 @@ spcasm::arch::valid
  4 │ start:        ; @ 0
    ╰────
   help: spcasm supports `arch` directives for compatibility with the Asar
-        multi-architecture assembler. This arch directive points to the
-        spc700 architecture and is therefore safely ignored.
+        multi-architecture assembler. This arch directive points to the spc700
+        architecture and is therefore safely ignored.
 
 spcasm::relative_offset_too_large
 
-  ⚠ The relative offset to address `002C` is out of range, the result will
-  │ be wrong.
+  ⚠ The relative offset to address `002C` is out of range, the result will be
+  │ wrong.
      ╭─[tests/opcodes.s:207:13]
  204 │    bvc reltarget+8  ;= 50 F8
  205 │    bmi reltarget+10 ;= 30 F8
@@ -458,13 +458,13 @@ spcasm::relative_offset_too_large
      ╰────
   help: The current address is `0174` and therefore the difference is -329.
         This difference exceeds the range [-128, 127] and will wrap around,
-        probably leading to incorrect code. If you are using a relative
-        jump, consider using a trampoline to cover larger jump distances.
+        probably leading to incorrect code. If you are using a relative jump,
+        consider using a trampoline to cover larger jump distances.
 
 spcasm::relative_offset_too_large
 
-  ⚠ The relative offset to address `002E` is out of range, the result will
-  │ be wrong.
+  ⚠ The relative offset to address `002E` is out of range, the result will be
+  │ wrong.
      ╭─[tests/opcodes.s:208:15]
  205 │    bmi reltarget+10 ;= 30 F8
  206 │    bpl reltarget+12 ;= 10 F8
@@ -478,13 +478,13 @@ spcasm::relative_offset_too_large
      ╰────
   help: The current address is `0177` and therefore the difference is -330.
         This difference exceeds the range [-128, 127] and will wrap around,
-        probably leading to incorrect code. If you are using a relative
-        jump, consider using a trampoline to cover larger jump distances.
+        probably leading to incorrect code. If you are using a relative jump,
+        consider using a trampoline to cover larger jump distances.
 
 spcasm::relative_offset_too_large
 
-  ⚠ The relative offset to address `0030` is out of range, the result will
-  │ be wrong.
+  ⚠ The relative offset to address `0030` is out of range, the result will be
+  │ wrong.
      ╭─[tests/opcodes.s:209:13]
  206 │    bpl reltarget+12 ;= 10 F8
  207 │    cbne $2B,$2C  ;= 2E 2B B7
@@ -498,13 +498,13 @@ spcasm::relative_offset_too_large
      ╰────
   help: The current address is `017A` and therefore the difference is -331.
         This difference exceeds the range [-128, 127] and will wrap around,
-        probably leading to incorrect code. If you are using a relative
-        jump, consider using a trampoline to cover larger jump distances.
+        probably leading to incorrect code. If you are using a relative jump,
+        consider using a trampoline to cover larger jump distances.
 
 spcasm::relative_offset_too_large
 
-  ⚠ The relative offset to address `0031` is out of range, the result will
-  │ be wrong.
+  ⚠ The relative offset to address `0031` is out of range, the result will be
+  │ wrong.
      ╭─[tests/opcodes.s:210:11]
  207 │    cbne $2B,$2C  ;= 2E 2B B7
  208 │    cbne $2D+X,$2E;= DE 2D B6
@@ -518,13 +518,13 @@ spcasm::relative_offset_too_large
      ╰────
   help: The current address is `017C` and therefore the difference is -332.
         This difference exceeds the range [-128, 127] and will wrap around,
-        probably leading to incorrect code. If you are using a relative
-        jump, consider using a trampoline to cover larger jump distances.
+        probably leading to incorrect code. If you are using a relative jump,
+        consider using a trampoline to cover larger jump distances.
 
 spcasm::relative_offset_too_large
 
-  ⚠ The relative offset to address `00F9` is out of range, the result will
-  │ be wrong.
+  ⚠ The relative offset to address `00F9` is out of range, the result will be
+  │ wrong.
      ╭─[tests/opcodes.s:227:15]
  224 │ global_selftarget:
  225 │    bne global_selftarget ;= D0 FE
@@ -538,13 +538,13 @@ spcasm::relative_offset_too_large
      ╰────
   help: The current address is `0194` and therefore the difference is -156.
         This difference exceeds the range [-128, 127] and will wrap around,
-        probably leading to incorrect code. If you are using a relative
-        jump, consider using a trampoline to cover larger jump distances.
+        probably leading to incorrect code. If you are using a relative jump,
+        consider using a trampoline to cover larger jump distances.
 
 spcasm::relative_offset_too_large
 
-  ⚠ The relative offset to address `00F9` is out of range, the result will
-  │ be wrong.
+  ⚠ The relative offset to address `00F9` is out of range, the result will be
+  │ wrong.
      ╭─[tests/opcodes.s:228:14]
  225 │    bne global_selftarget ;= D0 FE
  226 │ 
@@ -558,13 +558,13 @@ spcasm::relative_offset_too_large
      ╰────
   help: The current address is `0197` and therefore the difference is -159.
         This difference exceeds the range [-128, 127] and will wrap around,
-        probably leading to incorrect code. If you are using a relative
-        jump, consider using a trampoline to cover larger jump distances.
+        probably leading to incorrect code. If you are using a relative jump,
+        consider using a trampoline to cover larger jump distances.
 
 spcasm::relative_offset_too_large
 
-  ⚠ The relative offset to address `00F9` is out of range, the result will
-  │ be wrong.
+  ⚠ The relative offset to address `00F9` is out of range, the result will be
+  │ wrong.
      ╭─[tests/opcodes.s:229:14]
  226 │ 
  227 │    bbs data.0,$F9 ;= 03 13 64
@@ -578,13 +578,13 @@ spcasm::relative_offset_too_large
      ╰────
   help: The current address is `019A` and therefore the difference is -162.
         This difference exceeds the range [-128, 127] and will wrap around,
-        probably leading to incorrect code. If you are using a relative
-        jump, consider using a trampoline to cover larger jump distances.
+        probably leading to incorrect code. If you are using a relative jump,
+        consider using a trampoline to cover larger jump distances.
 
 spcasm::relative_offset_too_large
 
-  ⚠ The relative offset to address `00F9` is out of range, the result will
-  │ be wrong.
+  ⚠ The relative offset to address `00F9` is out of range, the result will be
+  │ wrong.
      ╭─[tests/opcodes.s:230:14]
  227 │    bbs data.0,$F9 ;= 03 13 64
  228 │    bbs $30.1,$F9 ;= 23 30 61
@@ -598,13 +598,13 @@ spcasm::relative_offset_too_large
      ╰────
   help: The current address is `019D` and therefore the difference is -165.
         This difference exceeds the range [-128, 127] and will wrap around,
-        probably leading to incorrect code. If you are using a relative
-        jump, consider using a trampoline to cover larger jump distances.
+        probably leading to incorrect code. If you are using a relative jump,
+        consider using a trampoline to cover larger jump distances.
 
 spcasm::relative_offset_too_large
 
-  ⚠ The relative offset to address `00F9` is out of range, the result will
-  │ be wrong.
+  ⚠ The relative offset to address `00F9` is out of range, the result will be
+  │ wrong.
      ╭─[tests/opcodes.s:231:14]
  228 │    bbs $30.1,$F9 ;= 23 30 61
  229 │    bbs $30.2,$F9 ;= 43 30 5E
@@ -618,13 +618,13 @@ spcasm::relative_offset_too_large
      ╰────
   help: The current address is `01A0` and therefore the difference is -168.
         This difference exceeds the range [-128, 127] and will wrap around,
-        probably leading to incorrect code. If you are using a relative
-        jump, consider using a trampoline to cover larger jump distances.
+        probably leading to incorrect code. If you are using a relative jump,
+        consider using a trampoline to cover larger jump distances.
 
 spcasm::relative_offset_too_large
 
-  ⚠ The relative offset to address `00F9` is out of range, the result will
-  │ be wrong.
+  ⚠ The relative offset to address `00F9` is out of range, the result will be
+  │ wrong.
      ╭─[tests/opcodes.s:232:14]
  229 │    bbs $30.2,$F9 ;= 43 30 5E
  230 │    bbs $30.3,$F9 ;= 63 30 5B
@@ -638,13 +638,13 @@ spcasm::relative_offset_too_large
      ╰────
   help: The current address is `01A3` and therefore the difference is -171.
         This difference exceeds the range [-128, 127] and will wrap around,
-        probably leading to incorrect code. If you are using a relative
-        jump, consider using a trampoline to cover larger jump distances.
+        probably leading to incorrect code. If you are using a relative jump,
+        consider using a trampoline to cover larger jump distances.
 
 spcasm::relative_offset_too_large
 
-  ⚠ The relative offset to address `00F9` is out of range, the result will
-  │ be wrong.
+  ⚠ The relative offset to address `00F9` is out of range, the result will be
+  │ wrong.
      ╭─[tests/opcodes.s:233:14]
  230 │    bbs $30.3,$F9 ;= 63 30 5B
  231 │    bbs $30.4,$F9 ;= 83 30 58
@@ -658,13 +658,13 @@ spcasm::relative_offset_too_large
      ╰────
   help: The current address is `01A6` and therefore the difference is -174.
         This difference exceeds the range [-128, 127] and will wrap around,
-        probably leading to incorrect code. If you are using a relative
-        jump, consider using a trampoline to cover larger jump distances.
+        probably leading to incorrect code. If you are using a relative jump,
+        consider using a trampoline to cover larger jump distances.
 
 spcasm::relative_offset_too_large
 
-  ⚠ The relative offset to address `00F9` is out of range, the result will
-  │ be wrong.
+  ⚠ The relative offset to address `00F9` is out of range, the result will be
+  │ wrong.
      ╭─[tests/opcodes.s:234:14]
  231 │    bbs $30.4,$F9 ;= 83 30 58
  232 │    bbs $30.5,$F9 ;= A3 30 55
@@ -678,13 +678,13 @@ spcasm::relative_offset_too_large
      ╰────
   help: The current address is `01A9` and therefore the difference is -177.
         This difference exceeds the range [-128, 127] and will wrap around,
-        probably leading to incorrect code. If you are using a relative
-        jump, consider using a trampoline to cover larger jump distances.
+        probably leading to incorrect code. If you are using a relative jump,
+        consider using a trampoline to cover larger jump distances.
 
 spcasm::relative_offset_too_large
 
-  ⚠ The relative offset to address `0005` is out of range, the result will
-  │ be wrong.
+  ⚠ The relative offset to address `0005` is out of range, the result will be
+  │ wrong.
      ╭─[tests/opcodes.s:235:16]
  232 │    bbs $30.5,$F9 ;= A3 30 55
  233 │    bbs $30.6,$F9 ;= C3 30 52
@@ -698,13 +698,13 @@ spcasm::relative_offset_too_large
      ╰────
   help: The current address is `01AC` and therefore the difference is -424.
         This difference exceeds the range [-128, 127] and will wrap around,
-        probably leading to incorrect code. If you are using a relative
-        jump, consider using a trampoline to cover larger jump distances.
+        probably leading to incorrect code. If you are using a relative jump,
+        consider using a trampoline to cover larger jump distances.
 
 spcasm::relative_offset_too_large
 
-  ⚠ The relative offset to address `0005` is out of range, the result will
-  │ be wrong.
+  ⚠ The relative offset to address `0005` is out of range, the result will be
+  │ wrong.
      ╭─[tests/opcodes.s:236:14]
  233 │    bbs $30.6,$F9 ;= C3 30 52
  234 │    bbs $30.7,$F9 ;= E3 30 4F
@@ -718,13 +718,13 @@ spcasm::relative_offset_too_large
      ╰────
   help: The current address is `01AF` and therefore the difference is -427.
         This difference exceeds the range [-128, 127] and will wrap around,
-        probably leading to incorrect code. If you are using a relative
-        jump, consider using a trampoline to cover larger jump distances.
+        probably leading to incorrect code. If you are using a relative jump,
+        consider using a trampoline to cover larger jump distances.
 
 spcasm::relative_offset_too_large
 
-  ⚠ The relative offset to address `0005` is out of range, the result will
-  │ be wrong.
+  ⚠ The relative offset to address `0005` is out of range, the result will be
+  │ wrong.
      ╭─[tests/opcodes.s:237:14]
  234 │    bbs $30.7,$F9 ;= E3 30 4F
  235 │    bbc start.0,$05 ;= 13 00 58
@@ -738,13 +738,13 @@ spcasm::relative_offset_too_large
      ╰────
   help: The current address is `01B2` and therefore the difference is -430.
         This difference exceeds the range [-128, 127] and will wrap around,
-        probably leading to incorrect code. If you are using a relative
-        jump, consider using a trampoline to cover larger jump distances.
+        probably leading to incorrect code. If you are using a relative jump,
+        consider using a trampoline to cover larger jump distances.
 
 spcasm::relative_offset_too_large
 
-  ⚠ The relative offset to address `0005` is out of range, the result will
-  │ be wrong.
+  ⚠ The relative offset to address `0005` is out of range, the result will be
+  │ wrong.
      ╭─[tests/opcodes.s:238:14]
  235 │    bbc start.0,$05 ;= 13 00 58
  236 │    bbc $31.1,$05 ;= 33 31 55
@@ -758,13 +758,13 @@ spcasm::relative_offset_too_large
      ╰────
   help: The current address is `01B5` and therefore the difference is -433.
         This difference exceeds the range [-128, 127] and will wrap around,
-        probably leading to incorrect code. If you are using a relative
-        jump, consider using a trampoline to cover larger jump distances.
+        probably leading to incorrect code. If you are using a relative jump,
+        consider using a trampoline to cover larger jump distances.
 
 spcasm::relative_offset_too_large
 
-  ⚠ The relative offset to address `0005` is out of range, the result will
-  │ be wrong.
+  ⚠ The relative offset to address `0005` is out of range, the result will be
+  │ wrong.
      ╭─[tests/opcodes.s:239:14]
  236 │    bbc $31.1,$05 ;= 33 31 55
  237 │    bbc $31.2,$05 ;= 53 31 52
@@ -778,13 +778,13 @@ spcasm::relative_offset_too_large
      ╰────
   help: The current address is `01B8` and therefore the difference is -436.
         This difference exceeds the range [-128, 127] and will wrap around,
-        probably leading to incorrect code. If you are using a relative
-        jump, consider using a trampoline to cover larger jump distances.
+        probably leading to incorrect code. If you are using a relative jump,
+        consider using a trampoline to cover larger jump distances.
 
 spcasm::relative_offset_too_large
 
-  ⚠ The relative offset to address `0005` is out of range, the result will
-  │ be wrong.
+  ⚠ The relative offset to address `0005` is out of range, the result will be
+  │ wrong.
      ╭─[tests/opcodes.s:240:14]
  237 │    bbc $31.2,$05 ;= 53 31 52
  238 │    bbc $31.3,$05 ;= 73 31 4F
@@ -798,13 +798,13 @@ spcasm::relative_offset_too_large
      ╰────
   help: The current address is `01BB` and therefore the difference is -439.
         This difference exceeds the range [-128, 127] and will wrap around,
-        probably leading to incorrect code. If you are using a relative
-        jump, consider using a trampoline to cover larger jump distances.
+        probably leading to incorrect code. If you are using a relative jump,
+        consider using a trampoline to cover larger jump distances.
 
 spcasm::relative_offset_too_large
 
-  ⚠ The relative offset to address `0005` is out of range, the result will
-  │ be wrong.
+  ⚠ The relative offset to address `0005` is out of range, the result will be
+  │ wrong.
      ╭─[tests/opcodes.s:241:14]
  238 │    bbc $31.3,$05 ;= 73 31 4F
  239 │    bbc $31.4,$05 ;= 93 31 4C
@@ -818,13 +818,13 @@ spcasm::relative_offset_too_large
      ╰────
   help: The current address is `01BE` and therefore the difference is -442.
         This difference exceeds the range [-128, 127] and will wrap around,
-        probably leading to incorrect code. If you are using a relative
-        jump, consider using a trampoline to cover larger jump distances.
+        probably leading to incorrect code. If you are using a relative jump,
+        consider using a trampoline to cover larger jump distances.
 
 spcasm::relative_offset_too_large
 
-  ⚠ The relative offset to address `0005` is out of range, the result will
-  │ be wrong.
+  ⚠ The relative offset to address `0005` is out of range, the result will be
+  │ wrong.
      ╭─[tests/opcodes.s:242:14]
  239 │    bbc $31.4,$05 ;= 93 31 4C
  240 │    bbc $31.5,$05 ;= B3 31 49
@@ -838,8 +838,8 @@ spcasm::relative_offset_too_large
      ╰────
   help: The current address is `01C1` and therefore the difference is -445.
         This difference exceeds the range [-128, 127] and will wrap around,
-        probably leading to incorrect code. If you are using a relative
-        jump, consider using a trampoline to cover larger jump distances.
+        probably leading to incorrect code. If you are using a relative jump,
+        consider using a trampoline to cover larger jump distances.
 
 
 ```
@@ -858,13 +858,13 @@ spcasm::arch::valid
  4 │ start:        ; @ 0
    ╰────
   help: spcasm supports `arch` directives for compatibility with the Asar
-        multi-architecture assembler. This arch directive points to the
-        spc700 architecture and is therefore safely ignored.
+        multi-architecture assembler. This arch directive points to the spc700
+        architecture and is therefore safely ignored.
 
 spcasm::relative_offset_too_large
 
-  ⚠ The relative offset to address `002C` is out of range, the result will
-  │ be wrong.
+  ⚠ The relative offset to address `002C` is out of range, the result will be
+  │ wrong.
      ╭─[tests/opcodes.s:207:13]
  204 │    bvc reltarget+8  ;= 50 F8
  205 │    bmi reltarget+10 ;= 30 F8
@@ -878,13 +878,13 @@ spcasm::relative_offset_too_large
      ╰────
   help: The current address is `0174` and therefore the difference is -329.
         This difference exceeds the range [-128, 127] and will wrap around,
-        probably leading to incorrect code. If you are using a relative
-        jump, consider using a trampoline to cover larger jump distances.
+        probably leading to incorrect code. If you are using a relative jump,
+        consider using a trampoline to cover larger jump distances.
 
 spcasm::relative_offset_too_large
 
-  ⚠ The relative offset to address `002E` is out of range, the result will
-  │ be wrong.
+  ⚠ The relative offset to address `002E` is out of range, the result will be
+  │ wrong.
      ╭─[tests/opcodes.s:208:15]
  205 │    bmi reltarget+10 ;= 30 F8
  206 │    bpl reltarget+12 ;= 10 F8
@@ -898,13 +898,13 @@ spcasm::relative_offset_too_large
      ╰────
   help: The current address is `0177` and therefore the difference is -330.
         This difference exceeds the range [-128, 127] and will wrap around,
-        probably leading to incorrect code. If you are using a relative
-        jump, consider using a trampoline to cover larger jump distances.
+        probably leading to incorrect code. If you are using a relative jump,
+        consider using a trampoline to cover larger jump distances.
 
 spcasm::relative_offset_too_large
 
-  ⚠ The relative offset to address `0030` is out of range, the result will
-  │ be wrong.
+  ⚠ The relative offset to address `0030` is out of range, the result will be
+  │ wrong.
      ╭─[tests/opcodes.s:209:13]
  206 │    bpl reltarget+12 ;= 10 F8
  207 │    cbne $2B,$2C  ;= 2E 2B B7
@@ -918,13 +918,13 @@ spcasm::relative_offset_too_large
      ╰────
   help: The current address is `017A` and therefore the difference is -331.
         This difference exceeds the range [-128, 127] and will wrap around,
-        probably leading to incorrect code. If you are using a relative
-        jump, consider using a trampoline to cover larger jump distances.
+        probably leading to incorrect code. If you are using a relative jump,
+        consider using a trampoline to cover larger jump distances.
 
 spcasm::relative_offset_too_large
 
-  ⚠ The relative offset to address `0031` is out of range, the result will
-  │ be wrong.
+  ⚠ The relative offset to address `0031` is out of range, the result will be
+  │ wrong.
      ╭─[tests/opcodes.s:210:11]
  207 │    cbne $2B,$2C  ;= 2E 2B B7
  208 │    cbne $2D+X,$2E;= DE 2D B6
@@ -938,13 +938,13 @@ spcasm::relative_offset_too_large
      ╰────
   help: The current address is `017C` and therefore the difference is -332.
         This difference exceeds the range [-128, 127] and will wrap around,
-        probably leading to incorrect code. If you are using a relative
-        jump, consider using a trampoline to cover larger jump distances.
+        probably leading to incorrect code. If you are using a relative jump,
+        consider using a trampoline to cover larger jump distances.
 
 spcasm::relative_offset_too_large
 
-  ⚠ The relative offset to address `00F9` is out of range, the result will
-  │ be wrong.
+  ⚠ The relative offset to address `00F9` is out of range, the result will be
+  │ wrong.
      ╭─[tests/opcodes.s:227:15]
  224 │ global_selftarget:
  225 │    bne global_selftarget ;= D0 FE
@@ -958,13 +958,13 @@ spcasm::relative_offset_too_large
      ╰────
   help: The current address is `0194` and therefore the difference is -156.
         This difference exceeds the range [-128, 127] and will wrap around,
-        probably leading to incorrect code. If you are using a relative
-        jump, consider using a trampoline to cover larger jump distances.
+        probably leading to incorrect code. If you are using a relative jump,
+        consider using a trampoline to cover larger jump distances.
 
 spcasm::relative_offset_too_large
 
-  ⚠ The relative offset to address `00F9` is out of range, the result will
-  │ be wrong.
+  ⚠ The relative offset to address `00F9` is out of range, the result will be
+  │ wrong.
      ╭─[tests/opcodes.s:228:14]
  225 │    bne global_selftarget ;= D0 FE
  226 │ 
@@ -978,13 +978,13 @@ spcasm::relative_offset_too_large
      ╰────
   help: The current address is `0197` and therefore the difference is -159.
         This difference exceeds the range [-128, 127] and will wrap around,
-        probably leading to incorrect code. If you are using a relative
-        jump, consider using a trampoline to cover larger jump distances.
+        probably leading to incorrect code. If you are using a relative jump,
+        consider using a trampoline to cover larger jump distances.
 
 spcasm::relative_offset_too_large
 
-  ⚠ The relative offset to address `00F9` is out of range, the result will
-  │ be wrong.
+  ⚠ The relative offset to address `00F9` is out of range, the result will be
+  │ wrong.
      ╭─[tests/opcodes.s:229:14]
  226 │ 
  227 │    bbs data.0,$F9 ;= 03 13 64
@@ -998,13 +998,13 @@ spcasm::relative_offset_too_large
      ╰────
   help: The current address is `019A` and therefore the difference is -162.
         This difference exceeds the range [-128, 127] and will wrap around,
-        probably leading to incorrect code. If you are using a relative
-        jump, consider using a trampoline to cover larger jump distances.
+        probably leading to incorrect code. If you are using a relative jump,
+        consider using a trampoline to cover larger jump distances.
 
 spcasm::relative_offset_too_large
 
-  ⚠ The relative offset to address `00F9` is out of range, the result will
-  │ be wrong.
+  ⚠ The relative offset to address `00F9` is out of range, the result will be
+  │ wrong.
      ╭─[tests/opcodes.s:230:14]
  227 │    bbs data.0,$F9 ;= 03 13 64
  228 │    bbs $30.1,$F9 ;= 23 30 61
@@ -1018,13 +1018,13 @@ spcasm::relative_offset_too_large
      ╰────
   help: The current address is `019D` and therefore the difference is -165.
         This difference exceeds the range [-128, 127] and will wrap around,
-        probably leading to incorrect code. If you are using a relative
-        jump, consider using a trampoline to cover larger jump distances.
+        probably leading to incorrect code. If you are using a relative jump,
+        consider using a trampoline to cover larger jump distances.
 
 spcasm::relative_offset_too_large
 
-  ⚠ The relative offset to address `00F9` is out of range, the result will
-  │ be wrong.
+  ⚠ The relative offset to address `00F9` is out of range, the result will be
+  │ wrong.
      ╭─[tests/opcodes.s:231:14]
  228 │    bbs $30.1,$F9 ;= 23 30 61
  229 │    bbs $30.2,$F9 ;= 43 30 5E
@@ -1038,13 +1038,13 @@ spcasm::relative_offset_too_large
      ╰────
   help: The current address is `01A0` and therefore the difference is -168.
         This difference exceeds the range [-128, 127] and will wrap around,
-        probably leading to incorrect code. If you are using a relative
-        jump, consider using a trampoline to cover larger jump distances.
+        probably leading to incorrect code. If you are using a relative jump,
+        consider using a trampoline to cover larger jump distances.
 
 spcasm::relative_offset_too_large
 
-  ⚠ The relative offset to address `00F9` is out of range, the result will
-  │ be wrong.
+  ⚠ The relative offset to address `00F9` is out of range, the result will be
+  │ wrong.
      ╭─[tests/opcodes.s:232:14]
  229 │    bbs $30.2,$F9 ;= 43 30 5E
  230 │    bbs $30.3,$F9 ;= 63 30 5B
@@ -1058,13 +1058,13 @@ spcasm::relative_offset_too_large
      ╰────
   help: The current address is `01A3` and therefore the difference is -171.
         This difference exceeds the range [-128, 127] and will wrap around,
-        probably leading to incorrect code. If you are using a relative
-        jump, consider using a trampoline to cover larger jump distances.
+        probably leading to incorrect code. If you are using a relative jump,
+        consider using a trampoline to cover larger jump distances.
 
 spcasm::relative_offset_too_large
 
-  ⚠ The relative offset to address `00F9` is out of range, the result will
-  │ be wrong.
+  ⚠ The relative offset to address `00F9` is out of range, the result will be
+  │ wrong.
      ╭─[tests/opcodes.s:233:14]
  230 │    bbs $30.3,$F9 ;= 63 30 5B
  231 │    bbs $30.4,$F9 ;= 83 30 58
@@ -1078,13 +1078,13 @@ spcasm::relative_offset_too_large
      ╰────
   help: The current address is `01A6` and therefore the difference is -174.
         This difference exceeds the range [-128, 127] and will wrap around,
-        probably leading to incorrect code. If you are using a relative
-        jump, consider using a trampoline to cover larger jump distances.
+        probably leading to incorrect code. If you are using a relative jump,
+        consider using a trampoline to cover larger jump distances.
 
 spcasm::relative_offset_too_large
 
-  ⚠ The relative offset to address `00F9` is out of range, the result will
-  │ be wrong.
+  ⚠ The relative offset to address `00F9` is out of range, the result will be
+  │ wrong.
      ╭─[tests/opcodes.s:234:14]
  231 │    bbs $30.4,$F9 ;= 83 30 58
  232 │    bbs $30.5,$F9 ;= A3 30 55
@@ -1098,13 +1098,13 @@ spcasm::relative_offset_too_large
      ╰────
   help: The current address is `01A9` and therefore the difference is -177.
         This difference exceeds the range [-128, 127] and will wrap around,
-        probably leading to incorrect code. If you are using a relative
-        jump, consider using a trampoline to cover larger jump distances.
+        probably leading to incorrect code. If you are using a relative jump,
+        consider using a trampoline to cover larger jump distances.
 
 spcasm::relative_offset_too_large
 
-  ⚠ The relative offset to address `0005` is out of range, the result will
-  │ be wrong.
+  ⚠ The relative offset to address `0005` is out of range, the result will be
+  │ wrong.
      ╭─[tests/opcodes.s:235:16]
  232 │    bbs $30.5,$F9 ;= A3 30 55
  233 │    bbs $30.6,$F9 ;= C3 30 52
@@ -1118,13 +1118,13 @@ spcasm::relative_offset_too_large
      ╰────
   help: The current address is `01AC` and therefore the difference is -424.
         This difference exceeds the range [-128, 127] and will wrap around,
-        probably leading to incorrect code. If you are using a relative
-        jump, consider using a trampoline to cover larger jump distances.
+        probably leading to incorrect code. If you are using a relative jump,
+        consider using a trampoline to cover larger jump distances.
 
 spcasm::relative_offset_too_large
 
-  ⚠ The relative offset to address `0005` is out of range, the result will
-  │ be wrong.
+  ⚠ The relative offset to address `0005` is out of range, the result will be
+  │ wrong.
      ╭─[tests/opcodes.s:236:14]
  233 │    bbs $30.6,$F9 ;= C3 30 52
  234 │    bbs $30.7,$F9 ;= E3 30 4F
@@ -1138,13 +1138,13 @@ spcasm::relative_offset_too_large
      ╰────
   help: The current address is `01AF` and therefore the difference is -427.
         This difference exceeds the range [-128, 127] and will wrap around,
-        probably leading to incorrect code. If you are using a relative
-        jump, consider using a trampoline to cover larger jump distances.
+        probably leading to incorrect code. If you are using a relative jump,
+        consider using a trampoline to cover larger jump distances.
 
 spcasm::relative_offset_too_large
 
-  ⚠ The relative offset to address `0005` is out of range, the result will
-  │ be wrong.
+  ⚠ The relative offset to address `0005` is out of range, the result will be
+  │ wrong.
      ╭─[tests/opcodes.s:237:14]
  234 │    bbs $30.7,$F9 ;= E3 30 4F
  235 │    bbc start.0,$05 ;= 13 00 58
@@ -1158,13 +1158,13 @@ spcasm::relative_offset_too_large
      ╰────
   help: The current address is `01B2` and therefore the difference is -430.
         This difference exceeds the range [-128, 127] and will wrap around,
-        probably leading to incorrect code. If you are using a relative
-        jump, consider using a trampoline to cover larger jump distances.
+        probably leading to incorrect code. If you are using a relative jump,
+        consider using a trampoline to cover larger jump distances.
 
 spcasm::relative_offset_too_large
 
-  ⚠ The relative offset to address `0005` is out of range, the result will
-  │ be wrong.
+  ⚠ The relative offset to address `0005` is out of range, the result will be
+  │ wrong.
      ╭─[tests/opcodes.s:238:14]
  235 │    bbc start.0,$05 ;= 13 00 58
  236 │    bbc $31.1,$05 ;= 33 31 55
@@ -1178,13 +1178,13 @@ spcasm::relative_offset_too_large
      ╰────
   help: The current address is `01B5` and therefore the difference is -433.
         This difference exceeds the range [-128, 127] and will wrap around,
-        probably leading to incorrect code. If you are using a relative
-        jump, consider using a trampoline to cover larger jump distances.
+        probably leading to incorrect code. If you are using a relative jump,
+        consider using a trampoline to cover larger jump distances.
 
 spcasm::relative_offset_too_large
 
-  ⚠ The relative offset to address `0005` is out of range, the result will
-  │ be wrong.
+  ⚠ The relative offset to address `0005` is out of range, the result will be
+  │ wrong.
      ╭─[tests/opcodes.s:239:14]
  236 │    bbc $31.1,$05 ;= 33 31 55
  237 │    bbc $31.2,$05 ;= 53 31 52
@@ -1198,13 +1198,13 @@ spcasm::relative_offset_too_large
      ╰────
   help: The current address is `01B8` and therefore the difference is -436.
         This difference exceeds the range [-128, 127] and will wrap around,
-        probably leading to incorrect code. If you are using a relative
-        jump, consider using a trampoline to cover larger jump distances.
+        probably leading to incorrect code. If you are using a relative jump,
+        consider using a trampoline to cover larger jump distances.
 
 spcasm::relative_offset_too_large
 
-  ⚠ The relative offset to address `0005` is out of range, the result will
-  │ be wrong.
+  ⚠ The relative offset to address `0005` is out of range, the result will be
+  │ wrong.
      ╭─[tests/opcodes.s:240:14]
  237 │    bbc $31.2,$05 ;= 53 31 52
  238 │    bbc $31.3,$05 ;= 73 31 4F
@@ -1218,13 +1218,13 @@ spcasm::relative_offset_too_large
      ╰────
   help: The current address is `01BB` and therefore the difference is -439.
         This difference exceeds the range [-128, 127] and will wrap around,
-        probably leading to incorrect code. If you are using a relative
-        jump, consider using a trampoline to cover larger jump distances.
+        probably leading to incorrect code. If you are using a relative jump,
+        consider using a trampoline to cover larger jump distances.
 
 spcasm::relative_offset_too_large
 
-  ⚠ The relative offset to address `0005` is out of range, the result will
-  │ be wrong.
+  ⚠ The relative offset to address `0005` is out of range, the result will be
+  │ wrong.
      ╭─[tests/opcodes.s:241:14]
  238 │    bbc $31.3,$05 ;= 73 31 4F
  239 │    bbc $31.4,$05 ;= 93 31 4C
@@ -1238,13 +1238,13 @@ spcasm::relative_offset_too_large
      ╰────
   help: The current address is `01BE` and therefore the difference is -442.
         This difference exceeds the range [-128, 127] and will wrap around,
-        probably leading to incorrect code. If you are using a relative
-        jump, consider using a trampoline to cover larger jump distances.
+        probably leading to incorrect code. If you are using a relative jump,
+        consider using a trampoline to cover larger jump distances.
 
 spcasm::relative_offset_too_large
 
-  ⚠ The relative offset to address `0005` is out of range, the result will
-  │ be wrong.
+  ⚠ The relative offset to address `0005` is out of range, the result will be
+  │ wrong.
      ╭─[tests/opcodes.s:242:14]
  239 │    bbc $31.4,$05 ;= 93 31 4C
  240 │    bbc $31.5,$05 ;= B3 31 49
@@ -1258,8 +1258,8 @@ spcasm::relative_offset_too_large
      ╰────
   help: The current address is `01C1` and therefore the difference is -445.
         This difference exceeds the range [-128, 127] and will wrap around,
-        probably leading to incorrect code. If you are using a relative
-        jump, consider using a trampoline to cover larger jump distances.
+        probably leading to incorrect code. If you are using a relative jump,
+        consider using a trampoline to cover larger jump distances.
 
 
 ```
@@ -1278,13 +1278,13 @@ spcasm::arch::valid
  4 │ start:        ; @ 0
    ╰────
   help: spcasm supports `arch` directives for compatibility with the Asar
-        multi-architecture assembler. This arch directive points to the
-        spc700 architecture and is therefore safely ignored.
+        multi-architecture assembler. This arch directive points to the spc700
+        architecture and is therefore safely ignored.
 
 spcasm::relative_offset_too_large
 
-  ⚠ The relative offset to address `002C` is out of range, the result will
-  │ be wrong.
+  ⚠ The relative offset to address `002C` is out of range, the result will be
+  │ wrong.
      ╭─[tests/opcodes.s:207:13]
  204 │    bvc reltarget+8  ;= 50 F8
  205 │    bmi reltarget+10 ;= 30 F8
@@ -1298,13 +1298,13 @@ spcasm::relative_offset_too_large
      ╰────
   help: The current address is `0174` and therefore the difference is -329.
         This difference exceeds the range [-128, 127] and will wrap around,
-        probably leading to incorrect code. If you are using a relative
-        jump, consider using a trampoline to cover larger jump distances.
+        probably leading to incorrect code. If you are using a relative jump,
+        consider using a trampoline to cover larger jump distances.
 
 spcasm::relative_offset_too_large
 
-  ⚠ The relative offset to address `002E` is out of range, the result will
-  │ be wrong.
+  ⚠ The relative offset to address `002E` is out of range, the result will be
+  │ wrong.
      ╭─[tests/opcodes.s:208:15]
  205 │    bmi reltarget+10 ;= 30 F8
  206 │    bpl reltarget+12 ;= 10 F8
@@ -1318,13 +1318,13 @@ spcasm::relative_offset_too_large
      ╰────
   help: The current address is `0177` and therefore the difference is -330.
         This difference exceeds the range [-128, 127] and will wrap around,
-        probably leading to incorrect code. If you are using a relative
-        jump, consider using a trampoline to cover larger jump distances.
+        probably leading to incorrect code. If you are using a relative jump,
+        consider using a trampoline to cover larger jump distances.
 
 spcasm::relative_offset_too_large
 
-  ⚠ The relative offset to address `0030` is out of range, the result will
-  │ be wrong.
+  ⚠ The relative offset to address `0030` is out of range, the result will be
+  │ wrong.
      ╭─[tests/opcodes.s:209:13]
  206 │    bpl reltarget+12 ;= 10 F8
  207 │    cbne $2B,$2C  ;= 2E 2B B7
@@ -1338,13 +1338,13 @@ spcasm::relative_offset_too_large
      ╰────
   help: The current address is `017A` and therefore the difference is -331.
         This difference exceeds the range [-128, 127] and will wrap around,
-        probably leading to incorrect code. If you are using a relative
-        jump, consider using a trampoline to cover larger jump distances.
+        probably leading to incorrect code. If you are using a relative jump,
+        consider using a trampoline to cover larger jump distances.
 
 spcasm::relative_offset_too_large
 
-  ⚠ The relative offset to address `0031` is out of range, the result will
-  │ be wrong.
+  ⚠ The relative offset to address `0031` is out of range, the result will be
+  │ wrong.
      ╭─[tests/opcodes.s:210:11]
  207 │    cbne $2B,$2C  ;= 2E 2B B7
  208 │    cbne $2D+X,$2E;= DE 2D B6
@@ -1358,13 +1358,13 @@ spcasm::relative_offset_too_large
      ╰────
   help: The current address is `017C` and therefore the difference is -332.
         This difference exceeds the range [-128, 127] and will wrap around,
-        probably leading to incorrect code. If you are using a relative
-        jump, consider using a trampoline to cover larger jump distances.
+        probably leading to incorrect code. If you are using a relative jump,
+        consider using a trampoline to cover larger jump distances.
 
 spcasm::relative_offset_too_large
 
-  ⚠ The relative offset to address `00F9` is out of range, the result will
-  │ be wrong.
+  ⚠ The relative offset to address `00F9` is out of range, the result will be
+  │ wrong.
      ╭─[tests/opcodes.s:227:15]
  224 │ global_selftarget:
  225 │    bne global_selftarget ;= D0 FE
@@ -1378,13 +1378,13 @@ spcasm::relative_offset_too_large
      ╰────
   help: The current address is `0194` and therefore the difference is -156.
         This difference exceeds the range [-128, 127] and will wrap around,
-        probably leading to incorrect code. If you are using a relative
-        jump, consider using a trampoline to cover larger jump distances.
+        probably leading to incorrect code. If you are using a relative jump,
+        consider using a trampoline to cover larger jump distances.
 
 spcasm::relative_offset_too_large
 
-  ⚠ The relative offset to address `00F9` is out of range, the result will
-  │ be wrong.
+  ⚠ The relative offset to address `00F9` is out of range, the result will be
+  │ wrong.
      ╭─[tests/opcodes.s:228:14]
  225 │    bne global_selftarget ;= D0 FE
  226 │ 
@@ -1398,13 +1398,13 @@ spcasm::relative_offset_too_large
      ╰────
   help: The current address is `0197` and therefore the difference is -159.
         This difference exceeds the range [-128, 127] and will wrap around,
-        probably leading to incorrect code. If you are using a relative
-        jump, consider using a trampoline to cover larger jump distances.
+        probably leading to incorrect code. If you are using a relative jump,
+        consider using a trampoline to cover larger jump distances.
 
 spcasm::relative_offset_too_large
 
-  ⚠ The relative offset to address `00F9` is out of range, the result will
-  │ be wrong.
+  ⚠ The relative offset to address `00F9` is out of range, the result will be
+  │ wrong.
      ╭─[tests/opcodes.s:229:14]
  226 │ 
  227 │    bbs data.0,$F9 ;= 03 13 64
@@ -1418,13 +1418,13 @@ spcasm::relative_offset_too_large
      ╰────
   help: The current address is `019A` and therefore the difference is -162.
         This difference exceeds the range [-128, 127] and will wrap around,
-        probably leading to incorrect code. If you are using a relative
-        jump, consider using a trampoline to cover larger jump distances.
+        probably leading to incorrect code. If you are using a relative jump,
+        consider using a trampoline to cover larger jump distances.
 
 spcasm::relative_offset_too_large
 
-  ⚠ The relative offset to address `00F9` is out of range, the result will
-  │ be wrong.
+  ⚠ The relative offset to address `00F9` is out of range, the result will be
+  │ wrong.
      ╭─[tests/opcodes.s:230:14]
  227 │    bbs data.0,$F9 ;= 03 13 64
  228 │    bbs $30.1,$F9 ;= 23 30 61
@@ -1438,13 +1438,13 @@ spcasm::relative_offset_too_large
      ╰────
   help: The current address is `019D` and therefore the difference is -165.
         This difference exceeds the range [-128, 127] and will wrap around,
-        probably leading to incorrect code. If you are using a relative
-        jump, consider using a trampoline to cover larger jump distances.
+        probably leading to incorrect code. If you are using a relative jump,
+        consider using a trampoline to cover larger jump distances.
 
 spcasm::relative_offset_too_large
 
-  ⚠ The relative offset to address `00F9` is out of range, the result will
-  │ be wrong.
+  ⚠ The relative offset to address `00F9` is out of range, the result will be
+  │ wrong.
      ╭─[tests/opcodes.s:231:14]
  228 │    bbs $30.1,$F9 ;= 23 30 61
  229 │    bbs $30.2,$F9 ;= 43 30 5E
@@ -1458,13 +1458,13 @@ spcasm::relative_offset_too_large
      ╰────
   help: The current address is `01A0` and therefore the difference is -168.
         This difference exceeds the range [-128, 127] and will wrap around,
-        probably leading to incorrect code. If you are using a relative
-        jump, consider using a trampoline to cover larger jump distances.
+        probably leading to incorrect code. If you are using a relative jump,
+        consider using a trampoline to cover larger jump distances.
 
 spcasm::relative_offset_too_large
 
-  ⚠ The relative offset to address `00F9` is out of range, the result will
-  │ be wrong.
+  ⚠ The relative offset to address `00F9` is out of range, the result will be
+  │ wrong.
      ╭─[tests/opcodes.s:232:14]
  229 │    bbs $30.2,$F9 ;= 43 30 5E
  230 │    bbs $30.3,$F9 ;= 63 30 5B
@@ -1478,13 +1478,13 @@ spcasm::relative_offset_too_large
      ╰────
   help: The current address is `01A3` and therefore the difference is -171.
         This difference exceeds the range [-128, 127] and will wrap around,
-        probably leading to incorrect code. If you are using a relative
-        jump, consider using a trampoline to cover larger jump distances.
+        probably leading to incorrect code. If you are using a relative jump,
+        consider using a trampoline to cover larger jump distances.
 
 spcasm::relative_offset_too_large
 
-  ⚠ The relative offset to address `00F9` is out of range, the result will
-  │ be wrong.
+  ⚠ The relative offset to address `00F9` is out of range, the result will be
+  │ wrong.
      ╭─[tests/opcodes.s:233:14]
  230 │    bbs $30.3,$F9 ;= 63 30 5B
  231 │    bbs $30.4,$F9 ;= 83 30 58
@@ -1498,13 +1498,13 @@ spcasm::relative_offset_too_large
      ╰────
   help: The current address is `01A6` and therefore the difference is -174.
         This difference exceeds the range [-128, 127] and will wrap around,
-        probably leading to incorrect code. If you are using a relative
-        jump, consider using a trampoline to cover larger jump distances.
+        probably leading to incorrect code. If you are using a relative jump,
+        consider using a trampoline to cover larger jump distances.
 
 spcasm::relative_offset_too_large
 
-  ⚠ The relative offset to address `00F9` is out of range, the result will
-  │ be wrong.
+  ⚠ The relative offset to address `00F9` is out of range, the result will be
+  │ wrong.
      ╭─[tests/opcodes.s:234:14]
  231 │    bbs $30.4,$F9 ;= 83 30 58
  232 │    bbs $30.5,$F9 ;= A3 30 55
@@ -1518,13 +1518,13 @@ spcasm::relative_offset_too_large
      ╰────
   help: The current address is `01A9` and therefore the difference is -177.
         This difference exceeds the range [-128, 127] and will wrap around,
-        probably leading to incorrect code. If you are using a relative
-        jump, consider using a trampoline to cover larger jump distances.
+        probably leading to incorrect code. If you are using a relative jump,
+        consider using a trampoline to cover larger jump distances.
 
 spcasm::relative_offset_too_large
 
-  ⚠ The relative offset to address `0005` is out of range, the result will
-  │ be wrong.
+  ⚠ The relative offset to address `0005` is out of range, the result will be
+  │ wrong.
      ╭─[tests/opcodes.s:235:16]
  232 │    bbs $30.5,$F9 ;= A3 30 55
  233 │    bbs $30.6,$F9 ;= C3 30 52
@@ -1538,13 +1538,13 @@ spcasm::relative_offset_too_large
      ╰────
   help: The current address is `01AC` and therefore the difference is -424.
         This difference exceeds the range [-128, 127] and will wrap around,
-        probably leading to incorrect code. If you are using a relative
-        jump, consider using a trampoline to cover larger jump distances.
+        probably leading to incorrect code. If you are using a relative jump,
+        consider using a trampoline to cover larger jump distances.
 
 spcasm::relative_offset_too_large
 
-  ⚠ The relative offset to address `0005` is out of range, the result will
-  │ be wrong.
+  ⚠ The relative offset to address `0005` is out of range, the result will be
+  │ wrong.
      ╭─[tests/opcodes.s:236:14]
  233 │    bbs $30.6,$F9 ;= C3 30 52
  234 │    bbs $30.7,$F9 ;= E3 30 4F
@@ -1558,13 +1558,13 @@ spcasm::relative_offset_too_large
      ╰────
   help: The current address is `01AF` and therefore the difference is -427.
         This difference exceeds the range [-128, 127] and will wrap around,
-        probably leading to incorrect code. If you are using a relative
-        jump, consider using a trampoline to cover larger jump distances.
+        probably leading to incorrect code. If you are using a relative jump,
+        consider using a trampoline to cover larger jump distances.
 
 spcasm::relative_offset_too_large
 
-  ⚠ The relative offset to address `0005` is out of range, the result will
-  │ be wrong.
+  ⚠ The relative offset to address `0005` is out of range, the result will be
+  │ wrong.
      ╭─[tests/opcodes.s:237:14]
  234 │    bbs $30.7,$F9 ;= E3 30 4F
  235 │    bbc start.0,$05 ;= 13 00 58
@@ -1578,13 +1578,13 @@ spcasm::relative_offset_too_large
      ╰────
   help: The current address is `01B2` and therefore the difference is -430.
         This difference exceeds the range [-128, 127] and will wrap around,
-        probably leading to incorrect code. If you are using a relative
-        jump, consider using a trampoline to cover larger jump distances.
+        probably leading to incorrect code. If you are using a relative jump,
+        consider using a trampoline to cover larger jump distances.
 
 spcasm::relative_offset_too_large
 
-  ⚠ The relative offset to address `0005` is out of range, the result will
-  │ be wrong.
+  ⚠ The relative offset to address `0005` is out of range, the result will be
+  │ wrong.
      ╭─[tests/opcodes.s:238:14]
  235 │    bbc start.0,$05 ;= 13 00 58
  236 │    bbc $31.1,$05 ;= 33 31 55
@@ -1598,13 +1598,13 @@ spcasm::relative_offset_too_large
      ╰────
   help: The current address is `01B5` and therefore the difference is -433.
         This difference exceeds the range [-128, 127] and will wrap around,
-        probably leading to incorrect code. If you are using a relative
-        jump, consider using a trampoline to cover larger jump distances.
+        probably leading to incorrect code. If you are using a relative jump,
+        consider using a trampoline to cover larger jump distances.
 
 spcasm::relative_offset_too_large
 
-  ⚠ The relative offset to address `0005` is out of range, the result will
-  │ be wrong.
+  ⚠ The relative offset to address `0005` is out of range, the result will be
+  │ wrong.
      ╭─[tests/opcodes.s:239:14]
  236 │    bbc $31.1,$05 ;= 33 31 55
  237 │    bbc $31.2,$05 ;= 53 31 52
@@ -1618,13 +1618,13 @@ spcasm::relative_offset_too_large
      ╰────
   help: The current address is `01B8` and therefore the difference is -436.
         This difference exceeds the range [-128, 127] and will wrap around,
-        probably leading to incorrect code. If you are using a relative
-        jump, consider using a trampoline to cover larger jump distances.
+        probably leading to incorrect code. If you are using a relative jump,
+        consider using a trampoline to cover larger jump distances.
 
 spcasm::relative_offset_too_large
 
-  ⚠ The relative offset to address `0005` is out of range, the result will
-  │ be wrong.
+  ⚠ The relative offset to address `0005` is out of range, the result will be
+  │ wrong.
      ╭─[tests/opcodes.s:240:14]
  237 │    bbc $31.2,$05 ;= 53 31 52
  238 │    bbc $31.3,$05 ;= 73 31 4F
@@ -1638,13 +1638,13 @@ spcasm::relative_offset_too_large
      ╰────
   help: The current address is `01BB` and therefore the difference is -439.
         This difference exceeds the range [-128, 127] and will wrap around,
-        probably leading to incorrect code. If you are using a relative
-        jump, consider using a trampoline to cover larger jump distances.
+        probably leading to incorrect code. If you are using a relative jump,
+        consider using a trampoline to cover larger jump distances.
 
 spcasm::relative_offset_too_large
 
-  ⚠ The relative offset to address `0005` is out of range, the result will
-  │ be wrong.
+  ⚠ The relative offset to address `0005` is out of range, the result will be
+  │ wrong.
      ╭─[tests/opcodes.s:241:14]
  238 │    bbc $31.3,$05 ;= 73 31 4F
  239 │    bbc $31.4,$05 ;= 93 31 4C
@@ -1658,13 +1658,13 @@ spcasm::relative_offset_too_large
      ╰────
   help: The current address is `01BE` and therefore the difference is -442.
         This difference exceeds the range [-128, 127] and will wrap around,
-        probably leading to incorrect code. If you are using a relative
-        jump, consider using a trampoline to cover larger jump distances.
+        probably leading to incorrect code. If you are using a relative jump,
+        consider using a trampoline to cover larger jump distances.
 
 spcasm::relative_offset_too_large
 
-  ⚠ The relative offset to address `0005` is out of range, the result will
-  │ be wrong.
+  ⚠ The relative offset to address `0005` is out of range, the result will be
+  │ wrong.
      ╭─[tests/opcodes.s:242:14]
  239 │    bbc $31.4,$05 ;= 93 31 4C
  240 │    bbc $31.5,$05 ;= B3 31 49
@@ -1678,8 +1678,8 @@ spcasm::relative_offset_too_large
      ╰────
   help: The current address is `01C1` and therefore the difference is -445.
         This difference exceeds the range [-128, 127] and will wrap around,
-        probably leading to incorrect code. If you are using a relative
-        jump, consider using a trampoline to cover larger jump distances.
+        probably leading to incorrect code. If you are using a relative jump,
+        consider using a trampoline to cover larger jump distances.
 
 
 ```

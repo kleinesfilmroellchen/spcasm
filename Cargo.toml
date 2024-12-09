@@ -65,7 +65,7 @@ object = { version = "0.36", features = [
 	"elf",
 ], optional = true, default-features = false }
 parking_lot = "0.12"
-thiserror = "1"
+thiserror = "2"
 lalrpop-util = { git = "https://github.com/lalrpop/lalrpop", rev = "b8b82e9ecde5ca531efd13ce1beb9c1c5fa488a1" }
 num-traits = "0.2"
 num-derive = "0.4"
@@ -91,7 +91,7 @@ path = "spcasm_derive"
 version = "1.2.0"
 
 [dependencies.shadow-rs]
-version = "0.35"
+version = "0.36"
 optional = true
 default-features = false
 features = ["metadata"]
@@ -107,7 +107,7 @@ lalrpop = { git = "https://github.com/lalrpop/lalrpop", rev = "b8b82e9ecde5ca531
 # lalrpop = { version = "0.22", default-features = false }
 
 [build-dependencies.shadow-rs]
-version = "0.35"
+version = "0.36"
 optional = true
 default-features = false
 

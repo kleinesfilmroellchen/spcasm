@@ -37,7 +37,7 @@ jobs:
         with:
           owner: thedodd
           name: trunk
-          # https://github.com/thedodd/trunk/issues/575
+          # https://github.com/thedodd/trunk/issues/575 -- seems to have resolved itself...
           version: 0.16.0
       - name: Install mdbook
         uses: extractions/setup-crate@v1
@@ -54,6 +54,11 @@ jobs:
         with:
           owner: rustwasm
           name: wasm-bindgen
+      - name: Install wasm-opt
+        run: |
+          wget -qO- https://github.com/WebAssembly/binaryen/releases/download/version_116/binaryen-version_116-x86_64-linux.tar.gz | tar xvz -C ./binaryen binaryen-version_116 --strip=1
+          install /binaryen/bin/wasm-opt /usr/local/bin
+
       - name: Install mdbook-toc
         uses: extractions/setup-crate@v1
         with:

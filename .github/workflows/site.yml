@@ -49,6 +49,11 @@ jobs:
         with:
           owner: Michael-F-Bryan
           name: mdbook-linkcheck
+      - name: Install wasm-bindgen
+        uses: extractions/setup-crate@v1
+        with:
+          owner: rustwasm
+          name: wasm-bindgen
       - name: Install mdbook-toc
         uses: extractions/setup-crate@v1
         with:

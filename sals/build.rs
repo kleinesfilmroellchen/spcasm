@@ -1,5 +1,10 @@
 //! sals build script, adding `shadow_rs` variables.
 
+#[cfg(debug_assertions)]
+const BUILD_PATTERN: shadow_rs::BuildPattern = shadow_rs::BuildPattern::Lazy;
+#[cfg(not(debug_assertions))]
+const BUILD_PATTERN: shadow_rs::BuildPattern = shadow_rs::BuildPattern::RealTime;
+
 fn main() {
 	let denied = std::collections::BTreeSet::from([
 		shadow_rs::CARGO_MANIFEST_DIR,
@@ -13,11 +18,6 @@ fn main() {
 		shadow_rs::CARGO_VERSION,
 		shadow_rs::CARGO_METADATA,
 	]);
-
-	#[cfg(debug_assertions)]
-	const BUILD_PATTERN: shadow_rs::BuildPattern = shadow_rs::BuildPattern::Lazy;
-	#[cfg(not(debug_assertions))]
-	const BUILD_PATTERN: shadow_rs::BuildPattern = shadow_rs::BuildPattern::RealTime;
 
 	shadow_rs::ShadowBuilder::builder().deny_const(denied).build_pattern(BUILD_PATTERN).build().unwrap();
 }

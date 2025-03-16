@@ -2,21 +2,18 @@
 //!
 //! See [the parent module](`crate`) for definitions of the Rust structures that represent the SPC file data.
 
-#![allow(unused, clippy::trivially_copy_pass_by_ref)]
+#![allow(clippy::trivially_copy_pass_by_ref)]
 
-use std::ffi::CString;
 use std::str::FromStr;
 use std::time::Duration;
 
-use chrono::{NaiveDate, NaiveDateTime};
+use chrono::NaiveDate;
 use nom::branch::alt;
 use nom::bytes::complete::{tag, take};
-use nom::character::complete::digit0;
 use nom::combinator::{map_res, rest, verify};
-use nom::error::{make_error, Error, ErrorKind, ParseError};
-use nom::multi::count;
+use nom::error::{make_error, Error, ErrorKind};
 use nom::number::complete::{le_u16, le_u8};
-use nom::{Err, Finish, IResult, Parser};
+use nom::{Err, IResult, Parser};
 
 use crate::{Emulator, SpcFile, SpcHeader, SpcMemory};
 
@@ -29,7 +26,7 @@ const MAGIC_LENGTH: usize = MAGIC.len();
 ///
 /// Any parser errors are passed on to the caller.
 pub fn parse_from_bytes(bytes: &[u8]) -> Result<SpcFile, Err<Error<&[u8]>>> {
-	let (title, (_, header, memory, rest)) = (tag(MAGIC), header, memory, rest).parse(bytes)?;
+	let (_title, (_, header, memory, _rest)) = (tag(MAGIC), header, memory, rest).parse(bytes)?;
 	Ok(SpcFile { header, memory })
 }
 
@@ -79,7 +76,7 @@ const fn is_year(year: &u16) -> bool {
 fn binary_date(input: &[u8]) -> IResult<&[u8], Option<NaiveDate>> {
 	let (rest, (day, month, year)) = alt((
 		(verify(le_u8, is_day), verify(le_u8, is_month), verify(le_u16, is_year)),
-		tag([0; 4].as_ref()).map(|x| (0, 0u8, 0u16)),
+		tag([0; 4].as_ref()).map(|_| (0, 0u8, 0u16)),
 	))
 	.parse(input)?;
 	if day == 0 && month == 0 && year == 0 {
@@ -100,7 +97,8 @@ fn text_date(input: &[u8]) -> IResult<&[u8], Option<NaiveDate>> {
 			take(4usize).and_then(parse_number::<u16>),
 		)
 			.map(|(m, _, d, _, y)| (m, d, y)),
-		tag([0; 11].as_ref()).map(|x| (0, 0, 0)),
+		// default, if parsing fails
+		tag([0; 11].as_ref()).map(|_| (0, 0, 0)),
 	))
 	.parse(input)?;
 
@@ -141,7 +139,7 @@ where
 {
 	null_terminated_string(input)
 		.parse()
-		.map_or_else(|x| Err(Err::Error(make_error(input, ErrorKind::Digit))), |v| Ok((input, v)))
+		.map_or_else(|_| Err(Err::Error(make_error(input, ErrorKind::Digit))), |v| Ok((input, v)))
 }
 
 fn rest_of_binary_header(input: &[u8]) -> IResult<&[u8], HeaderRest> {

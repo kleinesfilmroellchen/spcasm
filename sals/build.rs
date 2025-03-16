@@ -1,16 +1,23 @@
 //! sals build script, adding `shadow_rs` variables.
 
 fn main() {
-	use std::collections::BTreeSet;
-	let mut denied = BTreeSet::new();
-	denied.insert(shadow_rs::CARGO_MANIFEST_DIR);
-	denied.insert(shadow_rs::COMMIT_EMAIL);
-	denied.insert(shadow_rs::CARGO_TREE);
-	denied.insert(shadow_rs::GIT_STATUS_FILE);
-	// FIXME: BRANCH cannot be excluded, since that breaks the "CLAP_VERSION" constant, among others.
-	denied.insert(shadow_rs::BUILD_OS);
-	denied.insert(shadow_rs::BUILD_TARGET);
-	denied.insert(shadow_rs::BUILD_TARGET_ARCH);
-	denied.insert(shadow_rs::CARGO_VERSION);
-	shadow_rs::new_deny(denied).unwrap();
+	let denied = std::collections::BTreeSet::from([
+		shadow_rs::CARGO_MANIFEST_DIR,
+		shadow_rs::COMMIT_EMAIL,
+		shadow_rs::CARGO_TREE,
+		shadow_rs::GIT_STATUS_FILE,
+		// FIXME: BRANCH cannot be excluded, since that breaks the "CLAP_VERSION" constant, among others.
+		shadow_rs::BUILD_OS,
+		shadow_rs::BUILD_TARGET,
+		shadow_rs::BUILD_TARGET_ARCH,
+		shadow_rs::CARGO_VERSION,
+		shadow_rs::CARGO_METADATA,
+	]);
+
+	#[cfg(debug_assertions)]
+	const BUILD_PATTERN: shadow_rs::BuildPattern = shadow_rs::BuildPattern::Lazy;
+	#[cfg(not(debug_assertions))]
+	const BUILD_PATTERN: shadow_rs::BuildPattern = shadow_rs::BuildPattern::RealTime;
+
+	shadow_rs::ShadowBuilder::builder().deny_const(denied).build_pattern(BUILD_PATTERN).build().unwrap();
 }

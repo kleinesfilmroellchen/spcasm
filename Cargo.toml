@@ -91,10 +91,9 @@ path = "spcasm_derive"
 version = "1.2.0"
 
 [dependencies.shadow-rs]
-version = "0.36"
+version = "1"
 optional = true
 default-features = false
-features = ["metadata"]
 
 [dev-dependencies]
 trycmd = { version = "0.15", default-features = false, features = [
@@ -107,10 +106,10 @@ lalrpop = { git = "https://github.com/lalrpop/lalrpop", rev = "b8b82e9ecde5ca531
 # lalrpop = { version = "0.22", default-features = false }
 
 [build-dependencies.shadow-rs]
-version = "0.36"
+version = "1"
 optional = true
 default-features = false
-
+features = ["build"]
 
 [profile.release]
 opt-level = "s"

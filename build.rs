@@ -4,9 +4,9 @@
 #[allow(unused_extern_crates)]
 extern crate lalrpop;
 
-#[cfg(debug_assertions)]
+#[cfg(all(feature = "binaries", debug_assertions))]
 const BUILD_PATTERN: shadow_rs::BuildPattern = shadow_rs::BuildPattern::Lazy;
-#[cfg(not(debug_assertions))]
+#[cfg(all(feature = "binaries", not(debug_assertions)))]
 const BUILD_PATTERN: shadow_rs::BuildPattern = shadow_rs::BuildPattern::RealTime;
 
 fn main() {

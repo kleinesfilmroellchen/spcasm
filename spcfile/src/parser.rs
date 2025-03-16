@@ -16,8 +16,6 @@ use nom::combinator::{map_res, rest, verify};
 use nom::error::{make_error, Error, ErrorKind, ParseError};
 use nom::multi::count;
 use nom::number::complete::{le_u16, le_u8};
-use nom::sequence::{tuple, Tuple};
-use nom::streaming::bool;
 use nom::{Err, Finish, IResult, Parser};
 
 use crate::{Emulator, SpcFile, SpcHeader, SpcMemory};
@@ -31,7 +29,7 @@ const MAGIC_LENGTH: usize = MAGIC.len();
 ///
 /// Any parser errors are passed on to the caller.
 pub fn parse_from_bytes(bytes: &[u8]) -> Result<SpcFile, Err<Error<&[u8]>>> {
-	let (title, (_, header, memory, rest)) = tuple((tag(MAGIC), header, memory, rest))(bytes)?;
+	let (title, (_, header, memory, rest)) = (tag(MAGIC), header, memory, rest).parse(bytes)?;
 	Ok(SpcFile { header, memory })
 }
 
@@ -80,9 +78,10 @@ const fn is_year(year: &u16) -> bool {
 
 fn binary_date(input: &[u8]) -> IResult<&[u8], Option<NaiveDate>> {
 	let (rest, (day, month, year)) = alt((
-		tuple((verify(le_u8, is_day), verify(le_u8, is_month), verify(le_u16, is_year))),
+		(verify(le_u8, is_day), verify(le_u8, is_month), verify(le_u16, is_year)),
 		tag([0; 4].as_ref()).map(|x| (0, 0u8, 0u16)),
-	))(input)?;
+	))
+	.parse(input)?;
 	if day == 0 && month == 0 && year == 0 {
 		Ok((rest, None))
 	} else {
@@ -93,16 +92,17 @@ fn binary_date(input: &[u8]) -> IResult<&[u8], Option<NaiveDate>> {
 
 fn text_date(input: &[u8]) -> IResult<&[u8], Option<NaiveDate>> {
 	let (rest, (month, day, year)) = alt((
-		tuple((
+		(
 			take(2usize).and_then(parse_number::<u8>),
 			tag(b"/".as_ref()),
 			take(2usize).and_then(parse_number::<u8>),
 			tag(b"/".as_ref()),
 			take(4usize).and_then(parse_number::<u16>),
-		))
-		.map(|(m, _, d, _, y)| (m, d, y)),
+		)
+			.map(|(m, _, d, _, y)| (m, d, y)),
 		tag([0; 11].as_ref()).map(|x| (0, 0, 0)),
-	))(input)?;
+	))
+	.parse(input)?;
 
 	if day == 0 && month == 0 && year == 0 {
 		Ok((rest, None))
@@ -145,7 +145,7 @@ where
 }
 
 fn rest_of_binary_header(input: &[u8]) -> IResult<&[u8], HeaderRest> {
-	let (rest, (dump_date, _, duration, fade_duration, artist, (_, channel_disables), (_, emulator), _)) = tuple((
+	let (rest, (dump_date, _, duration, fade_duration, artist, (_, channel_disables), (_, emulator), _)) = (
 		binary_date,
 		take(7usize),
 		// track length
@@ -158,12 +158,13 @@ fn rest_of_binary_header(input: &[u8]) -> IResult<&[u8], HeaderRest> {
 		map_res(le_u8, to_bool),
 		map_res(le_u8, emulator),
 		tag([0; 46].as_ref()),
-	))(input)?;
+	)
+		.parse(input)?;
 	Ok((rest, HeaderRest { dump_date, duration, fade_duration, channel_disables, emulator, artist }))
 }
 
 fn rest_of_text_header(input: &[u8]) -> IResult<&[u8], HeaderRest> {
-	let (rest, (dump_date, duration, fade_duration, artist, (_, channel_disables), (_, emulator), _)) = tuple((
+	let (rest, (dump_date, duration, fade_duration, artist, (_, channel_disables), (_, emulator), _)) = (
 		text_date,
 		// track length
 		take(3usize).and_then(parse_number::<u64>).map(Duration::from_secs),
@@ -175,14 +176,15 @@ fn rest_of_text_header(input: &[u8]) -> IResult<&[u8], HeaderRest> {
 		map_res(le_u8, to_bool),
 		map_res(le_u8, emulator),
 		tag([0; 45].as_ref()),
-	))(input)?;
+	)
+		.parse(input)?;
 	Ok((rest, HeaderRest { dump_date, duration, fade_duration, channel_disables, emulator, artist }))
 }
 
 fn header(bytes: &[u8]) -> IResult<&[u8], SpcHeader> {
 	// TODO: actually respect the has_id666 indicator.
 	let (rest, (_, (_, _has_id666), version, pc, a, x, y, psw, sp, _, title, game, dump_author, comments, header_rest)) =
-		tuple((
+		(
 			tag([26, 26].as_ref()),
 			map_res(le_u8, has_id666_info),
 			alt((tag([30].as_ref()), tag([31].as_ref()))).map(|v: &[_]| v[0]),
@@ -211,7 +213,8 @@ fn header(bytes: &[u8]) -> IResult<&[u8], SpcHeader> {
 			// rest depends on the header type; the parsers try to verify that what they parsed is not bogus, but it
 			// might still fail.
 			alt((rest_of_binary_header, rest_of_text_header)),
-		))(bytes)?;
+		)
+			.parse(bytes)?;
 	let header = SpcHeader {
 		version,
 		pc,
@@ -239,7 +242,7 @@ fn header(bytes: &[u8]) -> IResult<&[u8], SpcHeader> {
 #[allow(clippy::similar_names)]
 fn memory(bytes: &[u8]) -> IResult<&[u8], SpcMemory> {
 	let (rest, (ram, dsp_registers, _, rom)) =
-		tuple((take(65536usize), take(128usize), take(64usize), take(64usize)))(bytes)?;
+		(take(65536usize), take(128usize), take(64usize), take(64usize)).parse(bytes)?;
 	// length is ensured by the parser above, so these conversions are infallible
 	Ok((rest, SpcMemory {
 		ram:           Box::new(<[u8; _]>::try_from(ram).unwrap()),

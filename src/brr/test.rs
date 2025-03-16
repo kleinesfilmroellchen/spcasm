@@ -185,6 +185,8 @@ fn encode_empty() {
 	assert!(encode_to_brr(&mut Vec::new(), None, CompressionLevel::Max).is_empty());
 }
 
+// Slow test that only really covers the WAV reading library, which is not our concern.
+#[cfg_attr(miri, ignore)]
 #[test]
 fn wav_sample_formats() {
 	let _ = read_wav_for_brr(std::fs::File::open("tests/yoshi.wav").unwrap()).unwrap();
@@ -200,10 +202,8 @@ fn wav_sample_formats() {
 #[bench]
 #[allow(clippy::cast_precision_loss)]
 fn extremely_long_encode(bencher: &mut Bencher) {
-	use ::wav::read as wav_read;
+	let mut data = read_wav_for_brr(std::fs::File::open("tests/song.wav").unwrap()).unwrap();
 
-	let (_, data) = wav_read(&mut std::fs::File::open("tests/song.wav").unwrap()).unwrap();
-	let mut data = data.try_into_sixteen().expect("must be signed 16-bit WAV");
 	let now = std::time::Instant::now();
 	bencher.iter(|| encode_to_brr(&mut data, None, CompressionLevel::Max));
 	let diff = now.elapsed();

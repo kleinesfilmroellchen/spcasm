@@ -129,6 +129,7 @@ impl Timers {
 	const T2_RATE: usize = 64000;
 	const TIMER_CLOCKS_PER_STEP: [usize; 3] =
 		[Self::T01_CLOCKS_PER_STEP, Self::T01_CLOCKS_PER_STEP, Self::T2_CLOCKS_PER_STEP];
+	#[allow(unused)] // only used by trace logging in debug mode
 	const TIMER_RATES: [usize; 3] = [Self::T01_RATE, Self::T01_RATE, Self::T2_RATE];
 
 	/// Create new timers.

@@ -37,7 +37,7 @@ jobs:
       - name: Install target toolchain
         run: rustup target add ${{ matrix.target }}
       - name: Install just
-        uses: extractions/setup-just@v2
+        uses: extractions/setup-just@v3
 
       - name: Install nextest (Linux)
         if: ${{ matrix.runner == 'ubuntu-latest' }}

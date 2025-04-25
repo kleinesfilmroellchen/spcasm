@@ -37,7 +37,7 @@ features = ["derive", "wrap_help", "string"]
 reqwest = { version = "0.12", features = ["blocking"] }
 serde = "1"
 rstest = "0.25"
-simd-json = { version = "0.14", features = ["known-key"] }
+simd-json = { version = "0.15", features = ["known-key"] }
 
 [lints]
 workspace = true

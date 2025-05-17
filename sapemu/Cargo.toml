@@ -30,7 +30,7 @@ path = ".."
 features = ["binaries"]
 
 [dependencies.clap]
-version = "4.4"
+version = "4.5"
 features = ["derive", "wrap_help", "string"]
 
 [dev-dependencies]

@@ -8,15 +8,15 @@ use std::num::ParseIntError;
 use std::sync::Arc;
 
 #[allow(unused)]
-use flexstr::{shared_str, IntoSharedStr, SharedStr, ToSharedStr};
+use flexstr::{IntoSharedStr, SharedStr, ToSharedStr, shared_str};
 use miette::SourceSpan;
 
+use crate::AssemblyCode;
 use crate::directive::DirectiveSymbol;
 use crate::error::ReferenceType;
 use crate::parser::Token;
-use crate::sema::instruction::Mnemonic;
 use crate::sema::AssemblyTimeValue;
-use crate::AssemblyCode;
+use crate::sema::instruction::Mnemonic;
 
 /// This is a default-like trait whose values are wholly ignored. It's just necessary for a discriminant-related hack:
 /// [`std::mem::discriminant`] has to obtain an enum instance, because enum variants are not types. In order to

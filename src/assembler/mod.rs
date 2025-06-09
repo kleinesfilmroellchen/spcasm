@@ -5,17 +5,17 @@ use std::path::PathBuf;
 use std::sync::Arc;
 
 #[allow(unused)]
-use flexstr::{shared_str, IntoSharedStr, SharedStr, ToSharedStr};
+use flexstr::{IntoSharedStr, SharedStr, ToSharedStr, shared_str};
 use miette::{Result, SourceSpan};
 
 use crate::change::Change;
-use crate::cli::{default_backend_options, Frontend};
+use crate::cli::{Frontend, default_backend_options};
 use crate::error::AssemblyError;
 use crate::sema::instruction::{Instruction, MemoryAddress, Opcode};
 use crate::sema::reference::{Reference, Resolvable};
 use crate::sema::value::{BinaryOperator, Size, SizedAssemblyTimeValue};
 use crate::sema::{AddressingMode, AssemblyTimeValue, ProgramElement, Register};
-use crate::{pretty_hex, AssemblyCode, Segments};
+use crate::{AssemblyCode, Segments, pretty_hex};
 
 mod directive;
 mod memory;

@@ -4,8 +4,8 @@ use std::sync::RwLock;
 
 use miette::{Diagnostic, Severity};
 use serde::{Deserialize, Serialize};
-use spcasm::cli::Frontend;
 use spcasm::AssemblyError;
+use spcasm::cli::Frontend;
 
 #[allow(clippy::module_name_repetitions)]
 #[derive(Debug, Serialize, Deserialize)]

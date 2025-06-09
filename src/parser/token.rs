@@ -4,12 +4,12 @@ use std::fmt::Display;
 use std::num::NonZeroU64;
 
 #[allow(unused)]
-use flexstr::{shared_str, IntoSharedStr, SharedStr, ToSharedStr};
+use flexstr::{IntoSharedStr, SharedStr, ToSharedStr, shared_str};
 use miette::{SourceOffset, SourceSpan};
 
 use crate::directive::DirectiveSymbol;
-use crate::sema::instruction::Mnemonic;
 use crate::sema::Register;
+use crate::sema::instruction::Mnemonic;
 use crate::{AssemblyCode, AssemblyError};
 
 /// Assembly language tokens.
@@ -239,7 +239,7 @@ impl Display for Token {
 	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> Result<(), std::fmt::Error> {
 		if let Self::Mnemonic(mnemonic, ..) = self {
 			return write!(f, "{mnemonic}");
-		};
+		}
 		write!(f, "{}", match self {
 			Self::Identifier(..) => "identifier".to_string(),
 			Self::SpecialIdentifier(name, ..) => (*name).to_string(),

@@ -5,13 +5,13 @@ use std::cell::Cell;
 use std::io::Write;
 
 #[allow(unused)]
-use flexstr::{shared_str, IntoSharedStr, SharedStr, ToSharedStr};
+use flexstr::{IntoSharedStr, SharedStr, ToSharedStr, shared_str};
 use object::elf::{ELFOSABI_STANDALONE, EM_PDSP, ET_EXEC, PT_LOAD, SHF_ALLOC, SHF_EXECINSTR, SHF_WRITE, SHT_PROGBITS};
-use object::write::elf::{FileHeader, ProgramHeader, SectionHeader, SectionIndex};
 use object::write::StringId;
+use object::write::elf::{FileHeader, ProgramHeader, SectionHeader, SectionIndex};
 
-use crate::sema::instruction::MemoryAddress;
 use crate::Segments;
+use crate::sema::instruction::MemoryAddress;
 
 /// Save all the metadata since object is too dumb to do this itself.
 struct SegmentMetadata {

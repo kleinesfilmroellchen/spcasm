@@ -7,7 +7,7 @@ use std::sync::Arc;
 #[cfg(feature = "binaries")]
 use clap::Args;
 #[allow(unused)]
-use flexstr::{shared_str, IntoSharedStr, SharedStr, ToSharedStr};
+use flexstr::{IntoSharedStr, SharedStr, ToSharedStr, shared_str};
 use miette::{Diagnostic, Severity};
 #[allow(unused)]
 use parking_lot::RwLock;

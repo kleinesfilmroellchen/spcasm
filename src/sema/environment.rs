@@ -6,16 +6,16 @@ use std::result::Result;
 use std::sync::Arc;
 
 #[allow(unused)]
-use flexstr::{shared_str, IntoSharedStr, SharedStr, ToSharedStr};
+use flexstr::{IntoSharedStr, SharedStr, ToSharedStr, shared_str};
 use miette::SourceSpan;
 use parking_lot::RwLock;
 
 use super::reference::Label;
 use super::{AssemblyFile, LabelUsageKind};
-use crate::cli::{default_backend_options, Frontend};
-use crate::error::AssemblyError;
-use crate::parser::{lalrpop_adaptor, Token};
 use crate::AssemblyCode;
+use crate::cli::{Frontend, default_backend_options};
+use crate::error::AssemblyError;
+use crate::parser::{Token, lalrpop_adaptor};
 
 /// Environment object for parsing. Holds the list of references.
 #[derive(Debug)]

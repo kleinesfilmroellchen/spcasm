@@ -4,7 +4,7 @@ use std::fs::File;
 use std::io::{BufReader, Read};
 
 #[allow(unused)]
-use flexstr::{shared_str, IntoSharedStr, SharedStr, ToSharedStr};
+use flexstr::{IntoSharedStr, SharedStr, ToSharedStr, shared_str};
 use hound::{SampleFormat, WavReader};
 
 use super::DecodedSample;
@@ -25,11 +25,7 @@ pub fn read_wav_for_brr(file: File) -> Result<Vec<DecodedSample>, SharedStr> {
 fn convert_sample_format<R: Read>(reader: WavReader<R>) -> Result<Vec<DecodedSample>, SharedStr> {
 	let channels = reader.spec().channels;
 	let s16bit_data = convert_bit_depth_to_16_bits(reader)?;
-	if channels > 1 {
-		average_channels(&s16bit_data, channels)
-	} else {
-		Ok(s16bit_data)
-	}
+	if channels > 1 { average_channels(&s16bit_data, channels) } else { Ok(s16bit_data) }
 }
 
 /// Convert all samples to 16 bits.

@@ -1,6 +1,7 @@
 //! Interactive in-browser playground for ``spcasm``, powered by `WebAssembly`.
 #![allow(clippy::default_trait_access)]
 
+use std::fmt::Write;
 use std::sync::{Arc, LazyLock};
 
 use flexstr::SharedStr;
@@ -8,9 +9,9 @@ use html_escape::{decode_html_entities, encode_safe};
 use miette::{GraphicalReportHandler, GraphicalTheme};
 use options::WebOptions;
 use regex::{Captures, Regex};
-use spcasm::{pretty_hex, run_assembler, AssemblyCode};
-use wasm_bindgen::prelude::*;
+use spcasm::{AssemblyCode, pretty_hex, run_assembler};
 use wasm_bindgen::JsCast;
+use wasm_bindgen::prelude::*;
 use web_sys::HtmlElement;
 
 mod options;
@@ -79,7 +80,7 @@ fn ansi_to_html(text: &str) -> SharedStr {
 						let r = numbers.next().unwrap();
 						let g = numbers.next().unwrap();
 						let b = numbers.next().unwrap();
-						replacement_text.push_str(&format!(" style=\"color:rgb({r},{g},{b})\""));
+						write!(replacement_text, " style=\"color:rgb({r},{g},{b})\"").unwrap();
 					},
 					code => unimplemented!("csi code {}", code),
 				}

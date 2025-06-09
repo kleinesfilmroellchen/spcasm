@@ -10,7 +10,7 @@
 use std::convert::TryInto;
 
 #[allow(unused)]
-use flexstr::{shared_str, IntoSharedStr, SharedStr, ToSharedStr};
+use flexstr::{IntoSharedStr, SharedStr, ToSharedStr, shared_str};
 use num_derive::FromPrimitive;
 use num_traits::FromPrimitive;
 

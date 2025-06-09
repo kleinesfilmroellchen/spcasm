@@ -1,18 +1,14 @@
 #![doc = include_str!("../README.md")]
 #![feature(
 	test,
-	result_flattening,
 	iterator_try_collect,
 	if_let_guard,
 	get_mut_unchecked,
 	iter_intersperse,
 	const_for,
 	let_chains,
-	slice_as_chunks,
 	exact_size_is_empty,
-	maybe_uninit_uninit_array,
 	const_trait_impl,
-	extract_if,
 	extend_one,
 	try_blocks,
 	maybe_uninit_array_assume_init,
@@ -20,7 +16,7 @@
 )]
 
 #[allow(unused)]
-use flexstr::{shared_str, IntoSharedStr, SharedStr, ToSharedStr};
+use flexstr::{IntoSharedStr, SharedStr, ToSharedStr, shared_str};
 
 #[macro_use] extern crate lalrpop_util;
 

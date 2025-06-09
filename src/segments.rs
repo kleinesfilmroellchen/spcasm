@@ -5,7 +5,7 @@
 use std::collections::BTreeMap;
 
 #[allow(unused)]
-use flexstr::{shared_str, IntoSharedStr, SharedStr, ToSharedStr};
+use flexstr::{IntoSharedStr, SharedStr, ToSharedStr, shared_str};
 
 use crate::assembler::sample_table::SampleTable;
 use crate::directive::DirectiveParameterTable;

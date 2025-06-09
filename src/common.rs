@@ -4,7 +4,7 @@ use std::cmp::min;
 use std::sync::Arc;
 
 #[allow(unused)]
-use flexstr::{shared_str, IntoSharedStr, SharedStr, ToSharedStr};
+use flexstr::{IntoSharedStr, SharedStr, ToSharedStr, shared_str};
 use miette::SourceSpan;
 use parking_lot::RwLock;
 
@@ -12,9 +12,9 @@ pub use super::directive::Directive;
 pub use super::error::AssemblyError;
 pub use super::sema::Environment;
 use crate::assembler::EntryPoint;
-use crate::cli::{default_backend_options, Frontend};
-use crate::sema::reference::Label;
+use crate::cli::{Frontend, default_backend_options};
 use crate::sema::ProgramElement;
+use crate::sema::reference::Label;
 use crate::{AssemblyCode, Segments};
 
 /// Assembler result type.

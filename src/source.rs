@@ -4,7 +4,7 @@ use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
 #[allow(unused)]
-use flexstr::{shared_str, IntoSharedStr, SharedStr, ToSharedStr};
+use flexstr::{IntoSharedStr, SharedStr, ToSharedStr, shared_str};
 use miette::{MietteError, MietteSpanContents, SourceCode, SourceSpan, SpanContents};
 
 use crate::AssemblyError;

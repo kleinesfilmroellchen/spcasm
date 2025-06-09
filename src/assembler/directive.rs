@@ -4,18 +4,18 @@ use std::fs::File;
 use std::sync::Arc;
 
 #[allow(unused)]
-use flexstr::{shared_str, IntoSharedStr, SharedStr, ToSharedStr};
+use flexstr::{IntoSharedStr, SharedStr, ToSharedStr, shared_str};
 use miette::SourceSpan;
 use num_traits::{FromPrimitive, ToPrimitive};
 
-use super::{resolve_file, AssembledData, ClearLabels};
+use super::{AssembledData, ClearLabels, resolve_file};
 use crate::brr::wav;
-use crate::directive::{symbolic_directives, DirectiveValue, FillOperation};
+use crate::directive::{DirectiveValue, FillOperation, symbolic_directives};
+use crate::sema::AssemblyTimeValue;
 use crate::sema::instruction::MemoryAddress;
 use crate::sema::reference::Reference;
 use crate::sema::value::{Size, SizedAssemblyTimeValue};
-use crate::sema::AssemblyTimeValue;
-use crate::{brr, AssemblyError, Directive};
+use crate::{AssemblyError, Directive, brr};
 
 impl AssembledData {
 	/// Assemble a single assembler directive into this assembly data. Returns whether the label list needs to be
@@ -77,7 +77,7 @@ impl AssembledData {
 					if current_address & 0xff != 0 {
 						let target_address = (current_address + 0x100) & !0xff;
 						let missing_bytes = target_address - current_address;
-						let space = std::iter::repeat(0).take(missing_bytes as usize).collect();
+						let space = vec![0; missing_bytes as usize];
 						self.append_bytes(space, &Vec::default(), directive.span)?;
 					}
 				} else if current_address & 0xff != 0 {

@@ -1,13 +1,13 @@
 //! BRR sample table infrastructure.
 
 #[allow(unused)]
-use flexstr::{shared_str, IntoSharedStr, SharedStr, ToSharedStr};
+use flexstr::{IntoSharedStr, SharedStr, ToSharedStr, shared_str};
 use miette::SourceSpan;
 
 use super::AssembledData;
-use crate::sema::reference::Reference;
-use crate::sema::AssemblyTimeValue;
 use crate::AssemblyError;
+use crate::sema::AssemblyTimeValue;
+use crate::sema::reference::Reference;
 
 /// An entire sample table, can have at maximum 256 entries.
 #[derive(Clone, Debug, PartialEq)]

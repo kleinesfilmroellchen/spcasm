@@ -20,7 +20,7 @@ use spcasm::sema::Register;
 use super::Smp;
 use crate::dsp::registers::DspRegisters;
 use crate::memory::Memory;
-use crate::smp::{ProgramStatusWord, RunState, BREAK_VECTOR};
+use crate::smp::{BREAK_VECTOR, ProgramStatusWord, RunState};
 use crate::trace;
 
 /// Action taken after an instruction cycle was executed.
@@ -1823,9 +1823,7 @@ fn dbnz_dp(
 			} else {
 				trace!(
 					"decremented {:04x} to non-zero value {}, taking branch to {:+x}",
-					state.address,
-					state.operand,
-					offset
+					state.address, state.operand, offset
 				);
 				MicroArchAction::Continue(state.with_relative(offset))
 			}
@@ -5113,11 +5111,7 @@ where
 				state.operand,
 				if value { "" } else { "not " }
 			);
-			if value {
-				MicroArchAction::Continue(state)
-			} else {
-				MicroArchAction::Next
-			}
+			if value { MicroArchAction::Continue(state) } else { MicroArchAction::Next }
 		},
 		// CPU calculates branch target in this step.
 		5 => MicroArchAction::Continue(state),
@@ -5637,11 +5631,7 @@ fn bit_logic_addr<const TAKES_FOUR_CYCLES: bool>(
 			trace!("read bit {} of address {:04x} ({:02x}) = {}", bit_index, address, value, memory_bit);
 			let result = op(cpu.carry(), memory_bit);
 			cpu.set_carry(result);
-			if TAKES_FOUR_CYCLES {
-				MicroArchAction::Next
-			} else {
-				MicroArchAction::Continue(state)
-			}
+			if TAKES_FOUR_CYCLES { MicroArchAction::Next } else { MicroArchAction::Continue(state) }
 		},
 		4 => MicroArchAction::Next,
 		_ => unreachable!(),

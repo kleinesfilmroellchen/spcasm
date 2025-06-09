@@ -3,13 +3,13 @@ use std::cmp::min;
 use std::sync::Arc;
 
 #[allow(unused)]
-use flexstr::{shared_str, IntoSharedStr, SharedStr, ToSharedStr};
+use flexstr::{IntoSharedStr, SharedStr, ToSharedStr, shared_str};
 use test::Bencher;
 
 use crate::cli::default_backend_options;
-use crate::sema::instruction::MemoryAddress;
 use crate::sema::ProgramElement;
-use crate::{dump_ast, dump_reference_tree, pretty_hex, AssemblyError, Segments};
+use crate::sema::instruction::MemoryAddress;
+use crate::{AssemblyError, Segments, dump_ast, dump_reference_tree, pretty_hex};
 
 #[bench]
 fn all_opcodes(bencher: &mut Bencher) {
@@ -244,11 +244,11 @@ fn coverage() {
 	use std::collections::BTreeMap;
 	use std::sync::Weak;
 
+	use crate::Directive;
 	use crate::default_hacks::FakeDefaultForIgnoredValues;
 	use crate::directive::DirectiveSymbol;
 	use crate::parser::Token;
 	use crate::sema::value::BinaryOperator;
-	use crate::Directive;
 
 	<i64 as FakeDefaultForIgnoredValues>::default();
 	miette::SourceSpan::default();

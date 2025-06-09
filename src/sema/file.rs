@@ -5,7 +5,7 @@ use std::result::Result;
 use std::sync::{Arc, Weak};
 
 #[allow(unused)]
-use flexstr::{shared_str, IntoSharedStr, SharedStr, ToSharedStr};
+use flexstr::{IntoSharedStr, SharedStr, ToSharedStr, shared_str};
 use miette::SourceSpan;
 use parking_lot::RwLock;
 
@@ -17,7 +17,7 @@ use super::{AddressingMode, AssemblyTimeValue, Environment, ProgramElement};
 use crate::assembler::resolve_file;
 use crate::directive::DirectiveValue;
 use crate::error::AssemblyError;
-use crate::parser::{lex, Token};
+use crate::parser::{Token, lex};
 use crate::{AssemblyCode, Change, Directive, Segments};
 
 /// The AST and associated information for one file.
@@ -40,11 +40,7 @@ impl AssemblyFile {
 	pub fn token_at(&self, offset: usize) -> Option<Token> {
 		self.tokens.iter().find_map(|token| {
 			let span = token.source_span();
-			if Self::source_span_contains(span, offset) {
-				Some(token.clone())
-			} else {
-				None
-			}
+			if Self::source_span_contains(span, offset) { Some(token.clone()) } else { None }
 		})
 	}
 
@@ -121,8 +117,8 @@ impl AssemblyFile {
 
 		for element in &mut self.content {
 			// First match for reference resolution in instruction position
-			match element {
-				ProgramElement::Label(ref mal @ Reference::MacroArgument { ref span, .. }) =>
+			match &element {
+				ProgramElement::Label(mal @ Reference::MacroArgument { span, .. }) =>
 					return Err(AssemblyError::UsingMacroArgumentOutsideMacro {
 						name:     mal.to_string().into(),
 						src:      self.source_code.clone(),
@@ -166,7 +162,7 @@ impl AssemblyFile {
 			}
 			element.set_current_label(current_label.as_ref(), &self.source_code)?;
 			// Set any non-synthetic label as the current label.
-			if let ProgramElement::Label(Reference::Label(ref label)) = element
+			if let ProgramElement::Label(Reference::Label(label)) = element
 				&& !label.read().synthetic
 			{
 				current_label = Some(label.clone());
@@ -221,7 +217,7 @@ impl AssemblyFile {
 	pub fn resolve_user_macro_arguments(&mut self) -> Result<(), Box<AssemblyError>> {
 		for element in &mut self.content {
 			if let ProgramElement::Directive(Directive {
-				value: DirectiveValue::UserDefinedMacro { ref arguments, body, .. },
+				value: DirectiveValue::UserDefinedMacro { arguments, body, .. },
 				..
 			}) = element
 			{
@@ -674,9 +670,7 @@ impl AssemblyFile {
 				.into());
 			}
 			index += 1;
-			// Using drain_filter is the easiest way of filtering elements from a vector. We need to consume the
-			// returned iterator fully or else not all filtering will happen.
-			let _: usize = macro_end_stack.extract_if(|end_index| *end_index < index).count();
+			let _: usize = macro_end_stack.extract_if(.., |end_index| *end_index < index).count();
 		}
 
 		Ok(Change::Unmodified)

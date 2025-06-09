@@ -6,9 +6,9 @@ use miette::SourceSpan;
 
 use crate::change::Change;
 use crate::cli::Frontend;
+use crate::sema::AssemblyTimeValue;
 use crate::sema::instruction::MemoryAddress;
 use crate::sema::reference::Reference;
-use crate::sema::AssemblyTimeValue;
 use crate::{AssemblyCode, AssemblyError};
 
 /// Data in memory while we still need to resolve references.

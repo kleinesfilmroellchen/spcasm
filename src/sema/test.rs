@@ -2,7 +2,7 @@
 
 use crate::cli::default_backend_options;
 use crate::parser::Token;
-use crate::{run_assembler_into_symbolic_segments, AssemblyCode};
+use crate::{AssemblyCode, run_assembler_into_symbolic_segments};
 
 #[test]
 fn file_token_reference_lookup() {

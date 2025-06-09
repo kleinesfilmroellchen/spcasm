@@ -166,11 +166,7 @@ impl Uploader {
 			self.remaining_blocks.remove(0);
 			self.current_address = self.remaining_blocks.first().map(|b| b.address).unwrap_or_default();
 
-			if self.remaining_blocks.is_empty() {
-				NextByteStatus::NoMoreBlocks
-			} else {
-				NextByteStatus::NewBlock
-			}
+			if self.remaining_blocks.is_empty() { NextByteStatus::NoMoreBlocks } else { NextByteStatus::NewBlock }
 		} else {
 			NextByteStatus::Normal
 		}
@@ -223,7 +219,7 @@ impl Uploader {
 							ports.write_to_smp::<1>(self.current_byte().unwrap());
 						},
 						NextByteStatus::NewBlock => {
-							debug!("Going to new block, using too large index {}", pseudo_index);
+							debug!("Going to new block, using too large index {pseudo_index}");
 							self.write_address(ports);
 							ports.write_to_smp::<0>(pseudo_index);
 							ports.write_to_smp::<1>(1);

@@ -7,7 +7,7 @@ use std::path::PathBuf;
 
 use clap::{Parser, Subcommand, ValueEnum};
 #[allow(unused)]
-use flexstr::{shared_str, IntoSharedStr, SharedStr, ToSharedStr};
+use flexstr::{IntoSharedStr, SharedStr, ToSharedStr, shared_str};
 use hound::WavWriter;
 use num_traits::cast::FromPrimitive;
 #[allow(clippy::wildcard_imports)]

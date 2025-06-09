@@ -3,15 +3,15 @@
 use std::sync::Arc;
 
 #[allow(unused)]
-use flexstr::{shared_str, IntoSharedStr, SharedStr, ToSharedStr};
+use flexstr::{IntoSharedStr, SharedStr, ToSharedStr, shared_str};
 use miette::SourceSpan;
 use parking_lot::RwLock;
 
+use super::AssemblyTimeValue;
 use super::instruction::Instruction;
 use super::reference::{MacroParent, Reference, ReferenceResolvable};
-use super::AssemblyTimeValue;
 use crate::parser::source_range;
-use crate::{span_to_string, AssemblyCode, AssemblyError, Directive};
+use crate::{AssemblyCode, AssemblyError, Directive, span_to_string};
 
 /// A program element of an assembled program. A list of program elements makes an assembled program itself.
 #[derive(Clone, Debug)]

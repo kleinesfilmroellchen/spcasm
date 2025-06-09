@@ -5,16 +5,16 @@ use std::num::NonZeroU64;
 use std::sync::Arc;
 
 #[allow(unused)]
-use flexstr::{shared_str, IntoSharedStr, SharedStr, ToSharedStr};
+use flexstr::{IntoSharedStr, SharedStr, ToSharedStr, shared_str};
 use miette::SourceOffset;
 
 use super::{Parse, Token};
+use crate::AssemblyCode;
 use crate::cli::Frontend;
 use crate::directive::DirectiveSymbol;
 use crate::error::AssemblyError;
-use crate::sema::instruction::{MemoryAddress, Mnemonic};
 use crate::sema::Register;
-use crate::AssemblyCode;
+use crate::sema::instruction::{MemoryAddress, Mnemonic};
 
 macro_rules! start_of_identifier {
 	() => { 'A' ..= 'Z' | 'a' ..= 'z' | '_' | '@' };

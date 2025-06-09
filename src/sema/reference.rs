@@ -6,14 +6,14 @@ use std::num::NonZeroU64;
 use std::sync::{Arc, Weak};
 
 #[allow(unused)]
-use flexstr::{shared_str, IntoSharedStr, SharedStr, ToSharedStr};
+use flexstr::{IntoSharedStr, SharedStr, ToSharedStr, shared_str};
 use miette::SourceSpan;
 use parking_lot::RwLock;
 
 use super::instruction::MemoryAddress;
 use super::{AssemblyTimeValue, LabelUsageKind};
-use crate::error::AssemblyError;
 use crate::AssemblyCode;
+use crate::error::AssemblyError;
 
 pub trait Resolvable {
 	/// Whether this reference has already been resolved to a memory location.
@@ -330,7 +330,6 @@ impl PartialEq<Arc<RwLock<Label>>> for Reference {
 }
 
 impl Resolvable for Reference {
-	#[must_use]
 	fn is_resolved(&self) -> bool {
 		match self {
 			Self::Label(label) => label.read().is_resolved(),
@@ -518,7 +517,6 @@ impl PartialEq for Label {
 impl Eq for Label {}
 
 impl Resolvable for Label {
-	#[must_use]
 	fn is_resolved(&self) -> bool {
 		self.location.is_some()
 	}

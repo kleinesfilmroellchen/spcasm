@@ -1,8 +1,8 @@
 //! Audio processing code for the DSP.
 
-use spcasm::brr::{split_bytes_into_nybbles, Block, Header, WarmUpSamples};
+use spcasm::brr::{Block, Header, WarmUpSamples, split_bytes_into_nybbles};
 
-use super::{BrrDecoderStep, Dsp, EnvelopeState, VoiceState, BRR_DECODE_BUFFER_SIZE};
+use super::{BRR_DECODE_BUFFER_SIZE, BrrDecoderStep, Dsp, EnvelopeState, VoiceState};
 use crate::memory::Memory;
 use crate::trace;
 
@@ -78,7 +78,7 @@ impl Dsp {
 	/// Since all necessary registers are read in cycle 29 (EDL&ESA take effect one sample later at the earliest!), but
 	/// we need to write the echo result starting in cycle 30, this seems to be the perfect time to run the sound
 	/// emulation.
-	#[allow(clippy::needless_pass_by_ref_mut, clippy::unused_self)]
+	#[allow(clippy::needless_pass_by_ref_mut, clippy::unused_self, clippy::missing_const_for_fn)]
 	fn run_main_processing(&mut self) {}
 }
 
@@ -135,9 +135,7 @@ impl VoiceState {
 			.copy_from_slice(&block_third);
 		trace!(
 			"decoded samples {:?} to {:?} starting at index {}",
-			expanded_samples,
-			block_third,
-			self.brr_buffer_index
+			expanded_samples, block_third, self.brr_buffer_index
 		);
 
 		self.brr_buffer_index += 4;

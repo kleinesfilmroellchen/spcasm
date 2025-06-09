@@ -143,11 +143,11 @@ impl Timers {
 
 	#[inline]
 	fn reset_timers_if_necessary(&mut self) {
-		for finalized_timer in
-			self.timer_tick_remaining
-				.into_iter()
-				.enumerate()
-				.filter_map(|(i, timer)| if timer == 0 { Some(i) } else { None })
+		for finalized_timer in self
+			.timer_tick_remaining
+			.into_iter()
+			.enumerate()
+			.filter_map(|(i, timer)| if timer == 0 { Some(i) } else { None })
 		{
 			// FIXME: Not sure if this is the only place where we should check the divisor.
 			let mut divisor = self.timer_divisor[finalized_timer] as usize;

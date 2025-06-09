@@ -5,15 +5,15 @@ use std::result::Result;
 use std::sync::Arc;
 
 #[allow(unused)]
-use flexstr::{shared_str, IntoSharedStr, SharedStr, ToSharedStr};
+use flexstr::{IntoSharedStr, SharedStr, ToSharedStr, shared_str};
 use miette::SourceSpan;
 use parking_lot::RwLock;
 
 use super::reference::{self, Label, Reference, ReferenceResolvable};
 use super::register::Register;
+use crate::AssemblyCode;
 use crate::error::AssemblyError;
 use crate::sema::AssemblyTimeValue;
-use crate::AssemblyCode;
 
 /// Addressing modes of the SPC700. Not all of these are supported everywhere (in fact, most aren't).
 #[derive(Clone, Debug, PartialEq)]
@@ -97,7 +97,7 @@ impl AddressingMode {
 	}
 
 	/// Returns a mutable reference to the number this addressing mode references, if any.
-	pub fn number_mut(&mut self) -> Option<&mut AssemblyTimeValue> {
+	pub const fn number_mut(&mut self) -> Option<&mut AssemblyTimeValue> {
 		match self {
 			Self::Immediate(number)
 			| Self::DirectPage(number)

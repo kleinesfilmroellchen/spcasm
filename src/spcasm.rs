@@ -4,10 +4,10 @@ use std::fs::File;
 use std::io::Write;
 
 #[allow(unused)]
-use flexstr::{shared_str, IntoSharedStr, SharedStr, ToSharedStr};
+use flexstr::{IntoSharedStr, SharedStr, ToSharedStr, shared_str};
 
 use crate::{
-	cli, dump_ast, dump_reference_tree, elf, run_assembler, run_assembler_into_segments, AssemblyCode, AssemblyError,
+	AssemblyCode, AssemblyError, cli, dump_ast, dump_reference_tree, elf, run_assembler, run_assembler_into_segments,
 };
 
 pub fn main() -> miette::Result<()> {
@@ -84,7 +84,7 @@ pub fn main() -> miette::Result<()> {
 				cli::OutputFormat::HexDump => outfile
 					.write_fmt(format_args!("{}", crate::pretty_hex(&assembled, None)))
 					.map_err(AssemblyError::from)?,
-			};
+			}
 		}
 
 		Ok(())

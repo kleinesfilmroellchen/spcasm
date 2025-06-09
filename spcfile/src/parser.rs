@@ -11,8 +11,8 @@ use chrono::NaiveDate;
 use nom::branch::alt;
 use nom::bytes::complete::{tag, take};
 use nom::combinator::{map_res, rest, verify};
-use nom::error::{make_error, Error, ErrorKind};
-use nom::number::complete::{le_u16, le_u8};
+use nom::error::{Error, ErrorKind, make_error};
+use nom::number::complete::{le_u8, le_u16};
 use nom::{Err, IResult, Parser};
 
 use crate::{Emulator, SpcFile, SpcHeader, SpcMemory};

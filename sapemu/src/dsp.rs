@@ -682,7 +682,7 @@ impl VoiceState {
 	}
 
 	/// Perform soft reset as per reset flag.
-	pub fn soft_reset(&mut self) {
+	pub const fn soft_reset(&mut self) {
 		self.envelope_volume = 0;
 		self.was_keyed_off = true;
 	}
@@ -846,7 +846,7 @@ enum BrrDecoderStep {
 impl BrrDecoderStep {
 	/// Advances the decoder to the next step once the next pitch counter overflow (across a 4-sample boundary) happened
 	/// and the memory accesses were executed.
-	pub fn advance(&mut self) {
+	pub const fn advance(&mut self) {
 		*self = match *self {
 			Self::Done => Self::ReadHeader,
 			Self::ReadHeader | Self::Read4Samples => Self::Read8Samples,

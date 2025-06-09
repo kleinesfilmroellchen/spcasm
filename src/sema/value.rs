@@ -8,15 +8,15 @@ use std::result::Result;
 use std::sync::Arc;
 
 #[allow(unused)]
-use flexstr::{shared_str, IntoSharedStr, SharedStr, ToSharedStr};
+use flexstr::{IntoSharedStr, SharedStr, ToSharedStr, shared_str};
 use miette::SourceSpan;
 use num_derive::{FromPrimitive, ToPrimitive};
 use parking_lot::RwLock;
 
 use super::instruction::MemoryAddress;
 use super::reference::{self, Label, Reference, ReferenceResolvable, RelativeReferenceDirection};
-use crate::error::AssemblyError;
 use crate::AssemblyCode;
+use crate::error::AssemblyError;
 
 /// Any numeric value that can be calculated at assembly time.
 #[derive(Clone, Debug, PartialEq)]
@@ -207,7 +207,7 @@ impl AssemblyTimeValue {
 		// fundamentally incompatible)
 		match self {
 			Self::Literal(value, ..) => Some(*value),
-			Self::Reference(ref reference, ..) => match reference {
+			Self::Reference(reference, ..) => match reference {
 				Reference::Label(label) if let Some(ref value) = label.read().location =>
 					value.value_using_resolver(resolver),
 				Reference::MacroArgument { value: Some(value), .. }
@@ -544,11 +544,7 @@ impl BinaryOperator {
 	/// TODO: Remove once const trait impls are stabilized and Into is const for bool -> i64.
 	#[must_use]
 	const fn bool_into_i64(this: bool) -> i64 {
-		if this {
-			1
-		} else {
-			0
-		}
+		if this { 1 } else { 0 }
 	}
 }
 

@@ -1,14 +1,14 @@
 //! Derive proc macros for spcasm.
 
 #[allow(unused)]
-use flexstr::{shared_str, FlexStr, IntoSharedStr, ToSharedStr};
+use flexstr::{FlexStr, IntoSharedStr, ToSharedStr, shared_str};
 
 #[allow(unused_extern_crates)]
 extern crate proc_macro;
 
 use proc_macro::TokenStream;
-use quote::{quote, ToTokens};
-use syn::{parse_macro_input, Data, DeriveInput, Fields};
+use quote::{ToTokens, quote};
+use syn::{Data, DeriveInput, Fields, parse_macro_input};
 
 /// # Panics
 ///

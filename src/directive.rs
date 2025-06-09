@@ -8,7 +8,7 @@ use std::num::NonZeroU64;
 use std::sync::Arc;
 
 #[allow(unused)]
-use flexstr::{shared_str, FlexStr, IntoSharedStr, SharedStr, ToSharedStr};
+use flexstr::{FlexStr, IntoSharedStr, SharedStr, ToSharedStr, shared_str};
 use miette::SourceSpan;
 use num_derive::ToPrimitive;
 use num_traits::{FromPrimitive, ToPrimitive};
@@ -20,7 +20,7 @@ use crate::sema::instruction::MemoryAddress;
 use crate::sema::reference::{Label, MacroParent, Reference, ReferenceResolvable};
 use crate::sema::value::{Size, SizedAssemblyTimeValue};
 use crate::sema::{self, AssemblyTimeValue, ProgramElement};
-use crate::{byte_vec_to_string, span_to_string, AssemblyCode, AssemblyError, Segments};
+use crate::{AssemblyCode, AssemblyError, Segments, byte_vec_to_string, span_to_string};
 
 /// An assembly directive, often confusingly referred to as a "macro".
 ///
@@ -93,7 +93,7 @@ impl Directive {
 					self.value = DirectiveValue::Placeholder;
 				},
 			DirectiveValue::AssignReference {
-				reference: ref reference @ (Reference::MacroArgument { .. } | Reference::MacroGlobal { .. }),
+				reference: reference @ (Reference::MacroArgument { .. } | Reference::MacroGlobal { .. }),
 				..
 			} =>
 				return Err(AssemblyError::AssigningToReference {

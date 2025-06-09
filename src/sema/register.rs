@@ -6,7 +6,7 @@ use std::fmt::Display;
 use std::marker::ConstParamTy;
 
 #[allow(unused)]
-use flexstr::{shared_str, IntoSharedStr, SharedStr, ToSharedStr};
+use flexstr::{IntoSharedStr, SharedStr, ToSharedStr, shared_str};
 use spcasm_derive::{Parse, VariantName};
 
 use crate::VariantName;

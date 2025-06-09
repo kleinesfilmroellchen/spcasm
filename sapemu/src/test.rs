@@ -12,20 +12,18 @@
 //!   "cycles":[[30256,0,"read"],[30257,null,"read"]]}
 //! ```
 
-#![allow(unused)]
+use std::fmt::Write;
 
-use bitflags::Flags;
 use log::info;
 use rstest::rstest;
 use serde::Deserialize;
 use time::macros::format_description;
 
 use crate::dsp::registers::DspRegisters;
-use crate::dsp::Dsp;
 use crate::memory::Memory;
 use crate::smp::peripherals::{ControlRegister, CpuIOPorts, ProgramStatusWord, TestRegister};
 use crate::smp::{
-	Smp, CONTROL, CPUIO0, CPUIO1, CPUIO2, CPUIO3, DSPADDR, DSPDATA, T0DIV, T0OUT, T1DIV, T1OUT, T2DIV, T2OUT, TEST,
+	CONTROL, CPUIO0, CPUIO1, CPUIO2, CPUIO3, DSPADDR, DSPDATA, Smp, T0DIV, T0OUT, T1DIV, T1OUT, T2DIV, T2OUT, TEST,
 };
 
 #[derive(Deserialize, Debug, Clone)]
@@ -82,22 +80,22 @@ impl ProcessorState {
 	pub fn mismatch_info(&self, smp: &Smp) -> String {
 		let mut info = String::new();
 		if smp.a != self.a {
-			info.push_str(&format!("expected a = {:02x} but got {:02x}\n", self.a, smp.a));
+			writeln!(info, "expected a = {:02x} but got {:02x}", self.a, smp.a).unwrap();
 		}
 		if smp.x != self.x {
-			info.push_str(&format!("expected x = {:02x} but got {:02x}\n", self.x, smp.x));
+			writeln!(info, "expected x = {:02x} but got {:02x}", self.x, smp.x).unwrap();
 		}
 		if smp.y != self.y {
-			info.push_str(&format!("expected y = {:02x} but got {:02x}\n", self.y, smp.y));
+			writeln!(info, "expected y = {:02x} but got {:02x}", self.y, smp.y).unwrap();
 		}
 		if smp.psw.bits() != self.psw {
-			info.push_str(&format!("expected psw = {} but got {}\n", ProgramStatusWord(self.psw), smp.psw));
+			writeln!(info, "expected psw = {} but got {}", ProgramStatusWord(self.psw), smp.psw).unwrap();
 		}
 		if smp.sp != self.sp {
-			info.push_str(&format!("expected sp = 01{:02x} but got 01{:02x}\n", self.sp, smp.sp));
+			writeln!(info, "expected sp = 01{:02x} but got 01{:02x}", self.sp, smp.sp).unwrap();
 		}
 		if smp.pc != self.pc {
-			info.push_str(&format!("expected pc = {:04x} but got {:04x}\n", self.pc, smp.pc));
+			writeln!(info, "expected pc = {:04x} but got {:04x}", self.pc, smp.pc).unwrap();
 		}
 		info
 	}
@@ -133,11 +131,7 @@ impl RamState {
 	pub fn test_register(&self) -> Option<TestRegister> {
 		self.0.iter().find_map(
 			|MemoryCellState { address, value }| {
-				if *address == TEST {
-					Some(TestRegister::from_bits_retain(*value))
-				} else {
-					None
-				}
+				if *address == TEST { Some(TestRegister::from_bits_retain(*value)) } else { None }
 			},
 		)
 	}
@@ -145,11 +139,7 @@ impl RamState {
 	pub fn control_register(&self) -> Option<ControlRegister> {
 		self.0.iter().find_map(
 			|MemoryCellState { address, value }| {
-				if *address == CONTROL {
-					Some(ControlRegister::from_bits_retain(*value))
-				} else {
-					None
-				}
+				if *address == CONTROL { Some(ControlRegister::from_bits_retain(*value)) } else { None }
 			},
 		)
 	}
@@ -208,6 +198,7 @@ impl From<(u16, u8)> for MemoryCellState {
 	}
 }
 
+#[allow(unused)]
 #[derive(Deserialize, Debug, Clone)]
 #[serde(untagged, try_from = "(Option<u16>, Option<u8>, String)")]
 enum Cycle {

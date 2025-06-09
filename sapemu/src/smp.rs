@@ -331,7 +331,7 @@ impl Smp {
 	#[track_caller]
 	fn memory_write(&mut self, address: u16, value: u8, memory: &mut Memory) {
 		if self.test.contains(TestRegister::RamWriteDisable) {
-			debug!("RAM write to {} is disabled via TEST register", address);
+			debug!("RAM write to {address} is disabled via TEST register");
 			return;
 		}
 		memory.write(address, value);

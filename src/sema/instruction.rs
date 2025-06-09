@@ -5,19 +5,19 @@ use std::result::Result;
 use std::sync::Arc;
 
 #[allow(unused)]
-use flexstr::{shared_str, IntoSharedStr, SharedStr, ToSharedStr};
+use flexstr::{IntoSharedStr, SharedStr, ToSharedStr, shared_str};
 use miette::SourceSpan;
 use parking_lot::RwLock;
 use spcasm_derive::{Parse, VariantName};
 
+use super::AddressingMode;
 use super::reference::{self, Label, Reference, ReferenceResolvable};
 use super::register::Register;
-use super::AddressingMode;
 #[allow(unused)]
 use crate::byte_vec_to_string;
 use crate::error::AssemblyError;
 use crate::sema::AssemblyTimeValue;
-use crate::{span_to_string, AssemblyCode, VariantName};
+use crate::{AssemblyCode, VariantName, span_to_string};
 
 /// Types for representing data and memory addresses (this is overkill).
 pub type MemoryAddress = i64;

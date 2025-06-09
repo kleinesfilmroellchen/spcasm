@@ -6,7 +6,7 @@ mod token;
 use std::sync::Arc;
 
 #[allow(unused)]
-use flexstr::{shared_str, IntoSharedStr, SharedStr, ToSharedStr};
+use flexstr::{IntoSharedStr, SharedStr, ToSharedStr, shared_str};
 pub use lexer::*;
 use miette::{SourceOffset, SourceSpan};
 pub use token::Token;

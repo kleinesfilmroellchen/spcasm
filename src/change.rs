@@ -18,10 +18,6 @@ impl std::ops::BitOr for Change {
 	type Output = Self;
 
 	fn bitor(self, rhs: Self) -> Self::Output {
-		if self == Self::Modified || rhs == Self::Modified {
-			Self::Modified
-		} else {
-			Self::Unmodified
-		}
+		if self == Self::Modified || rhs == Self::Modified { Self::Modified } else { Self::Unmodified }
 	}
 }

@@ -4,12 +4,12 @@ use std::num::NonZeroU64;
 use std::vec::IntoIter;
 
 #[allow(unused)]
-use flexstr::{shared_str, IntoSharedStr, SharedStr, ToSharedStr};
+use flexstr::{IntoSharedStr, SharedStr, ToSharedStr, shared_str};
 
-use super::{source_range, Token};
+use super::{Token, source_range};
 use crate::error::AssemblyError;
-use crate::sema::reference::RelativeReferenceDirection;
 use crate::sema::Register;
+use crate::sema::reference::RelativeReferenceDirection;
 
 /// An API adaptor that allows us to pass the [`Vec<Token>`] we lexed into LALRPOP.
 pub struct LalrpopAdaptor(IntoIter<Token>);

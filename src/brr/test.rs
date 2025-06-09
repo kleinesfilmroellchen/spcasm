@@ -6,12 +6,12 @@
 
 extern crate test;
 #[allow(unused)]
-use flexstr::{shared_str, IntoSharedStr, SharedStr, ToSharedStr};
+use flexstr::{IntoSharedStr, SharedStr, ToSharedStr, shared_str};
 use test::Bencher;
 
 use super::wav::read_wav_for_brr;
 use super::{
-	encode_to_brr, Block, CompressionLevel, DecodedBlockSamples, Header, LPCFilter, LoopEndFlags, WarmUpSamples,
+	Block, CompressionLevel, DecodedBlockSamples, Header, LPCFilter, LoopEndFlags, WarmUpSamples, encode_to_brr,
 };
 use crate::brr::decode_from_brr;
 

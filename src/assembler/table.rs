@@ -7,13 +7,13 @@ use std::collections::HashMap;
 use std::sync::LazyLock;
 
 #[allow(unused)]
-use flexstr::{shared_str, IntoSharedStr, SharedStr, ToSharedStr};
+use flexstr::{IntoSharedStr, SharedStr, ToSharedStr, shared_str};
 use miette::SourceSpan;
 
 use super::AssembledData;
+use crate::AssemblyError;
 use crate::sema::instruction::Mnemonic;
 use crate::sema::{AddressingModeCategory, AssemblyTimeValue};
-use crate::AssemblyError;
 
 /// An action of what to do additionally with the segment. This function handles two operands, such as addresses.
 /// Because of synchronization constraints, these have to be function pointers. All required actions are defined as
@@ -1138,7 +1138,7 @@ pub static ASSEMBLY_TABLE: LazyLock<Table> = LazyLock::new(|| {
 	table
 });
 
-fn one_operand_nop(
+const fn one_operand_nop(
 	_data: &mut AssembledData,
 	_span: SourceSpan,
 	_first: &AssemblyTimeValue,
@@ -1147,7 +1147,7 @@ fn one_operand_nop(
 	Ok(())
 }
 
-fn two_operand_nop(
+const fn two_operand_nop(
 	_data: &mut AssembledData,
 	_span: SourceSpan,
 	_first: &AssemblyTimeValue,

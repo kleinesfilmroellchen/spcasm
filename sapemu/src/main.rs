@@ -1,12 +1,12 @@
 //! S-APU / SPC700 emulator.
-#![feature(slice_as_chunks, generic_const_exprs, adt_const_params, let_chains, bigint_helper_methods)]
+#![feature(generic_const_exprs, adt_const_params, let_chains, bigint_helper_methods)]
 #![cfg_attr(test, feature(try_blocks))]
 
 use std::fs;
 use std::path::PathBuf;
 use std::time::Instant;
 
-use ::log::{debug, info, warn, LevelFilter};
+use ::log::{LevelFilter, debug, info, warn};
 use anyhow::Result;
 use clap::{Parser, ValueEnum};
 use dsp::Dsp;
@@ -16,7 +16,7 @@ use time::macros::format_description;
 
 use crate::memory::Memory;
 use crate::smp::upload::Uploader;
-use crate::smp::{Smp, CPU_RATE};
+use crate::smp::{CPU_RATE, Smp};
 
 pub mod dsp;
 pub mod memory;
@@ -76,7 +76,7 @@ fn upload_from_elf(
 ) -> Result<()> {
 	let mut uploader = Uploader::from_elf(&object::read::elf::ElfFile32::parse(file_data)?)?;
 
-	while !smp.is_halted() && arguments.cycles.map_or(true, |cycles| *ticks < cycles) {
+	while !smp.is_halted() && arguments.cycles.is_none_or(|cycles| *ticks < cycles) {
 		uploader.perform_step(&mut smp.ports);
 		smp.tick(memory, &mut dsp.registers);
 		dsp.tick(memory);
@@ -156,7 +156,7 @@ fn main() -> Result<()> {
 
 	trace!("{}", smp.is_halted());
 
-	while !smp.is_halted() && arguments.cycles.map_or(true, |cycles| ticks < cycles) {
+	while !smp.is_halted() && arguments.cycles.is_none_or(|cycles| ticks < cycles) {
 		smp.tick(&mut memory, &mut dsp.registers);
 		dsp.tick(&mut memory);
 		ticks += 1;

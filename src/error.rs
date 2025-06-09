@@ -6,18 +6,18 @@ use std::num::ParseIntError;
 use std::sync::Arc;
 
 #[allow(unused)]
-use flexstr::{shared_str, IntoSharedStr, SharedStr, ToSharedStr};
+use flexstr::{IntoSharedStr, SharedStr, ToSharedStr, shared_str};
 use lalrpop_util::ParseError;
 use miette::{Diagnostic, SourceSpan};
 use spcasm_derive::ErrorCodes;
 use thiserror::Error;
 
+use crate::AssemblyCode;
 use crate::directive::DirectiveSymbol;
 use crate::parser::Token;
+use crate::sema::AssemblyTimeValue;
 use crate::sema::instruction::{MemoryAddress, Mnemonic};
 use crate::sema::reference::Reference;
-use crate::sema::AssemblyTimeValue;
-use crate::AssemblyCode;
 
 #[allow(clippy::module_name_repetitions)]
 #[allow(unused)]

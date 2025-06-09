@@ -15,7 +15,7 @@ jobs:
       - name: Install latest nightly
         uses: actions-rs/toolchain@v1
         with:
-          toolchain: nightly-2024-11-20
+          toolchain: nightly-2025-06-08
           profile: minimal
       - name: Install Wasm target
         run: rustup target add wasm32-unknown-unknown

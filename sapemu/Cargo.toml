@@ -14,7 +14,7 @@ human-panic = "2"
 log = "0.4"
 time = "0.3"
 
-object = { version = "0.36", features = [
+object = { version = "0.37", features = [
 	"read",
 	"elf",
 ], default-features = false }
@@ -34,10 +34,10 @@ version = "4.4"
 features = ["derive", "wrap_help", "string"]
 
 [dev-dependencies]
-reqwest = { version = "0.12", features = ["blocking"] }
+reqwest = { version = "0.12", default-features = false, features = ["blocking", "rustls-tls"] }
 serde = "1"
 rstest = "0.25"
-simd-json = { version = "0.14", features = ["known-key"] }
+simd-json = { version = "0.15", features = ["known-key"] }
 
 [lints]
 workspace = true

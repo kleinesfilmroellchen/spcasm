@@ -36,7 +36,7 @@ features = ["derive", "wrap_help", "string"]
 [dev-dependencies]
 reqwest = { version = "0.12", default-features = false, features = ["blocking", "rustls-tls"] }
 serde = "1"
-rstest = "0.25"
+rstest = "0.26"
 simd-json = { version = "0.15", features = ["known-key"] }
 
 [lints]

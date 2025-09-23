@@ -8,7 +8,7 @@ use std::sync::Arc;
 use flexstr::{IntoSharedStr, SharedStr, ToSharedStr, shared_str};
 use miette::SourceSpan;
 use parking_lot::RwLock;
-use spcasm_derive::{Parse, VariantName};
+use spcasm_derive::Parse;
 
 use super::AddressingMode;
 use super::reference::{self, Label, Reference, ReferenceResolvable};

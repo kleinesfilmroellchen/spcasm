@@ -9,7 +9,6 @@ use std::sync::Arc;
 use flexstr::{IntoSharedStr, SharedStr, ToSharedStr, shared_str};
 use lalrpop_util::ParseError;
 use miette::{Diagnostic, SourceSpan};
-use spcasm_derive::ErrorCodes;
 use thiserror::Error;
 
 use crate::AssemblyCode;
@@ -23,6 +22,36 @@ use crate::sema::reference::Reference;
 #[allow(unused)]
 pub trait ErrorCodes {
 	fn all_codes() -> HashMap<Discriminant<AssemblyError>, SharedStr>;
+}
+
+macro_rules! ErrorCodes {
+	derive() (
+		$(#[$_m:meta])*
+		$_p:vis enum $Enum:ident {
+		$(
+			$(#[$_v:meta])*
+			$variant_name:ident {
+				$(
+					$(#[$_f:meta])*
+					$field_name:ident : $_t:ty
+				),* $(,)?
+			}
+		),* $(,)?
+	}) => {
+		#[automatically_derived]
+		impl ErrorCodes for $Enum {
+			fn all_codes() -> HashMap<Discriminant<AssemblyError>, SharedStr> {
+				let mut map = std::collections::HashMap::new();
+				$(
+					let error_instance = &Self::$variant_name {
+						$( $field_name: crate::default_hacks::FakeDefaultForIgnoredValues::default() ),*
+					};
+					map.insert(std::mem::discriminant(error_instance), error_instance.code().expect("error must have a code").to_string().into());
+				)*
+				return map;
+			}
+		}
+	};
 }
 
 /// All types of errors that the assembler can report to the user.

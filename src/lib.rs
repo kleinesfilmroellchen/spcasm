@@ -10,6 +10,7 @@
 	const_trait_impl,
 	extend_one,
 	try_blocks,
+	macro_derive,
 	maybe_uninit_array_assume_init,
 	adt_const_params
 )]

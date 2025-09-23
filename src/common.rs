@@ -179,3 +179,26 @@ pub trait VariantName {
 	/// Returns the name of this variant.
 	fn variant_name(&self) -> &'static str;
 }
+
+/// Derives the [`VariantName`] enum.
+#[macro_export]
+macro_rules! VariantName {
+	derive() (
+		$(#[$_m:meta])*
+		$_p:vis enum $Enum:ident {
+			$(
+				$(#[$_v:meta])*
+				$unit_variant_name:ident
+			),* $(,)?
+		}
+	) => {
+		#[automatically_derived]
+		impl VariantName for $Enum {
+			fn variant_name(&self) -> &'static str {
+				match self {
+					$( Self::$unit_variant_name => stringify!($unit_variant_name) ),*
+				}
+			}
+		}
+	};
+}

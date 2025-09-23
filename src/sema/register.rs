@@ -7,7 +7,7 @@ use std::marker::ConstParamTy;
 
 #[allow(unused)]
 use flexstr::{IntoSharedStr, SharedStr, ToSharedStr, shared_str};
-use spcasm_derive::{Parse, VariantName};
+use spcasm_derive::Parse;
 
 use crate::VariantName;
 

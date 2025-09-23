@@ -42,13 +42,13 @@ Options:
 
   -f, --output-format <OUTPUT_FORMAT>
           Format to output to
-          
-          [default: elf]
 
           Possible values:
           - elf:      Output the binary data within a .data section of an ELF file
           - plain:    Output just the binary data
           - hex-dump: Dump hexadecimal representation in a pretty format like in a hex editor
+          
+          [default: elf]
 
   -d, --dump-references
           Dump all references and their final values / locations

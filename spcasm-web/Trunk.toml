@@ -2,6 +2,7 @@
 # Makes Wasm bindings actually visible to JavaScript. See https://github.com/thedodd/trunk/issues/298
 pattern_script = "<script type=\"module\">import init, * as with_bindings from '{base}{js}';init('{base}{wasm}').then(()=>{{window.spcasm=with_bindings;window.onWasmLoad();}});</script>"
 filehash = false
+release = true
 
 [serve]
 open = false

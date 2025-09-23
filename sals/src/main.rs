@@ -337,12 +337,12 @@ impl LanguageServer for Backend {
 	}
 
 	async fn completion(&self, params: CompletionParams) -> Result<Option<CompletionResponse>> {
-		log::info!("completion request {:?}!", params);
+		log::info!("completion request {params:?}!");
 		Ok(None)
 	}
 
 	async fn rename(&self, params: RenameParams) -> Result<Option<WorkspaceEdit>> {
-		log::info!("rename request {:?}!", params);
+		log::info!("rename request {params:?}!");
 		Ok(None)
 	}
 

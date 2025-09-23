@@ -26,7 +26,7 @@ build = "build.rs"
 default-run = "spcasm"
 
 [workspace.package]
-version = "1.2.1"
+version = "1.2.3"
 edition = "2024"
 rust-version = "1.88"
 authors = ["kleines Filmröllchen <kleines@filmroellchen.eu>"]
@@ -42,7 +42,7 @@ required-features = []
 [[bin]]
 name = "spcasm"
 # shut up cargo
-path = "src/../src/lib.rs"
+path = "src/spcasm.rs"
 required-features = ["binaries"]
 test = false
 bench = false
@@ -57,6 +57,7 @@ bench = false
 [features]
 default = ["binaries"]
 binaries = ["dep:clap", "dep:object", "dep:shadow-rs"]
+human-panic = ["dep:human-panic"]
 
 [dependencies]
 object = { version = "0.37", features = [

@@ -99,7 +99,7 @@ impl std::fmt::Display for Instruction {
 }
 
 /// How to optimize the addressing mode
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+#[derive(Clone, Copy, Debug, Eq, PartialEq, Default)]
 #[repr(u8)]
 pub enum AddressingModeOptimization {
 	/// Force using direct page addressing.
@@ -107,12 +107,8 @@ pub enum AddressingModeOptimization {
 	/// Force using full addressing.
 	PreventDirectPage,
 	/// Let the optimizer decide.
+	#[default]
 	Automatic,
-}
-impl Default for AddressingModeOptimization {
-	fn default() -> Self {
-		Self::Automatic
-	}
 }
 
 /// An instruction's core data that's used to generate machine code.

@@ -6,7 +6,6 @@
 	get_mut_unchecked,
 	iter_intersperse,
 	const_for,
-	let_chains,
 	exact_size_is_empty,
 	const_trait_impl,
 	extend_one,
@@ -50,11 +49,3 @@ pub mod buildinfo {
 }
 
 #[cfg(test)] mod test;
-
-#[cfg(feature = "binaries")] mod spcasm;
-
-#[cfg(feature = "binaries")]
-#[allow(unused)]
-fn main() -> miette::Result<()> {
-	spcasm::main()
-}

@@ -84,8 +84,9 @@ pub struct CliOptions {
 	#[arg(long, short = 'r', default_value = "1000")]
 	pub(crate) macro_recursion_limit: usize,
 
+	/// Whether there was at least one error while parsing the CLI options.
 	#[clap(skip = RwLock::new(false))]
-	pub(crate) had_error: RwLock<bool>,
+	pub had_error: RwLock<bool>,
 }
 
 #[cfg(feature = "binaries")]
@@ -172,7 +173,7 @@ impl From<Discriminant<AssemblyError>> for ErrorCodeSpec {
 }
 
 #[allow(unused)]
-const error_prefix: &str = "spcasm::";
+const ERROR_PREFIX: &str = "spcasm::";
 
 impl FromStr for ErrorCodeSpec {
 	type Err = std::string::String;
@@ -184,7 +185,7 @@ impl FromStr for ErrorCodeSpec {
 			.find(|(_, value)| {
 				(value == &string_code)
 				// If the user provided an error code not starting with spcasm:: (very reasonable), just ignore the prefix.
-					|| (!string_code.starts_with(error_prefix) && value.get(error_prefix.len()..).is_some_and(|latter_part| latter_part == string_code))
+					|| (!string_code.starts_with(ERROR_PREFIX) && value.get(ERROR_PREFIX.len()..).is_some_and(|latter_part| latter_part == string_code))
 			})
 			.map(|(key, _)| *key)
 			.ok_or_else(|| String::from("invalid error code"))?;

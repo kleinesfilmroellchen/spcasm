@@ -86,7 +86,7 @@ pub fn encode_to_brr(
 	#[cfg(debug_assertions)]
 	let mut filter_type_counts: [usize; 4] = [1, 0, 0, 0];
 
-	if samples.len() % 16 != 0 {
+	if !samples.len().is_multiple_of(16) {
 		let needed_elements = 16 - (samples.len() % 16);
 		samples.splice(0 .. 0, [0].repeat(needed_elements));
 	}

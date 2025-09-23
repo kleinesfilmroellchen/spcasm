@@ -1,4 +1,4 @@
-edition = "2021"
+edition = "2024"
 hard_tabs = true
 wrap_comments = true
 comment_width = 140

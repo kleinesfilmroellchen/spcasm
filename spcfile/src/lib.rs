@@ -1,5 +1,5 @@
 #![doc = include_str!("../README.md")]
-#![feature(iterator_try_collect, generic_arg_infer)]
+#![feature(iterator_try_collect)]
 
 use std::time::Duration;
 

@@ -1,5 +1,5 @@
 //! S-APU / SPC700 emulator.
-#![feature(generic_const_exprs, adt_const_params, let_chains, bigint_helper_methods)]
+#![feature(generic_const_exprs, adt_const_params, bigint_helper_methods)]
 #![cfg_attr(test, feature(try_blocks))]
 
 use std::fs;

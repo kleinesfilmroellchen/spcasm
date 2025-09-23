@@ -36,7 +36,7 @@ pub fn parse_macro_derive(input: TokenStream) -> TokenStream {
 			let variant_identifiers = variant_identifiers_and_strings.iter().map(|(identifier, _)| identifier);
 			let variant_strings = variant_identifiers_and_strings
 				.iter()
-				.map(|(_, string)| string.to_string())
+				.map(|(_, string)| string.clone())
 				.collect::<Vec<std::string::String>>();
 
 			quote! {

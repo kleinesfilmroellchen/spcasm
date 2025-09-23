@@ -5,12 +5,11 @@ use std::io::Write;
 
 #[allow(unused)]
 use flexstr::{IntoSharedStr, SharedStr, ToSharedStr, shared_str};
-
-use crate::{
+use spcasm::{
 	AssemblyCode, AssemblyError, cli, dump_ast, dump_reference_tree, elf, run_assembler, run_assembler_into_segments,
 };
 
-pub fn main() -> miette::Result<()> {
+fn main() -> miette::Result<()> {
 	use clap::Parser;
 
 	#[cfg(feature = "human-panic")]
@@ -82,7 +81,7 @@ pub fn main() -> miette::Result<()> {
 				},
 				cli::OutputFormat::Plain => outfile.write_all(&assembled).map_err(AssemblyError::from)?,
 				cli::OutputFormat::HexDump => outfile
-					.write_fmt(format_args!("{}", crate::pretty_hex(&assembled, None)))
+					.write_fmt(format_args!("{}", spcasm::pretty_hex(&assembled, None)))
 					.map_err(AssemblyError::from)?,
 			}
 		}

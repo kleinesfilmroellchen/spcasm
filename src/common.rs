@@ -58,9 +58,7 @@ fn dump_reference_tree_impl(references: &mut dyn Iterator<Item = &Arc<RwLock<Lab
 		let label_text = global
 			.location
 			.as_ref()
-			.and_then(|location| {
-				location.try_value(global.source_span(), &Arc::new(AssemblyCode::new("", &String::new()))).ok()
-			})
+			.and_then(|location| location.try_value(global.source_span(), &Arc::new(AssemblyCode::new("", ""))).ok())
 			.map_or_else(|| "(unknown)".to_string(), |location| format!("{location:04X}"));
 
 		println!(
@@ -75,7 +73,7 @@ fn dump_reference_tree_impl(references: &mut dyn Iterator<Item = &Arc<RwLock<Lab
 				.location
 				.as_ref()
 				.and_then(|location| {
-					location.try_value(global.source_span(), &Arc::new(AssemblyCode::new("", &String::new()))).ok()
+					location.try_value(global.source_span(), &Arc::new(AssemblyCode::new("", ""))).ok()
 				})
 				.map_or_else(|| "(unknown)".to_string(), |location| format!("{location:04X}"))
 		});

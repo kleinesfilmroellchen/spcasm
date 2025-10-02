@@ -233,6 +233,16 @@ Directive: Directive = {
 			expected_value: None,
 		}
 	},
+	RepeatDirective,
+};
+
+RepeatDirective: Directive = <start:"repeat"> <value:AssemblyTimeValue> "\n" <body:Program> <end:"endrepeat"> => Directive {
+	value: DirectiveValue::Repeat {
+		count: value,
+		body,
+	},
+	span: source_range(start.into(), end.into()),
+	expected_value: None,
 };
 
 TableDirective: (DirectiveSymbol, SourceSpan) = {
@@ -466,6 +476,7 @@ ReferenceBase: (Reference, SourceSpan) = {
 		value: None,
 		span: minuses.1,
 	}, minuses.1),
+	"repeatcount" => (Reference::RepeatCount { span: <>, }, <>),
 };
 
 GlobalReferenceAsAddress: (Reference, SourceSpan) = <identifier:"identifier"> =>? Ok((
@@ -622,6 +633,7 @@ extern {
 		"arch" => Token::Directive(DirectiveSymbol::Arch, <SourceSpan>),
 		"offset" => Token::SpecialIdentifier("offset", <SourceSpan>),
 		"align" => Token::SpecialIdentifier("align", <SourceSpan>),
+		"repeatcount" => Token::SpecialIdentifier("repeatcount", <SourceSpan>),
 		"startpos" => Token::Directive(DirectiveSymbol::Startpos, <SourceSpan>),
 		"fill" => Token::Directive(DirectiveSymbol::Fill, <SourceSpan>),
 		"fillbyte" => Token::Directive(DirectiveSymbol::FillByte, <SourceSpan>),
@@ -641,6 +653,8 @@ extern {
 		"endif" => Token::Directive(DirectiveSymbol::EndIf, <SourceSpan>),
 		"math" => Token::Directive(DirectiveSymbol::Math, <SourceSpan>),
 		"namespace" => Token::Directive(DirectiveSymbol::Namespace, <SourceSpan>),
+		"repeat" => Token::Directive(DirectiveSymbol::Repeat, <SourceSpan>),
+		"endrepeat" => Token::Directive(DirectiveSymbol::EndRepeat, <SourceSpan>),
 		"number" => Token::Number(<i64>, <SharedStr>, <SourceSpan>),
 		"string" => Token::String(<Vec<u8>>, <SourceSpan>),
 		"#" => Token::Hash(<SourceOffset>),

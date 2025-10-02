@@ -39,7 +39,7 @@ fn main() -> miette::Result<()> {
 						location
 							.try_value(
 								reference.read_recursive().source_span(),
-								&std::sync::Arc::new(AssemblyCode::new("", &String::new())),
+								&std::sync::Arc::new(AssemblyCode::new("", "")),
 							)
 							.ok()
 					})

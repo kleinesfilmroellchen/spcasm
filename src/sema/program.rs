@@ -150,6 +150,19 @@ impl ReferenceResolvable for ProgramElement {
 				},
 		}
 	}
+
+	fn resolve_repeatcount(&mut self, repetition: super::instruction::MemoryAddress) {
+		match self {
+			Self::Label(label) => label.resolve_repeatcount(repetition),
+			Self::Directive(directive) => directive.resolve_repeatcount(repetition),
+			Self::Instruction(instruction) => instruction.resolve_repeatcount(repetition),
+			Self::IncludeSource { .. } => {},
+			Self::UserDefinedMacroCall { arguments, .. } =>
+				for argument in arguments {
+					argument.resolve_repeatcount(repetition);
+				},
+		}
+	}
 }
 
 impl std::fmt::Display for ProgramElement {

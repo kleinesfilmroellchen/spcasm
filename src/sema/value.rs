@@ -171,6 +171,7 @@ impl AssemblyTimeValue {
 				| Reference::MacroArgument { value: None, .. }
 				| Reference::Relative { value: None, .. }
 				| Reference::MacroGlobal { .. }
+				| Reference::RepeatCount { .. }
 				| Reference::UnresolvedLabel { .. },
 				..,
 			) => self,
@@ -214,6 +215,7 @@ impl AssemblyTimeValue {
 				| Reference::Relative { value: Some(value), .. } => value.value_using_resolver(resolver),
 				Reference::Label(_)
 				| Reference::MacroGlobal { .. }
+				| Reference::RepeatCount { .. }
 				| Reference::Relative { value: None, .. }
 				| Reference::UnresolvedLabel { .. }
 				| Reference::MacroArgument { value: None, .. } => resolver(reference.clone()),
@@ -307,10 +309,26 @@ impl ReferenceResolvable for AssemblyTimeValue {
 	) -> Result<(), Box<AssemblyError>> {
 		match self {
 			Self::Reference(reference, ..) => reference.set_current_label(label, source_code),
-			Self::UnaryOperation { inner_value: val, .. } => val.set_current_label(label, source_code),
+			Self::UnaryOperation { inner_value, .. } => inner_value.set_current_label(label, source_code),
 			Self::BinaryOperation { lhs, rhs, .. } =>
 				lhs.set_current_label(label, source_code).and_then(|()| rhs.set_current_label(label, source_code)),
 			Self::Literal(..) => Ok(()),
+		}
+	}
+
+	fn resolve_repeatcount(&mut self, repetition: MemoryAddress) {
+		match self {
+			Self::Reference(Reference::RepeatCount { span }, ..) => {
+				*self = Self::Literal(repetition, *span);
+			},
+			Self::UnaryOperation { inner_value, .. } => inner_value.resolve_repeatcount(repetition),
+			Self::BinaryOperation { lhs, rhs, .. } => {
+				lhs.resolve_repeatcount(repetition);
+				rhs.resolve_repeatcount(repetition);
+			},
+			// do not resolve the repeat count down to references – they cannot do anything, and there’s a safety panic
+			// that catches the call
+			Self::Reference(..) | Self::Literal(..) => {},
 		}
 	}
 }
@@ -444,6 +462,10 @@ impl ReferenceResolvable for SizedAssemblyTimeValue {
 		source_code: &Arc<AssemblyCode>,
 	) -> Result<(), Box<AssemblyError>> {
 		self.value.set_current_label(current_label, source_code)
+	}
+
+	fn resolve_repeatcount(&mut self, repetition: MemoryAddress) {
+		self.value.resolve_repeatcount(repetition);
 	}
 }
 

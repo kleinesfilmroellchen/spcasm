@@ -47,6 +47,9 @@ impl AssembledData {
 				}
 				Ok(ClearLabels::Yes)
 			},
+			DirectiveValue::Repeat { .. } => {
+				todo!()
+			},
 			DirectiveValue::Brr { ref file, range, auto_trim, .. } => {
 				self.assemble_brr(directive, file, range, auto_trim, current_labels)?;
 				Ok(ClearLabels::Yes)

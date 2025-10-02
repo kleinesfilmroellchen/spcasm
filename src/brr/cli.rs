@@ -319,7 +319,7 @@ fn main() {
 
 			WavWriter::new(&mut output_file, header)
 				.and_then(|mut writer| {
-					let mut writer = writer.get_i16_writer(samples.len() as u32);
+					let mut writer = writer.get_i16_writer(u32::try_from(samples.len()).unwrap());
 					for s in samples {
 						writer.write_sample(s);
 					}

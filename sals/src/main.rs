@@ -258,6 +258,7 @@ impl LanguageServer for Backend {
 				Reference::MacroArgument { span, .. }
 				| Reference::MacroGlobal { span, .. }
 				| Reference::Relative { span, .. }
+				| Reference::RepeatCount { span, .. }
 				| Reference::UnresolvedLabel { span, .. } => Box::new(std::iter::once(span)),
 			};
 

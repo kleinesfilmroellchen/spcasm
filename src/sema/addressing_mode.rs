@@ -247,6 +247,7 @@ impl AddressingMode {
 }
 
 impl ReferenceResolvable for AddressingMode {
+	// FIXME: Use number_mut for these
 	fn replace_macro_parent(
 		&mut self,
 		replacement_parent: Arc<RwLock<reference::MacroParent>>,
@@ -319,6 +320,12 @@ impl ReferenceResolvable for AddressingMode {
 		source_code: &Arc<AssemblyCode>,
 	) -> Result<(), Box<AssemblyError>> {
 		self.number_mut().map_or_else(|| Ok(()), |number| number.set_current_label(current_label, source_code))
+	}
+
+	fn resolve_repeatcount(&mut self, repetition: super::instruction::MemoryAddress) {
+		if let Some(number) = self.number_mut() {
+			number.resolve_repeatcount(repetition);
+		}
 	}
 }
 

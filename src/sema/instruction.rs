@@ -87,6 +87,10 @@ impl ReferenceResolvable for Instruction {
 	) -> Result<(), Box<AssemblyError>> {
 		self.opcode.set_current_label(current_label, source_code)
 	}
+
+	fn resolve_repeatcount(&mut self, repetition: MemoryAddress) {
+		self.opcode.resolve_repeatcount(repetition);
+	}
 }
 
 impl std::fmt::Display for Instruction {
@@ -359,6 +363,12 @@ impl ReferenceResolvable for Opcode {
 			operand.set_current_label(current_label, source_code)?;
 		}
 		Ok(())
+	}
+
+	fn resolve_repeatcount(&mut self, repetition: MemoryAddress) {
+		for operand in self.first_operand.iter_mut().chain(self.second_operand.iter_mut()) {
+			operand.resolve_repeatcount(repetition);
+		}
 	}
 }
 

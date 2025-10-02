@@ -927,10 +927,11 @@ spcasm::syntax::missing_token
 
   × Expected any of "identifier", "mnemonic", "org", "db", "byte", "dw",
   │ "word", "dl", "dd", "ascii", "asciiz", "incbin", "include", "incsrc",
-  │ "endasm", "brr", "sampletable", "pushpc", "pullpc", "arch", "startpos",
-  │ "fill", "fillbyte", "fillword", "filllong", "filldword", "pad", "padbyte",
-  │ "padword", "padlong", "paddword", "macro", "if", "math", "namespace", "+",
-  │ "+++", "---", "-", "-range-", "<", "%", ".", "/n"
+  │ "endasm", "brr", "sampletable", "pushpc", "pullpc", "arch", "repeatcount",
+  │ "startpos", "fill", "fillbyte", "fillword", "filllong", "filldword",
+  │ "pad", "padbyte", "padword", "padlong", "paddword", "macro", "if", "math",
+  │ "namespace", "repeat", "+", "+++", "---", "-", "-range-", "<", "%", ".",
+  │ "/n"
    ╭─[tests/errors/parser-missing-token.spcasmtest:3:1]
  1 │ org 0
  2 │ label:

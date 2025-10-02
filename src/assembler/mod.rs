@@ -693,6 +693,11 @@ impl AssembledData {
 								src:            self.source_code.clone(),
 							}
 							.into()),
+							Reference::RepeatCount { span } => Err(AssemblyError::RepeatCountOutsideRepeat {
+								usage_location: span,
+								src:            self.source_code.clone(),
+							}
+							.into()),
 						}
 						.err()
 					})

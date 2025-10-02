@@ -78,6 +78,12 @@ pub enum Reference {
 		/// Source code location of the reference.
 		span: SourceSpan,
 	},
+	/// The special identifier `repeatcount`, which is used in `repeat` directives to get access to the current
+	/// repetition count.
+	RepeatCount {
+		/// Source code location of the identifier.
+		span: SourceSpan,
+	},
 }
 
 impl Reference {
@@ -90,6 +96,7 @@ impl Reference {
 			Self::MacroArgument { span, .. }
 			| Self::UnresolvedLabel { span, .. }
 			| Self::Relative { span, .. }
+			| Self::RepeatCount { span, .. }
 			| Self::MacroGlobal { span, .. } => *span,
 		}
 	}
@@ -104,6 +111,7 @@ impl Reference {
 				direction.string().repeat(usize::try_from(u64::from(*id)).unwrap()).into(),
 			Self::UnresolvedLabel { name, .. } | Self::MacroArgument { name, .. } => name.clone(),
 			Self::MacroGlobal { .. } => "\\@".into(),
+			Self::RepeatCount { .. } => "repeatcount".into(),
 		}
 	}
 
@@ -113,7 +121,7 @@ impl Reference {
 			Self::Label(global) => global.write().location = Some(location),
 			Self::UnresolvedLabel { value, .. } | Self::Relative { value, .. } => *value = Some(location.into()),
 			// noop on macro arguments
-			Self::MacroArgument { .. } | Self::MacroGlobal { .. } => {},
+			Self::MacroArgument { .. } | Self::MacroGlobal { .. } | Self::RepeatCount { .. } => {},
 		}
 	}
 
@@ -123,7 +131,7 @@ impl Reference {
 		match self {
 			Self::Label(global) => global.read().location.clone(),
 			Self::MacroArgument { value, .. } | Self::Relative { value, .. } => value.clone().map(|boxed| *boxed),
-			Self::MacroGlobal { .. } | Self::UnresolvedLabel { .. } => None,
+			Self::MacroGlobal { .. } | Self::UnresolvedLabel { .. } | Self::RepeatCount { .. } => None,
 		}
 	}
 
@@ -153,7 +161,11 @@ impl Reference {
 				},
 			Self::MacroArgument { value: Some(value), .. } | Self::Relative { value: Some(value), .. } =>
 				value.set_current_label(current_label, source_code),
-			Self::Label(_) | Self::MacroGlobal { .. } | Self::MacroArgument { .. } | Self::Relative { .. } => Ok(()),
+			Self::Label(_)
+			| Self::MacroGlobal { .. }
+			| Self::MacroArgument { .. }
+			| Self::Relative { .. }
+			| Self::RepeatCount { .. } => Ok(()),
 		}
 	}
 }
@@ -190,7 +202,10 @@ impl ReferenceResolvable for Reference {
 					},
 				)
 			},
-			Self::MacroGlobal { .. } | Self::Relative { .. } | Self::UnresolvedLabel { .. } => Ok(()),
+			Self::MacroGlobal { .. }
+			| Self::Relative { .. }
+			| Self::UnresolvedLabel { .. }
+			| Self::RepeatCount { .. } => Ok(()),
 		}
 	}
 
@@ -211,7 +226,10 @@ impl ReferenceResolvable for Reference {
 				if let Some(value) = value.as_mut() {
 					value.resolve_relative_labels(direction, relative_labels);
 				},
-			Self::MacroGlobal { .. } | Self::Relative { .. } | Self::UnresolvedLabel { .. } => (),
+			Self::MacroGlobal { .. }
+			| Self::Relative { .. }
+			| Self::UnresolvedLabel { .. }
+			| Self::RepeatCount { .. } => (),
 		}
 	}
 
@@ -276,7 +294,10 @@ impl ReferenceResolvable for Reference {
 				if let Some(value) = value.as_mut() {
 					value.resolve_pseudo_labels(global_labels);
 				},
-			Self::MacroGlobal { .. } | Self::Relative { .. } | Self::UnresolvedLabel { .. } => (),
+			Self::MacroGlobal { .. }
+			| Self::Relative { .. }
+			| Self::UnresolvedLabel { .. }
+			| Self::RepeatCount { .. } => (),
 		}
 	}
 
@@ -289,6 +310,10 @@ impl ReferenceResolvable for Reference {
 		// function directly.
 		self.set_current_label_with_kind(current_label, LabelUsageKind::AsAddress, source_code)
 	}
+
+	fn resolve_repeatcount(&mut self, _: MemoryAddress) {
+		panic!("bug: repeat count resolution should not descend into references");
+	}
 }
 
 impl Display for Reference {
@@ -298,6 +323,7 @@ impl Display for Reference {
 			Self::UnresolvedLabel { name, nesting_level, .. } => format!("{}{}", ".".repeat(*nesting_level), name),
 			Self::MacroArgument { name, .. } => format!("<{name}>"),
 			Self::MacroGlobal { .. } => "\\@".to_string(),
+			Self::RepeatCount { .. } => "repeatcount".to_string(),
 			Self::Relative { direction, id, .. } => direction.string().repeat(usize::try_from(u64::from(*id)).unwrap()),
 		})
 	}
@@ -314,7 +340,7 @@ impl PartialEq for Reference {
 			Self::Relative { .. } |
 			Self::UnresolvedLabel { .. } |
 			// Equality doesn't really make sense for dynamic user macro globals.
-			Self::MacroGlobal { .. } => false,
+			Self::MacroGlobal { .. } | Self::RepeatCount { .. } => false,
 			Self::MacroArgument { name, .. } => match other {
 				Self::MacroArgument { name: other_name, .. } => name.eq(other_name),
 				_ => false,
@@ -337,7 +363,8 @@ impl Resolvable for Reference {
 			Self::MacroArgument { .. }
 			| Self::Relative { .. }
 			| Self::MacroGlobal { .. }
-			| Self::UnresolvedLabel { .. } => false,
+			| Self::UnresolvedLabel { .. }
+			| Self::RepeatCount { .. } => false,
 		}
 	}
 
@@ -353,7 +380,7 @@ impl Resolvable for Reference {
 				*value = Some(Box::new(AssemblyTimeValue::Literal(location, usage_span)));
 				Ok(())
 			},
-			Self::MacroGlobal { .. } | Self::UnresolvedLabel { .. } =>
+			Self::MacroGlobal { .. } | Self::UnresolvedLabel { .. } | Self::RepeatCount { .. } =>
 				unimplemented!("{:?} leaked to reference resolution, this is a sema bug", self),
 		}
 	}
@@ -507,6 +534,10 @@ impl ReferenceResolvable for Label {
 	) -> Result<(), Box<AssemblyError>> {
 		Ok(())
 	}
+
+	fn resolve_repeatcount(&mut self, _: MemoryAddress) {
+		panic!("bug: labels should not be handled in repeat count resolution");
+	}
 }
 
 impl PartialEq for Label {
@@ -658,6 +689,9 @@ pub trait ReferenceResolvable {
 		current_label: Option<&Arc<RwLock<Label>>>,
 		source_code: &Arc<AssemblyCode>,
 	) -> Result<(), Box<AssemblyError>>;
+
+	/// Resolve all repeatcount symbols to the given value.
+	fn resolve_repeatcount(&mut self, repetition: MemoryAddress);
 }
 
 /// Creates a local label at this position from the given data (name and nesting level), as well as the current label.

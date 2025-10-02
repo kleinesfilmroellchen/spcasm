@@ -144,6 +144,10 @@ impl ReferenceResolvable for Directive {
 	) -> Result<(), Box<AssemblyError>> {
 		self.value.set_current_label(current_label, source_code)
 	}
+
+	fn resolve_repeatcount(&mut self, repetition: MemoryAddress) {
+		self.value.resolve_repeatcount(repetition);
+	}
 }
 
 impl std::fmt::Display for Directive {
@@ -179,6 +183,7 @@ pub enum DirectiveSymbol {
 	Else,
 	ElseIf,
 	EndIf,
+	EndRepeat,
 	Math,
 	Fill,
 	FillByte,
@@ -190,6 +195,7 @@ pub enum DirectiveSymbol {
 	PadWord,
 	PadLong,
 	PadDWord,
+	Repeat,
 	Startpos,
 	Namespace,
 }
@@ -218,6 +224,7 @@ impl Display for DirectiveSymbol {
 			Self::Else => "else",
 			Self::ElseIf => "elseif",
 			Self::EndIf => "endif",
+			Self::EndRepeat => "endrepeat",
 			Self::Math => "math",
 			Self::Fill => "fill",
 			Self::FillByte => "fillbyte",
@@ -229,6 +236,7 @@ impl Display for DirectiveSymbol {
 			Self::PadWord => "padword",
 			Self::PadLong => "padlong",
 			Self::PadDWord => "paddword",
+			Self::Repeat => "repeat",
 			Self::Startpos => "startpos",
 			Self::Namespace => "namespace",
 		})
@@ -304,6 +312,13 @@ pub enum DirectiveValue {
 	StartNamespace { name: SharedStr },
 	/// `namespace off`
 	EndNamespace,
+	/// `repeat`
+	Repeat {
+		/// How often the block is repeated.
+		count: AssemblyTimeValue,
+		/// Body of the repeat block.
+		body:  Vec<ProgramElement>,
+	},
 }
 
 /// Expands to a pattern that matches all symbolic directives.
@@ -368,6 +383,11 @@ impl DirectiveValue {
 						.sum::<usize>()
 						.max(false_block.iter().map(ProgramElement::assembled_size).sum())
 				},
+			Self::Repeat { count, body } =>
+				body.iter().map(ProgramElement::assembled_size).sum::<usize>()
+					* count
+						.value_using_resolver(&|_| None)
+						.unwrap_or_else(|| (Self::LARGE_ASSEMBLED_SIZE).try_into().unwrap()) as usize,
 			// Use a large assembled size as a signal that we don't know at this point. This will force any later
 			// reference out of the direct page, which will always yield correct behavior.
 			Self::Include { .. } | Self::Brr { .. } | Self::SampleTable { .. } | Self::Fill { .. } =>
@@ -460,6 +480,14 @@ impl Display for DirectiveValue {
 					.collect::<String>()
 					.replace('\n', "\n    "),
 			),
+			Self::Repeat { count, body } => format!(
+				"repeat {count:04X}\n{}",
+				body.iter()
+					.map(ProgramElement::to_string)
+					.intersperse("\n".into())
+					.collect::<String>()
+					.replace('\n', "\n    "),
+			),
 		})
 	}
 }
@@ -498,6 +526,13 @@ impl ReferenceResolvable for DirectiveValue {
 			| Self::EndNamespace
 			| Self::Org(_) => Ok(()),
 			Self::AssignReference { value, .. } => value.replace_macro_parent(replacement_parent, source_code),
+			Self::Repeat { count, body } => {
+				let result = count.replace_macro_parent(replacement_parent.clone(), source_code);
+				body.iter_mut()
+					.map(|element| element.replace_macro_parent(replacement_parent.clone(), source_code))
+					.try_collect::<()>()?;
+				result
+			},
 			Self::UserDefinedMacro { name, body, .. } => Err(AssemblyError::RecursiveMacroDefinition {
 				name:     (*name).to_string().into(),
 				location: source_range(
@@ -546,6 +581,12 @@ impl ReferenceResolvable for DirectiveValue {
 			| Self::Org(_)
 			| Self::UserDefinedMacro { .. } => (),
 			Self::AssignReference { value, .. } => value.resolve_relative_labels(direction, relative_labels),
+			Self::Repeat { count, body } => {
+				count.resolve_relative_labels(direction, relative_labels);
+				for element in body {
+					element.resolve_relative_labels(direction, relative_labels);
+				}
+			},
 		}
 	}
 
@@ -580,6 +621,12 @@ impl ReferenceResolvable for DirectiveValue {
 			| Self::Org(_)
 			| Self::UserDefinedMacro { .. } => (),
 			Self::AssignReference { value, .. } => value.resolve_pseudo_labels(global_labels),
+			Self::Repeat { count, body } => {
+				count.resolve_pseudo_labels(global_labels);
+				for element in body {
+					element.resolve_pseudo_labels(global_labels);
+				}
+			},
 		}
 	}
 
@@ -630,6 +677,54 @@ impl ReferenceResolvable for DirectiveValue {
 			| Self::StartNamespace { .. }
 			| Self::EndNamespace
 			| Self::Org(_) => Ok(()),
+			Self::Repeat { count, body } => {
+				for element in body {
+					element.set_current_label(current_label, source_code)?;
+				}
+				count.set_current_label(current_label, source_code)
+			},
+		}
+	}
+
+	fn resolve_repeatcount(&mut self, repetition: MemoryAddress) {
+		match self {
+			Self::Table { values, .. } =>
+				for value in &mut *values {
+					value.value.resolve_repeatcount(repetition);
+				},
+			Self::Conditional { true_block, false_block, .. } =>
+				for element in true_block.iter_mut().chain(false_block.iter_mut()) {
+					element.resolve_repeatcount(repetition);
+				},
+			Self::Fill { parameter, value, .. } => {
+				parameter.resolve_repeatcount(repetition);
+				if let Some(value) = value.as_mut() {
+					value.resolve_repeatcount(repetition);
+				}
+			},
+			Self::AssignReference { value, .. } => {
+				value.resolve_repeatcount(repetition);
+			},
+			Self::UserDefinedMacro { .. }
+			| Self::Include { .. }
+			| Self::SampleTable { .. }
+			| Self::Brr { .. }
+			| Self::String { .. }
+			| Self::SetDirectiveParameters { .. }
+			| Self::Placeholder
+			| Self::End
+			| Self::PushSection
+			| Self::PopSection
+			| Self::Startpos
+			| Self::StartNamespace { .. }
+			| Self::EndNamespace
+			| Self::Org(_) => {},
+			Self::Repeat { count, body } => {
+				for element in body {
+					element.resolve_repeatcount(repetition);
+				}
+				count.resolve_repeatcount(repetition);
+			},
 		}
 	}
 }

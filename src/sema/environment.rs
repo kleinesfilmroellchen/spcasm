@@ -124,7 +124,7 @@ impl Environment {
 		let mut file = rc_file.write();
 		file.resolve_source_includes()?;
 
-		file.expand_user_macros()?;
+		file.expand_macros()?;
 		file.fill_in_reference_links()?;
 		file.coerce_to_direct_page_addressing();
 		drop(file);

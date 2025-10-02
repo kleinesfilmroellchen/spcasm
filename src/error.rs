@@ -417,6 +417,35 @@ pub enum AssemblyError {
 		src:            Arc<AssemblyCode>,
 	},
 
+	#[error("'repeatcount' can not be resolved to a value")]
+	#[diagnostic(
+		code(spcasm::reference::unresolved),
+		severity(Error),
+		help("The special symbol 'repeatcount' is only usable inside repeat directives.")
+	)]
+	RepeatCountOutsideRepeat {
+		#[label("Used here, outside of a repeat directive")]
+		usage_location: SourceSpan,
+		#[source_code]
+		src:            Arc<AssemblyCode>,
+	},
+
+	#[error("Repetition count is negative and will be clamped to zero")]
+	#[diagnostic(
+		code(spcasm::directive::negative_repeatcount),
+		severity(Warning),
+		help("Use repeat count zero to not repeat this block at all")
+	)]
+	NegativeRepeatCount {
+		#[label("Repeat count resolves to {resolved_repeatcount}")]
+		repeatcount_location: SourceSpan,
+		resolved_repeatcount: MemoryAddress,
+		#[label("While expanding this repeat directive")]
+		directive_location:   SourceSpan,
+		#[source_code]
+		src:                  Arc<AssemblyCode>,
+	},
+
 	#[error("Invalid addressing mode `{mode}` as first operand for `{mnemonic}`")]
 	#[diagnostic(
 		code(spcasm::instruction::invalid_addressing_mode),
@@ -922,6 +951,7 @@ pub enum ReferenceType {
 	Local,
 	#[default]
 	Global,
+	RepeatCount,
 }
 
 impl ReferenceType {
@@ -932,6 +962,7 @@ impl ReferenceType {
 			Self::Relative => "'+'/'-' relative label",
 			Self::Local => "local label",
 			Self::Global => "label",
+			Self::RepeatCount => "repeatcount",
 		}
 	}
 }
@@ -947,6 +978,7 @@ where
 			Reference::UnresolvedLabel { .. } => Self::Local,
 			Reference::MacroArgument { .. } => Self::MacroArgument,
 			Reference::MacroGlobal { .. } => Self::MacroGlobal,
+			Reference::RepeatCount { .. } => Self::RepeatCount,
 		}
 	}
 }

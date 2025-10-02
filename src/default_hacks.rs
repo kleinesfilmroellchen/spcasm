@@ -13,7 +13,7 @@ use miette::SourceSpan;
 
 use crate::AssemblyCode;
 use crate::directive::DirectiveSymbol;
-use crate::error::ReferenceType;
+use crate::error::UnassignableReferenceType;
 use crate::parser::Token;
 use crate::sema::AssemblyTimeValue;
 use crate::sema::instruction::Mnemonic;
@@ -36,7 +36,7 @@ where
 	}
 }
 
-impl InheritFromDefault for ReferenceType {}
+impl InheritFromDefault for UnassignableReferenceType {}
 impl InheritFromDefault for SharedStr {}
 impl InheritFromDefault for AssemblyCode {}
 impl InheritFromDefault for bool {}

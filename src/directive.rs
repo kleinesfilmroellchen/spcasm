@@ -97,7 +97,7 @@ impl Directive {
 				..
 			} =>
 				return Err(AssemblyError::AssigningToReference {
-					kind:     reference.into(),
+					kind:     (&*reference).try_into().unwrap(),
 					name:     reference.to_string().into(),
 					src:      source_code,
 					location: self.span,

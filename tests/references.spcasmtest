@@ -100,3 +100,7 @@ endmacro
 ; bra pseudo_tests ;= 2F F0
 
 ; namespace off
+
+global_:
+	.local = $20
+	db .local ;= 20

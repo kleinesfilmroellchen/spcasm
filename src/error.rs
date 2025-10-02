@@ -1,4 +1,3 @@
-use std::borrow::Borrow;
 use std::collections::HashMap;
 use std::fmt::Write;
 use std::mem::Discriminant;
@@ -150,21 +149,18 @@ pub enum AssemblyError {
 		code(spcasm::reference::assign_invalid),
 		severity(Error),
 		help("{}", match .kind {
-				ReferenceType::MacroArgument => "Arguments of macros are given a value when the macro is called. Therefore, it does not make sense to \
+				UnassignableReferenceType::MacroArgument => "Arguments of macros are given a value when the macro is called. Therefore, it does not make sense to \
 				                                 assign them a value. If you need a label with a specific value inside a macro, use a local label under \
 				                                 the macro's special '\\@' label instead",
-				ReferenceType::MacroGlobal => "The special macro label '\\@' can be used for creating a unique global label per user macro call. It can \
+				UnassignableReferenceType::MacroGlobal => "The special macro label '\\@' can be used for creating a unique global label per user macro call. It can \
 				                               therefore only be assigned a value by using it as the label for an instruction. If you need to compute \
 				                               values based on macro arguments, there is currently no non-repetitive way to do this.",
-				ReferenceType::Relative => "Relative labels cannot be referred to unambiguously, since they don't have a proper name. Therefore, \
-				                            assigning to them is not useful, since that would make them have no proper relative position to anything.",
-				_ => "",
 			}
 		)
 	)]
 	AssigningToReference {
 		name:     SharedStr,
-		kind:     ReferenceType,
+		kind:     UnassignableReferenceType,
 		#[source_code]
 		src:      Arc<AssemblyCode>,
 		#[label("Assignment happens here")]
@@ -788,15 +784,6 @@ pub enum AssemblyError {
 		src:      Arc<AssemblyCode>,
 	},
 
-	#[error("There's dangling tokens after this")]
-	#[diagnostic(code(spcasm::syntax::dangling_tokens), help("Remove these tokens"), severity(Error))]
-	DanglingTokens {
-		#[label("Dangling tokens here")]
-		location: SourceSpan,
-		#[source_code]
-		src:      Arc<AssemblyCode>,
-	},
-
 	#[cfg(test)]
 	#[error("Test comment has invalid format")]
 	#[diagnostic(
@@ -896,11 +883,6 @@ pub enum AssemblyError {
 impl AssemblyError {
 	pub(crate) fn from_lalrpop(error: ParseError<usize, Token, Self>, src: Arc<AssemblyCode>) -> Self {
 		match error {
-			ParseError::InvalidToken { location } => Self::UnexpectedCharacter {
-				chr: src.text.chars().nth(location).unwrap_or_default(),
-				location: (location, 1).into(),
-				src,
-			},
 			ParseError::UnrecognizedEof { location, expected } => Self::UnexpectedEndOfTokens {
 				expected: expected.into_iter().map(SharedStr::from).collect(),
 				location: (location, 1).into(),
@@ -920,9 +902,9 @@ impl AssemblyError {
 					location: (start, end - start).into(),
 					src,
 				},
-			ParseError::UnrecognizedToken { .. } => unreachable!(),
-			ParseError::ExtraToken { token: (start, _, end) } =>
-				Self::DanglingTokens { location: (start, end - start).into(), src },
+			ParseError::InvalidToken { .. } => unreachable!("not using the internal lexer"),
+			ParseError::UnrecognizedToken { .. } => unreachable!("at least one token is always expected"),
+			ParseError::ExtraToken { .. } => unreachable!("parser should not report extra tokens"),
 			ParseError::User { error } => error,
 		}
 	}
@@ -944,41 +926,32 @@ impl From<std::io::Error> for AssemblyError {
 #[repr(u8)]
 #[allow(clippy::missing_docs_in_private_items)]
 #[derive(Clone, Copy, Debug, Eq, PartialEq, Default)]
-pub enum ReferenceType {
+pub enum UnassignableReferenceType {
+	#[default]
 	MacroGlobal,
 	MacroArgument,
-	Relative,
-	Local,
-	#[default]
-	Global,
-	RepeatCount,
 }
 
-impl ReferenceType {
+impl UnassignableReferenceType {
 	pub const fn name(self) -> &'static str {
 		match self {
 			Self::MacroGlobal => "macro global label",
 			Self::MacroArgument => "macro argument",
-			Self::Relative => "'+'/'-' relative label",
-			Self::Local => "local label",
-			Self::Global => "label",
-			Self::RepeatCount => "repeatcount",
 		}
 	}
 }
 
-impl<Ref> From<Ref> for ReferenceType
-where
-	Ref: Borrow<Reference>,
-{
-	fn from(value: Ref) -> Self {
-		match value.borrow() {
-			Reference::Label(_) => Self::Global,
-			Reference::Relative { .. } => Self::Relative,
-			Reference::UnresolvedLabel { .. } => Self::Local,
-			Reference::MacroArgument { .. } => Self::MacroArgument,
-			Reference::MacroGlobal { .. } => Self::MacroGlobal,
-			Reference::RepeatCount { .. } => Self::RepeatCount,
+impl TryInto<UnassignableReferenceType> for &Reference {
+	type Error = ();
+
+	fn try_into(self) -> Result<UnassignableReferenceType, Self::Error> {
+		match self {
+			Reference::Label(_) => Err(()),
+			Reference::Relative { .. } => Err(()),
+			Reference::UnresolvedLabel { .. } => Err(()),
+			Reference::MacroArgument { .. } => Ok(UnassignableReferenceType::MacroArgument),
+			Reference::MacroGlobal { .. } => Ok(UnassignableReferenceType::MacroGlobal),
+			Reference::RepeatCount { .. } => Err(()),
 		}
 	}
 }

@@ -240,6 +240,7 @@ fn extract_asar_expected_output(file: &str) -> Vec<u8> {
 	clippy::too_many_lines,
 	unused_must_use
 )]
+#[cfg(coverage)]
 fn coverage() {
 	use std::collections::BTreeMap;
 	use std::sync::Weak;
@@ -428,6 +429,10 @@ fn coverage() {
 		DirectiveSymbol::PadWord,
 		DirectiveSymbol::PadLong,
 		DirectiveSymbol::PadDWord,
+		DirectiveSymbol::Repeat,
+		DirectiveSymbol::EndRepeat,
+		DirectiveSymbol::Startpos,
+		DirectiveSymbol::Namespace,
 	] {
 		let _ = format!("{directive_symbol} {directive_symbol:?}");
 	}

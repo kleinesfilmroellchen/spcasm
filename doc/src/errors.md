@@ -821,12 +821,6 @@ Segments specify where the currently-being-assembled binary data belongs in the 
 
 This category contains syntax errors.
 
-#### spcasm::syntax::dangling_tokens
-
-A syntax error issued when there are unconsumed tokens not used by the parser at the end of the file.
-
-Note: This is a theoretical error forwarded from the parser backend. It is not known whether this error can actually be produced by spcasm's parser.
-
 #### spcasm::syntax::expected_token
 
 ```trycmd

@@ -465,7 +465,7 @@ impl Display for DirectiveValue {
 				value.as_ref().map_or_else(|| "[fill value unknown]".to_owned(), SizedAssemblyTimeValue::to_string)
 			),
 			Self::Conditional { condition, true_block, false_block } => format!(
-				"if {:04X}\n{}\nelse\n{}",
+				"if {:04X}\n    {}\nelse\n    {}",
 				condition,
 				true_block
 					.iter()
@@ -481,7 +481,7 @@ impl Display for DirectiveValue {
 					.replace('\n', "\n    "),
 			),
 			Self::Repeat { count, body } => format!(
-				"repeat {count:04X}\n{}",
+				"repeat {count:04X}\n    {}",
 				body.iter()
 					.map(ProgramElement::to_string)
 					.intersperse("\n".into())

@@ -1,0 +1,11 @@
+org 0
+
+macro recursive(repetition)
+  repeat 3
+    %recursive(<repetition>)
+    nop
+  endrepeat
+endmacro
+
+recursion_start:
+  %recursive(600)

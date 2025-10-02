@@ -674,6 +674,16 @@ impl AssemblyFile {
 				ProgramElement::Directive(Directive {
 					value: DirectiveValue::Repeat { count, body }, span, ..
 				}) => {
+					if macro_end_stack.len() > maximum_macro_expansion_depth {
+						return Err(AssemblyError::RecursiveMacroUse {
+							depth:    maximum_macro_expansion_depth,
+							name:     "repeat".into(),
+							location: *span,
+							src:      self.source_code.clone(),
+						}
+						.into());
+					}
+
 					// Only expand a repeat directive if we can determine how often to repeat it
 					let AssemblyTimeValue::Literal(mut repeat_count, _) = count.clone().try_resolve() else {
 						continue;

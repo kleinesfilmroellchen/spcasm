@@ -383,11 +383,17 @@ impl DirectiveValue {
 						.sum::<usize>()
 						.max(false_block.iter().map(ProgramElement::assembled_size).sum())
 				},
-			Self::Repeat { count, body } =>
-				body.iter().map(ProgramElement::assembled_size).sum::<usize>()
-					* count
-						.value_using_resolver(&|_| None)
-						.unwrap_or_else(|| (Self::LARGE_ASSEMBLED_SIZE).try_into().unwrap()) as usize,
+			Self::Repeat { count, body } => {
+				let body_size = body.iter().map(ProgramElement::assembled_size).sum::<usize>();
+				let count = count
+					.value_using_resolver(&|_| None)
+					.unwrap_or_else(|| (Self::LARGE_ASSEMBLED_SIZE).try_into().unwrap()) as usize;
+				if count >= Self::LARGE_ASSEMBLED_SIZE || body_size >= Self::LARGE_ASSEMBLED_SIZE {
+					Self::LARGE_ASSEMBLED_SIZE
+				} else {
+					body_size * count
+				}
+			},
 			// Use a large assembled size as a signal that we don't know at this point. This will force any later
 			// reference out of the direct page, which will always yield correct behavior.
 			Self::Include { .. } | Self::Brr { .. } | Self::SampleTable { .. } | Self::Fill { .. } =>
@@ -731,10 +737,9 @@ impl ReferenceResolvable for DirectiveValue {
 			| Self::StartNamespace { .. }
 			| Self::EndNamespace
 			| Self::Org(_) => {},
-			Self::Repeat { count, body } => {
-				for element in body {
-					element.resolve_repeatcount(repetition);
-				}
+			Self::Repeat { count, .. } => {
+				// Do not resolve the repeatcount from the outer repeat in the inner repeat, so that the innermost
+				// repeat’s repetition counter always takes priority. This is the most intuitive behavior.
 				count.resolve_repeatcount(repetition);
 			},
 		}

@@ -593,137 +593,179 @@ impl AssemblyFile {
 		// program element after the macro. This is used to keep track of recursion depth.
 		let mut macro_end_stack = Vec::new();
 
-		while index < self.content.len() {
+		'iter: while index < self.content.len() {
 			let element = &mut self.content[index];
 
-			match element {
-				ProgramElement::UserDefinedMacroCall { macro_name, arguments: actual_arguments, span, .. } => {
-					if macro_end_stack.len() > maximum_macro_expansion_depth {
-						return Err(AssemblyError::RecursiveMacroUse {
-							depth:    maximum_macro_expansion_depth,
-							name:     macro_name.clone(),
-							location: *span,
-							src:      self.source_code.clone(),
-						}
-						.into());
-					}
-
-					let called_macro = user_macros.get(macro_name);
-					if let Some((definition_span, DirectiveValue::UserDefinedMacro { arguments, body, .. })) =
-						called_macro
-					{
-						let arguments = arguments.read();
-						let formal_arguments = match &(arguments).parameters {
-							MacroParameters::Formal(formal_arguments) => formal_arguments,
-							MacroParameters::Actual(_) => unreachable!(),
-						};
-						if formal_arguments.len() != actual_arguments.len() {
-							return Err(AssemblyError::IncorrectNumberOfMacroArguments {
-								name:            macro_name.clone(),
-								expected_number: formal_arguments.len(),
-								actual_number:   actual_arguments.len(),
-								location:        *span,
-								definition:      *definition_span,
-								src:             self.source_code.clone(),
+			'mtch: {
+				match element {
+					ProgramElement::UserDefinedMacroCall { macro_name, arguments: actual_arguments, span, .. } => {
+						if macro_end_stack.len() > maximum_macro_expansion_depth {
+							return Err(AssemblyError::RecursiveMacroUse {
+								depth:    maximum_macro_expansion_depth,
+								name:     macro_name.clone(),
+								location: *span,
+								src:      self.source_code.clone(),
 							}
 							.into());
 						}
-						let actual_argument_parent = MacroParent::new_actual(
-							formal_arguments
-								.iter()
-								.zip(actual_arguments.iter())
-								.map(|((formal_argument, _), actual_argument)| {
-									(formal_argument.clone(), actual_argument.clone())
-								})
-								.collect(),
-							// We use a unique reference name just to make sure that we don't combine different
-							// references accidentally. This is not a synthetic label!
-							Label::new_with_definition(
-								format!("{macro_name}_global_label_{index}").into(),
-								*definition_span,
-							),
-						);
-						drop(arguments);
-						// FIXME: Doesn't handle macro-internal references correctly; also no support for the \@ special
-						// label.
-						let mut inserted_body = body.clone();
-						for macro_element in &mut inserted_body {
-							macro_element.replace_macro_parent(actual_argument_parent.clone(), &self.source_code)?;
+
+						let called_macro = user_macros.get(macro_name);
+						if let Some((definition_span, DirectiveValue::UserDefinedMacro { arguments, body, .. })) =
+							called_macro
+						{
+							let arguments = arguments.read();
+							let formal_arguments = match &(arguments).parameters {
+								MacroParameters::Formal(formal_arguments) => formal_arguments,
+								MacroParameters::Actual(_) => unreachable!(),
+							};
+							if formal_arguments.len() != actual_arguments.len() {
+								return Err(AssemblyError::IncorrectNumberOfMacroArguments {
+									name:            macro_name.clone(),
+									expected_number: formal_arguments.len(),
+									actual_number:   actual_arguments.len(),
+									location:        *span,
+									definition:      *definition_span,
+									src:             self.source_code.clone(),
+								}
+								.into());
+							}
+							let actual_argument_parent = MacroParent::new_actual(
+								formal_arguments
+									.iter()
+									.zip(actual_arguments.iter())
+									.map(|((formal_argument, _), actual_argument)| {
+										(formal_argument.clone(), actual_argument.clone())
+									})
+									.collect(),
+								// We use a unique reference name just to make sure that we don't combine different
+								// references accidentally. This is not a synthetic label!
+								Label::new_with_definition(
+									format!("{macro_name}_global_label_{index}").into(),
+									*definition_span,
+								),
+							);
+							drop(arguments);
+							// FIXME: Doesn't handle macro-internal references correctly; also no support for the \@
+							// special label.
+							let mut inserted_body = body.clone();
+							for macro_element in &mut inserted_body {
+								macro_element
+									.replace_macro_parent(actual_argument_parent.clone(), &self.source_code)?;
+							}
+
+							let body_length = inserted_body.len();
+							// Replace the macro call directive by its expanded contents.
+							self.content.splice(index ..= index, inserted_body);
+
+							// Shift all later end indices backwards to account for the inserted instructions.
+							macro_end_stack = macro_end_stack
+								.into_iter()
+								.map(|end_index| if end_index >= index { end_index + body_length } else { end_index })
+								.collect();
+							macro_end_stack.push(index + body_length);
+							continue 'iter;
 						}
-
-						let body_length = inserted_body.len();
-						// Replace the macro call directive by its expanded contents.
-						self.content.splice(index ..= index, inserted_body);
-
-						// Shift all later end indices backwards to account for the inserted instructions.
-						macro_end_stack = macro_end_stack
-							.into_iter()
-							.map(|end_index| if end_index >= index { end_index + body_length } else { end_index })
-							.collect();
-						macro_end_stack.push(index + body_length);
-						continue;
-					}
-					return Err(AssemblyError::UndefinedUserMacro {
-						name:             macro_name.clone(),
-						available_macros: user_macros.keys().map(SharedStr::clone).collect(),
-						location:         *span,
-						src:              self.source_code.clone(),
-					}
-					.into());
-				},
-				ProgramElement::Directive(Directive {
-					value: DirectiveValue::Repeat { count, body }, span, ..
-				}) => {
-					if macro_end_stack.len() > maximum_macro_expansion_depth {
-						return Err(AssemblyError::RecursiveMacroUse {
-							depth:    maximum_macro_expansion_depth,
-							name:     "repeat".into(),
-							location: *span,
-							src:      self.source_code.clone(),
+						return Err(AssemblyError::UndefinedUserMacro {
+							name:             macro_name.clone(),
+							available_macros: user_macros.keys().map(SharedStr::clone).collect(),
+							location:         *span,
+							src:              self.source_code.clone(),
 						}
 						.into());
-					}
-
-					// Only expand a repeat directive if we can determine how often to repeat it
-					let AssemblyTimeValue::Literal(mut repeat_count, _) = count.clone().try_resolve() else {
-						continue;
-					};
-					if repeat_count < 0 {
-						environment.options.report_diagnostic(AssemblyError::NegativeRepeatCount {
-							repeatcount_location: count.source_span(),
-							resolved_repeatcount: repeat_count,
-							directive_location:   *span,
-							src:                  self.source_code.clone(),
-						});
-						repeat_count = 0;
-					}
-					// Nothing to do.
-					if repeat_count == 0 {
-						continue;
-					}
-					let repeat_body = body.clone();
-
-					let mut all_repetitions = Vec::new();
-					for repetition in 0 .. repeat_count {
-						let mut repeat_body = repeat_body.clone();
-						// Replace repeatcount symbols in this repetition’s body
-						for element in &mut repeat_body {
-							element.resolve_repeatcount(repetition);
+					},
+					ProgramElement::Directive(Directive {
+						value: DirectiveValue::Repeat { count, body },
+						span,
+						..
+					}) => {
+						if macro_end_stack.len() > maximum_macro_expansion_depth {
+							return Err(AssemblyError::RecursiveMacroUse {
+								depth:    maximum_macro_expansion_depth,
+								name:     "repeat".into(),
+								location: *span,
+								src:      self.source_code.clone(),
+							}
+							.into());
 						}
-						all_repetitions.append(&mut repeat_body);
-					}
-					let insert_length = all_repetitions.len();
-					// Replace the repeat directive by its expanded contents.
-					self.content.splice(index ..= index, all_repetitions);
 
-					// Same macro stack handling, but for all the inserted repetitions at once.
-					macro_end_stack = macro_end_stack
-						.into_iter()
-						.map(|end_index| if end_index >= index { end_index + insert_length } else { end_index })
-						.collect();
-					macro_end_stack.push(index + insert_length);
-				},
-				_ => {},
+						// Only expand a repeat directive if we can determine how often to repeat it
+						let AssemblyTimeValue::Literal(mut repeat_count, _) = count.clone().try_resolve() else {
+							break 'mtch;
+						};
+						if repeat_count < 0 {
+							environment.options.report_diagnostic(AssemblyError::NegativeRepeatCount {
+								repeatcount_location: count.source_span(),
+								resolved_repeatcount: repeat_count,
+								directive_location:   *span,
+								src:                  self.source_code.clone(),
+							});
+							repeat_count = 0;
+						}
+						// Nothing to do.
+						if repeat_count == 0 {
+							break 'mtch;
+						}
+						let repeat_body = body.clone();
+
+						let mut all_repetitions = Vec::new();
+						for repetition in 0 .. repeat_count {
+							let mut repeat_body = repeat_body.clone();
+							// Replace repeatcount symbols in this repetition’s body
+							for element in &mut repeat_body {
+								element.resolve_repeatcount(repetition);
+							}
+							all_repetitions.append(&mut repeat_body);
+						}
+						let insert_length = all_repetitions.len();
+						// Replace the repeat directive by its expanded contents.
+						self.content.splice(index ..= index, all_repetitions);
+
+						// Same macro stack handling, but for all the inserted repetitions at once.
+						macro_end_stack = macro_end_stack
+							.into_iter()
+							.map(|end_index| if end_index >= index { end_index + insert_length } else { end_index })
+							.collect();
+						macro_end_stack.push(index + insert_length);
+						continue 'iter;
+					},
+					ProgramElement::Directive(Directive {
+						value: DirectiveValue::Conditional { condition, true_block, false_block },
+						span,
+						..
+					}) => {
+						if macro_end_stack.len() > maximum_macro_expansion_depth {
+							return Err(AssemblyError::RecursiveMacroUse {
+								depth:    maximum_macro_expansion_depth,
+								name:     "condition".into(),
+								location: *span,
+								src:      self.source_code.clone(),
+							}
+							.into());
+						}
+						let AssemblyTimeValue::Literal(condition, _) = condition.clone().try_resolve() else {
+							break 'mtch;
+						};
+						let insert_length = if condition == 0 {
+							let len = false_block.len();
+							let false_block = false_block.clone();
+							self.content.splice(index ..= index, false_block);
+							len
+						} else {
+							let len = true_block.len();
+							let true_block = true_block.clone();
+							self.content.splice(index ..= index, true_block);
+							len
+						};
+						// Macro stack handling.
+						macro_end_stack = macro_end_stack
+							.into_iter()
+							.map(|end_index| if end_index >= index { end_index + insert_length } else { end_index })
+							.collect();
+						macro_end_stack.push(index + insert_length);
+						continue 'iter;
+					},
+					_ => {},
+				}
 			}
 
 			index += 1;

@@ -903,7 +903,8 @@ impl AssemblyError {
 					src,
 				},
 			ParseError::InvalidToken { .. } => unreachable!("not using the internal lexer"),
-			ParseError::UnrecognizedToken { .. } => unreachable!("at least one token is always expected"),
+			ParseError::UnrecognizedToken { token: (start, token, end), .. } =>
+				Self::ExpectedToken { expected: "".into(), actual: token, location: (start, end - start).into(), src },
 			ParseError::ExtraToken { .. } => unreachable!("parser should not report extra tokens"),
 			ParseError::User { error } => error,
 		}
@@ -946,12 +947,12 @@ impl TryInto<UnassignableReferenceType> for &Reference {
 
 	fn try_into(self) -> Result<UnassignableReferenceType, Self::Error> {
 		match self {
-			Reference::Label(_) => Err(()),
-			Reference::Relative { .. } => Err(()),
-			Reference::UnresolvedLabel { .. } => Err(()),
+			Reference::Label(_)
+			| Reference::Relative { .. }
+			| Reference::RepeatCount { .. }
+			| Reference::UnresolvedLabel { .. } => Err(()),
 			Reference::MacroArgument { .. } => Ok(UnassignableReferenceType::MacroArgument),
 			Reference::MacroGlobal { .. } => Ok(UnassignableReferenceType::MacroGlobal),
-			Reference::RepeatCount { .. } => Err(()),
 		}
 	}
 }

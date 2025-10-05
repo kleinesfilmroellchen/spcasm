@@ -74,6 +74,15 @@ impl<Contained> Segments<Contained> {
 			+ self.current_segment_start.unwrap())
 	}
 
+	/// Returns the current offset from the start of the current segment.
+	/// # Errors
+	/// If this assembly data doesn't have a started segment yet, or the start address overflowed (unlikely).
+	#[inline]
+	#[allow(clippy::missing_panics_doc)]
+	pub fn current_offset(&self) -> Result<MemoryAddress, ()> {
+		MemoryAddress::try_from(self.segments[&self.current_segment_start.ok_or(())?].len()).map_err(|_| ())
+	}
+
 	/// Returns a mutable reference to the data of the current segment.
 	/// # Errors
 	/// If this assembly data doesn't have a started segment yet.

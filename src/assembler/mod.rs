@@ -34,6 +34,12 @@ enum ClearLabels {
 	No,
 }
 
+impl From<bool> for ClearLabels {
+	fn from(value: bool) -> Self {
+		if value { Self::Yes } else { Self::No }
+	}
+}
+
 /// Assembles the instructions into a byte sequence. This function receives already-separated sections as input, so it
 /// does not do section splitting itself. It might modify the input segments as well during optimization.
 ///

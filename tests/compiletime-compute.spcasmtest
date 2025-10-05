@@ -18,12 +18,16 @@ else
 	nop ;= 00
 endif
 
-; macro repeat(n)
-; 	if <n> >= 1
-; 		%repeat(<n> - 1)
-; 		mov a, <n>
-; 	else
-; 	endif
-; endmacro
 
-; %repeat(7)
+macro repeating_macro(n)
+	if <n> >= 1
+		%repeating_macro(<n> - 1)
+		mov a, <n>
+	else
+	endif
+endmacro
+
+start_repeat:
+	%repeating_macro(7)
+end_repeat:
+	db (end_repeat - start_repeat) ;= 0E

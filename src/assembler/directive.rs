@@ -11,10 +11,10 @@ use num_traits::{FromPrimitive, ToPrimitive};
 use super::{AssembledData, ClearLabels, resolve_file};
 use crate::brr::wav;
 use crate::directive::{DirectiveValue, FillOperation, symbolic_directives};
-use crate::sema::AssemblyTimeValue;
 use crate::sema::instruction::MemoryAddress;
-use crate::sema::reference::Reference;
+use crate::sema::reference::{Reference, ReferenceResolvable};
 use crate::sema::value::{Size, SizedAssemblyTimeValue};
+use crate::sema::{AssemblyTimeValue, ProgramElement};
 use crate::{AssemblyError, Directive, brr};
 
 impl AssembledData {
@@ -26,12 +26,16 @@ impl AssembledData {
 	///
 	/// # Panics
 	/// All panics are programming bugs.
-	#[allow(clippy::unnecessary_wraps)]
+	#[allow(clippy::unnecessary_wraps, clippy::too_many_lines)]
 	pub(super) fn assemble_directive(
 		&mut self,
 		directive: &mut Directive,
 		current_labels: &[Reference],
 	) -> Result<ClearLabels, Box<AssemblyError>> {
+		// HACK (somewhat): In order for certain safe backreferences to labels to work in directives, we want to resolve
+		// possible references right now.
+		self.execute_reference_resolution_pass();
+
 		match directive.value {
 			// Symbolic directives should not be around anymore.
 			symbolic_directives!() => unreachable!(),
@@ -47,8 +51,26 @@ impl AssembledData {
 				}
 				Ok(ClearLabels::Yes)
 			},
-			DirectiveValue::Repeat { .. } => {
-				todo!()
+			DirectiveValue::Repeat { ref count, ref body } => {
+				let repeat_count = count.try_value(directive.span, &self.source_code)?;
+
+				let start_offset = self.segments.current_offset().unwrap();
+				for i in 0 .. repeat_count {
+					let mut body_copy = body.clone();
+					for element in &mut body_copy {
+						element.resolve_repeatcount(i);
+					}
+					// Give the labels to the first body.
+					if i == 0 {
+						for reference in current_labels {
+							body_copy.insert(0, ProgramElement::Label(reference.clone()));
+						}
+					}
+					self.assemble_all_from_list(&mut body_copy)?;
+				}
+				let end_offset = self.segments.current_offset().unwrap();
+				// Labels were only consumed if the repeated body is not empty.
+				Ok((end_offset - start_offset > 0).into())
 			},
 			DirectiveValue::Brr { ref file, range, auto_trim, .. } => {
 				self.assemble_brr(directive, file, range, auto_trim, current_labels)?;

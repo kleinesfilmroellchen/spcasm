@@ -100,7 +100,7 @@ impl AssemblyTimeValue {
 		if let Self::Literal(value, ..) = possibly_resolved {
 			Ok(value)
 		} else {
-			Err(self
+			Err(possibly_resolved
 				.first_reference()
 				.map_or_else(
 					|| AssemblyError::UnresolvableValue {

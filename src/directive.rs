@@ -499,17 +499,23 @@ impl ReferenceResolvable for DirectiveValue {
 		source_code: &Arc<AssemblyCode>,
 	) -> Result<(), Box<AssemblyError>> {
 		match self {
-			Self::Table { values, .. } =>
+			Self::Table { values } =>
 				try {
 					for value in values {
 						value.value.replace_macro_parent(replacement_parent.clone(), source_code)?;
 					}
 				},
-			Self::Conditional { true_block, false_block, .. } =>
+			Self::Conditional { true_block, false_block, condition } =>
 				try {
+					condition.replace_macro_parent(replacement_parent.clone(), source_code)?;
 					for element in true_block.iter_mut().chain(false_block.iter_mut()) {
 						element.replace_macro_parent(replacement_parent.clone(), source_code)?;
 					}
+				},
+			Self::Fill { parameter, value, .. } =>
+				try {
+					parameter.replace_macro_parent(replacement_parent.clone(), source_code)?;
+					value.as_mut().map(|v| v.replace_macro_parent(replacement_parent, source_code)).transpose()?;
 				},
 			Self::String { .. }
 			| Self::Include { .. }
@@ -519,7 +525,6 @@ impl ReferenceResolvable for DirectiveValue {
 			| Self::Brr { .. }
 			| Self::SampleTable { .. }
 			| Self::SetDirectiveParameters { .. }
-			| Self::Fill { .. }
 			| Self::PopSection
 			| Self::Startpos
 			| Self::StartNamespace { .. }
@@ -552,14 +557,16 @@ impl ReferenceResolvable for DirectiveValue {
 		relative_labels: &HashMap<NonZeroU64, Arc<RwLock<Label>>>,
 	) {
 		match self {
-			Self::Table { values, .. } =>
+			Self::Table { values } =>
 				for value in values {
 					value.value.resolve_relative_labels(direction, relative_labels);
 				},
-			Self::Conditional { true_block, false_block, .. } =>
+			Self::Conditional { true_block, false_block, condition } => {
+				condition.resolve_relative_labels(direction, relative_labels);
 				for element in true_block.iter_mut().chain(false_block.iter_mut()) {
 					element.resolve_relative_labels(direction, relative_labels);
-				},
+				}
+			},
 			Self::Fill { parameter, value, .. } => {
 				parameter.resolve_relative_labels(direction, relative_labels);
 				if let Some(value) = value.as_mut() {
@@ -592,14 +599,16 @@ impl ReferenceResolvable for DirectiveValue {
 
 	fn resolve_pseudo_labels(&mut self, global_labels: &[Arc<RwLock<Label>>]) {
 		match self {
-			Self::Table { values, .. } =>
+			Self::Table { values } =>
 				for value in values {
 					value.value.resolve_pseudo_labels(global_labels);
 				},
-			Self::Conditional { true_block, false_block, .. } =>
+			Self::Conditional { true_block, false_block, condition } => {
+				condition.resolve_pseudo_labels(global_labels);
 				for element in true_block.iter_mut().chain(false_block.iter_mut()) {
 					element.resolve_pseudo_labels(global_labels);
-				},
+				}
+			},
 			Self::Fill { parameter, value, .. } => {
 				parameter.resolve_pseudo_labels(global_labels);
 				if let Some(value) = value.as_mut() {
@@ -636,14 +645,15 @@ impl ReferenceResolvable for DirectiveValue {
 		source_code: &Arc<AssemblyCode>,
 	) -> Result<(), Box<AssemblyError>> {
 		match self {
-			Self::Table { values, .. } =>
+			Self::Table { values } =>
 				try {
 					for value in &mut *values {
 						value.value.set_current_label(current_label, source_code)?;
 					}
 				},
-			Self::Conditional { true_block, false_block, .. } =>
+			Self::Conditional { true_block, false_block, condition } =>
 				try {
+					condition.set_current_label(current_label, source_code)?;
 					for element in true_block.iter_mut().chain(false_block.iter_mut()) {
 						element.set_current_label(current_label, source_code)?;
 					}
@@ -688,14 +698,16 @@ impl ReferenceResolvable for DirectiveValue {
 
 	fn resolve_repeatcount(&mut self, repetition: MemoryAddress) {
 		match self {
-			Self::Table { values, .. } =>
+			Self::Table { values } =>
 				for value in &mut *values {
 					value.value.resolve_repeatcount(repetition);
 				},
-			Self::Conditional { true_block, false_block, .. } =>
+			Self::Conditional { true_block, false_block, condition } => {
+				condition.resolve_repeatcount(repetition);
 				for element in true_block.iter_mut().chain(false_block.iter_mut()) {
 					element.resolve_repeatcount(repetition);
-				},
+				}
+			},
 			Self::Fill { parameter, value, .. } => {
 				parameter.resolve_repeatcount(repetition);
 				if let Some(value) = value.as_mut() {

@@ -22,3 +22,8 @@ bne label_before_repeat ;= D0 FE
 repeat (-2)
 	nop ;= FF
 endrepeat
+
+increasing_number_table:
+repeat 100
+  db repeatcount
+endrepeat

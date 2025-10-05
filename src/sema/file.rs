@@ -600,7 +600,7 @@ impl AssemblyFile {
 				match element {
 					ProgramElement::UserDefinedMacroCall { macro_name, arguments: actual_arguments, span, .. } => {
 						if macro_end_stack.len() > maximum_macro_expansion_depth {
-							return Err(AssemblyError::RecursiveMacroUse {
+							return Err(AssemblyError::DirectiveRecursionLimit {
 								depth:    maximum_macro_expansion_depth,
 								name:     macro_name.clone(),
 								location: *span,
@@ -679,7 +679,7 @@ impl AssemblyFile {
 						..
 					}) => {
 						if macro_end_stack.len() > maximum_macro_expansion_depth {
-							return Err(AssemblyError::RecursiveMacroUse {
+							return Err(AssemblyError::DirectiveRecursionLimit {
 								depth:    maximum_macro_expansion_depth,
 								name:     "repeat".into(),
 								location: *span,
@@ -734,7 +734,7 @@ impl AssemblyFile {
 						..
 					}) => {
 						if macro_end_stack.len() > maximum_macro_expansion_depth {
-							return Err(AssemblyError::RecursiveMacroUse {
+							return Err(AssemblyError::DirectiveRecursionLimit {
 								depth:    maximum_macro_expansion_depth,
 								name:     "condition".into(),
 								location: *span,

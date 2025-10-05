@@ -6,24 +6,23 @@ $ spcasm -w all -r 40 tests/opcodes.s
 ```trycmd
 $ spcasm -r 1 tests/user-macro.spcasmtest
 ? 1
-spcasm::user_macro::recursive_use
+spcasm::directive::recursion_limit
 
-  × Maximum recursion depth 1 was exceeded while expanding user macro
-  │ 'has_argument'
+  × Maximum recursion depth 1 was exceeded while expanding 'has_argument'
     ╭─[tests/user-macro.spcasmtest:14:3]
  11 │ macro do_stuff(first, second)
  12 │   mov a,<first>-7
  13 │   %do_nothing()
  14 │   %has_argument(<first>)
     ·   ───────────┬──────────
-    ·              ╰── While trying to expand this macro
+    ·              ╰── While trying to expand this
  15 │   mov x,~<second>
  16 │ endmacro
  17 │ 
     ╰────
-  help: This is most likely caused by an infinitely recursive macro
-        definition. On the command line, use `--macro-recursion-limit` to
-        increase the limit.
+  help: This is most likely caused by an infinite recursion in a macro calling
+        itself. On the command line, use `--macro-recursion-limit` to increase
+        the limit.
 
 
 ```
@@ -31,24 +30,23 @@ spcasm::user_macro::recursive_use
 ```trycmd
 $ spcasm -r 0 tests/user-macro.spcasmtest
 ? 1
-spcasm::user_macro::recursive_use
+spcasm::directive::recursion_limit
 
-  × Maximum recursion depth 0 was exceeded while expanding user macro
-  │ 'do_nothing'
+  × Maximum recursion depth 0 was exceeded while expanding 'do_nothing'
     ╭─[tests/user-macro.spcasmtest:13:3]
  10 │ ; Macro with argument and simple recursion
  11 │ macro do_stuff(first, second)
  12 │   mov a,<first>-7
  13 │   %do_nothing()
     ·   ──────┬──────
-    ·         ╰── While trying to expand this macro
+    ·         ╰── While trying to expand this
  14 │   %has_argument(<first>)
  15 │   mov x,~<second>
  16 │ endmacro
     ╰────
-  help: This is most likely caused by an infinitely recursive macro
-        definition. On the command line, use `--macro-recursion-limit` to
-        increase the limit.
+  help: This is most likely caused by an infinite recursion in a macro calling
+        itself. On the command line, use `--macro-recursion-limit` to increase
+        the limit.
 
 
 ```

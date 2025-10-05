@@ -63,6 +63,35 @@ spcasm has a whole collection of features targeted at compatibility with the pop
 
 ## Warnings
 
+### spcasm::directive::negative_repeatcount
+
+```trycmd
+$ spcasm -w all -W spcasm::directive::negative_repeatcount tests/repeat.spcasmtest
+? 1
+spcasm::directive::negative_repeatcount
+
+  ⚠ Repetition count is negative and will be clamped to zero
+    ╭─[tests/repeat.spcasmtest:22:1]
+ 19 │     bne label_before_repeat ;= D0 FE
+ 20 │     
+ 21 │     ; negative repeats act like 0 but produce a warning
+ 22 │ ╭─▶ repeat (-2)
+    · │           ─┬
+    · │            ╰── Repeat count resolves to -2
+ 23 │ │       nop ;= FF
+ 24 │ ├─▶ endrepeat
+    · ╰──── While expanding this repeat directive
+ 25 │     
+ 26 │     increasing_number_table:
+ 27 │     repeat 100
+    ╰────
+  help: Use repeat count zero to not repeat this block at all
+
+
+```
+
+The [`repeat` directive](reference/directives.md#repeat) accepts all repeat count values, even negative ones. However, since a negative repeat doesn’t make practical sense, it simply doesn’t repeat the block at all and acts like repeat count zero. Usually, this is unintentional, and the repeat count should be replaced with 0.
+
 ### spcasm::value_too_large
 
 ```trycmd
@@ -227,7 +256,6 @@ spcasm::directive::duplicate_startpos
 
 The [`startpos` directive](reference/directives.md#startpos) can only be specified once, since there can only be one program entry point.
 
-
 #### spcasm::directive::invalid_directive_option
 
 ```trycmd
@@ -342,6 +370,34 @@ spcasm::directive::range_out_of_bounds
 
 When providing a range for a binary file that is included, the range is allowed to exceed the end of the binary, at which point just everything until the binary's end is included. However, the start point must lie within the binary.
 
+#### spcasm::directive::recursion_limit
+
+```trycmd
+$ spcasm -w all tests/errors/recursive-macro.spcasmtest
+? 1
+spcasm::directive::recursion_limit
+
+  × Maximum recursion depth 1000 was exceeded while expanding 'recursive'
+   ╭─[tests/errors/recursive-macro.spcasmtest:5:3]
+ 2 │ 
+ 3 │ macro recursive
+ 4 │   mov a,#4
+ 5 │   %recursive()
+   ·   ──────┬─────
+   ·         ╰── While trying to expand this
+ 6 │ endmacro
+ 7 │ 
+ 8 │ recursion_start:
+   ╰────
+  help: This is most likely caused by an infinite recursion in a macro calling
+        itself. On the command line, use `--macro-recursion-limit` to increase
+        the limit.
+
+
+```
+
+Directives and user macros may be used within other directives and macros, but they must at some point fully resolve to real data. This may not happen if a macro is self-recursive infinitely. Because the recursion is hard to detect in an abstract manner, spcasm employs a recursion depth limit that will stop expanding directives and macros after some point. This limit is very large by default and should suffice for all reasonable situations. However, if you _really_ need to recurse more, and your recursion is in fact finite, you can change this limit on the command line with `--macro-recursion-limit`.
+
 #### spcasm::directive::references_as_argument
 
 ```trycmd
@@ -389,7 +445,7 @@ org custom_code_bank
 
 Therefore, for now, spcasm disallows the use of references in these cases entirely.
 
-### spcasm::directive::sample_table_too_large
+#### spcasm::directive::sample_table_too_large
 
 ```trycmd
 $ spcasm -w all tests/errors/sample-table-too-large.spcasmtest
@@ -715,6 +771,42 @@ spcasm::reference::redefine
 Defining a reference with the same name more than once is ambiguous and not allowed. Some assemblers allow this and have different behavior for which reference they actually use when; spcasm would _in theory probably_ always use the first definition in source code order. However, this is not considered a useful feature and therefore disallowed.
 
 Some common names, such as `loop`, `end`, `return`, `continue`, `again`, `else`, ... should be usable more than once in the program without ambiguity. The [local label system](reference/README.md#labels-and-references) of spcasm and other assemblers allow you to use local labels (leading `.` before the label name) for these instead, so they only have to be unique within a global label.
+
+Consequently, instead of this:
+
+```asm
+some_procedure:
+  mov a, x
+  ; ...
+  loop:
+    mov y, DSPDATA
+    ; ...
+    bne loop
+
+some_other_procedure:
+  mov y, #10
+  loop:
+    ; ...
+    dbnz y, loop
+```
+
+where the `loop` label exists twice and will cause an error like above, do this:
+
+```asm
+some_procedure:
+  mov a, x
+  ; ...
+  .loop:
+    mov y, DSPDATA
+    ; ...
+    bne .loop
+
+some_other_procedure:
+  mov y, #10
+  .loop:
+    ; ...
+    dbnz y, .loop
+```
 
 #### spcasm::reference::unresolved
 
@@ -1057,35 +1149,6 @@ spcasm::user_macro::recursive_definition
 ```
 
 A user-defined macro cannot be defined within another user-defined macro. That simply makes no sense. A common reason as to why you would want to do that is to avoid name collisions. The only way to do this, however, is to choose a non-colliding name, for example by using C-style prefixes.
-
-#### spcasm::user_macro::recursive_use
-
-```trycmd
-$ spcasm -w all tests/errors/recursive-macro.spcasmtest
-? 1
-spcasm::user_macro::recursive_use
-
-  × Maximum recursion depth 1000 was exceeded while expanding user macro
-  │ 'recursive'
-   ╭─[tests/errors/recursive-macro.spcasmtest:5:3]
- 2 │ 
- 3 │ macro recursive
- 4 │   mov a,#4
- 5 │   %recursive()
-   ·   ──────┬─────
-   ·         ╰── While trying to expand this macro
- 6 │ endmacro
- 7 │ 
- 8 │ recursion_start:
-   ╰────
-  help: This is most likely caused by an infinitely recursive macro
-        definition. On the command line, use `--macro-recursion-limit` to
-        increase the limit.
-
-
-```
-
-Macros may be called within other macros, but they must at some point fully resolve to non-macro data. This may not happen if the macro is self-recursive infinitely. Because the recursion is hard to detect in an abstract manner, spcasm employs a recursion depth limit that will stop expanding macros after some point. This limit is very large by default and should suffice for all reasonable situations. However, if you _really_ need to recurse more, and your recursion is in fact finite, you can change this limit on the command line with `--macro-recursion-limit`.
 
 #### spcasm::user_macro::undefined
 

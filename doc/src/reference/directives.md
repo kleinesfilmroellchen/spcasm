@@ -266,3 +266,32 @@ The value in the same line as the `if` specifies the condition that decides whic
 After an `if` there must be an `endif` or `else`. As you can see in the example, `elseif` can be chained arbitrarily.
 
 Note that depending on where you use conditional compilation, spcasm might have different requirements for when the condition's value needs to be known. In basically all cases, the condition needs to be resolved before assembly starts.
+
+## `repeat`
+
+Similar to conditional compilation, the `repeat` directive can be used to repeat an assembler block any number of times, including not at all. The syntax is straightforward like the `if` directive:
+
+```asm
+delay_200:
+; delay for 200 cycles
+repeat 200
+  nop
+endrepeat
+```
+
+The number after `repeat` repeats the block however often specified. The block is terminated by `endrepeat` This can be any kind of calculation, as usual, as long as it can be resolved before code generation needs to happen. (Therefore, many labels will not work.)
+
+A repetition count of zero (or negative) is allowed and will not repeat the block at all, thereby removing it.
+
+Sometimes it is useful to know inside the block on which iteration of the repeat it’s currently on. For this, the special `repeatcount` variable is reserved that gets replaced with a normal zero-based index of the iteration. For example:
+
+```asm
+increasing_number_table:
+repeat 100
+  db repeatcount
+endrepeat
+```
+
+This produces a byte table of all the numbers from 0 to 99 inclusive.
+
+Note that only the innermost repeat’s `repeatcount` is accessible, just like with variable shadowing. A local reference can be assigned to the `repeatcount` if you need access to multiple `repeatcount` values in nested repeat blocks.

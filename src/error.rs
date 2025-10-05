@@ -196,21 +196,21 @@ pub enum AssemblyError {
 		outer:    SourceSpan,
 	},
 
-	#[error("Maximum recursion depth {depth} was exceeded while expanding user macro '{name}'")]
+	#[error("Maximum recursion depth {depth} was exceeded while expanding '{name}'")]
 	#[diagnostic(
-		code(spcasm::user_macro::recursive_use),
+		code(spcasm::directive::recursion_limit),
 		severity(Error),
 		help(
-			"This is most likely caused by an infinitely recursive macro definition. On the command line, use \
+			"This is most likely caused by an infinite recursion in a macro calling itself. On the command line, use \
 			 `--macro-recursion-limit` to increase the limit."
 		)
 	)]
-	RecursiveMacroUse {
+	DirectiveRecursionLimit {
 		name:     SharedStr,
 		depth:    usize,
 		#[source_code]
 		src:      Arc<AssemblyCode>,
-		#[label("While trying to expand this macro")]
+		#[label("While trying to expand this")]
 		location: SourceSpan,
 	},
 

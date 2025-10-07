@@ -6,7 +6,6 @@ use std::sync::Arc;
 use flexstr::{IntoSharedStr, SharedStr, ToSharedStr, shared_str};
 use test::Bencher;
 
-use crate::cli::default_backend_options;
 use crate::sema::ProgramElement;
 use crate::sema::instruction::MemoryAddress;
 use crate::{AssemblyError, Segments, dump_ast, dump_reference_tree, pretty_hex};
@@ -24,26 +23,26 @@ fn boot_rom() {
 #[test]
 fn entry_point() {
 	let code = crate::AssemblyCode::from_file_or_assembly_error("tests/entrypoint.s").unwrap();
-	let (_, _, entry_point) = super::run_assembler_into_segments(&code, default_backend_options()).unwrap();
-	assert_eq!(entry_point, Some(0xFF00));
+	let output = super::run_assembler(code, None).unwrap();
+	assert_eq!(output.entry_point, Some(0xFF00));
 
 	let code = crate::AssemblyCode::from_file_or_assembly_error("tests/references.spcasmtest").unwrap();
-	let (_, _, entry_point) = super::run_assembler_into_segments(&code, default_backend_options()).unwrap();
-	assert_eq!(entry_point, None);
+	let output = super::run_assembler(code, None).unwrap();
+	assert_eq!(output.entry_point, None);
 }
 
 #[test]
 fn assembler() {
 	#[cfg(miri)]
-	const ignored_miri_tests: [&str; 1] = ["tests/brr.spcasmtest"];
+	const IGNORED_MIRI_TESTS: [&str; 1] = ["tests/brr.spcasmtest"];
 	#[cfg(not(miri))]
-	const ignored_miri_tests: [&str; 0] = [];
+	const IGNORED_MIRI_TESTS: [&str; 0] = [];
 
 	let sources = std::fs::read_dir("tests").unwrap();
 	for source in sources {
 		let source = source.unwrap().path();
 		let source = &*source.to_string_lossy();
-		if source.ends_with(".spcasmtest") && !ignored_miri_tests.contains(&source) {
+		if source.ends_with(".spcasmtest") && !IGNORED_MIRI_TESTS.contains(&source) {
 			println!("assembling {source} ...");
 			test_file(source);
 		} else {
@@ -60,11 +59,14 @@ fn errors() {
 		let error_source = &*error_source.to_string_lossy();
 		if error_source.ends_with(".spcasmtest") {
 			println!("checking {error_source} for errors ...");
-			let result = super::run_assembler_with_default_options(error_source);
-			let _ = super::run_assembler_into_segments(
-				&crate::AssemblyCode::from_file_or_assembly_error(error_source).unwrap(),
-				default_backend_options(),
-			);
+			let result =
+				super::run_assembler(crate::AssemblyCode::from_file_or_assembly_error(error_source).unwrap(), None);
+			let result: Result<Box<dyn std::fmt::Debug>, Box<AssemblyError>> = if let Ok(output) = result {
+				// Hasn’t failed yet, try combining segments.
+				output.flattened_binary().map(|x| Box::new(x) as _)
+			} else {
+				result.map(|x| Box::new(x) as _)
+			};
 			println!("{result:?}");
 			assert!(result.is_err());
 		} else {
@@ -124,15 +126,16 @@ fn asar_opcode_test() -> Result<(), Box<AssemblyError>> {
 	let maybe_test_file: Result<_, reqwest::Error> = try { reqwest::blocking::get(test_file_url)?.text()? };
 	match maybe_test_file {
 		Ok(test_file) => {
-			let (_, mut assembled, _) = super::run_assembler_into_segments(
-				&Arc::new(crate::AssemblyCode {
+			let mut assembled = super::run_assembler(
+				Arc::new(crate::AssemblyCode {
 					name: file_name.into(),
 					text: test_file.clone().into(),
 					..Default::default()
 				}),
-				default_backend_options(),
+				None,
 			)?;
-			let only_segment = assembled.segments.first_entry().expect("no segment present").remove();
+			let only_segment =
+				assembled.assembled_segments.segments.first_entry().expect("no segment present").remove();
 			let expected_output = extract_asar_expected_output(&test_file).into_iter().map(Some).collect::<Vec<_>>();
 			assert_segments_are_equal(0, &expected_output, 0, &only_segment, file_name);
 		},
@@ -145,15 +148,14 @@ fn asar_opcode_test() -> Result<(), Box<AssemblyError>> {
 
 fn test_file(file: &str) {
 	let code = crate::AssemblyCode::from_file_or_assembly_error(file).unwrap();
-	let (parsed, assembled, _) = super::run_assembler_into_segments(&code, default_backend_options()).unwrap();
-	let (environment, _) = super::run_assembler_with_default_options(file).unwrap();
+	let assembled = super::run_assembler(code.clone(), None).unwrap();
 
-	dump_reference_tree(&environment.read_recursive().globals.values().cloned().collect::<Vec<_>>());
-	dump_ast(&environment.read_recursive().files.get(&code.name).unwrap().read_recursive().content);
+	dump_reference_tree(&assembled.environment.read_recursive().globals.values().cloned().collect::<Vec<_>>());
+	dump_ast(&assembled.environment.read_recursive().files.get(&code.name).unwrap().read_recursive().content);
 
-	let expected_binary = assemble_expected_binary(parsed);
+	let expected_binary = assemble_expected_binary(assembled.abstract_segments);
 	for ((parsed_segment_start, expected_segment), (assembled_segment_start, assembled)) in
-		expected_binary.segments.iter().zip(assembled.segments.iter())
+		expected_binary.segments.iter().zip(assembled.assembled_segments.segments.iter())
 	{
 		assert_segments_are_equal(*parsed_segment_start, expected_segment, *assembled_segment_start, assembled, file);
 	}

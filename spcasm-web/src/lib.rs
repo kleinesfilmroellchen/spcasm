@@ -137,23 +137,29 @@ pub fn on_assembly_change(options: JsValue) {
 	let source = Arc::new(AssemblyCode::new(&code_text, "<<input>>"));
 
 	let start_time = js_sys::Date::now();
-	let assembler_result = run_assembler(&source, options.clone());
+	let assembler_result = (|| {
+		let assembly_output = run_assembler(source.clone(), Some(options.clone()))?;
+		assembly_output.assembled_segments.flatten(&source)
+	})();
 
 	let end_time = js_sys::Date::now();
 	let elapsed_time = end_time - start_time;
 
-	let status_text = if let Ok((_environment, binary)) = assembler_result {
-		let binary_text = pretty_hex(&binary, None);
-		output.set_inner_html(&htmlify(&binary_text));
-		"Assembly compiled successfully."
-	} else {
-		let mut rendered = String::new();
-		#[allow(clippy::significant_drop_in_scrutinee)] // noone else can actually access the frontend object
-		for error in options.diagnostics.read().unwrap().iter() {
-			report_handler.render_report(&mut rendered, error).expect("couldn't render report");
-		}
-		output.set_inner_html(&htmlify(&rendered));
-		"Couldn't compile assembly."
-	};
+	let status_text = assembler_result.map_or_else(
+		|_| {
+			let mut rendered = String::new();
+			#[allow(clippy::significant_drop_in_scrutinee)] // noone else can actually access the frontend object
+			for error in options.diagnostics.read().unwrap().iter() {
+				report_handler.render_report(&mut rendered, error).expect("couldn't render report");
+			}
+			output.set_inner_html(&htmlify(&rendered));
+			"Couldn't compile assembly."
+		},
+		|binary| {
+			let binary_text = pretty_hex(&binary, None);
+			output.set_inner_html(&htmlify(&binary_text));
+			"Assembly compiled successfully."
+		},
+	);
 	status_paragraph.set_inner_html(&htmlify(&format!("{status_text} ({}ms)", elapsed_time.floor() as i64)));
 }

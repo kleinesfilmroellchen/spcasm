@@ -15,7 +15,7 @@ use crate::sema::instruction::{Instruction, MemoryAddress, Opcode};
 use crate::sema::reference::{Reference, Resolvable};
 use crate::sema::value::{BinaryOperator, Size, SizedAssemblyTimeValue};
 use crate::sema::{AddressingMode, AssemblyTimeValue, ProgramElement, Register};
-use crate::{AssemblyCode, Segments, pretty_hex};
+use crate::{AssemblyCode, Segments};
 
 mod directive;
 mod memory;
@@ -38,20 +38,6 @@ impl From<bool> for ClearLabels {
 	fn from(value: bool) -> Self {
 		if value { Self::Yes } else { Self::No }
 	}
-}
-
-/// Assembles the instructions into a byte sequence. This function receives already-separated sections as input, so it
-/// does not do section splitting itself. It might modify the input segments as well during optimization.
-///
-/// # Errors
-/// Unencodeable instructions will cause errors.
-#[allow(clippy::trivially_copy_pass_by_ref)]
-pub(crate) fn assemble_from_segments(
-	segments: &mut Segments<ProgramElement>,
-	source_code: &Arc<AssemblyCode>,
-	options: Arc<dyn Frontend>,
-) -> Result<Vec<u8>, Box<AssemblyError>> {
-	assemble_to_data(segments, source_code, options)?.combine_segments()
 }
 
 /// Runs the assembler, but does not combine data from different segments afterwards.
@@ -158,38 +144,6 @@ pub struct AssembledData {
 
 impl AssembledData {
 	const DEFAULT_VEC: &'static Vec<Reference> = &Vec::new();
-
-	/// Combine the segments into one binary stream. The result has correct memory addresses, so the first byte is
-	/// memory address 0 etc.
-	/// # Errors
-	/// If the segments contain overlapping data, errors are returned.
-	#[allow(clippy::cast_possible_wrap)]
-	pub fn combine_segments(&self) -> Result<Vec<u8>, Box<AssemblyError>> {
-		let mut all_data = Vec::new();
-		let segments = self.resolve_segments()?;
-
-		// The iteration is sorted
-		for (starting_address, segment_data) in segments.segments {
-			if starting_address < all_data.len() as MemoryAddress {
-				return Err(AssemblyError::SegmentMismatch {
-					src:           Arc::new(AssemblyCode {
-						text:         pretty_hex(&all_data, Some(starting_address as usize)),
-						name:         self.source_code.name.clone(),
-						include_path: Vec::new(),
-					}),
-					// TODO: This location is wrong, it ignores newlines.
-					location:      (starting_address as usize * 3 + 1, 2).into(),
-					segment_start: starting_address,
-					segment_end:   all_data.len() as MemoryAddress,
-				}
-				.into());
-			}
-			all_data.resize(starting_address as usize, 0);
-			all_data.extend_from_slice(&segment_data);
-		}
-
-		Ok(all_data)
-	}
 
 	/// Resolve the assembled data's segments by resolving individual memory values. This yields the final data segments
 	/// containing raw bytes.

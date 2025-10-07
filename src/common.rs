@@ -18,7 +18,39 @@ use crate::sema::reference::Label;
 use crate::{AssemblyCode, Segments};
 
 /// Assembler result type.
-pub type AssemblyResult = miette::Result<(std::sync::Arc<RwLock<Environment>>, Vec<u8>)>;
+pub type AssemblyResult = Result<AssemblyOutput, Box<AssemblyError>>;
+
+/// Output data structure for the assembler.
+///
+/// This struct contains various pieces of data produced by the assembler, ranging from early support data useful for
+/// debugging (like the [`Environment`]) to finalized output data.
+#[non_exhaustive]
+#[derive(Clone, Debug)]
+pub struct AssemblyOutput {
+	/// The original source code of the output.
+	pub source_code:        Arc<AssemblyCode>,
+	/// The abstract (AST) segments that were created before assembly.
+	pub abstract_segments:  Segments<ProgramElement>,
+	/// The final assembled segments.
+	pub assembled_segments: Segments<u8>,
+	/// The program entry point.
+	pub entry_point:        EntryPoint,
+	/// The options that were used to run the assembler.
+	pub options:            Arc<dyn Frontend>,
+	/// The environment that was used by the assembler.
+	pub environment:        Arc<RwLock<Environment>>,
+}
+
+impl AssemblyOutput {
+	/// Convert the assembled data into a flat binary that represents the final format in the address space.
+	///
+	/// # Errors
+	/// If segments overlap.
+	#[must_use = "This function performs expensive work and copies a lot of data."]
+	pub fn flattened_binary(&self) -> Result<Vec<u8>, Box<AssemblyError>> {
+		self.assembled_segments.flatten(&self.source_code)
+	}
+}
 
 /// Pretty-print byte data as hexadecimal, similar to hex editors.
 #[must_use]
@@ -106,72 +138,36 @@ pub fn byte_vec_to_string(vec: &Option<Vec<u8>>) -> std::string::String {
 	})
 }
 
-/// Run the assembler on a single file. No errors options are provided; this is mainly intended for non-clap builds
-/// where that has no effect anyways.
-///
-/// # Errors
-/// Any assembler errors are propagated to the caller.
-pub fn run_assembler_with_default_options(file_name: &str) -> AssemblyResult {
-	run_assembler_on_file(file_name, default_backend_options())
-}
-
-/// Run the assembler on a single file.
-///
-/// # Errors
-/// Any assembler errors are propagated to the caller.
-pub fn run_assembler_on_file(file_name: &str, options: Arc<dyn Frontend>) -> AssemblyResult {
-	let source_code = AssemblyCode::from_file_or_assembly_error(file_name).map_err(AssemblyError::from)?;
-	run_assembler(&source_code, options)
-}
-
-/// Run the assembler on given source code. This method is intended to be used directly when the source code is not a
-/// file on disk.
-///
-/// # Errors
-/// Any assembler errors are propagated to the caller.
-#[allow(clippy::needless_pass_by_value)]
-pub fn run_assembler(source_code: &Arc<AssemblyCode>, options: Arc<dyn Frontend>) -> AssemblyResult {
-	let result: Result<_, AssemblyError> = try {
-		let (env, mut segmented_program) = run_assembler_into_symbolic_segments(source_code, options.clone())?;
-		let assembled = crate::assembler::assemble_from_segments(&mut segmented_program, source_code, options.clone())?;
-		(env, assembled)
-	};
-	if let Err(ref why) = result {
-		options.report_diagnostic_impl(why.clone());
-	}
-	result.map_err(miette::Report::from)
-}
-
-/// Run the assembler on the given source code and return the segmented AST as well as the environment.
-///
-/// # Errors
-/// Any assembler errors are propagated to the caller.
-#[allow(clippy::needless_pass_by_value, clippy::type_complexity)]
-pub fn run_assembler_into_symbolic_segments(
-	source_code: &Arc<AssemblyCode>,
-	options: Arc<dyn Frontend>,
-) -> Result<(Arc<RwLock<Environment>>, Segments<ProgramElement>), Box<AssemblyError>> {
-	let env = crate::Environment::new();
-	env.write().set_error_options(options.clone());
-	let tokens = crate::parser::lex(source_code.clone(), &*options)?;
-	let program = crate::Environment::parse(&env, tokens, source_code)?;
-	let segmented_program = program.write().split_into_segments()?;
-	Ok((env, segmented_program))
-}
-
 /// Run the assembler on the given source code and return the segments, both assembled and in AST form.
 ///
+/// If no options are given, default options for the CLI are used.
+///
 /// # Errors
 /// Any assembler errors are propagated to the caller.
-pub fn run_assembler_into_segments(
-	source_code: &Arc<AssemblyCode>,
-	options: Arc<dyn Frontend>,
-) -> Result<(Segments<ProgramElement>, Segments<u8>, EntryPoint), Box<AssemblyError>> {
-	let (_, mut segmented_program) = run_assembler_into_symbolic_segments(source_code, options.clone())?;
-	let (assembled, entry_point) =
-		crate::assembler::assemble_inside_segments(&mut segmented_program, source_code, options)
-			.map_err(AssemblyError::from)?;
-	Ok((segmented_program, assembled, entry_point))
+pub fn run_assembler(source_code: Arc<AssemblyCode>, options: Option<Arc<dyn Frontend>>) -> AssemblyResult {
+	let options: Arc<dyn Frontend> = options.unwrap_or_else(default_backend_options).clone();
+	let result: Result<_, AssemblyError> = try {
+		let environment = crate::Environment::new();
+		environment.write().set_error_options(options.clone());
+		let tokens = crate::parser::lex(source_code.clone(), &*options)?;
+		let program = crate::Environment::parse(&environment, tokens, &source_code)?;
+		let mut segmented_program = program.write().split_into_segments()?;
+		let (assembled, entry_point) =
+			crate::assembler::assemble_inside_segments(&mut segmented_program, &source_code, options.clone())
+				.map_err(AssemblyError::from)?;
+		AssemblyOutput {
+			source_code,
+			abstract_segments: segmented_program,
+			assembled_segments: assembled,
+			entry_point,
+			options: options.clone(),
+			environment,
+		}
+	};
+	result.map_err(|why| {
+		options.report_diagnostic(why.clone());
+		why.into()
+	})
 }
 
 /// Provides a name for enum variants.

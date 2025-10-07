@@ -1,14 +1,13 @@
 //! Semantics module unit tests.
 
-use crate::cli::default_backend_options;
 use crate::parser::Token;
-use crate::{AssemblyCode, run_assembler_into_symbolic_segments};
+use crate::{AssemblyCode, run_assembler};
 
 #[test]
 fn file_token_reference_lookup() {
 	let source = AssemblyCode::from_file("tests/references.spcasmtest").unwrap();
-	let (environment, _) = run_assembler_into_symbolic_segments(&source, default_backend_options()).unwrap();
-	let file = environment.read().find_file_by_source(&source).unwrap().unwrap();
+	let output = run_assembler(source.clone(), None).unwrap();
+	let file = output.environment.read().find_file_by_source(&source).unwrap().unwrap();
 
 	let mut offset_of_zero_definition = None;
 	for i in 0 .. source.text.chars().count() {

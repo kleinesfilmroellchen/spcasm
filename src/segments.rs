@@ -3,6 +3,7 @@
 //! This lives in a separate module because both semantic analysis and assembler need to consider segments.
 
 use std::collections::BTreeMap;
+use std::sync::Arc;
 
 #[allow(unused)]
 use flexstr::{IntoSharedStr, SharedStr, ToSharedStr, shared_str};
@@ -10,6 +11,7 @@ use flexstr::{IntoSharedStr, SharedStr, ToSharedStr, shared_str};
 use crate::assembler::sample_table::SampleTable;
 use crate::directive::DirectiveParameterTable;
 use crate::sema::instruction::MemoryAddress;
+use crate::{AssemblyCode, AssemblyError, pretty_hex};
 
 /// Handles binary segments and assembler state.
 ///
@@ -28,7 +30,7 @@ pub struct Segments<Contained> {
 	/// Current contents of the BRR sample table.
 	pub sample_table:          SampleTable,
 	/// Current state of the directive parameters.
-	pub directive_parameters:  DirectiveParameterTable,
+	pub directive_parameters:  Box<DirectiveParameterTable>,
 }
 
 #[allow(clippy::result_unit_err)]
@@ -130,7 +132,39 @@ impl<Contained> Default for Segments<Contained> {
 			current_segment_start: None,
 			segment_stack:         Vec::default(),
 			sample_table:          SampleTable::default(),
-			directive_parameters:  DirectiveParameterTable::default(),
+			directive_parameters:  DirectiveParameterTable::default().into(),
 		}
+	}
+}
+
+impl Segments<u8> {
+	/// Flatten the binary segments into a single flat memory space.
+	///
+	/// # Errors
+	/// If segments overlap, an error is produced.
+	#[allow(clippy::cast_sign_loss, clippy::cast_possible_truncation, clippy::cast_possible_wrap)]
+	pub fn flatten(&self, source_code: &Arc<AssemblyCode>) -> Result<Vec<u8>, Box<AssemblyError>> {
+		let mut all_data = Vec::new();
+		// The iteration is sorted
+		for (starting_address, segment_data) in &self.segments {
+			if *starting_address < all_data.len() as MemoryAddress {
+				return Err(AssemblyError::SegmentMismatch {
+					src:           Arc::new(AssemblyCode {
+						text:         pretty_hex(&all_data, Some(*starting_address as usize)),
+						name:         source_code.name.clone(),
+						include_path: Vec::new(),
+					}),
+					// TODO: This location is wrong, it ignores newlines.
+					location:      (*starting_address as usize * 3 + 1, 2).into(),
+					segment_start: *starting_address,
+					segment_end:   all_data.len() as MemoryAddress,
+				}
+				.into());
+			}
+			all_data.resize(*starting_address as usize, 0);
+			all_data.extend_from_slice(segment_data);
+		}
+
+		Ok(all_data)
 	}
 }

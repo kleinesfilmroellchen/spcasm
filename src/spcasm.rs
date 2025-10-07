@@ -5,9 +5,8 @@ use std::io::Write;
 
 #[allow(unused)]
 use flexstr::{IntoSharedStr, SharedStr, ToSharedStr, shared_str};
-use spcasm::{
-	AssemblyCode, AssemblyError, cli, dump_ast, dump_reference_tree, elf, run_assembler, run_assembler_into_segments,
-};
+use spcasm::cli::{self, Frontend};
+use spcasm::{AssemblyCode, AssemblyError, dump_ast, dump_reference_tree, elf, run_assembler};
 
 fn main() -> miette::Result<()> {
 	use clap::Parser;
@@ -27,9 +26,10 @@ fn main() -> miette::Result<()> {
 	let options = std::sync::Arc::new(args.warning_flags);
 	let code = AssemblyCode::from_file_or_assembly_error(&file_name.to_string_lossy()).map_err(AssemblyError::from)?;
 	// Errors are already reported, so we only need to handle the success case.
-	if let Ok((environment, assembled)) = run_assembler(&code, options.clone()) {
+	if let Ok(assembly_output) = run_assembler(code.clone(), Some(options.clone())) {
 		if args.dump_references {
-			let mut references = environment.read_recursive().globals.values().cloned().collect::<Vec<_>>();
+			let mut references =
+				assembly_output.environment.read_recursive().globals.values().cloned().collect::<Vec<_>>();
 			references.sort_by_cached_key(|reference| {
 				reference
 					.read()
@@ -49,12 +49,20 @@ fn main() -> miette::Result<()> {
 		}
 
 		if args.dump_ast {
-			dump_ast(&environment.read_recursive().files.get(&code.name).unwrap().read_recursive().content);
+			dump_ast(
+				&assembly_output.environment.read_recursive().files.get(&code.name).unwrap().read_recursive().content,
+			);
+		}
+		let combine_result = assembly_output.flattened_binary();
+		if let Err(ref why) = combine_result {
+			options.report_diagnostic(*why.clone());
 		}
 
 		if *options.had_error.read() {
 			std::process::exit(1);
 		}
+
+		let binary = combine_result.unwrap();
 
 		if let Some(outfile) = args.output {
 			let mut outfile: Box<dyn Write> = if outfile.to_string_lossy() == "-" {
@@ -70,18 +78,16 @@ fn main() -> miette::Result<()> {
 				))
 			};
 			match args.output_format {
-				// TODO: Don't do double work assembling here.
-				cli::OutputFormat::Elf => {
-					let (_, output, maybe_entry_point) = run_assembler_into_segments(&code, options).unwrap();
-					if let Some(entry_point) = maybe_entry_point {
-						elf::write_to_elf(&mut outfile, output, entry_point).map_err(AssemblyError::from)?;
+				cli::OutputFormat::Elf =>
+					if let Some(entry_point) = assembly_output.entry_point {
+						elf::write_to_elf(&mut outfile, assembly_output.assembled_segments, entry_point)
+							.map_err(AssemblyError::from)?;
 					} else {
 						Err(AssemblyError::MissingStartpos { src: code.clone() })?;
-					}
-				},
-				cli::OutputFormat::Plain => outfile.write_all(&assembled).map_err(AssemblyError::from)?,
+					},
+				cli::OutputFormat::Plain => outfile.write_all(&binary).map_err(AssemblyError::from)?,
 				cli::OutputFormat::HexDump => outfile
-					.write_fmt(format_args!("{}", spcasm::pretty_hex(&assembled, None)))
+					.write_fmt(format_args!("{}", spcasm::pretty_hex(&binary, None)))
 					.map_err(AssemblyError::from)?,
 			}
 		}

@@ -35,41 +35,32 @@ jobs:
       - name: Install trunk
         uses: extractions/setup-crate@v1
         with:
-          owner: thedodd
-          name: trunk
-          # https://github.com/thedodd/trunk/issues/575 -- seems to have resolved itself...
-          version: 0.16.0
+          repo: thedodd/trunk@0.21.14
       - name: Install mdbook
         uses: extractions/setup-crate@v1
         with:
-          owner: rust-lang
-          name: mdBook
+          repo: rust-lang/mdBook@0.4.52
       - name: Install mdbook-linkcheck
         uses: extractions/setup-crate@v1
         with:
-          owner: Michael-F-Bryan
-          name: mdbook-linkcheck
+          repo: Michael-F-Bryan/mdbook-linkcheck@0.7.7
       - name: Install wasm-bindgen
         uses: extractions/setup-crate@v1
         with:
-          owner: rustwasm
-          name: wasm-bindgen
+          repo: wasm-bindgen/wasm-bindgen@0.2.104
       - name: Install wasm-opt
         run: |
           mkdir ./binaryen
           wget -qO- https://github.com/WebAssembly/binaryen/releases/download/version_116/binaryen-version_116-x86_64-linux.tar.gz | tar xvz -C ./binaryen binaryen-version_116 --strip=1
           install ./binaryen/bin/wasm-opt /usr/local/bin
-
       - name: Install mdbook-toc
         uses: extractions/setup-crate@v1
         with:
-          owner: badboy
-          name: mdbook-toc
+          repo: badboy/mdbook-toc@0.14.2
       - name: Install just
         uses: extractions/setup-crate@v1
         with:
-          owner: casey
-          name: just
+          repo: casey/just@1.43.0
 
       - name: Build and assemble site
         run: just website

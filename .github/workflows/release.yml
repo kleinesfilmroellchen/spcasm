@@ -55,7 +55,7 @@ jobs:
           $tmp | Remove-Item
 
       - name: Run tests
-        run: cargo nextest run --workspace --verbose --config-file .github/nextest-ci.toml
+        run: cargo nextest run --cargo-profile=spcasm-release --workspace --verbose --config-file .github/nextest-ci.toml
       - name: Build release artifacts
         run: just release ${{ github.ref_name }} ${{ matrix.target }}
 

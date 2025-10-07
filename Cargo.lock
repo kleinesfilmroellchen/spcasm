@@ -1963,7 +1963,7 @@ checksum = "28d3b2b1366ec20994f1fd18c3c594f05c5dd4bc44d8bb0c1c632c8d6829481f"
 
 [[package]]
 name = "sals"
-version = "1.2.3"
+version = "2.0.0"
 dependencies = [
  "dashmap 6.1.0",
  "env_logger",
@@ -1990,7 +1990,7 @@ dependencies = [
 
 [[package]]
 name = "sapemu"
-version = "1.2.3"
+version = "2.0.0"
 dependencies = [
  "anyhow",
  "bitflags 2.9.4",
@@ -2246,7 +2246,7 @@ dependencies = [
 
 [[package]]
 name = "spcasm"
-version = "1.2.3"
+version = "2.0.0"
 dependencies = [
  "arrcat",
  "clap",
@@ -2270,7 +2270,7 @@ dependencies = [
 
 [[package]]
 name = "spcasm-web"
-version = "1.2.3"
+version = "2.0.0"
 dependencies = [
  "console_error_panic_hook",
  "flexstr",
@@ -2289,7 +2289,7 @@ dependencies = [
 
 [[package]]
 name = "spcasm_derive"
-version = "1.2.3"
+version = "2.0.0"
 dependencies = [
  "flexstr",
  "quote",

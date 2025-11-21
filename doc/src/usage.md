@@ -154,6 +154,26 @@ spcasm follows some simple markup conventions within its output:
 - 'single quotes' mark reference names, including macro names, macro arguments, etc.
 - "double quotes" mark file names, as those are usually given within strings anyways. They also mark invalid syntax in parser errors.
 
+### Screenreader-friendly error output
+
+The error formatting library [miette]() has the ability to output errors in a screenreader-friendly format, using the environment variable `NO_GRAPHICS=1`. spcasm never inhibits this, so you can always use it for controlling the error output:
+
+```trycmd
+$ NO_GRAPHICS=1 spcasm tests/errors/file-not-found.spcasmtest
+? 1
+File "[CWD]/tests/errors/this_definitely_does_not_exist" was not found
+    Diagnostic severity: error
+    Caused by: No such file or directory (os error 2)
+Begin snippet for tests/errors/file-not-found.spcasmtest starting at line 1, column 1
+
+snippet line 1: org 0
+snippet line 2: include "this_definitely_does_not_exist"
+    label at line 2, columns 1 to 40: File was requested here
+diagnostic code: spcasm::io::file_not_found
+
+
+```
+
 ## brr
 
 You can use the `brr` binary (`cargo r --profile=spcasm-release --bin=brr --`) for using and testing the BRR encoder and decoder directly.

@@ -26,7 +26,7 @@ jobs:
             archive: tar.xz
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
       - name: Install OpenSSL (Linux)
         if: ${{ matrix.runner == 'ubuntu-latest' }}
         run: sudo apt update && sudo apt-get install -y openssl clang

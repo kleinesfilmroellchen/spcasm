@@ -1,2 +1,0 @@
-org 0
-incbin "../binary.bin":20000-50000

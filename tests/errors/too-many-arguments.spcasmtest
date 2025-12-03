@@ -1,6 +1,0 @@
-org 0
-
-macro my_macro(one)
-endmacro
-
-%my_macro(5, 6)

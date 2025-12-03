@@ -1,7 +1,0 @@
-org 0
-
-label_1 = label_2
-label_2 = label_1
-
-; Make sure the labels need to be resolved
-jmp label_1

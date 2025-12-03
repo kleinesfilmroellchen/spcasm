@@ -1,3 +1,0 @@
-; The current grammar will make the expected token list for this syntax error empty.
-endmacro:
-	nop

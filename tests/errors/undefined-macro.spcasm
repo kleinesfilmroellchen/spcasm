@@ -1,4 +1,0 @@
-macro something
-endmacro
-
-%something_else()

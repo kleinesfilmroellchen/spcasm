@@ -1,6 +1,0 @@
-org 0
-
-dp_label:
-   nop       ; dummy
-
-org dp_label

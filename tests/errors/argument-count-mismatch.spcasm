@@ -1,4 +1,0 @@
-macro takes_one(one)
-endmacro
-
-%takes_one(1, 2)

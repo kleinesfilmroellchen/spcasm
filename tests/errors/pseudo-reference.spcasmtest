@@ -1,7 +1,0 @@
-org 0
-
-global: nop
-.local: nop
-
-other_global:
-bra local

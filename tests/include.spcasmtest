@@ -1,7 +1,0 @@
-; Include directive tests
-org 0
-
-incbin "binary.bin"
-
-org $10
-incbin "yoshi.wav"

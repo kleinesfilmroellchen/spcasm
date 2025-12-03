@@ -1,5 +1,0 @@
-**/*.rs.bk
-Cargo.lock
-bin/
-wasm-pack.log
-dist
